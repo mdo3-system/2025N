@@ -242,31 +242,23 @@ function handleUnifiedDeletion(e, state) {
 
 function handleGridInput(mode, state) {
     if (mode === 'add-grid') {
-        if ((!state.gridXCoords || state.gridXCoords.length === 0) && (!state.gridYCoords || state.gridYCoords.length === 0)) {
-            const axis = prompt("通り芯がありません。新規追加する通り芯の方向を入力してください (X または Y)", "X");
-            if (!axis) return;
-            const upAxis = axis.toUpperCase().trim();
-            if (upAxis === 'X') {
-                const name = prompt("追加するX通りの名称を入力してください", "X1");
-                if (!name) return;
-                if (!state.manualGridX) state.manualGridX = [];
-                state.manualGridX.push({ coord: 0, name: name.trim() });
-            } else if (upAxis === 'Y') {
-                const name = prompt("追加するY通りの名称を入力してください", "Y1");
-                if (!name) return;
-                if (!state.manualGridY) state.manualGridY = [];
-                state.manualGridY.push({ coord: 0, name: name.trim() });
+        // 1. 常に最初に追加したい軸の方向を問う (自由度確保)
+        const axis = prompt("追加する通り芯の方向を入力してください (X または Y)", "X");
+        if (!axis) return;
+        const upAxis = axis.toUpperCase().trim();
+        if (upAxis !== 'X' && upAxis !== 'Y') return;
+
+        if (upAxis === 'X') {
+            // 2. 最寄りのX通りを基準値として検索
+            let bestGX = 0;
+            let minDX = Infinity;
+            if (state.gridXCoords && state.gridXCoords.length > 0) {
+                state.gridXCoords.forEach(gx => {
+                    let d = Math.abs(state.mouseX - (gx * state.scale + state.offsetX));
+                    if (d < minDX) { minDX = d; bestGX = gx; }
+                });
             }
-            window.GridEngine.analyzeGrids(state);
-            window.AppController.refreshAll();
-            return;
-        }
-        let bestGX = null, bestGY = null, minDX = Infinity, minDY = Infinity;
-        state.gridXCoords.forEach(gx => { let d = Math.abs(state.mouseX - (gx * state.scale + state.offsetX)); if(d < minDX){ minDX=d; bestGX=gx; } });
-        state.gridYCoords.forEach(gy => { let d = Math.abs(state.mouseY - (state.canvas.height - (gy * state.scale + state.offsetY))); if(d < minDY){ minDY=d; bestGY=gy; } });
-        
-        if (bestGX !== null && (bestGY === null || minDX <= minDY)) {
-            const offsetStr = prompt("選択したX通りから右方向へのオフセット距離を入力してください (mm)", "910");
+            const offsetStr = prompt(`基準となるX通り (座標: ${bestGX}) からのオフセット距離を入力してください (mm)\n右方向はプラス、左方向はマイナス`, "910");
             if (offsetStr === null) return;
             const offset = parseFloat(offsetStr);
             if (isNaN(offset)) return;
@@ -275,10 +267,17 @@ function handleGridInput(mode, state) {
             if (!name) return;
             if (!state.manualGridX) state.manualGridX = [];
             state.manualGridX.push({ coord: newGX, name: name.trim() });
-            window.GridEngine.analyzeGrids(state);
-            window.AppController.refreshAll();
-        } else if (bestGY !== null) {
-            const offsetStr = prompt("選択したY通りから上方向へのオフセット距離を入力してください (mm)", "910");
+        } else if (upAxis === 'Y') {
+            // 3. 最寄りのY通りを基準値として検索
+            let bestGY = 0;
+            let minDY = Infinity;
+            if (state.gridYCoords && state.gridYCoords.length > 0) {
+                state.gridYCoords.forEach(gy => {
+                    let d = Math.abs(state.mouseY - (state.canvas.height - (gy * state.scale + state.offsetY)));
+                    if (d < minDY) { minDY = d; bestGY = gy; }
+                });
+            }
+            const offsetStr = prompt(`基準となるY通り (座標: ${bestGY}) からのオフセット距離を入力してください (mm)\n上方向はプラス、下方向はマイナス`, "910");
             if (offsetStr === null) return;
             const offset = parseFloat(offsetStr);
             if (isNaN(offset)) return;
@@ -287,9 +286,9 @@ function handleGridInput(mode, state) {
             if (!name) return;
             if (!state.manualGridY) state.manualGridY = [];
             state.manualGridY.push({ coord: newGY, name: name.trim() });
-            window.GridEngine.analyzeGrids(state);
-            window.AppController.refreshAll();
         }
+        window.GridEngine.analyzeGrids(state);
+        window.AppController.refreshAll();
     } else if (mode === 'del-grid') {
         // クリック位置に近いグリッドを検索
         let bestIX = -1, bestIY = -1, minDX = 20, minDY = 20;

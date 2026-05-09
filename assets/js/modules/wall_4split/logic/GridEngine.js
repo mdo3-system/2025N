@@ -100,8 +100,8 @@ window.GridEngine = {
             let availableGridTexts = state.bgTextsOriginal.filter(t => t.isGridText);
 
             let nameMapX = {}, nameMapY = {};
-            state.manualGridX.forEach(m => { nameMapX[m.coord] = m.name; });
-            state.manualGridY.forEach(m => { nameMapY[m.coord] = m.name; });
+            state.manualGridX.forEach(m => { nameMapX[snapToModule(m.coord)] = m.name; });
+            state.manualGridY.forEach(m => { nameMapY[snapToModule(m.coord)] = m.name; });
 
             // X軸マッピング
             masterXs.forEach(x => {
