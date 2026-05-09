@@ -80,8 +80,18 @@ window.GridEngine = {
         masterXs.sort((a, b) => a - b); masterYs.sort((a, b) => a - b);
         
         // ブラックリスト（削除済みグリッド）を除外
-        masterXs = masterXs.filter(mx => !state.deletedGridX.some(dx => Math.abs(dx - mx) < TOL_SNAP));
-        masterYs = masterYs.filter(my => !state.deletedGridY.some(dy => Math.abs(dy - my) < TOL_SNAP));
+        // 手動追加されたものは削除リストにあっても優先
+        const manualXCoords = state.manualGridX.map(m => snapToModule(m.coord));
+        masterXs = masterXs.filter(mx => {
+            if (manualXCoords.includes(mx)) return true;
+            return !state.deletedGridX.some(dx => Math.abs(dx - mx) < TOL_SNAP);
+        });
+
+        const manualYCoords = state.manualGridY.map(m => snapToModule(m.coord));
+        masterYs = masterYs.filter(my => {
+            if (manualYCoords.includes(my)) return true;
+            return !state.deletedGridY.some(dy => Math.abs(dy - my) < TOL_SNAP);
+        });
 
         state.masterXs = masterXs; 
         state.masterYs = masterYs;

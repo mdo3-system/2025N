@@ -83,7 +83,7 @@ function initCanvasInput(canvas) {
             }
             // 通り芯追加・削除
             else if (mode === 'add-grid' || mode === 'del-grid') {
-                handleGridInput(mode, state);
+                handleGridInput(mode, state, mx, my);
             }
             // 通り芯文字の編集
             else if (mode === 'edit-text') {
@@ -222,16 +222,8 @@ function handleUnifiedDeletion(e, state) {
     } else if (hit.type === 'window' || hit.item.id !== undefined) {
         // 開口部としての判定 (hit.type が 'window' か、IDが存在する場合)
         const targetId = hit.item.id;
-        const initialCount = state.windowsArr.length;
         state.windowsArr = state.windowsArr.filter(w => w.id != targetId);
-        
-        if (state.windowsArr.length < initialCount) {
-            console.log(`✅ Window ${targetId} deleted.`);
-        } else {
-            console.log(`⚠️ Window ${targetId} not found in windowsArr. Trying walls fallback...`);
-            // 万が一 walls 側に混入していた場合のフォールバック
-            state.walls = state.walls.filter(w => w.id != targetId);
-        }
+        console.log(`✅ Window ${targetId} deleted.`);
     } else if (hit.type === 'area') {
         state.areaLines = state.areaLines.filter(a => a.id != hit.item.id);
         console.log(`✅ Area deleted.`);
@@ -240,54 +232,83 @@ function handleUnifiedDeletion(e, state) {
     window.AppController.refreshAll();
 }
 
-function handleGridInput(mode, state) {
+function handleGridInput(mode, state, clickX, clickY) {
     if (mode === 'add-grid') {
-        // 1. 常に最初に追加したい軸の方向を問う (自由度確保)
+        const snapToModule = (val) => {
+            const module = 455;
+            const nearest = Math.round(val / module) * module;
+            if (Math.abs(val - nearest) < 5) return nearest;
+            return Math.round(val);
+        };
+
         const axis = prompt("追加する通り芯の方向を入力してください (X または Y)", "X");
         if (!axis) return;
         const upAxis = axis.toUpperCase().trim();
         if (upAxis !== 'X' && upAxis !== 'Y') return;
 
         if (upAxis === 'X') {
-            // 2. 最寄りのX通りを基準値として検索
             let bestGX = 0;
             let minDX = Infinity;
             if (state.gridXCoords && state.gridXCoords.length > 0) {
                 state.gridXCoords.forEach(gx => {
-                    let d = Math.abs(state.mouseX - (gx * state.scale + state.offsetX));
+                    let d = Math.abs(clickX - (gx * state.scale + state.offsetX));
                     if (d < minDX) { minDX = d; bestGX = gx; }
                 });
             }
-            const offsetStr = prompt(`基準となるX通り (座標: ${bestGX}) からのオフセット距離を入力してください (mm)\n右方向はプラス、左方向はマイナス`, "910");
+
+            // もし既存通り芯が遠すぎる（または無い）場合は、クリック地点を基準にする
+            if (minDX > 100 || minDX === Infinity) {
+                bestGX = snapToModule((clickX - state.offsetX) / state.scale);
+            }
+
+            const offsetStr = prompt(`基準位置 (座標: ${bestGX}) からのオフセット距離を入力してください (mm)\n右方向はプラス、左方向はマイナス`, "910");
             if (offsetStr === null) return;
             const offset = parseFloat(offsetStr);
             if (isNaN(offset)) return;
+
             const newGX = bestGX + offset;
             const name = prompt("追加するX通りの名称を入力してください", `X_${(state.manualGridX || []).length + 1}`);
             if (!name) return;
+
             if (!state.manualGridX) state.manualGridX = [];
             state.manualGridX.push({ coord: newGX, name: name.trim() });
+
+            // 削除リストに入っていたら解除
+            if (state.deletedGridX) {
+                state.deletedGridX = state.deletedGridX.filter(dx => Math.abs(dx - newGX) > 5);
+            }
         } else if (upAxis === 'Y') {
-            // 3. 最寄りのY通りを基準値として検索
             let bestGY = 0;
             let minDY = Infinity;
             if (state.gridYCoords && state.gridYCoords.length > 0) {
                 state.gridYCoords.forEach(gy => {
-                    let d = Math.abs(state.mouseY - (state.canvas.height - (gy * state.scale + state.offsetY)));
+                    let d = Math.abs(clickY - (state.canvas.height - (gy * state.scale + state.offsetY)));
                     if (d < minDY) { minDY = d; bestGY = gy; }
                 });
             }
-            const offsetStr = prompt(`基準となるY通り (座標: ${bestGY}) からのオフセット距離を入力してください (mm)\n上方向はプラス、下方向はマイナス`, "910");
+
+            if (minDY > 100 || minDY === Infinity) {
+                bestGY = snapToModule((state.canvas.height - clickY - state.offsetY) / state.scale);
+            }
+
+            const offsetStr = prompt(`基準位置 (座標: ${bestGY}) からのオフセット距離を入力してください (mm)\n上方向はプラス、下方向はマイナス`, "910");
             if (offsetStr === null) return;
             const offset = parseFloat(offsetStr);
             if (isNaN(offset)) return;
+
             const newGY = bestGY + offset;
             const name = prompt("追加するY通りの名称を入力してください", `Y_${(state.manualGridY || []).length + 1}`);
             if (!name) return;
+
             if (!state.manualGridY) state.manualGridY = [];
             state.manualGridY.push({ coord: newGY, name: name.trim() });
+
+            // 削除リストに入っていたら解除
+            if (state.deletedGridY) {
+                state.deletedGridY = state.deletedGridY.filter(dy => Math.abs(dy - newGY) > 5);
+            }
         }
-        window.GridEngine.analyzeGrids(state);
+        if (window.GridEngine) window.GridEngine.analyzeGrids(state);
         window.AppController.refreshAll();
     } else if (mode === 'del-grid') {
         // クリック位置に近いグリッドを検索
@@ -295,11 +316,11 @@ function handleGridInput(mode, state) {
         let targetVal = null, targetAxis = null;
 
         state.gridXCoords.forEach((gx, i) => { 
-            let d = Math.abs(state.mouseX - (gx * state.scale + state.offsetX)); 
+            let d = Math.abs(clickX - (gx * state.scale + state.offsetX)); 
             if(d < minDX){ minDX=d; bestIX=i; targetVal=gx; targetAxis='X'; } 
         });
         state.gridYCoords.forEach((gy, i) => { 
-            let d = Math.abs(state.mouseY - (state.canvas.height - (gy * state.scale + state.offsetY))); 
+            let d = Math.abs(clickY - (state.canvas.height - (gy * state.scale + state.offsetY))); 
             if(d < minDY){ minDY=d; bestIY=i; targetVal=gy; targetAxis='Y'; } 
         });
         

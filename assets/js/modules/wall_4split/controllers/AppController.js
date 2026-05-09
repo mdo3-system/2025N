@@ -99,10 +99,10 @@ window.AppController = {
             walls: JSON.parse(JSON.stringify(state.walls)),
             windowsArr: JSON.parse(JSON.stringify(state.windowsArr)),
             areaLines: JSON.parse(JSON.stringify(state.areaLines)),
-            gridXCoords: [...state.gridXCoords],
-            gridYCoords: [...state.gridYCoords],
-            gridXNames: [...state.gridXNames],
-            gridYNames: [...state.gridYNames],
+            manualGridX: JSON.parse(JSON.stringify(state.manualGridX || [])),
+            manualGridY: JSON.parse(JSON.stringify(state.manualGridY || [])),
+            deletedGridX: [...(state.deletedGridX || [])],
+            deletedGridY: [...(state.deletedGridY || [])],
             foundationBeams: JSON.parse(JSON.stringify(state.foundationBeams || [])),
             foundationSlabs: JSON.parse(JSON.stringify(state.foundationSlabs || [])),
             exteriorWalls: JSON.parse(JSON.stringify(state.exteriorWalls || [])),
@@ -146,10 +146,14 @@ window.AppController = {
         state.walls = JSON.parse(JSON.stringify(data.walls));
         state.windowsArr = JSON.parse(JSON.stringify(data.windowsArr));
         state.areaLines = JSON.parse(JSON.stringify(data.areaLines));
-        state.gridXCoords = [...data.gridXCoords];
-        state.gridYCoords = [...data.gridYCoords];
-        state.gridXNames = [...data.gridXNames];
-        state.gridYNames = [...data.gridYNames];
+        state.gridXCoords = [...(data.gridXCoords || [])];
+        state.gridYCoords = [...(data.gridYCoords || [])];
+        state.gridXNames = [...(data.gridXNames || [])];
+        state.gridYNames = [...(data.gridYNames || [])];
+        state.manualGridX = JSON.parse(JSON.stringify(data.manualGridX || []));
+        state.manualGridY = JSON.parse(JSON.stringify(data.manualGridY || []));
+        state.deletedGridX = [...(data.deletedGridX || [])];
+        state.deletedGridY = [...(data.deletedGridY || [])];
         if (data.foundationBeams) state.foundationBeams = JSON.parse(JSON.stringify(data.foundationBeams));
         if (data.foundationSlabs) state.foundationSlabs = JSON.parse(JSON.stringify(data.foundationSlabs));
         if (data.exteriorWalls) state.exteriorWalls = JSON.parse(JSON.stringify(data.exteriorWalls));
