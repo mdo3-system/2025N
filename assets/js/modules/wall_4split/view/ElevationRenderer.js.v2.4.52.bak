@@ -1,0 +1,410 @@
+/**
+ * view/ElevationRenderer.js - Elevation Axial Force Diagram Rendering
+ * v2.3.11 Refactoring
+ */
+
+window.ElevationRenderer = {
+    /**
+     * 全通りの最大寸法を取得する
+     */
+    getGlobalDimensions: function(state) {
+        const s = state || window.AppState;
+        const axes = window.getAxesToReport ? window.getAxesToReport() : [];
+        let maxW = 100, maxH = 100;
+        const h1 = (s.config.floorHeight1F || 2.7) * 1000;
+        const h2 = (s.config.floorHeight2F || 2.7) * 1000;
+
+        axes.forEach(axisName => {
+            const floorsDesc = ['2F', '1F'];
+            let totalH = 0;
+            let axisPillars = [];
+            floorsDesc.forEach(f => {
+                const h = (f === '2F') ? h2 : h1;
+                const wallsOnAxis = s.walls.filter(w => {
+                    if (w.floor !== f) return false;
+                    const n1 = window.GridEngine.getPillarName(w.p1, s);
+                    const n2 = window.GridEngine.getPillarName(w.p2, s);
+                    return (n1 && (n1.startsWith(axisName) || n1.endsWith(axisName))) && 
+                           (n2 && (n2.startsWith(axisName) || n2.endsWith(axisName)));
+                });
+                const pillarsOnAxis = s.pillars.filter(p => {
+                    if (p.floor !== f && p.floor !== 'ALL') return false;
+                    if (p.isDeleted) return false;
+                    const nm = window.GridEngine.getPillarName(p, s);
+                    return nm && (nm.startsWith(axisName) || nm.endsWith(axisName));
+                });
+                if (wallsOnAxis.length > 0 || pillarsOnAxis.length > 0) {
+                    totalH += h;
+                    axisPillars.push(...wallsOnAxis.flatMap(w => [w.p1, w.p2]), ...pillarsOnAxis);
+                }
+            });
+            if (axisPillars.length > 0) {
+                const minX = Math.min(...axisPillars.map(p => p.x)), maxX = Math.max(...axisPillars.map(p => p.x));
+                const minY = Math.min(...axisPillars.map(p => p.y)), maxY = Math.max(...axisPillars.map(p => p.y));
+                const dx = maxX - minX, dy = maxY - minY;
+                maxW = Math.max(maxW, Math.max(dx, dy));
+                maxH = Math.max(maxH, totalH);
+            }
+        });
+        return { maxW, maxH };
+    },
+
+    /**
+     * 特定の通りの拡大軸力図（立面）を SVG で生成する
+     */
+    generateAxialDiagramSvg: function(axisName, loadDirection = 'left', state, globalScaleParams = null) {
+        const s = state || window.AppState;
+        const floorsDesc = ['2F', '1F'];
+        const floorDataMap = [];
+        const h1 = (s.config.floorHeight1F || 2.7) * 1000;
+        const h2 = (s.config.floorHeight2F || 2.7) * 1000;
+
+        floorsDesc.forEach(f => {
+            const h = (f === '2F') ? h2 : h1;
+            const wallsOnAxis = s.walls.filter(w => {
+                if (w.floor !== f) return false;
+                const n1 = window.GridEngine.getPillarName(w.p1, s);
+                const n2 = window.GridEngine.getPillarName(w.p2, s);
+                return (n1 && (n1.startsWith(axisName) || n1.endsWith(axisName))) && 
+                       (n2 && (n2.startsWith(axisName) || n2.endsWith(axisName)));
+            });
+
+            const pillarsOnAxis = s.pillars.filter(p => {
+                if (p.floor !== f && p.floor !== 'ALL') return false;
+                if (p.isDeleted) return false;
+                const nm = window.GridEngine.getPillarName(p, s);
+                return nm && (nm.startsWith(axisName) || nm.endsWith(axisName));
+            });
+
+            if (wallsOnAxis.length > 0 || pillarsOnAxis.length > 0) {
+                floorDataMap.push({ floor: f, walls: wallsOnAxis, columns: pillarsOnAxis, floorHeight: h });
+            }
+        });
+
+        if (floorDataMap.length === 0) return `<div style="padding:20px; color:#666;">通りのデータが見つかりません: ${axisName}</div>`;
+
+        const allP = floorDataMap.flatMap(fm => [
+            ...fm.walls.flatMap(w => [w.p1, w.p2]),
+            ...fm.columns
+        ]);
+        const minX = Math.min(...allP.map(p => p.x)), maxX = Math.max(...allP.map(p => p.x));
+        const minY = Math.min(...allP.map(p => p.y)), maxY = Math.max(...allP.map(p => p.y));
+        const dx = maxX - minX, dy = maxY - minY;
+        
+        const isXHorizontal = dx >= dy;
+        const getPos = (p) => isXHorizontal ? p.x : p.y;
+        const startPos = isXHorizontal ? minX : minY;
+        const currentW = Math.max(isXHorizontal ? dx : dy, 100);
+
+        const padding = 80;
+        const svgW = 800;
+        const totalH_val = floorDataMap.reduce((sum, fm) => sum + fm.floorHeight, 0);
+
+        // スケール決定
+        let scaleVal;
+        let drawW = currentW;
+        let drawH = totalH_val;
+
+        if (globalScaleParams) {
+            // 全通り共通スケール
+            const { maxW, maxH } = globalScaleParams;
+            scaleVal = Math.min((svgW - padding * 2) / maxW, 350 / maxH);
+            drawW = maxW;
+            drawH = maxH;
+        } else {
+            scaleVal = Math.min((svgW - padding * 2) / currentW, 350 / (totalH_val || 1));
+        }
+
+        const W = svgW;
+        const H = drawH * scaleVal + padding * 2;
+        // 中央寄せ計算
+        const offsetX = (W - currentW * scaleVal) / 2;
+        const getX = (pos) => offsetX + (pos - startPos) * scaleVal;
+
+        const floorYMap_Bot = {};
+        const groundY = H - padding;
+        let accH = 0;
+        const sortedMap = [...floorDataMap].reverse(); 
+        sortedMap.forEach(fm => {
+            floorYMap_Bot[fm.floor] = groundY - (accH * scaleVal);
+            accH += fm.floorHeight;
+        });
+
+        let svg = `<svg width="100%" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="background:#fff; font-family: sans-serif;">`;
+        
+        sortedMap.forEach(fm => {
+            const y = floorYMap_Bot[fm.floor];
+            svg += `<line x1="${padding/2}" y1="${y}" x2="${W-padding/2}" y2="${y}" stroke="#ccc" stroke-width="1" />`;
+            svg += `<text x="5" y="${y+4}" font-size="12" fill="#666">${fm.floor}${fm.floor==='1F'?'/GL':''}</text>`;
+        });
+        
+        if (floorDataMap.length > 0) {
+            const topFloorY = groundY - (accH * scaleVal);
+            svg += `<line x1="${padding/2}" y1="${topFloorY}" x2="${W-padding/2}" y2="${topFloorY}" stroke="#ccc" stroke-width="1" />`;
+            svg += `<text x="5" y="${topFloorY+4}" font-size="12" fill="#666">R/屋根</text>`;
+        }
+        svg += `<line x1="${padding/2}" y1="${groundY}" x2="${W-padding/2}" y2="${groundY}" stroke="#333" stroke-width="2" />`;
+
+        floorDataMap.forEach(fm => {
+            const yBot = floorYMap_Bot[fm.floor];
+            const yTop = yBot - fm.floorHeight * scaleVal;
+
+            fm.walls.forEach(w => {
+                const x1 = getX(getPos(w.p1)), x2 = getX(getPos(w.p2));
+                const xL = Math.min(x1, x2), xR = Math.max(x1, x2), width = xR - xL;
+                const tv = window.WallEngine.getTotalMultiplier(w);
+                const fill = tv > 0 ? "rgba(91,138,254,0.08)" : "none";
+                const stroke = tv > 0 ? "#5b8afe" : "#999";
+                
+                svg += `<rect x="${xL}" y="${yTop}" width="${width}" height="${yBot - yTop}" fill="${fill}" stroke="${stroke}" stroke-width="1.5" />`;
+                if (tv > 0) {
+                    svg += `<line x1="${xL}" y1="${yTop}" x2="${xR}" y2="${yBot}" stroke="${stroke}" stroke-width="0.5" opacity="0.5" />`;
+                    svg += `<line x1="${xR}" y1="${yTop}" x2="${xL}" y2="${yBot}" stroke="${stroke}" stroke-width="0.5" opacity="0.5" />`;
+                    
+                    const wallL = Math.abs(getPos(w.p1) - getPos(w.p2)) / 1000;
+                    const wallH = fm.floorHeight / 1000;
+                    const Pa = tv * 1.96 * wallL; // kN
+                    const wallN = tv * 1.96 * wallH; // kN
+                    
+                    svg += `<text x="${(xL+xR)/2}" y="${(yTop+yBot)/2 - 12}" font-size="9" fill="#2c3e50" font-weight="bold" text-anchor="middle">
+                                <tspan x="${(xL+xR)/2}" dy="0">α = ${tv.toFixed(2)}</tspan>
+                                <tspan x="${(xL+xR)/2}" dy="11">Pa = ${Pa.toFixed(2)} kN</tspan>
+                                <tspan x="${(xL+xR)/2}" dy="11">N = ${wallN.toFixed(2)} kN</tspan>
+                            </text>`;
+                }
+            });
+
+            const axisPosSet = new Set();
+            fm.walls.forEach(w => { axisPosSet.add(getPos(w.p1)); axisPosSet.add(getPos(w.p2)); });
+            fm.columns.forEach(p => { axisPosSet.add(getPos(p)); });
+
+            Array.from(axisPosSet).sort((a,b)=>a-b).forEach((pPos, pIdx) => {
+                const x = getX(pPos);
+                svg += `<line x1="${x}" y1="${yTop}" x2="${x}" y2="${yBot}" stroke="#666" stroke-width="1" stroke-dasharray="2,2" />`;
+                
+                const col = fm.columns.find(c => Math.abs(getPos(c) - pPos) < 5);
+                if (col && col.nValue !== undefined) {
+                    const nVal = col.nValue || 0;
+                    const nValN = nVal * 1000;
+                    const color = nValN > 0 ? '#e74c3c' : '#3498db';
+                    const anchor = (loadDirection === 'left') ? 'end' : 'start';
+                    const dxOffset = (loadDirection === 'left') ? -5 : 5;
+                    const offY = (pIdx % 2 === 0) ? 12 : 24;
+                    svg += `<text x="${x + dxOffset}" y="${yTop + offY}" font-size="9" fill="${color}" font-weight="bold" text-anchor="${anchor}">Ni:${nValN.toFixed(0)} N</text>`;
+                }
+
+                // Get pre-calculated cumulative Sigma N for the current axis from AxialEngine
+                let cumulativeN = 0;
+                const lookupCol = col || s.pillars.find(p => {
+                    if (p.isDeleted) return false;
+                    if (Math.abs(getPos(p) - pPos) >= 5) return false;
+                    const nm = window.GridEngine.getPillarName(p, s);
+                    return nm && nm.includes(axisName);
+                });
+                if (lookupCol) {
+                    const dict = (fm.floor === '2F') ? lookupCol.axisSeismicAxial2F : lookupCol.axisSeismicAxial;
+                    if (dict && dict[axisName] !== undefined) {
+                        cumulativeN = dict[axisName];
+                        if (loadDirection === 'right') {
+                            cumulativeN = -cumulativeN;
+                        }
+                    }
+                }
+
+                if (cumulativeN !== 0) {
+                    const cumColor = cumulativeN > 0 ? '#e74c3c' : '#3498db';
+                    const cumAnchor = (loadDirection === 'left') ? 'start' : 'end';
+                    const cumDxOffset = (loadDirection === 'left') ? 5 : -5;
+                    const cumSignStr = cumulativeN > 0 ? '+' : '';
+                    svg += `<text x="${x + cumDxOffset}" y="${yBot - 4}" font-size="9" fill="${cumColor}" font-weight="bold" text-anchor="${cumAnchor}">ΣN:${cumSignStr}${cumulativeN.toFixed(0)} N</text>`;
+                }
+
+                const colName = col ? window.GridEngine.getPillarName(col, s) : '';
+                if (colName) {
+                    let shortPName = colName;
+                    if (shortPName.includes(axisName)) {
+                        shortPName = shortPName.replace(axisName, '');
+                    }
+                    svg += `<text x="${x}" y="${yBot + 14}" font-size="9" fill="#333" font-weight="bold" text-anchor="middle">${shortPName}</text>`;
+                }
+            });
+        });
+
+        svg += `</svg>`;
+        return svg;
+    },
+
+    /**
+     * 軸力算出表のHTMLを生成する
+     */
+    generateAxialTableHtml: function(axisName, loadDirection = 'left', state) {
+        const s = state || window.AppState;
+        const M = window.MathUtils;
+        
+        // データの収集
+        const pillarPositions = new Set();
+        
+        ['2F', '1F'].forEach(f => {
+            const wallsOnAxis = s.walls.filter(w => {
+                if (w.floor !== f) return false;
+                const n1 = window.GridEngine.getPillarName(w.p1, s);
+                const n2 = window.GridEngine.getPillarName(w.p2, s);
+                return (n1 && (n1.startsWith(axisName) || n1.endsWith(axisName))) && 
+                       (n2 && (n2.startsWith(axisName) || n2.endsWith(axisName)));
+            });
+            const pillarsOnAxis = s.pillars.filter(p => {
+                if (p.floor !== f && p.floor !== 'ALL') return false;
+                if (p.isDeleted) return false;
+                const nm = window.GridEngine.getPillarName(p, s);
+                return nm && (nm.startsWith(axisName) || nm.endsWith(axisName));
+            });
+            
+            wallsOnAxis.forEach(w => {
+                pillarPositions.add(w.p1.x + ',' + w.p1.y);
+                pillarPositions.add(w.p2.x + ',' + w.p2.y);
+            });
+            pillarsOnAxis.forEach(p => {
+                pillarPositions.add(p.x + ',' + p.y);
+            });
+        });
+
+        // 通り上のユニークな座標をソート
+        const sortedPositions = Array.from(pillarPositions).map(str => {
+            const [x, y] = str.split(',').map(Number);
+            return { x, y, name: window.GridEngine.getPillarName({ x, y }, s) };
+        }).sort((a, b) => (a.x !== b.x ? a.x - b.x : a.y - b.y));
+
+        let html = `<div style="margin-top:20px; overflow-x:auto; overflow-y:auto; max-height:450px; border:1px solid #ddd; border-radius:8px; box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+            <table style="width:100%; border-collapse:collapse; font-size:10px; border:1px solid #ddd; font-family:sans-serif;">
+                <thead>
+                    <tr style="background:#f8f9fa; border-bottom:2px solid #cbd5e1;">
+                        <th rowspan="2" style="border:1px solid #ddd; padding:4px; text-align:center;">通り芯符号</th>
+                        <th rowspan="2" style="border:1px solid #ddd; padding:4px; text-align:center;">階</th>
+                        <th colspan="2" style="border:1px solid #ddd; padding:4px; text-align:center; background:#f1f5f9; font-weight:bold; color:#334155;">共通仕様</th>
+                        <th colspan="2" style="border:1px solid #ddd; padding:4px; text-align:center; background:#ebf5fb; font-weight:bold; color:#1e3a8a;">左加力 (左←右)</th>
+                        <th colspan="2" style="border:1px solid #ddd; padding:4px; text-align:center; background:#fdf2e9; font-weight:bold; color:#7c2d12;">右加力 (左→右)</th>
+                    </tr>
+                    <tr style="background:#f8f9fa; border-bottom:1px solid #cbd5e1;">
+                        <th style="border:1px solid #ddd; padding:4px; text-align:center; background:#f8fafc;">α (倍率)</th>
+                        <th style="border:1px solid #ddd; padding:4px; text-align:center; background:#f8fafc;">P (地震力 N)</th>
+                        <th style="border:1px solid #ddd; padding:4px; text-align:center; background:#f0f7ff;">N (付加 N)</th>
+                        <th style="border:1px solid #ddd; padding:4px; text-align:center; background:#f0f7ff;">ΣN (累積 N)</th>
+                        <th style="border:1px solid #ddd; padding:4px; text-align:center; background:#fffaf0;">N (付加 N)</th>
+                        <th style="border:1px solid #ddd; padding:4px; text-align:center; background:#fffaf0;">ΣN (累積 N)</th>
+                    </tr>
+                </thead>
+                <tbody>`;
+
+        sortedPositions.forEach(pos => {
+            const floors = ['2F', '1F'];
+            let cumulativeN_Left = 0;
+            let cumulativeN_Right = 0;
+            
+            // 通り芯符号の整形 (X1通り表示時は Y1 のみ表示)
+            let shortName = pos.name || '';
+            if (shortName.includes(axisName)) {
+                shortName = shortName.replace(axisName, '');
+            }
+
+            // 個別階高(manualH)の表示用チェック
+            let hInfo = "";
+            const pillarForDisplay = s.pillars.find(p => (p.floor === '2F' || p.floor === 'ALL') && Math.hypot(p.x - pos.x, p.y - pos.y) < 5);
+            if (pillarForDisplay && pillarForDisplay.manualH) {
+                hInfo = ` <span style="font-size:9px; color:#666;">(H=${(pillarForDisplay.manualH * 1000).toFixed(0)})</span>`;
+            }
+
+            floors.forEach(f => {
+                // 個別階高(manualH)を考慮した計算用階高
+                const pForH = s.pillars.find(p => p.floor === f && Math.hypot(p.x - pos.x, p.y - pos.y) < 5);
+                const h = (pForH && pForH.manualH) ? pForH.manualH : (f === '2F' ? s.config.floorHeight2F : s.config.floorHeight1F);
+
+                // この位置に接続されている壁を特定
+                const connectedWalls = s.walls.filter(w => {
+                    if (w.floor !== f) return false;
+                    const onPos = (Math.hypot(w.p1.x - pos.x, w.p1.y - pos.y) < 5 || Math.hypot(w.p2.x - pos.x, w.p2.y - pos.y) < 5);
+                    if (!onPos) return false;
+                    const n1 = window.GridEngine.getPillarName(w.p1, s);
+                    const n2 = window.GridEngine.getPillarName(w.p2, s);
+                    return (n1 && (n1.startsWith(axisName) || n1.endsWith(axisName))) && 
+                           (n2 && (n2.startsWith(axisName) || n2.endsWith(axisName)));
+                });
+
+                let totalAlpha = 0;
+                let totalP_N = 0;
+                let totalN_N_Left = 0;
+                let totalN_N_Right = 0;
+
+                connectedWalls.forEach(w => {
+                    const alpha = window.WallEngine.getTotalMultiplier(w);
+                    if (alpha <= 0) return;
+                    
+                    const dx = w.p2.x - w.p1.x;
+                    const dy = w.p2.y - w.p1.y;
+                    const L = Math.sqrt(dx*dx + dy*dy) / 1000;
+                    const P_kN = alpha * 1.96 * L;
+                    const N_kN = alpha * 1.96 * h; // Magnitude
+                    
+                    // 正負の判定
+                    const isXAxis = Math.abs(dx) > Math.abs(dy);
+                    const p1Coord = isXAxis ? w.p1.x : w.p1.y;
+                    const p2Coord = isXAxis ? w.p2.x : w.p2.y;
+                    const currentCoord = isXAxis ? pos.x : pos.y;
+                    
+                    const isLeftEnd = (Math.abs(currentCoord - Math.min(p1Coord, p2Coord)) < 5);
+                    const signLeft = isLeftEnd ? 1 : -1;
+                    const signRight = -signLeft;
+                    
+                    totalAlpha += alpha;
+                    totalP_N += P_kN * 1000;
+                    totalN_N_Left += (N_kN * signLeft * 1000);
+                    totalN_N_Right += (N_kN * signRight * 1000);
+                });
+
+                // Override cumulativeN with exact pre-calculated value from AxialEngine to guarantee perfect synchronization
+                const tblCol = s.pillars.find(p => {
+                    if (p.isDeleted) return false;
+                    if (p.floor !== f && p.floor !== 'ALL') return false;
+                    if (Math.hypot(p.x - pos.x, p.y - pos.y) >= 5) return false;
+                    const nm = window.GridEngine.getPillarName(p, s);
+                    return nm && nm.includes(axisName);
+                });
+                if (tblCol) {
+                    const dict = (f === '2F') ? tblCol.axisSeismicAxial2F : tblCol.axisSeismicAxial;
+                    if (dict && dict[axisName] !== undefined) {
+                        cumulativeN_Left = dict[axisName];
+                        cumulativeN_Right = -cumulativeN_Left;
+                    }
+                } else {
+                    cumulativeN_Left += totalN_N_Left;
+                    cumulativeN_Right += totalN_N_Right;
+                }
+
+                const sigNStr_Left = cumulativeN_Left !== 0 ? (cumulativeN_Left > 0 ? '+' : '') + cumulativeN_Left.toFixed(0) : '-';
+                const totalNStr_Left = totalN_N_Left !== 0 ? (totalN_N_Left > 0 ? '+' : '') + totalN_N_Left.toFixed(0) : '-';
+
+                const sigNStr_Right = cumulativeN_Right !== 0 ? (cumulativeN_Right > 0 ? '+' : '') + cumulativeN_Right.toFixed(0) : '-';
+                const totalNStr_Right = totalN_N_Right !== 0 ? (totalN_N_Right > 0 ? '+' : '') + totalN_N_Right.toFixed(0) : '-';
+
+                html += `<tr style="border-bottom:1px solid #e2e8f0;">
+                    <td style="border:1px solid #ddd; padding:4px; text-align:center; font-weight:bold;">${(f === '2F') ? (shortName + hInfo) : ''}</td>
+                    <td style="border:1px solid #ddd; padding:4px; text-align:center; background:#f8f9fa;">${f}</td>
+                    
+                    <!-- Common -->
+                    <td style="border:1px solid #ddd; padding:4px; text-align:right;">${totalAlpha > 0 ? totalAlpha.toFixed(2) : '-'}</td>
+                    <td style="border:1px solid #ddd; padding:4px; text-align:right;">${totalP_N > 0 ? totalP_N.toFixed(0) : '-'}</td>
+                    
+                    <!-- Leftward -->
+                    <td style="border:1px solid #ddd; padding:4px; text-align:right; color:${totalN_N_Left > 0 ? '#e74c3c' : (totalN_N_Left < 0 ? '#3498db' : '#000')}">${totalNStr_Left}</td>
+                    <td style="border:1px solid #ddd; padding:4px; text-align:right; font-weight:bold; color:${cumulativeN_Left > 0 ? '#e74c3c' : (cumulativeN_Left < 0 ? '#3498db' : '#000')}">${sigNStr_Left}</td>
+                    
+                    <!-- Rightward -->
+                    <td style="border:1px solid #ddd; padding:4px; text-align:right; color:${totalN_N_Right > 0 ? '#e74c3c' : (totalN_N_Right < 0 ? '#3498db' : '#000')}">${totalNStr_Right}</td>
+                    <td style="border:1px solid #ddd; padding:4px; text-align:right; font-weight:bold; color:${cumulativeN_Right > 0 ? '#e74c3c' : (cumulativeN_Right < 0 ? '#3498db' : '#000')}">${sigNStr_Right}</td>
+                </tr>`;
+            });
+        });
+
+        html += `</tbody></table></div>`;
+        return html;
+    }
+};

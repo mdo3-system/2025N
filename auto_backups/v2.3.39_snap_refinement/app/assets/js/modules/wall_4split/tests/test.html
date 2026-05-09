@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>v2.1.0 Automated Test Dashboard</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f8f9fa; color: #333; padding: 20px; }
+        h1 { color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px; }
+        .result-item { padding: 10px; margin-bottom: 5px; border-radius: 4px; border-left: 5px solid #ccc; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .pass { border-left-color: #2ecc71; color: #27ae60; }
+        .fail { border-left-color: #e74c3c; color: #c0392b; }
+        .suite-name { font-weight: bold; font-size: 0.9em; color: #7f8c8d; margin-top: 15px; }
+        .summary { margin-top: 20px; padding: 15px; background: #2c3e50; color: #fff; border-radius: 6px; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h1>🧪 v2.1.0 Automated Testing</h1>
+    <div id="test-results">Running tests...</div>
+    <div id="test-summary" class="summary" style="display:none;"></div>
+
+    <!-- Load Application Logic -->
+    <script src="../logic/MathUtils.js"></script>
+    <script src="../logic/WallEngine.js"></script>
+    <script src="../logic/StructuralEngine.js"></script>
+    
+    <!-- Load Test Infrastructure -->
+    <script src="TestRunner.js"></script>
+    
+    <!-- Load Test Cases -->
+    <script src="MathUtils.test.js"></script>
+    <script src="StructuralEngine.test.js"></script>
+
+    <script>
+        async function startTests() {
+            const results = await window.TestRunner.run();
+            const container = document.getElementById('test-results');
+            container.innerHTML = '';
+            
+            let passedCount = 0;
+            let currentSuite = '';
+
+            results.forEach(res => {
+                if (res.suite !== currentSuite) {
+                    currentSuite = res.suite;
+                    const suiteEl = document.createElement('div');
+                    suiteEl.className = 'suite-name';
+                    suiteEl.textContent = `--- Suite: ${currentSuite} ---`;
+                    container.appendChild(suiteEl);
+                }
+
+                const el = document.createElement('div');
+                el.className = `result-item ${res.status}`;
+                el.innerHTML = `[${res.status.toUpperCase()}] ${res.name} ${res.status === 'fail' ? '<br><small>' + res.error + '</small>' : ''}`;
+                container.appendChild(el);
+                if (res.status === 'pass') passedCount++;
+            });
+
+            const summaryEl = document.getElementById('test-summary');
+            summaryEl.style.display = 'block';
+            summaryEl.textContent = `Total: ${results.length} | Passed: ${passedCount} | Failed: ${results.length - passedCount}`;
+            summaryEl.style.background = (passedCount === results.length) ? '#27ae60' : '#c0392b';
+        }
+        
+        window.onload = startTests;
+    </script>
+</body>
+</html>

@@ -1,0 +1,1375 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>上善如水 - 壁量計算WEB (Ver 2.3.29)</title>
+    <script src="https://cdn.jsdelivr.net/npm/dxf-parser@1.1.2/dist/dxf-parser.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/encoding-japanese/2.0.0/encoding.min.js"></script>
+    <link rel="icon" href="../../favicon.ico">
+    <style>
+        body {
+            margin: 0;
+            font-family: "Segoe UI", "Meiryo", sans-serif;
+            display: flex;
+            height: 100vh;
+            background-color: #f5f5f5;
+            color: #333;
+            overflow: hidden;
+        }
+
+        #left-panel {
+            width: 460px;
+            background-color: #ffffff;
+            border-right: 1px solid #ccc;
+            padding: 15px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #center-panel {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            background-color: #e8e8e8;
+        }
+
+        #right-panel {
+            width: 360px;
+            background-color: #ffffff;
+            border-left: 1px solid #ccc;
+            padding: 15px;
+            overflow-y: auto;
+        }
+
+        h2 {
+            font-size: 15px;
+            border-bottom: 2px solid #0056b3;
+            padding-bottom: 5px;
+            margin-top: 0;
+            color: #0056b3;
+        }
+
+        .canvas-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 20px;
+            background: #fff;
+            border-bottom: 1px solid #ccc;
+        }
+
+        .tab-btn {
+            padding: 8px 15px;
+            font-size: 13px;
+            font-weight: bold;
+            cursor: pointer;
+            border: 1px solid #ccc;
+            background: #f0f0f0;
+            border-radius: 4px;
+            margin-right: 5px;
+            outline: none;
+            transition: 0.2s;
+        }
+
+        .tab-btn.active {
+            background: #0056b3;
+            color: white;
+            border-color: #0056b3;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+
+        .action-btn {
+            background: #e67e22;
+            color: white;
+            padding: 5px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: bold;
+            border: none;
+            display: inline-block;
+            text-align: center;
+        }
+
+        .action-btn.save {
+            background: #27ae60;
+        }
+
+        .action-btn.load {
+            background: #8e44ad;
+        }
+
+        .btn-undo {
+            background-color: #6c757d;
+            color: white;
+            border: none;
+            cursor: pointer;
+            padding: 5px 12px;
+            font-size: 12px;
+            font-weight: bold;
+            border-radius: 4px;
+        }
+
+        .btn-table {
+            background-color: #17a2b8;
+            color: white;
+            border: none;
+            cursor: pointer;
+            padding: 8px;
+            font-size: 12px;
+            font-weight: bold;
+            border-radius: 4px;
+            width: 100%;
+            margin-bottom: 10px;
+        }
+
+        .btn-table.doc {
+            background-color: #2c3e50;
+            font-size: 14px;
+            padding: 12px;
+        }
+
+        .btn-table.csv {
+            background-color: #16a085;
+        }
+
+        .btn-table.calc {
+            background-color: #8e44ad;
+        }
+
+        .btn-add-item {
+            background-color: #fff;
+            color: #0056b3;
+            border: 1px dashed #0056b3;
+            cursor: pointer;
+            padding: 5px;
+            font-size: 11px;
+            font-weight: bold;
+            border-radius: 4px;
+            width: 100%;
+            margin-bottom: 10px;
+            transition: 0.2s;
+        }
+
+        .btn-add-item:hover {
+            background-color: #e8f4f8;
+        }
+
+        #cad-container {
+            flex-grow: 1;
+            position: relative;
+            background-color: #1e1e1e;
+            overflow: hidden;
+        }
+
+        #cad-canvas {
+            display: block;
+            cursor: crosshair;
+        }
+
+        label {
+            font-size: 11px;
+            display: block;
+            margin-bottom: 2px;
+            color: #555;
+            font-weight: bold;
+        }
+
+        select,
+        input[type="number"],
+        input[type="text"] {
+            width: 100%;
+            padding: 5px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 12px;
+            box-sizing: border-box;
+        }
+
+        details {
+            background: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-bottom: 15px;
+        }
+
+        summary {
+            font-weight: bold;
+            font-size: 13px;
+            padding: 10px;
+            cursor: pointer;
+            background: #e8f4f8;
+            outline: none;
+            border-radius: 4px;
+            color: #0056b3;
+        }
+
+        .calc-content {
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .calc-row-flex {
+            display: flex;
+            gap: 10px;
+        }
+
+        .calc-col {
+            flex: 1;
+        }
+
+        .calc-box {
+            background: #fff;
+            border: 1px solid #ccc;
+            padding: 6px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+        }
+
+        .calc-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 3px;
+        }
+
+        .calc-row input,
+        .calc-row select {
+            width: 55px;
+            text-align: right;
+            margin-bottom: 0;
+            padding: 2px;
+            font-size: 11px;
+        }
+
+        /* 統合モーダル用スタイル */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            z-index: 10000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .prop-edit-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .prop-edit-row label {
+            font-size: 13px;
+            font-weight: bold;
+            color: #444;
+        }
+
+        .prop-edit-row input, .prop-edit-row select {
+            width: 180px !important;
+            margin-bottom: 0 !important;
+        }
+
+        .floor-title {
+            font-size: 12px;
+            font-weight: bold;
+            background: #555;
+            color: white;
+            padding: 3px 5px;
+            margin-bottom: 5px;
+            border-radius: 2px;
+        }
+
+        .report-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 11px;
+            text-align: center;
+            margin-bottom: 15px;
+            background: #fff;
+        }
+
+        .report-table th,
+        .report-table td {
+            border: 1px solid #aaa;
+            padding: 4px 2px;
+        }
+
+        .report-table th {
+            background: #d9edf7;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .report-table td.bg-ok {
+            background: #d4edda;
+            color: #155724;
+            font-weight: bold;
+        }
+
+        .report-table td.bg-ng {
+            background: #f8d7da;
+            color: #721c24;
+            font-weight: bold;
+        }
+
+        .mode-selector {
+            background: #eef5f9;
+            padding: 10px;
+            border: 1px solid #bce8f1;
+            border-radius: 4px;
+            margin-bottom: 15px;
+        }
+
+        .mode-selector label {
+            display: inline-block;
+            margin-right: 10px;
+            margin-bottom: 5px;
+            font-size: 12px;
+            cursor: pointer;
+            color: #333;
+        }
+
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: flex-start;
+            justify-content: center;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        .modal-content {
+            background: #fff;
+            border-radius: 8px;
+            width: 95vw;
+            max-width: 1400px;
+            padding: 30px;
+            position: relative;
+            margin: auto;
+        }
+
+        .close-btn {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 8px 20px;
+            cursor: pointer;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+
+        .doc-header {
+            text-align: left;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #333;
+            padding-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .doc-info-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+            font-size: 12px;
+        }
+
+        .doc-info-table th {
+            border: 1px solid #333;
+            padding: 5px;
+            background: #eee;
+            width: 15%;
+            text-align: right;
+        }
+
+        .doc-info-table td {
+            border: 1px solid #333;
+            padding: 5px;
+            width: 35%;
+            text-align: left;
+        }
+
+        .doc-section {
+            margin-bottom: 25px;
+            page-break-inside: avoid;
+            break-inside: avoid;
+        }
+
+        .doc-section h3 {
+            margin: 0 0 10px 0;
+            color: #e67e22;
+            font-size: 14px;
+            border-left: 4px solid #e67e22;
+            padding-left: 5px;
+        }
+
+        .img-preview-box {
+            flex: 1;
+            min-width: 300px;
+            padding: 10px;
+            background: #fdfdfd;
+            border: 1px solid #ddd;
+            text-align: center;
+        }
+
+        .img-preview-box img {
+            max-width: 100%;
+            height: auto;
+            border: 1px solid #ccc;
+            background: #fff;
+        }
+
+        #modal-doc .modal-content {
+            display: flex;
+            flex-direction: column;
+            padding: 0;
+            max-height: 95vh;
+            overflow: hidden;
+        }
+
+        #doc-scroll-area {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 30px;
+            background: #fff;
+        }
+
+        .sticky-nav {
+            flex-shrink: 0;
+            background: #f8f9fa;
+            padding: 12px 20px;
+            border-bottom: 2px solid #ccc;
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            align-items: center;
+            flex-wrap: wrap;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .sticky-nav button.jump-btn {
+            padding: 8px 12px;
+            font-size: 13px;
+            cursor: pointer;
+            border: 1px solid #0056b3;
+            background: #fff;
+            color: #0056b3;
+            border-radius: 4px;
+            font-weight: bold;
+            transition: 0.2s;
+        }
+
+        .sticky-nav button.jump-btn:hover {
+            background: #0056b3;
+            color: #fff;
+        }
+
+        .sticky-nav button.print-btn {
+            padding: 8px 20px;
+            font-size: 13px;
+            cursor: pointer;
+            border: 1px solid #27ae60;
+            background: #27ae60;
+            color: #fff;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+
+        .sticky-nav button.close-btn-nav {
+            padding: 8px 20px;
+            font-size: 13px;
+            cursor: pointer;
+            border: 1px solid #dc3545;
+            background: #dc3545;
+            color: #fff;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+
+        @media print {
+            /* 不要要素の非表示 (UIパーツ) */
+            header, footer, .panel-left, .panel-right, .canvas-header, .no-print, 
+            .sticky-nav, .btn-undo, .btn-table, .action-btn, details, #left-panel, #right-panel {
+                display: none !important;
+            }
+
+            /* ブラウザ拡張（Monica等）の強制非表示 */
+            [id*="ai-chat"], [class*="ai-chat"], [id*="monica"], [class*="monica"],
+            div[style*="fixed"], div[style*="absolute"]:not(#modal-doc *) { 
+                display: none !important; opacity: 0 !important; 
+            }
+
+            @page {
+                size: A4 portrait;
+                margin: 15mm;
+            }
+
+            body {
+                display: block !important;
+                height: auto !important;
+                overflow: visible !important;
+                background-color: #fff !important;
+                color: #000 !important;
+            }
+
+            body > :not(#modal-doc) {
+                display: none !important;
+            }
+
+            #modal-doc {
+                position: static !important;
+                display: block !important;
+                width: 100% !important;
+                height: auto !important;
+                background: none !important;
+                overflow: visible !important;
+                padding: 0 !important;
+                margin: 0 !important;
+            }
+
+            #modal-doc .modal-content {
+                display: block !important;
+                overflow: visible !important;
+                max-height: none !important;
+                width: 100% !important;
+                padding: 0 !important;
+                border: none !important;
+                box-shadow: none !important;
+            }
+
+            #doc-scroll-area {
+                padding: 0 !important;
+                overflow: visible !important;
+                height: auto !important;
+                max-height: none !important;
+            }
+
+            /* 改ページ制御の強化 */
+            .page-break {
+                page-break-before: always !important;
+                height: 0;
+                margin: 0;
+            }
+
+            .doc-section, .keep-together, .page-break-avoid {
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+                display: block !important;
+                margin-bottom: 30px;
+                clear: both;
+            }
+
+            table {
+                width: 100% !important;
+                border-collapse: collapse !important;
+                break-inside: auto !important;
+                margin-bottom: 20px;
+            }
+
+            tr {
+                break-inside: avoid !important;
+                page-break-inside: avoid !important;
+            }
+
+            th, td {
+                border: 1px solid #000 !important;
+                color: #000 !important;
+            }
+
+            /* 画像・SVGのはみ出し防止 */
+            img, svg {
+                max-width: 100% !important;
+                height: auto !important;
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+                display: block;
+                margin: 10px auto;
+            }
+
+            h1, h2, h3, h4 {
+                color: #000 !important;
+                page-break-after: avoid !important;
+                break-after: avoid !important;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="modal-center" class="modal-overlay">
+        <div class="modal-content" style="max-width:700px;">
+            <div class="doc-header">
+                <h2 style="margin:0; color:#0056b3;">🧲 重心・剛心 算出根拠</h2><button class="close-btn btn-close-modal">✖
+                    閉じる</button>
+            </div>
+            <div id="scroll-area-center" style="padding:0; overflow-y:auto; max-height:80vh;">
+                <div id="center-calc-container"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-ratio" class="modal-overlay">
+        <div class="modal-content" style="max-width:600px;">
+            <div class="doc-header">
+                <h2 style="margin:0; color:#d35400;">📐 直下率チェック (設計補助)</h2>
+                <button class="close-btn btn-close-modal">✖ 閉じる</button>
+            </div>
+            <div id="scroll-area-ratio" style="padding:0; overflow-y:auto; max-height:75vh;">
+                <div
+                    style="font-size:12px; color:#555; margin-bottom:15px; background:#fff3cd; padding:8px; border:1px solid #ffeeba; border-radius:4px;">
+                    ※この機能は設計のバランスを確認するための補助ツールであり、確認申請等の審査対象ではありません。
+                </div>
+                <div id="ratio-container"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-area-input" class="modal-overlay" style="z-index: 2000;">
+        <div class="modal-content" style="max-width:400px; padding:20px;">
+            <h2 style="margin-top:0; color:#d35400;">⚠️ 計算用 面積データの初期設定</h2>
+            <div style="font-size:12px; color:#555; margin-bottom:15px;">
+                DXFの読み込みが完了しました。壁量・N値計算を行うために、以下の面積データ（図面から拾った正確な値）を入力してください。<br>
+                <b style="color:#d35400;">※床面積および4分割側端面積は、作図データ（床面積ポリゴン）から自動計算・セットされます。（必要に応じて手動修正も可能です）</b>
+            </div>
+            <div style="display:flex; gap:15px; margin-bottom:15px;">
+                <div style="flex:1;">
+                    <div class="floor-title" style="background:#2ecc71;">1階</div>
+                    <table style="width:100%;font-size:12px;border-collapse:collapse;margin-bottom:10px;">
+                        <tr>
+                            <td style="padding:3px 5px;color:#555;">床面積(㎡)</td>
+                            <td><input type="number" id="aim-a-f1" step="0.01" style="width:80px;padding:3px;"></td>
+                        </tr>
+                        <tr>
+                            <td style="padding:3px 5px;color:#555;">小屋裏(㎡)</td>
+                            <td><input type="number" id="aim-a-attic1" step="0.01" style="width:80px;padding:3px;"></td>
+                        </tr>
+                        <tr>
+                            <td style="padding:3px 5px;color:#555;">バルコニー(㎡)</td>
+                            <td><input type="number" id="aim-a-balcony1" step="0.01" style="width:80px;padding:3px;"></td>
+                        </tr>
+                        <tr style="background:#e8f4f8; font-weight:bold;">
+                            <td style="padding:3px 5px;color:#2980b9;">【必須】X見付(㎡)</td>
+                            <td><input type="number" id="aim-a-wx1" step="0.01"
+                                    style="width:80px;padding:3px;border-color:#2980b9;"></td>
+                        </tr>
+                        <tr style="background:#e8f4f8; font-weight:bold;">
+                            <td style="padding:3px 5px;color:#2980b9;">【必須】Y見付(㎡)</td>
+                            <td><input type="number" id="aim-a-wy1" step="0.01"
+                                    style="width:80px;padding:3px;border-color:#2980b9;"></td>
+                        </tr>
+                        <tr>
+                            <td colspan="2" style="font-size:10px;font-weight:bold;color:#3498db;padding-top:5px;">■
+                                4分割側端部面積(㎡)</td>
+                        </tr>
+                        <tr>
+                            <td style="padding:3px 5px;color:#555;">X上(奥)</td>
+                            <td><input type="number" id="aim-e-x-t1" step="0.001" style="width:80px;padding:3px;"></td>
+                        </tr>
+                        <tr>
+                            <td style="padding:3px 5px;color:#555;">X下(前)</td>
+                            <td><input type="number" id="aim-e-x-b1" step="0.001" style="width:80px;padding:3px;"></td>
+                        </tr>
+                        <tr>
+                            <td style="padding:3px 5px;color:#555;">Y左</td>
+                            <td><input type="number" id="aim-e-y-l1" step="0.001" style="width:80px;padding:3px;"></td>
+                        </tr>
+                        <tr>
+                            <td style="padding:3px 5px;color:#555;">Y右</td>
+                            <td><input type="number" id="aim-e-y-r1" step="0.001" style="width:80px;padding:3px;"></td>
+                        </tr>
+                    </table>
+                </div>
+                <div style="flex:1;">
+                    <div class="floor-title" style="background:#f1c40f; color:#333;">2階</div>
+                    <table style="width:100%;font-size:12px;border-collapse:collapse;margin-bottom:10px;">
+                        <tr>
+                            <td style="padding:3px 5px;color:#555;">床面積(㎡)</td>
+                            <td><input type="number" id="aim-a-f2" step="0.01" style="width:80px;padding:3px;"></td>
+                        </tr>
+                        <tr>
+                            <td style="padding:3px 5px;color:#555;">小屋裏(㎡)</td>
+                            <td><input type="number" id="aim-a-attic2" step="0.01" style="width:80px;padding:3px;"></td>
+                        </tr>
+                        <tr>
+                            <td style="padding:3px 5px;color:#555;">バルコニー(㎡)</td>
+                            <td><input type="number" id="aim-a-balcony2" step="0.01" style="width:80px;padding:3px;"></td>
+                        </tr>
+                        <tr style="background:#e8f4f8; font-weight:bold;">
+                            <td style="padding:3px 5px;color:#2980b9;">【必須】X見付(㎡)</td>
+                            <td><input type="number" id="aim-a-wx2" step="0.01"
+                                    style="width:80px;padding:3px;border-color:#2980b9;"></td>
+                        </tr>
+                        <tr style="background:#e8f4f8; font-weight:bold;">
+                            <td style="padding:3px 5px;color:#2980b9;">【必須】Y見付(㎡)</td>
+                            <td><input type="number" id="aim-a-wy2" step="0.01"
+                                    style="width:80px;padding:3px;border-color:#2980b9;"></td>
+                        </tr>
+                        <tr>
+                            <td colspan="2" style="font-size:10px;font-weight:bold;color:#3498db;padding-top:5px;">■
+                                4分割側端部面積(㎡)</td>
+                        </tr>
+                        <tr>
+                            <td style="padding:3px 5px;color:#555;">X上(奥)</td>
+                            <td><input type="number" id="aim-e-x-t2" step="0.001" style="width:80px;padding:3px;"></td>
+                        </tr>
+                        <tr>
+                            <td style="padding:3px 5px;color:#555;">X下(前)</td>
+                            <td><input type="number" id="aim-e-x-b2" step="0.001" style="width:80px;padding:3px;"></td>
+                        </tr>
+                        <tr>
+                            <td style="padding:3px 5px;color:#555;">Y左</td>
+                            <td><input type="number" id="aim-e-y-l2" step="0.001" style="width:80px;padding:3px;"></td>
+                        </tr>
+                        <tr>
+                            <td style="padding:3px 5px;color:#555;">Y右</td>
+                            <td><input type="number" id="aim-e-y-r2" step="0.001" style="width:80px;padding:3px;"></td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+            <div style="text-align:right;display:flex;gap:10px;justify-content:flex-end;">
+                <button class="btn-close-modal"
+                    onclick="document.getElementById('modal-area-input').style.display='none';triggerUpdate();"
+                    style="background:#6c757d;color:white;border:none;padding:10px 20px;cursor:pointer;border-radius:4px;font-weight:bold;">スキップ</button>
+                <button onclick="applyAreaInputModal()"
+                    style="background:#27ae60;color:white;border:none;padding:10px 20px;cursor:pointer;border-radius:4px;font-weight:bold;">入力を反映して開始</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-area" class="modal-overlay">
+        <div class="modal-content"><button class="btn-close-modal"
+                style="position:absolute;top:10px;right:10px;font-size:20px;background:none;border:none;cursor:pointer;color:#333;z-index:100;">✕</button>
+            <h2 style="margin-top:0; color:#0056b3;">🖼️ 挿絵プレビュー (DXF読込結果)</h2>
+            <div id="scroll-area-prev" style="padding:0; overflow-y:auto; max-height:80vh;">
+                <div id="area-preview-container" style="display:flex; flex-wrap:wrap; gap:15px;"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-doc" class="modal-overlay" style="padding:0;">
+        <div class="modal-content" style="padding:0;">
+            <div id="doc-nav-container"></div>
+
+            <div id="doc-scroll-area">
+                <div class="doc-header">
+                    <h1 style="margin:0; font-size: 20px;">構造計算書 (壁量・4分割・N値・柱の小径等)</h1>
+                </div>
+                <table class="doc-info-table">
+                    <tr>
+                        <th>工事名</th>
+                        <td id="out-prj"></td>
+                        <th>作成日</th>
+                        <td id="out-date"></td>
+                    </tr>
+                    <tr>
+                        <th>事務所名</th>
+                        <td id="out-office"></td>
+                        <th>建築士番号</th>
+                        <td id="out-license"></td>
+                    </tr>
+                    <tr>
+                        <th>設計者名</th>
+                        <td id="out-name"></td>
+                        <th>システム</th>
+                        <td>上善如水 - 壁量計算WEB Ver 1.16</td>
+                    </tr>
+                </table>
+
+                <div id="doc-container"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="left-panel">
+        <h1
+            style="font-size:16px; margin:0 0 10px 0; color:#2c3e50; border-bottom:2px solid #2ecc71; padding-bottom:5px; display:flex; justify-content:space-between; align-items:center;">
+            <span>上善如水 <span style="font-size:12px; color:#7f8c8d;">壁量計算WEB <span id="app-version-title">v2.3.29</span></span></span>
+            <a href="assets/js/modules/wall_4split/tests/test.html" target="_blank" style="font-size:11px; color:#3498db; text-decoration:none;">🧪 自動テスト実行</a>
+        </h1>
+
+        <!-- [UI改修 基礎タブ移動] アプリモード切替タブは中央ヘッダーへ移動しました -->
+
+        <div style="display:flex; gap:5px; margin-bottom:15px;">
+            <a href="../../manual/index.html" target="_blank" style="flex:1; background:#3498db; color:white; text-decoration:none; padding:8px 5px; border-radius:4px; font-size:12px; font-weight:bold; text-align:center; box-sizing:border-box;">📖 マニュアル・動画</a>
+            
+            <a href="../../portal" style="flex:1; background:#95a5a6; color:white; text-decoration:none; padding:8px 5px; border-radius:4px; font-size:12px; font-weight:bold; text-align:center; box-sizing:border-box;">⚙️ 契約管理・解約</a>
+        </div>
+
+
+        <!-- [基礎計算追加 Phase1] 壁量モード専用パネル開始 -->
+        <div id="wall-mode-panel">
+            <h2 style="margin-bottom: 10px;">📊 出力 ＆ サマリー</h2>
+        <div style="display:flex; gap:5px; flex-wrap:wrap; margin-bottom:10px;">
+            <button class="btn-table doc" style="flex:100%;" id="btn-gen-doc">📑 計算書を一括出力 (PDF)</button>
+            <button class="btn-table calc" style="flex:100%; background-color:#e67e22;" id="btn-show-ratio">📐 直下率チェック (設計補助)</button>
+            <button class="btn-table calc" style="flex:1;" id="btn-show-area">🖼️ 挿絵プレビュー</button>
+            <button class="btn-table calc" style="flex:1; background:#2980b9; color:#fff;" id="btn-elevation-viewer-left">📊 耐力壁の軸力図 (立面)</button>
+            <button class="btn-table calc" style="flex:1;" id="btn-show-center">🧲 重心剛心</button>
+            <button class="btn-table csv" style="flex:1;" id="btn-export-csv">📥 CSV保存</button>
+        </div>
+
+        <h2>⚙️ 計算モード</h2>
+        <div style="padding: 10px; background: #fff3cd; border: 1px solid #ffeeba; border-radius: 4px; margin-bottom: 15px;">
+            <label style="font-weight: bold; color: #d35400; font-size:12px; display:block; margin-bottom:5px;">面積算出・地震力判定モード:</label>
+            <select id="calc-mode-select" style="width:100%; padding:4px;" onchange="triggerUpdate()">
+                <option value="kijun">建築基準法 (見下げ面積)</option>
+                <option value="seinou">性能表示 (見上げ面積)</option>
+            </select>
+        </div>
+
+        <details open>
+            <summary>▼ 物件情報 ＆ 面積・係数の登録</summary>
+            <div class="calc-content">
+                <div class="calc-box" style="background:#fff3cd; border-color:#ffeeba;">
+                    <div style="font-size:11px; font-weight:bold; margin-bottom:5px; color:#d35400;">🏢 物件・設計者情報</div>
+                    <div class="calc-row"><label style="width:50px;">案件名</label><input type="text" id="info-prj"
+                            value="〇〇邸 新築工事" style="width:calc(100% - 60px); text-align:left;"></div>
+                    <div class="calc-row"><label style="width:50px;">事務所</label><input type="text" id="info-office"
+                            value="上善如水 建築設計" style="width:calc(100% - 60px); text-align:left;"></div>
+                    <div class="calc-row"><label style="width:50px;">建築士</label><input type="text" id="info-license"
+                            value="一級 第00000号" style="width:calc(100% - 60px); text-align:left;"></div>
+                    <div class="calc-row"><label style="width:50px;">設計者</label><input type="text" id="info-name"
+                            value="上善 如水" style="width:calc(100% - 60px); text-align:left;"></div>
+                </div>
+
+                <!-- [v2.3.24] 面積・4分割入力は右パネルへ集約されました -->
+            </div>
+        </details>
+
+        <div id="left-report-container"></div>
+        </div><!-- [基礎計算追加 Phase1] wall-mode-panel 終了 -->
+
+        <!-- [基礎計算追加 Phase1] 基礎計算モード専用パネル（初期は非表示） -->
+        <div id="foundation-mode-panel" style="display:none;">
+            <h2 style="color:#8e44ad;">&#127959; 基礎計算 プロパティ</h2>
+
+            <!-- [基礎計算追加] 基礎専用設定 -->
+            <div class="calc-box" style="background:#f4ecf7; border-color:#d2b4de; margin-bottom:12px;">
+                <div style="font-size:11px; font-weight:bold; margin-bottom:5px; color:#8e44ad;">⚙ 基礎計算 共通設定</div>
+                <div class="calc-row">
+                    <label style="width:100px;">スラブ割増(三角)</label>
+                    <input type="number" id="global-triangle-mult-sync" value="1.33" step="0.01" style="width:70px; text-align:right;" onchange="document.getElementById('global-triangle-mult').value = this.value; AppController.refreshAll();">
+                </div>
+            </div>
+
+            <!-- [基礎計算追加 Phase2] サブモード切替 -->
+            <div style="padding:10px; background:#4a235a; border-radius:6px; margin-bottom:12px;">
+                <div style="font-size:11px; font-weight:bold; color:#d7bde2; margin-bottom:8px;">🖊 作図サブモード</div>
+                <div style="display:flex; flex-direction:column; gap:5px;" id="fd-mode-selector">
+                    <label class="fd-mode-label" style="display:flex; align-items:center; gap:7px; cursor:pointer; font-size:12px; color:#ecf0f1; background:#4a235a; padding:6px 8px; border-radius:4px;">
+                        <input type="radio" name="f_mode" value="f_select" onchange="updateFdModeUI('f_select')">
+                        👆 選択
+                    </label>
+                    <label class="fd-mode-label" style="display:flex; align-items:center; gap:7px; cursor:pointer; font-size:12px; color:#ecf0f1; background:#6c3483; padding:6px 8px; border-radius:4px; font-weight:bold;">
+                        <input type="radio" name="f_mode" value="f_slab" checked onchange="updateFdModeUI('f_slab')">
+                        🟦 スラブを引く（多角形）
+                    </label>
+                    <label class="fd-mode-label" style="display:flex; align-items:center; gap:7px; cursor:pointer; font-size:12px; color:#ecf0f1; background:#4a235a; padding:6px 8px; border-radius:4px;">
+                        <input type="radio" name="f_mode" value="f_beam" onchange="updateFdModeUI('f_beam')">
+                        🏗 基礎梁を引く
+                    </label>
+                    <label class="fd-mode-label" style="display:flex; align-items:center; gap:7px; cursor:pointer; font-size:12px; color:#ecf0f1; background:#4a235a; padding:6px 8px; border-radius:4px;">
+                        <input type="radio" name="f_mode" value="f_ext_wall" onchange="updateFdModeUI('f_ext_wall')">
+                        🧱 外壁線を引く（多角形）
+                    </label>
+                    <label class="fd-mode-label" style="display:flex; align-items:center; gap:7px; cursor:pointer; font-size:12px; color:#ecf0f1; background:#4a235a; padding:6px 8px; border-radius:4px;">
+                        <input type="radio" name="f_mode" value="f_manhole" onchange="updateFdModeUI('f_manhole')">
+                        ⭕ 人通口を配置
+                    </label>
+                    <label class="fd-mode-label" style="display:flex; align-items:center; gap:7px; cursor:pointer; font-size:12px; color:#f1948a; background:#4a235a; padding:6px 8px; border-radius:4px; border:1px solid #e74c3c;">
+                        <input type="radio" name="f_mode" value="f_delete" onchange="updateFdModeUI('f_delete')">
+                        ❌ 削除（クリックした要素）
+                    </label>
+                </div>
+                <div style="font-size:10px; color:#a569bd; margin-top:8px; line-height:1.5;">
+                    💡 ヒント：<b>右クリック</b> or <b>Escキー</b>で作図中の操作をキャンセルできます。<br>
+                    基礎梁は「始点→終点」の2クリック。外壁線・スラブは頂点を次々にクリックし<b>始点に戻ってクリック</b>で確定。
+                </div>
+            </div>
+
+            <div style="padding:12px; background:#f5eef8; border:1px solid #d2b4de; border-radius:6px; margin-bottom:15px;">
+                <div style="font-size:12px; font-weight:bold; color:#8e44ad; margin-bottom:10px;">⚙️ 基礎計算 デフォルト設定</div>
+                <div class="calc-row"><label>梁幅 W(mm)</label><input type="number" id="fd-beam-width" value="150" step="5" min="120"></div>
+                <div class="calc-row"><label>梁成 H(mm)</label><input type="number" id="fd-beam-height" value="640" step="10" min="350"></div>
+                <div class="calc-row"><label>根入深さ(mm)</label><input type="number" id="fd-embed-depth" value="240" step="10" min="120"></div>
+                <div class="calc-row"><label>上主筋</label><input type="text" id="fd-top-rebar" value="1-D13" style="text-align:left;"></div>
+                <div class="calc-row"><label>下主筋</label><input type="text" id="fd-bot-rebar" value="1-D13" style="text-align:left;"></div>
+                <div class="calc-row"><label>ST筋</label><input type="text" id="fd-stirrup" value="1-D10@200" style="text-align:left;"></div>
+                <div class="calc-row"><label>スラブ厚さ(mm)</label><input type="number" id="fd-slab-thickness" value="150" step="10" min="120"></div>
+                <div class="calc-row"><label>スラブ天端高(mm)</label><input type="number" id="fd-slab-top-height" value="50" step="10"></div>
+            </div>
+            <div style="padding:10px; background:#1a0a2e; border:1px solid #6c3483; border-radius:6px; font-size:11px; color:#d7bde2; line-height:1.6;">
+                <b>💬 操作ガイド</b><br>
+                1. 基礎梁 → スラブ → 人通口の順で入力してください。<br>
+                2. 入力後、基礎梁をクリックすると断面検定結果が表示されます。<br>
+                3. <b style="color:#e74c3c;">NGの標</b>が赤色で表示されます。
+            </div>
+
+            <!-- [基礎UI改善 タスク1] 基礎要素のプロパティポップアップ（フローティング） -->
+            <div id="fd-property-popup" 
+                 style="display:none; position:fixed; z-index:5000; background:#fff; border:1px solid #8e44ad; border-radius:8px; box-shadow:0 4px 20px rgba(0,0,0,0.3); width:320px; max-height:80vh; overflow-y:auto; font-family:sans-serif;">
+                <!-- [UI改善 ポップアップの移動と閉じるボタン] ドラッグ用のヘッダーと閉じるボタンの追加 -->
+                <div id="fd-popup-header" style="background:#8e44ad; color:#fff; padding:8px 12px; display:flex; justify-content:space-between; align-items:center; border-radius:7px 7px 0 0; cursor: move;">
+                    <span id="fd-popup-title" style="font-weight:bold; font-size:13px;">要素プロパティ</span>
+                    <button onclick="hideFdPropertyPopup()" style="background:#c0392b; border:none; border-radius:4px; padding:4px 8px; color:#fff; cursor:pointer; font-size:12px; font-weight:bold; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">✖ 閉じる</button>
+                </div>
+                <div id="fd-popup-content" style="padding:12px;"></div>
+            </div>
+
+        </div>
+    </div>
+
+    <div id="center-panel">
+        <div class="canvas-header">
+            <div style="display: flex; align-items: center; gap: 5px;">
+                <!-- [UI改修 基礎タブ移動] 基礎モードタブを階切替の左隣に追加 -->
+                <button class="tab-btn" id="tab-foundation">基礎</button>
+                <button class="tab-btn active" id="tab-1f">1階 作図</button>
+                <button class="tab-btn" id="tab-2f">2階 作図</button>
+                <div style="width: 1px; height: 20px; background: #ccc; margin: 0 5px;"></div>
+                <button class="action-btn save" id="btn-save">💾 保存</button>
+                <input type="file" id="json-upload" accept=".json" style="display: none;">
+                <label for="json-upload" class="action-btn load">📂 復元</label>
+            </div>
+            <div style="display: flex; align-items: center; gap: 5px;">
+                <button class="btn-undo" id="btn-undo">↩ 戻る</button>
+                <button class="btn-undo" id="btn-redo" style="background:#666;">↪ 進む</button>
+                <button class="btn-undo" id="btn-toggle-layer" title="DXFレイヤ表示設定パネルの表示/非表示を切り替え" style="background:#2980b9;">🗂 レイヤ設定</button>
+            </div>
+        </div>
+        <div id="cad-container">
+            <canvas id="cad-canvas"></canvas>
+            <div
+                style="position: absolute; bottom: 10px; right: 10px; font-size: 11px; color: #aaa; background: rgba(0,0,0,0.7); padding: 5px; border-radius: 4px;">
+                <span style="color:#3498db; font-weight:bold;">● G: 重心</span> / <span
+                    style="color:#e74c3c; font-weight:bold;">● C: 剛心</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="right-panel">
+        <details open style="margin-bottom: 15px; border-color:#e67e22;">
+            <summary style="background:#fdebd0; color:#d35400;">📂 1. DXFデータ読込 (必須)</summary>
+            <div style="padding:10px; background:#fff; font-size:11px;">
+                <div
+                    style="margin-bottom:10px; padding:8px; background:#fff3cd; border:1px solid #ffeeba; border-radius:4px; line-height:1.5;">
+                    <b style="color:#d35400;">【作図・レイヤルール】</b><br>
+                    ・<b>平面図:</b> COL_1F/2F(柱), GRID(芯), 1F/2F_AREA(床), BG_1F/2F/RF(背景)<br>
+                    ・<b>立面・挿絵用:</b> 見付面積も AREA_X, AREA_Y レイヤで作成してください。DIV4_1F/2F(4分割), BG_X/Y(背景)
+                </div>
+
+                <b style="color:#0056b3;">① 平面図 DXF読込 (マスト)</b>
+                <input type="file" id="dxf-upload" accept=".dxf" style="display: none;">
+                <label for="dxf-upload" class="action-btn"
+                    style="width:100%; box-sizing:border-box; padding:8px; font-size:12px; margin-top:5px;">📂
+                    平面図を選択</label>
+
+                <div style="margin-top: 15px; border-top: 1px dashed #ccc; padding-top: 10px;">
+                    <b style="color:#0056b3;">② 立面図・挿絵用 DXF読込 (マスト)</b>
+                    <input type="file" id="upload-doc-sub" accept=".dxf" style="display:none;">
+                    <label for="upload-doc-sub" class="action-btn"
+                        style="width:100%; box-sizing:border-box; padding:8px; font-size:12px; background:#3498db; margin-top:5px;">📂
+                        立面・挿絵用DXFを選択</label>
+                    <div style="font-size:10px; color:#555; margin-top:3px;">※見付面積や立面の4分割図などを1つのDXFから自動抽出します。</div>
+                </div>
+
+                <div style="margin-top:10px; display:flex; flex-direction:column; gap:5px;">
+                    <div style="display:flex; gap:5px; align-items:center;">
+                        <label style="margin:0;">平面図スケール: S=1/</label>
+                        <input type="number" id="scale-plan" value="100" style="margin:0; width:50px; padding:2px;">
+                    </div>
+                    <div style="display:flex; gap:5px; align-items:center;">
+                        <label style="margin:0;">立面・挿絵スケール: S=1/</label>
+                        <input type="number" id="scale-sub" value="100" style="margin:0; width:50px; padding:2px;">
+                    </div>
+                    <div style="font-size:10px; color:#555; margin-top:3px; line-height:1.3;">
+                        ※下絵図面などがA4縦に納まらないときは、右パネルのスケール設定で調整してください。
+                    </div>
+                </div>
+                <div id="action-msg" style="margin-top: 5px; font-size: 10px; color: #d35400; font-weight:bold;"></div>
+            </div>
+        </details>
+
+        <!-- [UI改修] 表示切替を右パネルへ移動 -->
+        <details class="layer-control" style="margin-bottom:15px; border:1px solid #bdc3c7; border-radius:4px;">
+            <summary style="background:#f1c40f; color:#333; padding:5px 8px; font-weight:bold; cursor:pointer;">👁 表示切替 (Layer Control)</summary>
+            <div style="padding:10px; font-size:11px; background:#fff; display:flex; flex-direction:column; gap:8px;">
+                <div>
+                    <div style="font-weight:bold; color:#2980b9; margin-bottom:3px; border-bottom:1px dashed #ccc;">共通</div>
+                    <label><input type="checkbox" id="v-layer-grids" checked> 通り芯・グリッド</label>
+                </div>
+                <div>
+                    <div style="font-weight:bold; color:#27ae60; margin-bottom:3px; border-bottom:1px dashed #ccc;">壁量モード用</div>
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:3px;">
+                        <label><input type="checkbox" id="v-layer-pillars" checked> 柱</label>
+                        <label><input type="checkbox" id="v-layer-pillarNValues" checked> N値・金物名</label>
+                        <label><input type="checkbox" id="vis-wall" checked> 耐力壁</label>
+                        <label><input type="checkbox" id="v-layer-windows" checked> 開口部</label>
+                        <label><input type="checkbox" id="vis-diaph" checked> 面積（エリア）</label>
+                    </div>
+                </div>
+                <div>
+                    <div style="font-weight:bold; color:#8e44ad; margin-bottom:3px; border-bottom:1px dashed #ccc;">基礎モード用</div>
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:3px;">
+                        <label><input type="checkbox" id="v-layer-f_beams" checked> 基礎梁</label>
+                        <label><input type="checkbox" id="v-layer-f_slabs" checked> スラブ</label>
+                        <label><input type="checkbox" id="v-layer-f_ext_walls" checked> 外壁線(荷重用)</label>
+                        <label><input type="checkbox" id="v-layer-f_manholes" checked> 人通口</label>
+                    </div>
+                </div>
+            </div>
+        </details>
+
+        <details open style="margin-bottom: 15px; border-color:#2980b9;">
+            <summary style="background:#e8f4f8; color:#0056b3;">⚙️ 2. 各種設定と仕様</summary>
+            <div style="padding:10px; background:#fff; font-size:11px;">
+                
+                <!-- [荷重と外壁仕様] 最上段へ移動 -->
+                <div class="calc-box" style="border-color:#3498db; background:#f0f8ff; margin-bottom:10px; padding:10px; border-radius:6px;">
+                    <div style="font-size:11px; font-weight:bold; margin-bottom:8px; color:#2980b9; border-bottom:1px solid #bce8f1;">■ 荷重と外壁仕様 (表計算ツール)</div>
+                    <div class="calc-row" style="margin-bottom:5px;">
+                        <label>外壁仕様</label>
+                        <select id="prop-ext-wall" style="width:110px; padding:2px;">
+                            <option value="1000">土塗り壁等 (1k)</option>
+                            <option value="890">モルタル等 (890)</option>
+                            <option value="600" selected>サイディング (600)</option>
+                            <option value="500">金属板張 (500)</option>
+                            <option value="350">下見板張 (350)</option>
+                        </select>
+                    </div>
+                    <div class="calc-row" style="margin-bottom:5px;">
+                        <label>屋根材仕様</label>
+                        <select id="prop-roof-type" style="width:110px; padding:2px;">
+                            <option value="990">瓦ぶき (990)</option>
+                            <option value="740">スレートぶき (740)</option>
+                            <option value="500" selected>金属板ぶき (500)</option>
+                        </select>
+                    </div>
+                    <div class="calc-row" style="margin-bottom:5px;">
+                        <label>太陽光発電</label>
+                        <select id="prop-solar" style="width:110px; padding:2px;">
+                            <option value="0" selected>なし (0)</option>
+                            <option value="200">あり (200)</option>
+                        </select>
+                    </div>
+                    <div class="calc-row" style="margin-bottom:5px;">
+                        <label>天井断熱(mm)</label>
+                        <input type="number" id="prop-ceiling-ins" value="100" style="width:60px; text-align:right; padding:2px;">
+                    </div>
+                    <div class="calc-row">
+                        <label>外壁断熱(mm)</label>
+                        <input type="number" id="prop-wall-ins" value="70" style="width:60px; text-align:right; padding:2px;">
+                    </div>
+                </div>
+
+                <!-- [計算単位と面積データ] v2.3.24 集約レイアウト -->
+                <div class="calc-box" style="background:#fff; border:1px solid #ddd; padding:10px; border-radius:6px; margin-bottom:10px;">
+                    <div style="font-size:11px; font-weight:bold; margin-bottom:8px; color:#555; border-bottom:1px solid #eee;">📏 計算単位・床面積・4分割面積</div>
+                    
+                    <!-- 1F データ -->
+                    <div style="background:#2ecc71; color:#fff; text-align:center; font-size:10px; font-weight:bold; padding:2px; border-radius:3px; margin-bottom:5px;">1階 構造計算データ</div>
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:x 10px; margin-bottom:10px;">
+                        <div class="calc-row"><label style="font-size:9px;">床面積(㎡)</label><input type="number" id="a-f1" value="0.00" step="0.01" style="width:45px; font-size:10px;"></div>
+                        <div class="calc-row"><label style="font-size:9px;">地震係数(m/㎡)</label><input type="number" id="c-q1" value="0.29" step="0.01" style="width:45px; font-size:10px;"></div>
+                        <div class="calc-row"><label style="font-size:9px;">小屋裏(㎡)</label><input type="number" id="a-attic1" value="0.00" step="0.01" style="width:45px; font-size:10px;"></div>
+                        <div class="calc-row"><label style="font-size:9px;">風圧係数(m/㎡)</label><input type="number" id="c-w1" value="0.50" step="0.01" style="width:45px; font-size:10px;"></div>
+                        <div class="calc-row"><label style="font-size:9px;">バルコニー(㎡)</label><input type="number" id="a-balcony1" value="0.00" step="0.01" style="width:45px; font-size:10px;"></div>
+                        <div class="calc-row"><label style="font-size:9px;">X見付(㎡)</label><input type="number" id="a-wx1" value="0.00" step="0.01" style="width:45px; font-size:10px;"></div>
+                        <div class="calc-row"></div><div class="calc-row"><label style="font-size:9px;">Y見付(㎡)</label><input type="number" id="a-wy1" value="0.00" step="0.01" style="width:45px; font-size:10px;"></div>
+                    </div>
+                    <div style="font-size:9px; font-weight:bold; color:#c0392b; margin-bottom:3px;">1F 4分割 側端部面積(㎡)</div>
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:2px 10px; margin-bottom:10px;">
+                        <div class="calc-row"><label style="font-size:9px;">X上(奥)</label><input type="number" id="e-x-t1" value="0.00" step="0.001" style="width:45px; font-size:10px;"></div>
+                        <div class="calc-row"><label style="font-size:9px;">Y左</label><input type="number" id="e-y-l1" value="0.00" step="0.001" style="width:45px; font-size:10px;"></div>
+                        <div class="calc-row"><label style="font-size:9px;">X下(前)</label><input type="number" id="e-x-b1" value="0.00" step="0.001" style="width:45px; font-size:10px;"></div>
+                        <div class="calc-row"><label style="font-size:9px;">Y右</label><input type="number" id="e-y-r1" value="0.00" step="0.001" style="width:45px; font-size:10px;"></div>
+                    </div>
+
+                    <hr style="border:0; border-top:1px dashed #ccc; margin:10px 0;">
+
+                    <!-- 2F データ -->
+                    <div style="background:#e67e22; color:#fff; text-align:center; font-size:10px; font-weight:bold; padding:2px; border-radius:3px; margin-bottom:5px;">2階 構造計算データ</div>
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:2px 10px; margin-bottom:10px;">
+                        <div class="calc-row"><label style="font-size:9px;">床面積(㎡)</label><input type="number" id="a-f2" value="0.00" step="0.01" style="width:45px; font-size:10px;"></div>
+                        <div class="calc-row"><label style="font-size:9px;">地震係数(m/㎡)</label><input type="number" id="c-q2" value="0.15" step="0.01" style="width:45px; font-size:10px;"></div>
+                        <div class="calc-row"><label style="font-size:9px;">小屋裏(㎡)</label><input type="number" id="a-attic2" value="0.00" step="0.01" style="width:45px; font-size:10px;"></div>
+                        <div class="calc-row"><label style="font-size:9px;">風圧係数(m/㎡)</label><input type="number" id="c-w2" value="0.50" step="0.01" style="width:45px; font-size:10px;"></div>
+                        <div class="calc-row"><label style="font-size:9px;">バルコニー(㎡)</label><input type="number" id="a-balcony2" value="0.00" step="0.01" style="width:45px; font-size:10px;"></div>
+                        <div class="calc-row"><label style="font-size:9px;">X見付(㎡)</label><input type="number" id="a-wx2" value="0.00" step="0.01" style="width:45px; font-size:10px;"></div>
+                        <div class="calc-row"></div><div class="calc-row"><label style="font-size:9px;">Y見付(㎡)</label><input type="number" id="a-wy2" value="0.00" step="0.01" style="width:45px; font-size:10px;"></div>
+                    </div>
+                    <div style="font-size:9px; font-weight:bold; color:#c0392b; margin-bottom:3px;">2F 4分割 側端部面積(㎡)</div>
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:2px 10px; margin-bottom:5px;">
+                        <div class="calc-row"><label style="font-size:9px;">X上(奥)</label><input type="number" id="e-x-t2" value="0.00" step="0.001" style="width:45px; font-size:10px;"></div>
+                        <div class="calc-row"><label style="font-size:9px;">Y左</label><input type="number" id="e-y-l2" value="0.00" step="0.001" style="width:45px; font-size:10px;"></div>
+                        <div class="calc-row"><label style="font-size:9px;">X下(前)</label><input type="number" id="e-x-b2" value="0.00" step="0.001" style="width:45px; font-size:10px;"></div>
+                        <div class="calc-row"><label style="font-size:9px;">Y右</label><input type="number" id="e-y-r2" value="0.00" step="0.001" style="width:45px; font-size:10px;"></div>
+                    </div>
+                </div>
+
+                <!-- [柱寸法・横架材間] 左パネルから移動 -->
+                <div class="calc-box" style="background:#fff5f5; border:1px solid #ffcdd2; padding:10px; border-radius:6px; margin-bottom:10px;">
+                    <div style="font-size:11px; font-weight:bold; margin-bottom:8px; color:#c62828; border-bottom:1px solid #ffcdd2;">■ 柱寸法・横架材間</div>
+                    <div style="display:flex; gap:8px;">
+                        <div style="flex:1;">
+                            <div style="background:#2ecc71; color:#fff; text-align:center; font-size:10px; font-weight:bold; padding:2px; border-radius:3px; margin-bottom:5px;">1F</div>
+                            <div class="calc-row" style="margin-bottom:3px;"><label style="font-size:9px;">天端間 h(m)</label><input type="number" id="n-h1" value="2.70" step="0.01" style="width:45px; font-size:10px;"></div>
+                            <div class="calc-row"><label style="font-size:9px;">柱小径 d(mm)</label><input type="number" id="p-d1" value="105" step="1" style="width:45px; font-size:10px;"></div>
+                        </div>
+                        <div style="flex:1;">
+                            <div style="background:#e67e22; color:#fff; text-align:center; font-size:10px; font-weight:bold; padding:2px; border-radius:3px; margin-bottom:5px;">2F</div>
+                            <div class="calc-row" style="margin-bottom:3px;"><label style="font-size:9px;">天端間 h(m)</label><input type="number" id="n-h2" value="2.70" step="0.01" style="width:45px; font-size:10px;"></div>
+                            <div class="calc-row"><label style="font-size:9px;">柱小径 d(mm)</label><input type="number" id="p-d2" value="105" step="1" style="width:45px; font-size:10px;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- [全体設計条件] 柱寸法の直下へ移動 -->
+                <div class="calc-box" style="background:#f8f9fa; border:1px solid #ced4da; margin-bottom:10px; padding:10px; border-radius:6px;">
+                    <div style="font-size:11px; font-weight:bold; margin-bottom:8px; color:#495057; border-bottom:1px solid #dee2e6;">🏗️ 全体設計条件</div>
+                    <div class="calc-row" style="display:flex; align-items:center; justify-content:space-between; margin-bottom:5px;">
+                        <label style="font-size:11px;">コンクリート強度 (Fc)</label>
+                        <select id="global-fc" style="padding:2px; border-radius:4px; border:1px solid #adb5bd; font-size:11px; width:80px;">
+                            <option value="18">Fc18</option>
+                            <option value="21" selected>Fc21</option>
+                            <option value="24">Fc24</option>
+                            <option value="27">Fc27</option>
+                            <option value="30">Fc30</option>
+                        </select>
+                    </div>
+                    <div class="calc-row" style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+                        <label style="font-size:11px;">三角形状割増係数</label>
+                        <input type="number" id="global-triangle-mult" value="1.33" step="0.01" style="padding:2px; border-radius:4px; border:1px solid #adb5bd; font-size:11px; width:80px; text-align:right;">
+                    </div>
+                    <div style="font-size:9px; color:#6c757d; margin-top:5px; line-height:1.2;">
+                        ※鉄筋仕様: D19/D22は SD345、他は SD295
+                    </div>
+                </div>
+
+            </div>
+        </details>
+
+        <h2>🛠️ 操作モード</h2>
+        <div class="mode-selector">
+            <label style="background: #fff8e1; display: block; padding: 5px; border-radius: 4px; margin-bottom: 5px; border: 1px solid #ffe082;">
+                <input type="radio" name="mode" value="select"> 🔍 <b>選択・プロパティ編集</b>
+            </label>
+            <label><input type="radio" name="mode" value="draw-area"> 📐 1. 床面積(外形)の作図</label><br>
+            <label><input type="radio" name="mode" value="window"> 🪟 2. 開口部の配置</label><br>
+            <label><input type="radio" name="mode" value="wall" checked> 🟩 3. 壁の配置</label><br>
+            <label><input type="radio" name="mode" value="delete-unified"> ❌ 5. 削除(柱/壁/窓/面積)</label>
+            <hr style="border:0; border-top:1px dashed #ccc; margin:5px 0;">
+            <label><input type="radio" name="mode" value="add-grid"> 📏 グリッド追加(オフセット)</label><br>
+            <label><input type="radio" name="mode" value="del-grid"> ❌ グリッド削除</label><br>
+            <label><input type="radio" name="mode" value="edit-text"> 📝 通り芯文字の編集</label><br>
+            <label><input type="radio" name="mode" value="add-pillar"> 🔵 柱の追加</label>
+            <hr style="border:0; border-top:1px dashed #ccc; margin:5px 0;">
+            <label><input type="radio" name="mode" value="n-value"> 🧲 <b>N値計算・金物図</b></label><br>
+            <label><input type="radio" name="mode" value="area"> 🔲 <b>柱負担面積図 (壁非表示)</b></label>
+            <hr style="border:0; border-top:1px dashed #ccc; margin:5px 0;">
+            <div style="font-size:11px; padding:5px; background:#fff; border:1px solid #ddd; border-radius:4px;">
+                <label><b>作図する面積の種類:</b></label><br>
+                <select id="area-type-select" style="width:100%; margin-top:3px; padding:2px;">
+                    <option value="floor">1. 床面積 (通常)</option>
+                    <option value="attic">2. 小屋裏収納</option>
+                    <option value="balcony">3. 持ち出しバルコニー</option>
+                    <option value="void">4. 吹き抜け (2階作図用)</option>
+                    <option value="porch">5. ポーチ・屋根</option>
+                </select>
+                <div style="font-size:10px; color:#555; margin-top:5px; line-height:1.3;">
+                    基準法床面積には、吹き抜け面積は算入不要で持ち出しバルコニー、ポーチについても算入不要です。性能表示床面積には横架材で囲まれたポーチや持ち出しバルコニーの面積、吹き抜けの面積も算入が必要です。小屋裏面積は2階の上に設置するものは2階作図で、1階の上（2階と同レベル）に設置するものは1階作図で入力してください
+                </div>
+                <div style="margin-top:5px; display:flex; align-items:center; gap:5px;">
+                    <label>小屋裏の平均天井高(m):</label>
+                    <input type="number" id="attic-height" value="1.4" max="1.4" step="0.01" style="width:50px;">
+                </div>
+            </div>
+        </div>
+
+        <div
+            style="margin-bottom: 15px; padding: 10px; background: #e8f4f8; border: 1px solid #bce8f1; border-radius: 4px;">
+            <label style="cursor: pointer; display: flex; align-items: center;">
+                <input type="checkbox" id="show-4div" checked style="margin-right: 8px;">
+                <strong style="color: #0056b3;">🔲 4分割の抽出ゾーン境界を表示</strong>
+            </label>
+        </div>
+
+        <div id="wall-tools">
+            <h2>🧱 壁の仕様 (上限 7.0倍)</h2>
+            <div style="text-align:right; font-size:13px; font-weight:bold; color:#0056b3; margin-bottom:5px;">合計: <span
+                    id="total-val">0.0</span> 倍</div>
+            <label>面材 1面目</label>
+            <select id="wall-p1"></select>
+            <label>面材 2面目</label>
+            <select id="wall-p2"></select>
+            <label>筋交い仕様</label>
+            <select id="wall-b">
+                <option value="b0">なし</option>
+                <option value="b1">筋交い 15x90 片掛け(／) 1.5倍</option>
+                <option value="b2">筋交い 15x90 片掛け(＼) 1.5倍</option>
+                <option value="b3">筋交い 45x90 片掛け(／) 2.0倍</option>
+                <option value="b4">筋交い 45x90 片掛け(＼) 2.0倍</option>
+                <option value="b5">筋交い 90x90 片掛け(／) 3.0倍</option>
+                <option value="b6">筋交い 90x90 片掛け(＼) 3.0倍</option>
+                <option value="b7">筋交い 45x90 たすき(Ｘ) 4.0倍</option>
+                <option value="b8">筋交い 90x90 たすき(Ｘ) 5.0倍</option>
+            </select>
+        </div>
+
+        <details>
+            <summary style="font-size:12px; margin-top:10px;">⚙️ 任意 面材・金物仕様の登録</summary>
+            <div class="calc-box" style="background:#eef5f9; border-color:#bce8f1; margin-top:5px; padding:10px;">
+                <div style="font-size:11px; font-weight:bold; margin-bottom:5px; color:#0056b3;">■ 面材仕様</div>
+                <div id="custom-wall-container">
+                    <div class="calc-row cust-wall-row" style="margin-bottom:5px;"><input type="text" class="cust-w-n"
+                            placeholder="名称" style="width:130px; margin:0;"><input type="number" class="cust-w-v"
+                            placeholder="倍率" step="0.1" style="margin:0;"></div>
+                </div>
+                <button id="btn-add-cust-wall" class="btn-add-item">＋ 面材を追加</button>
+
+                <hr style="border:0; border-top:1px dashed #ccc; margin:10px 0;">
+                <div style="font-size:11px; font-weight:bold; margin-bottom:5px; color:#0056b3;">■ 金物仕様</div>
+                <div id="custom-hw-container">
+                    <div class="calc-row cust-hw-row" style="margin-bottom:5px;"><input type="text" class="cust-h-n"
+                            placeholder="記号" style="width:130px; margin:0;"><input type="number" class="cust-h-v"
+                            placeholder="耐力(kN)" step="0.1" style="margin:0;"></div>
+                </div>
+                <button id="btn-add-cust-hw" class="btn-add-item">＋ 金物を追加</button>
+            </div>
+        </details>
+
+        <button class="btn-table"
+            style="background:#8e44ad; color:#fff; border-radius:6px; padding:12px; cursor:pointer; font-weight:bold; font-size:14px; margin-top:10px;"
+            id="btn-export-dxf">📥 壁・金物 DXF出力 (CAD逆輸入)</button>
+
+        <div id="pillar-props"
+            style="display:none; background:#fff3cd; padding:10px; border:1px solid #ffeeba; border-radius:4px; margin-top:10px;">
+            <b style="color:#d35400;">📍 柱のプロパティ: <span id="prop-id"></span></b>
+            <div style="margin-top:5px; font-size:11px;">
+                <label style="display:flex; align-items:center; margin-bottom:5px;"><input type="checkbox"
+                        id="prop-corner" style="width:auto; margin-right:5px;"> 出隅(角)として強制計算</label>
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:5px;"><label
+                        style="margin:0;">L値の算出:</label><select id="prop-lcalc"
+                        style="margin:0; padding:2px; width:100px;">
+                        <option value="auto">簡易(告示)</option>
+                        <option value="detail">詳細(負担面積)</option>
+                    </select></div>
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:5px;"><label
+                        style="margin:0;">負担面積(㎡): <span
+                            style="font-size:9px; color:#7f8c8d;">※空白=自動</span></label><input type="number"
+                        id="prop-area" step="0.01" placeholder="自動計算"
+                        style="width:60px; margin:0; padding:2px; text-align:right;"></div>
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:5px;"><label
+                        style="margin:0;">個別 階高(m): <span
+                            style="font-size:9px; color:#7f8c8d;">※空白=全体</span></label><input type="number" id="prop-h"
+                        step="0.01" placeholder="自動" style="width:60px; margin:0; padding:2px; text-align:right;"></div>
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:5px;"><label
+                        style="margin:0;">個別 小径(mm): <span
+                            style="font-size:9px; color:#7f8c8d;">※空白=全体</span></label><input type="number" id="prop-d"
+                        step="1" placeholder="自動" style="width:60px; margin:0; padding:2px; text-align:right;"></div>
+                <label>手動 金物指定:</label><select id="prop-mark" style="margin-bottom:0;"></select>
+                <div id="prop-hw-alert" style="color:red; font-weight:bold; margin-top:5px;"></div>
+                <div id="prop-detail"
+                    style="font-family:monospace; margin-top:5px; color:#555; line-height:1.4; white-space:pre-wrap; background:#fdfdfd; padding:5px; border:1px solid #ddd;">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- [機能追加 立面軸力図ビューア] 専用モーダルの追加 -->
+    <div id="modal-elevation-viewer" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:9000; align-items:center; justify-content:center;">
+        <div style="background:#fff; width:95%; max-width:800px; max-height:90vh; border-radius:8px; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 5px 25px rgba(0,0,0,0.5);">
+            <!-- ヘッダー -->
+            <div style="background:#2c3e50; color:#fff; padding:12px 16px; display:flex; justify-content:space-between; align-items:center;">
+                <h3 style="margin:0; font-size:16px;">📊 耐力壁の軸力図 (立面)</h3>
+                <button onclick="document.getElementById('modal-elevation-viewer').style.display='none'" style="background:#e74c3c; border:none; color:#fff; cursor:pointer; font-size:14px; padding:4px 8px; border-radius:4px; font-weight:bold;">✖ 閉じる</button>
+            </div>
+            <!-- コントロール -->
+            <div style="padding:10px; background:#f8f9fa; border-bottom:1px solid #ddd; display:flex; gap:15px; align-items:center;">
+                <div style="font-size:13px; font-weight:bold;">加力方向:</div>
+                <label style="cursor:pointer; font-size:13px;"><input type="radio" name="el-dir" value="left" checked onchange="if(window.updateElevationViewer) window.updateElevationViewer()"> ⬅ 左加力 (<-)</label>
+                <label style="cursor:pointer; font-size:13px;"><input type="radio" name="el-dir" value="right" onchange="if(window.updateElevationViewer) window.updateElevationViewer()"> ➡ 右加力 (->)</label>
+            </div>
+            <!-- タブコンテナ -->
+            <div id="elevation-axis-tabs" style="display:flex; overflow-x:auto; background:#ecf0f1; border-bottom:1px solid #bdc3c7; padding:5px 10px 0;">
+                <!-- 動的生成されるタブボタン -->
+            </div>
+            <!-- SVG表示コンテナ -->
+            <div id="elevation-svg-container" style="flex:1; padding:20px; overflow:auto; background:#fff; text-align:center;">
+            </div>
+        </div>
+    </div>
+
+    <!-- [機能追加] 統合プロパティエディタ・モーダル -->
+    <div id="modal-property-editor" class="modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:10000; align-items:center; justify-content:center; backdrop-filter:blur(2px);">
+        <div style="background:#fff; width:90%; max-width:450px; border-radius:10px; overflow:hidden; box-shadow:0 10px 30px rgba(0,0,0,0.3); display:flex; flex-direction:column;">
+            <div id="modal-prop-header" style="background:#34495e; color:#fff; padding:12px 15px; display:flex; justify-content:space-between; align-items:center;">
+                <h3 style="margin:0; font-size:16px;">🔍 要素のプロパティ編集</h3>
+                <button class="btn-close-modal" onclick="document.getElementById('modal-property-editor').style.display='none'" style="background:#e74c3c; border:none; color:#fff; cursor:pointer; font-size:14px; padding:4px 8px; border-radius:4px; font-weight:bold;">✖</button>
+            </div>
+            <div id="modal-prop-body" style="padding:20px; max-height:70vh; overflow-y:auto;">
+                <!-- ここに動的にフォームが生成されます -->
+            </div>
+            <div style="padding:15px; background:#f8f9fa; border-top:1px solid #ddd; display:flex; justify-content:flex-end; gap:10px;">
+                <button onclick="document.getElementById('modal-property-editor').style.display='none'" style="padding:8px 20px; border-radius:5px; border:1px solid #ccc; background:#fff; cursor:pointer;">キャンセル</button>
+                <button id="btn-prop-apply" style="padding:8px 20px; border-radius:5px; border:none; background:#27ae60; color:#fff; font-weight:bold; cursor:pointer;">設定を反映</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="../../assets/js/modules/wall_4split/Version.js"></script>
+    <script src="../../assets/js/modules/wall_4split/state/Specs.js"></script>
+    <script src="../../assets/js/modules/wall_4split/state/AppState.js"></script>
+    <script src="../../assets/js/modules/wall_4split/wall_4split_bridge.js"></script>
+    <script src="../../assets/js/modules/wall_4split/logic/MathUtils.js"></script>
+    <script src="../../assets/js/modules/wall_4split/logic/Parsers.js"></script>
+    <script src="../../assets/js/modules/wall_4split/logic/WallEngine.js"></script>
+    <script src="../../assets/js/modules/wall_4split/logic/CadEngine.js"></script>
+    <script src="../../assets/js/modules/wall_4split/logic/GridEngine.js"></script>
+    <script src="../../assets/js/modules/wall_4split/logic/StructuralEngine.js"></script>
+    <script src="../../assets/js/modules/wall_4split/logic/DocumentEngine.js"></script>
+    <script src="../../assets/js/modules/wall_4split/logic/NValueEngine.js"></script>
+    <script src="../../assets/js/modules/wall_4split/logic/AreaEngine.js"></script>
+    <script src="../../assets/js/modules/wall_4split/logic/FoundationEngine.js"></script>
+    <script src="../../assets/js/modules/wall_4split/logic/ReportEngine.js"></script>
+    <script src="../../assets/js/modules/wall_4split/controllers/PropertyController.js"></script>
+    <script src="../../assets/js/modules/wall_4split/controllers/InputController.js"></script>
+    <script src="../../assets/js/modules/wall_4split/controllers/ModalController.js"></script>
+    <script src="../../assets/js/modules/wall_4split/controllers/AppController.js"></script>
+    <script src="../../assets/js/modules/wall_4split/controllers/FoundationInputController.js"></script>
+    <script src="../../assets/js/modules/wall_4split/view/UIView.js"></script>
+    <script src="../../assets/js/modules/wall_4split/view/MainRenderer.js"></script>
+    <script src="../../assets/js/modules/wall_4split/view/FoundationRenderer.js"></script>
+    <script src="../../assets/js/modules/wall_4split/view/DocumentRenderer.js"></script>
+    <script src="../../assets/js/modules/wall_4split/view/ElevationRenderer.js"></script>
+    <script src="../../assets/js/modules/wall_4split/wall_4split_export.js"></script>
+    <script src="../../assets/js/modules/wall_4split/wall_4split_cad.js"></script>
+    <script src="../../assets/js/modules/wall_4split/wall_4split_render.js"></script>
+    <script src="../../assets/js/modules/wall_4split/wall_4split_pdf.js"></script>
+    <script src="../../assets/js/modules/wall_4split/wall_4split_calc.js"></script>
+    <script src="../../assets/js/modules/wall_4split/wall_4split_foundation_engine.js"></script>
+    <script src="../../assets/js/modules/wall_4split/wall_4split_report.js"></script>
+    <script src="../../assets/js/modules/wall_4split/wall_4split_input.js"></script>
+    <script src="../../assets/js/modules/wall_4split/wall_4split_main.js"></script>
+</body>
+
+</html>

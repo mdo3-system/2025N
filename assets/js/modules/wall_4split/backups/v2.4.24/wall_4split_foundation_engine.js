@@ -1,0 +1,1370 @@
+// ==========================================
+// wall_4split_foundation_engine.js
+// [基礎計算追加 Phase4] 基礎梁 応力解析・断面検定エンジン
+//
+// 依存: wall_4split_state.js (AppState), wall_4split_calc.js (polygonArea等)
+// ==========================================
+
+// ============================================================
+// 鉄筋コンクリート設計定数
+// ============================================================
+// [機能拡張 スラブ設計条件と自動判定]
+// コンクリートと鉄筋の設計定数は、これまで定数だったものを関数またはAppState参照に切り替えます
+const FD_COVER = 40; // かぶり厚さ (mm)
+
+// コンクリート許容応力度計算ヘルパー
+function fd_getConcreteAllowable(fc) {
+    return {
+        fc: fc,
+        fck_L: fc / 3,
+        ftk_L: 0.49 * Math.pow(fc, 1/3),
+        fwk_L: fc / 3 / Math.sqrt(3)
+    };
+}
+
+// ============================================================
+// [基礎計算追加 Phase4] 鉄筋解析ヘルパー
+// "1-D13" | "2-D16" 等の文字列から本数・直径・断面積を返す
+// ============================================================
+function fd_parseRebar(str) {
+    if (!str || typeof str !== 'string') return { count: 0, dia: 0, area: 0 };
+    // フォーマット: "本数-D直径" e.g., "2-D16", "1-D13"
+    const m = str.trim().match(/^(\d+)-D(\d+)/i);
+    if (!m) return { count: 0, dia: 0, area: 0 };
+    const count = parseInt(m[1], 10);
+    const dia   = parseInt(m[2], 10);
+    // 標準鉄筋断面積 (mm²)
+    const diaTbl = { 10: 71.33, 13: 126.7, 16: 198.6, 19: 286.5, 22: 387.1, 25: 506.7, 29: 642.4, 32: 794.2 };
+    const area1 = diaTbl[dia] || (Math.PI * dia * dia / 4);
+    return { count, dia, area: count * area1 };
+}
+
+// ============================================================
+// [機能拡張 スラブ設計条件と自動判定] 鉄筋強度の自動判定
+// 文字列に '19' または '22' が含まれる場合は SD345、それ以外は SD295
+// ============================================================
+function fd_getSteelStrength(str) {
+    if (!str) return { ft: 195, fts: 295, type: 'SD295' };
+    const isSD345 = /19|22/.test(str);
+    if (isSD345) {
+        return { ft: 215, fts: 345, type: 'SD345' };
+    }
+    return { ft: 195, fts: 295, type: 'SD295' };
+}
+
+// ============================================================
+// [基礎計算追加 Phase4] せん断補強筋解析
+// "1-D10@200" → { count, dia, pitch }
+// ============================================================
+function fd_parseStirrups(str) {
+    if (!str || typeof str !== 'string') return { count: 1, dia: 10, pitch: 200, area: 71.33 };
+    const m = str.trim().match(/^(\d+)-D(\d+)@(\d+)/i);
+    if (!m) return { count: 1, dia: 10, pitch: 200, area: 71.33 };
+    const count = parseInt(m[1], 10);
+    const dia   = parseInt(m[2], 10);
+    const pitch = parseInt(m[3], 10);
+    const diaTbl = { 10: 71.33, 13: 126.7, 16: 198.6, 19: 286.5, 22: 387.1 };
+    const area1 = diaTbl[dia] || (Math.PI * dia * dia / 4);
+    return { count, dia, pitch, area: count * area1 };
+}
+
+// ============================================================
+// [機能追加 応力計算ロジックの厳密化] 断面許容耐力の計算 (割増係数αの厳密化)
+function calculateAllowableBeamCapacity(beam, stressData = {}) {
+    const p = beam.props || {};
+    const b  = p.width  || 150;   // 梁幅 (mm)
+    const h  = p.height || 640;   // 梁成 (mm)
+    const dt = p.coverDepth || 70; // 有効せい算出用のかぶり (mm)
+    const d  = h - dt;            // 有効せい (mm)
+    const j  = d * 7 / 8;         // 応力中心距離
+
+    const fcVal = window.AppState.concreteFc || 21;
+    const conc = fd_getConcreteAllowable(fcVal);
+
+    const topRebarStr = p.topRebar    || '1-D13';
+    const botRebarStr = p.bottomRebar || '1-D13';
+    const stStr       = p.stirrup     || '1-D10@200';
+
+    const topRebar = fd_parseRebar(topRebarStr);
+    const botRebar = fd_parseRebar(botRebarStr);
+    const st       = fd_parseStirrups(stStr);
+
+    const topSteel = fd_getSteelStrength(topRebarStr);
+    const botSteel = fd_getSteelStrength(botRebarStr);
+    const stSteel  = fd_getSteelStrength(stStr);
+
+    // 曲げ耐力 (上端・下端)
+    const lMa_t = topRebar.area * topSteel.ft * j;
+    const lMa_b = botRebar.area * botSteel.ft * j;
+    const sMa_t = lMa_t * 1.5;
+    const sMa_b = lMa_b * 1.5;
+
+    // --- せん断割増係数 α の厳密計算 ---
+    // 長期 α = 4 / ((M_end_L / (Q_L * d)) + 1)
+    const ML = Math.abs(stressData.M_long_end_Nmm || 0);
+    const QL = Math.abs(stressData.Q_long_N || 0);
+    let m_qd_L = (QL * d > 0) ? ML / (QL * d) : 1.0;
+    const alpha_L = Math.max(1.0, Math.min(2.0, 4 / (m_qd_L + 1)));
+
+    // 短期 α = 4 / (((M_end_L + M_short_end - Mwf) / ((Q_L + Qe) * d)) + 1)
+    // ※ ここでは M_short_end と Mwf を区別して扱う仕様に基づき計算
+    const MS_sum = Math.abs((stressData.M_long_end_Nmm || 0) + (stressData.M_short_end_Nmm || 0) - (stressData.Mwf_Nmm || 0));
+    const QS_sum = Math.abs((stressData.Q_long_N || 0) + (stressData.Qe_N || 0));
+    let m_qd_S = (QS_sum * d > 0) ? MS_sum / (QS_sum * d) : 1.0;
+    const alpha_S = Math.max(1.0, Math.min(2.0, 4 / (m_qd_S + 1)));
+
+    const pw = (b * st.pitch) > 0 ? st.area / (b * st.pitch) : 0;
+    const Qa_steel_L = st.area * (stSteel.fts / 1.5) * j / st.pitch;
+    const Qa_steel_S = Qa_steel_L * 1.5;
+
+    const lQa = (alpha_L * conc.fwk_L * b * j) + Qa_steel_L;
+    const sQa = (alpha_S * conc.fwk_L * b * j * 1.5) + Qa_steel_S;
+
+    return {
+        b, h, d, j, dt, pw,
+        lMa_t, lMa_b, sMa_t, sMa_b, lQa, sQa,
+        topRebar, botRebar, st,
+        fc: fcVal, botSteelType: botSteel.type, stSteelType: stSteel.type,
+        alpha_L, alpha_S, m_qd_L, m_qd_S,
+        // UI互換用
+        Ma_L: lMa_b, Ma_S: sMa_b, Qa_L: lQa, Qa_S: sQa, At: botRebar.area
+    };
+}
+
+// ============================================================
+// [機能追加 応力計算ロジックの厳密化] 長期応力解析 (両端固定/連続梁モデル)
+function generateFoundationLongTermStressTable(beam, allSlabs, allBeams) {
+    const p = beam.props || {};
+    const dx = beam.p2.x - beam.p1.x;
+    const dy = beam.p2.y - beam.p1.y;
+    const L_mm = Math.hypot(dx, dy);
+    if (L_mm < 1) return null;
+
+    // ---- 1. 荷重集計 ----
+    let beamTotalLoad_kN = 0;
+    let totalTribArea_m2 = 0;
+    (allSlabs || []).forEach(slab => {
+        const qSlab = slab.fdStress ? slab.fdStress.qTotal : 12.0;
+        (slab.tributaryPolygons || []).forEach(tp => {
+            if (tp.beamId === beam.id) {
+                const area_m2 = tp.area / 1e6;
+                beamTotalLoad_kN += qSlab * area_m2;
+                totalTribArea_m2 += area_m2;
+            }
+        });
+    });
+
+    const spanM_geom = L_mm / 1000;
+    let wL_kN_m = spanM_geom > 0 ? beamTotalLoad_kN / spanM_geom : 0;
+    
+    const tributaryWidth_m = spanM_geom > 0 ? totalTribArea_m2 / spanM_geom : 0;
+    const qTotal           = totalTribArea_m2 > 0 ? beamTotalLoad_kN / totalTribArea_m2 : 0;
+    
+    // 梁自重
+    const slabTopH = p.slabTopHeight || 50;
+    const selfWeight_kN_m = (p.width || 150) * ((p.height || 640) - slabTopH) / 1e6 * 24;
+    wL_kN_m += selfWeight_kN_m;
+
+    const spanM = spanM_geom;
+
+    // --- 両端固定モデルによる応力算定 ---
+    const M_mid_kNm = (wL_kN_m * spanM * spanM) / 8;  // 中央 1/8 (実務上、安全側に 1/8 を採用する場合が多い)
+    const M_end_kNm = (wL_kN_m * spanM * spanM) / 12; // 端部 1/12
+    const Q_max_kN  = (wL_kN_m * spanM) / 2;          // せん断 1/2
+
+    return {
+        L_mm, spanM, wL_kN_m, tributaryWidth_m,
+        totalTribArea_m2, qTotal,
+        M_mid_kNm, M_end_kNm, Q_max_kN,
+        M_mid_Nmm: M_mid_kNm * 1e6,
+        M_end_Nmm: M_end_kNm * 1e6,
+        Q_L_N:   Q_max_kN  * 1e3,
+        M_max_kNm: Math.max(M_mid_kNm, M_end_kNm), 
+        M_max_Nmm: Math.max(M_mid_kNm, M_end_kNm) * 1e6, 
+        Q_max_N: Q_max_kN * 1e3
+    };
+}
+
+// [バグ修正 通り芯名変換と応力伝達の型安全化] 座標から通り芯名への逆引き
+function getGridNameFromCoords(x, y) {
+    const TOL = 15;
+    let xName = "", yName = "";
+    const gXC = window.AppState.gridXCoords || [];
+    const gXN = window.AppState.gridXNames || [];
+    const gYC = window.AppState.gridYCoords || [];
+    const gYN = window.AppState.gridYNames || [];
+    for(let i=0; i<gXC.length; i++) { if(Math.abs(Number(gXC[i]) - Number(x)) < TOL) { xName = gXN[i]; break; } }
+    for(let i=0; i<gYC.length; i++) { if(Math.abs(Number(gYC[i]) - Number(y)) < TOL) { yName = gYN[i]; break; } }
+    
+    // [バグ修正 文字化けの物理的修復] 通り芯名の結合
+    if(xName && yName) return `${xName}-${yName}`;
+    if(xName) return `${xName}通り上`; // [バグ修正 文字化けの物理的修復]
+    if(yName) return `${yName}通り上`; // [バグ修正 文字化けの物理的修復]
+    return `(${Math.round(x)}, ${Math.round(y)})`;
+}
+
+// ============================================================
+// [機能追加 応力計算ロジックの厳密化] 短期(水平時)応力解析 (連続梁・耐力壁軸力ベース)
+function calculateFoundationHorizontalStressData(beam, walls, h1) {
+    if (!beam || !beam.spans || beam.spans.length === 0) return null;
+
+    // [バグ修正 通り芯名変換と応力伝達の型安全化] 階高のフォールバック
+    const h_eff = Number(h1) || 2800;
+
+    // 1. ノードリストの作成と節点荷重 Td の集計
+    // 連続梁の開始点からの相対距離で管理
+    let nodes = [];
+    let currentX = 0;
+    nodes.push({ x: 0, node: beam.spans[0].startNode, Td_base: 0 });
+    beam.spans.forEach(s => {
+        currentX += (Number(s.spanLength) || 0);
+        nodes.push({ x: currentX, node: s.endNode, Td_base: 0 });
+    });
+    const L_total = currentX;
+
+    // 各ノードの Td_base ( α * 1.96 * H ) を算出
+    // 注意: Td は壁の両端で逆方向（引抜/押え）に働く
+    nodes.forEach(n => {
+        // [バグ修正 座標マッチングの許容誤差導入] 判定条件を座標優先に修正。柱以外の交点ノードでも壁端点があれば受ける。
+        if (n.node) {
+            const TOL = 15;
+            const nodeX = Number(n.node.x);
+            const nodeY = Number(n.node.y);
+            
+            const connectedWalls = (walls || []).filter(w => 
+                w.floor === '1F' && (
+                    Math.hypot(Number(w.p1.x) - nodeX, Number(w.p1.y) - nodeY) < TOL || 
+                    Math.hypot(Number(w.p2.x) - nodeX, Number(w.p2.y) - nodeY) < TOL
+                )
+            );
+            
+            connectedWalls.forEach(w => {
+                // [バグ修正 通り芯名変換と応力伝達の型安全化] 堅牢な壁倍率取得
+                const alpha = window.getWallTotalVal(w);
+                
+                if (alpha > 0) {
+                    // [機能追加 上部データ連携と一括UI] 指定された算定式を用いて Td を算出
+                    const dx_w = Math.abs(Number(w.p1.x) - Number(w.p2.x));
+                    const dy_w = Math.abs(Number(w.p1.y) - Number(w.p2.y));
+                    const Lw = Math.hypot(dx_w, dy_w) / 1000; // 壁長 (m)
+                    if (Lw < 0.1) return;
+
+                    const N = (alpha * 1.96 * Lw) * h_eff / Lw; // Td = (許容耐力 P = α * 1.96 * L) * H / L
+
+                    const isP1 = Math.hypot(Number(w.p1.x) - nodeX, Number(w.p1.y) - nodeY) < TOL;
+                    
+                    // 壁の他方の端点の X 座標を確認して方向を特定
+                    const wallIsHorizontal = Math.abs(Number(w.p1.y) - Number(w.p2.y)) < 50; // [バグ修正 通り芯名変換と応力伝達の型安全化] 数値キャスト
+                    const wallIsVertical = Math.abs(Number(w.p1.x) - Number(w.p2.x)) < 50;   // [バグ修正 通り芯名変換と応力伝達の型安全化] 数値キャスト
+                    
+                    // 梁の方向と同じ方向の壁のみ寄与させる（簡易化）
+                    n.Td_base_list = n.Td_base_list || [];
+                    n.Td_base_list.push({
+                        N: N,
+                        isStart: isP1, // 壁の定義上の始点
+                        isLeftRel: isP1 ? (Number(w.p1.x) < Number(w.p2.x) || Number(w.p1.y) < Number(w.p2.y)) : (Number(w.p2.x) < Number(w.p1.x) || Number(w.p2.y) < Number(w.p1.y)) // [バグ修正 通り芯名変換と応力伝達の型安全化] 数値キャスト
+                    });
+                }
+            });
+        }
+    });
+
+    // 解析実行ヘルパー（加力方向を指定）
+    const analyzePattern = (isLeftLoading) => {
+        // Td の確定
+        let Td = nodes.map(n => {
+            let sum = 0;
+            (n.Td_base_list || []).forEach(w => {
+                // 左加力の場合: 左端が引抜(+)、右端が押え(-)
+                // 右加力の場合: 逆
+                let sign = w.isLeftRel ? 1 : -1;
+                if (!isLeftLoading) sign *= -1;
+                sum += (w.N * sign);
+            });
+            return sum;
+        });
+
+        // 回転モーメントの合計 ΣM = Σ(Td * x)
+        let sumM = 0;
+        nodes.forEach((n, i) => {
+            sumM += Td[i] * n.x;
+        });
+
+        // 支点反力 R (両端支点を仮定)
+        // N_0 = ΣM / L_total (右端の反力)
+        const N_end = L_total > 0 ? sumM / L_total : 0;
+        const R_start = -N_end; // 左端の反力 (簡易釣合)
+
+        // Qe, Mwf の累積計算
+        let Qe = [];
+        let Mwf = [];
+        let currentQe = R_start;
+        let currentMwf = 0;
+
+        // 初期ノード荷重の加算
+        currentQe += Td[0];
+
+        for (let i = 0; i < beam.spans.length; i++) {
+            Qe.push(currentQe);
+            Mwf.push(currentMwf);
+
+            const interval = beam.spans[i].spanLength;
+            currentMwf += (currentQe * interval / 1000); // kN·m
+            currentQe += Td[i + 1];
+        }
+
+        return { Td, R_start, N_end, Qe, Mwf };
+    };
+
+    const left = analyzePattern(true);
+    const right = analyzePattern(false);
+
+    return {
+        left,
+        right,
+        spanM: L_total / 1000
+    };
+}
+
+// ============================================================
+// [基礎梁計算Step1 応力耐力エンジン] 全基礎梁の応力解析・断面検定を実行
+// 各 beam オブジェクトに spans 配列として詳細データを格納
+// ============================================================
+// [機能追加 応力計算ロジックの厳密化] 全基礎梁の応力解析・断面検定を実行
+function OBSOLETE_runFoundationBeamAnalysis(beams, slabs) {
+    if (!beams || beams.length === 0) return;
+
+    // 階高の取得 (デフォルト 2.7m)
+    const h1 = (typeof getVal === 'function' ? getVal('n-h1') : 2.7) || 2.7;
+    const walls = window.AppState.walls || [];
+
+    (beams || []).forEach(beam => {
+        // --- 1. 長期応力解析 (連続梁全体/代表) ---
+        const lt_total = generateFoundationLongTermStressTable(beam, slabs, beams);
+        if (!lt_total) { beam.spans = []; beam.fdStress = null; return; }
+
+        // --- 2. 短期応力解析 (左右加力パターンの累積計算) ---
+        const st_total = calculateFoundationHorizontalStressData(beam, walls, h1);
+
+        let beamIsNG = false;
+        const wL_kN_m = lt_total.wL_kN_m;
+
+        if (beam.spans && beam.spans.length > 0) {
+            beam.spans.forEach((span, i) => {
+                const sL_mm = span.spanLength || 0;
+                const spanM = sL_mm / 1000;
+                
+                // --- A. 長期応力 (スパンごと) ---
+                // 両端固定モデル: 中央 wL^2/8, 端部 wL^2/12
+                const sM_long_mid_kNm = (wL_kN_m * spanM * spanM) / 8;
+                const sM_long_end_kNm = (wL_kN_m * spanM * spanM) / 12;
+                const sQ_long_kNm = (wL_kN_m * spanM) / 2;
+
+                const stressData = {
+                    M_long_mid_Nmm: sM_long_mid_kNm * 1e6,
+                    M_long_end_Nmm: sM_long_end_kNm * 1e6,
+                    Q_long_N: sQ_long_kNm * 1e3
+                };
+
+                // --- B. 短期応力 (左右加力パターン) ---
+                const stL = st_total ? st_total.left : null;
+                const stR = st_total ? st_total.right : null;
+
+                const leftPat = stL ? {
+                    Td_kN: stL.Td[i],
+                    Qe_kN: stL.Qe[i],
+                    Mwf_kNm: stL.Mwf[i]
+                } : null;
+
+                const rightPat = stR ? {
+                    Td_kN: stR.Td[i],
+                    Qe_kN: stR.Qe[i],
+                    Mwf_kNm: stR.Mwf[i]
+                } : null;
+
+                // --- C. 検定用の包絡応力 (Envelope) ---
+                // α計算および検定には左・右パターンのうち不利な方を採用
+                const Qe_max_N = Math.max(
+                    leftPat ? Math.abs(leftPat.Qe_kN * 1000) : 0,
+                    rightPat ? Math.abs(rightPat.Qe_kN * 1000) : 0
+                );
+                const Mwf_max_Nmm = Math.max(
+                    leftPat ? Math.abs(leftPat.Mwf_kNm * 1e6) : 0,
+                    rightPat ? Math.abs(rightPat.Mwf_kNm * 1e6) : 0
+                );
+
+                // calculateAllowableBeamCapacity 用に短期成分をセット
+                // (ここでは簡易的に最大値を渡すが、本来は組み合わせごとに計算)
+                stressData.Qe_N = Qe_max_N;
+                stressData.Mwf_Nmm = Mwf_max_Nmm;
+                stressData.M_short_end_Nmm = Mwf_max_Nmm; // フェイスモーメントを短期端部モーメントとして扱う
+
+                // --- D. 断面検定 ---
+                const spProps = span.props || beam.props;
+                const cap = calculateAllowableBeamCapacity({ props: spProps }, stressData);
+
+                // 検定比
+                const ratioM_L = Math.max(stressData.M_long_mid_Nmm / cap.lMa_b, stressData.M_long_end_Nmm / cap.lMa_t);
+                const ratioQ_L = stressData.Q_long_N / cap.lQa;
+
+                const M_short_mid_Nmm = Mwf_max_Nmm / 2; // 短期中央モーメントの簡易想定
+                const ratioM_S = Math.max(
+                    (stressData.M_long_mid_Nmm + M_short_mid_Nmm) / cap.sMa_b,
+                    (stressData.M_long_end_Nmm + stressData.M_short_end_Nmm) / cap.sMa_t
+                );
+                const ratioQ_S = (stressData.Q_long_N + stressData.Qe_N) / cap.sQa;
+
+                const isNG = (ratioM_L > 1.0 || ratioQ_L > 1.0 || ratioM_S > 1.0 || ratioQ_S > 1.0);
+                if (isNG) beamIsNG = true;
+
+                // スパンデータへの格納
+                span.fdStress = {
+                    spanM, wL_kN_m,
+                    stressData,
+                    leftPat, rightPat,
+                    cap,
+                    ratioM_L, ratioQ_L, ratioM_S, ratioQ_S,
+                    isNG
+                };
+                
+                // [バグ修正 通り芯名変換と応力伝達の型安全化] スパンの終端ノードのTdも保持 (レポート表示用)
+                if (i === beam.spans.length - 1) {
+                    if (stL) span.fdStress.leftPat.lastTd_kN = stL.Td[i+1];
+                    if (stR) span.fdStress.rightPat.lastTd_kN = stR.Td[i+1];
+                }
+
+                span.isNG = isNG;
+            });
+        }
+
+        // 梁全体のサマリー (旧UI/帳票との互換性のためのフォールバック)
+        beam.isNG = beamIsNG;
+        if (beam.spans && beam.spans[0]) {
+            beam.fdStress = beam.spans[0].fdStress; // 代表スパンをセット
+        }
+    });
+}
+
+// ============================================================
+// [基礎計算追加 Phase4] HTML レポート生成
+// 選択梁の応力・断面検定結果を ARCHITREND スタイルの表で返す
+// ============================================================
+function getFoundationBeamReportHtml(beam) {
+    if (!beam || !beam.fdStress) {
+        return '<p style="color:#888; padding:10px;">⚠️ 計算データがありません。作図後に更新を実行してください。</p>';
+    }
+    const bp = beam.props || {};
+    let html = `<div class="foundation-beam-report" style="font-family:'Hiragino Kaku Gothic ProN','Meiryo',sans-serif; font-size:11px; line-height:1.4; color:#333;">
+        <div style="background:#2c3e50; color:#fff; padding:6px 10px; font-weight:bold; font-size:12px; margin-bottom:10px; border-radius:3px;">
+            📐 基礎梁断面検定 計算書（符号: ${bp.symbol || 'FG1'}）
+        </div>
+        
+        <table style="width:100%; border-collapse:collapse; font-size:11px; margin-bottom:10px; border:1px solid #aaa;">
+            <tr style="background:#f2f2f2;">
+                <th style="border:1px solid #aaa; padding:4px; text-align:left; width:25%;">符号</th>
+                <th style="border:1px solid #aaa; padding:4px; text-align:right; width:25%;">梁幅 W(mm)</th>
+                <th style="border:1px solid #aaa; padding:4px; text-align:right; width:25%;">梁成 H(mm)</th>
+                <th style="border:1px solid #aaa; padding:4px; text-align:right; width:25%;">根入深さ (mm)</th>
+            </tr>
+            <tr>
+                <td style="border:1px solid #aaa; padding:4px; font-weight:bold;">${bp.symbol || 'FG1'}</td>
+                <td style="border:1px solid #aaa; padding:4px; text-align:right;">${bp.width || 150}</td>
+                <td style="border:1px solid #aaa; padding:4px; text-align:right;">${bp.height || 640}</td>
+                <td style="border:1px solid #aaa; padding:4px; text-align:right;">${bp.embedDepth || 250}</td>
+            </tr>
+            <tr style="background:#f2f2f2;">
+                <th style="border:1px solid #aaa; padding:4px; text-align:left;">上部主筋</th>
+                <th style="border:1px solid #aaa; padding:4px; text-align:left;">下部主筋</th>
+                <th colspan="2" style="border:1px solid #aaa; padding:4px; text-align:left;">ST筋 (あばら筋)</th>
+            </tr>
+            <tr>
+                <td style="border:1px solid #aaa; padding:4px;">${bp.topRebar || '1-D13'}</td>
+                <td style="border:1px solid #aaa; padding:4px;">${bp.bottomRebar || '1-D13'}</td>
+                <td colspan="2" style="border:1px solid #aaa; padding:4px;">${bp.stirrup || '1-D10@200'}</td>
+            </tr>
+        </table>`;
+
+    if (beam.fdStress && beam.fdStress.pillars && beam.fdStress.pillars.length > 0) {
+        const pillars = beam.fdStress.pillars;
+        const seismic = beam.fdStress.seismic;
+        const spans = beam.fdStress.spans || [];
+
+        // Table 1: 応力の算定（水平荷重時）
+        html += `<div style="font-weight:bold; margin-top:12px; margin-bottom:4px; font-size:11px;">(1) 応力の算定（水平荷重時）</div>
+        <table style="width:100%; border-collapse:collapse; font-size:10px; margin-bottom:10px; border:1px solid #aaa;">
+            <thead>
+                <tr style="background:#f2f2f2;">
+                    <th rowspan="2" style="border:1px solid #aaa; padding:3px;">柱</th>
+                    <th rowspan="2" style="border:1px solid #aaa; padding:3px;">x(m)</th>
+                    <th colspan="4" style="border:1px solid #aaa; padding:3px; text-align:center;">左加力 (B=0.5)</th>
+                    <th colspan="4" style="border:1px solid #aaa; padding:3px; text-align:center;">右加力 (B=0.5)</th>
+                </tr>
+                <tr style="background:#f2f2f2;">
+                    <th style="border:1px solid #aaa; padding:2px;">Td</th>
+                    <th style="border:1px solid #aaa; padding:2px;">R</th>
+                    <th style="border:1px solid #aaa; padding:2px;">Qe</th>
+                    <th style="border:1px solid #aaa; padding:2px;">Mf</th>
+                    <th style="border:1px solid #aaa; padding:2px;">Td</th>
+                    <th style="border:1px solid #aaa; padding:2px;">R</th>
+                    <th style="border:1px solid #aaa; padding:2px;">Qe</th>
+                    <th style="border:1px solid #aaa; padding:2px;">Mf</th>
+                </tr>
+            </thead>
+            <tbody>`;
+        pillars.forEach((p, idx) => {
+            const l_Td = (seismic.leftward.Td[idx] || 0).toFixed(2);
+            const l_R = (idx === 0 ? seismic.leftward.R_left : (idx === pillars.length - 1 ? seismic.leftward.R_right : 0)).toFixed(2);
+            const l_Qe = (seismic.leftward.Qe[idx] || 0).toFixed(2);
+            const l_Mf = (seismic.leftward.Mf[idx] || 0).toFixed(2);
+
+            const r_Td = (seismic.rightward.Td[idx] || 0).toFixed(2);
+            const r_R = (idx === 0 ? seismic.rightward.R_left : (idx === pillars.length - 1 ? seismic.rightward.R_right : 0)).toFixed(2);
+            const r_Qe = (seismic.rightward.Qe[idx] || 0).toFixed(2);
+            const r_Mf = (seismic.rightward.Mf[idx] || 0).toFixed(2);
+
+            html += `<tr>
+                <td style="border:1px solid #aaa; padding:3px; font-weight:bold;">${p.name}</td>
+                <td style="border:1px solid #aaa; padding:3px; text-align:right;">${p.x.toFixed(2)}</td>
+                <td style="border:1px solid #aaa; padding:3px; text-align:right;">${l_Td}</td>
+                <td style="border:1px solid #aaa; padding:3px; text-align:right;">${l_R}</td>
+                <td style="border:1px solid #aaa; padding:3px; text-align:right; font-weight:bold;">${l_Qe}</td>
+                <td style="border:1px solid #aaa; padding:3px; text-align:right; font-weight:bold;">${l_Mf}</td>
+                <td style="border:1px solid #aaa; padding:3px; text-align:right;">${r_Td}</td>
+                <td style="border:1px solid #aaa; padding:3px; text-align:right;">${r_R}</td>
+                <td style="border:1px solid #aaa; padding:3px; text-align:right; font-weight:bold;">${r_Qe}</td>
+                <td style="border:1px solid #aaa; padding:3px; text-align:right; font-weight:bold;">${r_Mf}</td>
+            </tr>`;
+        });
+        html += `</tbody></table>`;
+
+        // Table 2: 応力の算定（長期）
+        html += `<div style="font-weight:bold; margin-top:10px; margin-bottom:4px; font-size:11px;">(2) 応力の算定（長期）</div>
+        <table style="width:100%; border-collapse:collapse; font-size:10px; margin-bottom:10px; border:1px solid #aaa;">
+            <thead>
+                <tr style="background:#f2f2f2;">
+                    <th style="border:1px solid #aaa; padding:3px;">柱間</th>
+                    <th style="border:1px solid #aaa; padding:3px;">長さL(m)</th>
+                    <th style="border:1px solid #aaa; padding:3px;">σe (kN/㎡)</th>
+                    <th style="border:1px solid #aaa; padding:3px;">負担幅 B(m)</th>
+                    <th style="border:1px solid #aaa; padding:3px;">M中(kNm)</th>
+                    <th style="border:1px solid #aaa; padding:3px;">M端(kNm)</th>
+                    <th style="border:1px solid #aaa; padding:3px;">QL(kN)</th>
+                </tr>
+            </thead>
+            <tbody>`;
+        spans.forEach(span => {
+            html += `<tr>
+                <td style="border:1px solid #aaa; padding:3px; font-weight:bold;">${span.spanName}</td>
+                <td style="border:1px solid #aaa; padding:3px; text-align:right;">${span.L.toFixed(2)}</td>
+                <td style="border:1px solid #aaa; padding:3px; text-align:right;">${span.sigma_e.toFixed(2)}</td>
+                <td style="border:1px solid #aaa; padding:3px; text-align:right;">${span.B_trib.toFixed(2)}</td>
+                <td style="border:1px solid #aaa; padding:3px; text-align:right; font-weight:bold;">${span.M_mid.toFixed(2)}</td>
+                <td style="border:1px solid #aaa; padding:3px; text-align:right; font-weight:bold;">${span.M_end.toFixed(2)}</td>
+                <td style="border:1px solid #aaa; padding:3px; text-align:right; font-weight:bold;">${span.Q_L.toFixed(2)}</td>
+            </tr>`;
+        });
+        html += `</tbody></table>`;
+
+        // Table 3: 応力の算定（短期）
+        html += `<div style="font-weight:bold; margin-top:10px; margin-bottom:4px; font-size:11px;">(3) 応力の算定（短期）</div>
+        <table style="width:100%; border-collapse:collapse; font-size:10px; margin-bottom:10px; border:1px solid #aaa;">
+            <thead>
+                <tr style="background:#f2f2f2;">
+                    <th rowspan="2" style="border:1px solid #aaa; padding:3px;">柱間</th>
+                    <th colspan="3" style="border:1px solid #aaa; padding:3px; text-align:center;">左加力 (QL + 2.0Qe)</th>
+                    <th colspan="3" style="border:1px solid #aaa; padding:3px; text-align:center;">右加力 (QL + 2.0Qe)</th>
+                </tr>
+                <tr style="background:#f2f2f2;">
+                    <th style="border:1px solid #aaa; padding:2px;">M端(左)</th>
+                    <th style="border:1px solid #aaa; padding:2px;">M端(右)</th>
+                    <th style="border:1px solid #aaa; padding:2px;">QS (kN)</th>
+                    <th style="border:1px solid #aaa; padding:2px;">M端(左)</th>
+                    <th style="border:1px solid #aaa; padding:2px;">M端(右)</th>
+                    <th style="border:1px solid #aaa; padding:2px;">QS (kN)</th>
+                </tr>
+            </thead>
+            <tbody>`;
+        spans.forEach(span => {
+            html += `<tr>
+                <td style="border:1px solid #aaa; padding:3px; font-weight:bold;">${span.spanName}</td>
+                <td style="border:1px solid #aaa; padding:3px; text-align:right;">${span.leftward.M_left.toFixed(2)}</td>
+                <td style="border:1px solid #aaa; padding:3px; text-align:right;">${span.leftward.M_right.toFixed(2)}</td>
+                <td style="border:1px solid #aaa; padding:3px; text-align:right; font-weight:bold;">${span.leftward.Q.toFixed(2)}</td>
+                <td style="border:1px solid #aaa; padding:3px; text-align:right;">${span.rightward.M_left.toFixed(2)}</td>
+                <td style="border:1px solid #aaa; padding:3px; text-align:right;">${span.rightward.M_right.toFixed(2)}</td>
+                <td style="border:1px solid #aaa; padding:3px; text-align:right; font-weight:bold;">${span.rightward.Q.toFixed(2)}</td>
+            </tr>`;
+        });
+        html += `</tbody></table>`;
+
+        // Table 4: 許容耐力の算定（1）
+        html += `<div style="font-weight:bold; margin-top:10px; margin-bottom:4px; font-size:11px;">(4) 許容耐力の算定（1 - 曲げ）</div>
+        <table style="width:100%; border-collapse:collapse; font-size:10px; margin-bottom:10px; border:1px solid #aaa;">
+            <thead>
+                <tr style="background:#f2f2f2;">
+                    <th rowspan="2" style="border:1px solid #aaa; padding:3px;">柱間</th>
+                    <th rowspan="2" style="border:1px solid #aaa; padding:3px;">成 D(mm)</th>
+                    <th colspan="3" style="border:1px solid #aaa; padding:3px; text-align:center;">上端主筋</th>
+                    <th colspan="3" style="border:1px solid #aaa; padding:3px; text-align:center;">下端主筋</th>
+                </tr>
+                <tr style="background:#f2f2f2;">
+                    <th style="border:1px solid #aaa; padding:2px;">鉄筋</th>
+                    <th style="border:1px solid #aaa; padding:2px;">at(㎟)</th>
+                    <th style="border:1px solid #aaa; padding:2px;">sMa(kNm)</th>
+                    <th style="border:1px solid #aaa; padding:2px;">鉄筋</th>
+                    <th style="border:1px solid #aaa; padding:2px;">at(㎟)</th>
+                    <th style="border:1px solid #aaa; padding:2px;">lMa(kNm)</th>
+                </tr>
+            </thead>
+            <tbody>`;
+        spans.forEach(span => {
+            html += `<tr>
+                <td style="border:1px solid #aaa; padding:3px; font-weight:bold;">${span.spanName}</td>
+                <td style="border:1px solid #aaa; padding:3px; text-align:right;">${span.cap.h}</td>
+                <td style="border:1px solid #aaa; padding:3px; font-weight:bold;">${bp.topRebar || '1-D13'}</td>
+                <td style="border:1px solid #aaa; padding:3px; text-align:right;">${(span.cap.lMa_top * 1e6 / 195 / span.cap.j || 0).toFixed(1)}</td>
+                <td style="border:1px solid #aaa; padding:3px; text-align:right; font-weight:bold;">${span.cap.sMa_top.toFixed(2)}</td>
+                <td style="border:1px solid #aaa; padding:3px; font-weight:bold;">${bp.bottomRebar || '1-D13'}</td>
+                <td style="border:1px solid #aaa; padding:3px; text-align:right;">${(span.cap.lMa_bot * 1e6 / 195 / span.cap.j || 0).toFixed(1)}</td>
+                <td style="border:1px solid #aaa; padding:3px; text-align:right; font-weight:bold;">${span.cap.lMa_bot.toFixed(2)}</td>
+            </tr>`;
+        });
+        html += `</tbody></table>`;
+
+        // Table 5: 許容耐力の算定（2）
+        html += `<div style="font-weight:bold; margin-top:10px; margin-bottom:4px; font-size:11px;">(5) 許容耐力の算定（2 - せん断）</div>
+        <table style="width:100%; border-collapse:collapse; font-size:10px; margin-bottom:10px; border:1px solid #aaa;">
+            <thead>
+                <tr style="background:#f2f2f2;">
+                    <th style="border:1px solid #aaa; padding:3px;">柱間</th>
+                    <th style="border:1px solid #aaa; padding:3px;">幅 b</th>
+                    <th style="border:1px solid #aaa; padding:3px;">ST筋</th>
+                    <th style="border:1px solid #aaa; padding:3px;">pw</th>
+                    <th style="border:1px solid #aaa; padding:3px;">長期Qa(kN)</th>
+                    <th style="border:1px solid #aaa; padding:3px;">短期Qa_L(kN)</th>
+                    <th style="border:1px solid #aaa; padding:3px;">短期Qa_R(kN)</th>
+                </tr>
+            </thead>
+            <tbody>`;
+        spans.forEach(span => {
+            html += `<tr>
+                <td style="border:1px solid #aaa; padding:3px; font-weight:bold;">${span.spanName}</td>
+                <td style="border:1px solid #aaa; padding:3px; text-align:right;">${span.cap.b}</td>
+                <td style="border:1px solid #aaa; padding:3px; font-weight:bold;">${bp.stirrup || '1-D10@200'}</td>
+                <td style="border:1px solid #aaa; padding:3px; text-align:right;">${span.cap.pw.toFixed(5)}</td>
+                <td style="border:1px solid #aaa; padding:3px; text-align:right; font-weight:bold;">${span.cap.lQa.toFixed(2)}</td>
+                <td style="border:1px solid #aaa; padding:3px; text-align:right; font-weight:bold;">${span.cap.sQa_L.toFixed(2)}</td>
+                <td style="border:1px solid #aaa; padding:3px; text-align:right; font-weight:bold;">${span.cap.sQa_R.toFixed(2)}</td>
+            </tr>`;
+        });
+        html += `</tbody></table>`;
+
+        // Table 6: 総合判定表
+        html += `<div style="font-weight:bold; margin-top:10px; margin-bottom:4px; font-size:11px;">(6) 総合判定表</div>
+        <table style="width:100%; border-collapse:collapse; font-size:10px; border:1px solid #aaa;">
+            <thead>
+                <tr style="background:#f2f2f2;">
+                    <th style="border:1px solid #aaa; padding:3px;">柱間</th>
+                    <th style="border:1px solid #aaa; padding:3px; text-align:center;">長期 M_L/Ma</th>
+                    <th style="border:1px solid #aaa; padding:3px; text-align:center;">長期 Q_L/Qa</th>
+                    <th style="border:1px solid #aaa; padding:3px; text-align:center;">短期左 M_S/Ma</th>
+                    <th style="border:1px solid #aaa; padding:3px; text-align:center;">短期左 Q_S/Qa</th>
+                    <th style="border:1px solid #aaa; padding:3px; text-align:center;">短期右 M_S/Ma</th>
+                    <th style="border:1px solid #aaa; padding:3px; text-align:center;">短期右 Q_S/Qa</th>
+                    <th style="border:1px solid #aaa; padding:3px; text-align:center;">判定</th>
+                </tr>
+            </thead>
+            <tbody>`;
+        spans.forEach(span => {
+            const badge = span.isNG ? `<span style="color:red; font-weight:bold;">NG</span>` : `<span style="color:green; font-weight:bold;">OK</span>`;
+            html += `<tr>
+                <td style="border:1px solid #aaa; padding:3px; font-weight:bold;">${span.spanName}</td>
+                <td style="border:1px solid #aaa; padding:3px; text-align:right; font-weight:bold; color:${span.rM_L > 1.0 ? 'red' : 'inherit'}">${span.rM_L.toFixed(2)}</td>
+                <td style="border:1px solid #aaa; padding:3px; text-align:right; font-weight:bold; color:${span.rQ_L > 1.0 ? 'red' : 'inherit'}">${span.rQ_L.toFixed(2)}</td>
+                <td style="border:1px solid #aaa; padding:3px; text-align:right; font-weight:bold; color:${Math.max(span.leftward.rM_left, span.leftward.rM_right) > 1.0 ? 'red' : 'inherit'}">${Math.max(span.leftward.rM_left, span.leftward.rM_right).toFixed(2)}</td>
+                <td style="border:1px solid #aaa; padding:3px; text-align:right; font-weight:bold; color:${span.leftward.rQ > 1.0 ? 'red' : 'inherit'}">${span.leftward.rQ.toFixed(2)}</td>
+                <td style="border:1px solid #aaa; padding:3px; text-align:right; font-weight:bold; color:${Math.max(span.rightward.rM_left, span.rightward.rM_right) > 1.0 ? 'red' : 'inherit'}">${Math.max(span.rightward.rM_left, span.rightward.rM_right).toFixed(2)}</td>
+                <td style="border:1px solid #aaa; padding:3px; text-align:right; font-weight:bold; color:${span.rightward.rQ > 1.0 ? 'red' : 'inherit'}">${span.rightward.rQ.toFixed(2)}</td>
+                <td style="border:1px solid #aaa; padding:3px; text-align:center;">${badge}</td>
+            </tr>`;
+        });
+        html += `</tbody></table>`;
+    } else {
+        html += `<p style="padding:10px; text-align:center; color:#7f8c8d; font-size:11px;">
+            💡 基礎梁のスパン（柱間）が検出されていません。
+        </p>`;
+    }
+
+    html += `</div>`;
+    return html;
+}
+
+// ============================================================
+// [バグ修正 構文エラー解消] [機能補完 スラブ検定実装] モーメント係数テーブル (Standard Alpha values for Mx=α*q*lx^2)
+// 簡略化した安全側の係数テーブルを使用します
+// ============================================================
+/* 
+const FD_SLAB_COEFFS = {
+    '4辺固定':                     { mcx: 0.025, max: 0.045, mcy: 0.015, may: 0.035 },
+    '3辺固定1辺ピン（長辺ピン）':  { mcx: 0.035, max: 0.055, mcy: 0.020, may: 0.040 },
+    '3辺固定1辺ピン（短辺ピン）':  { mcx: 0.040, max: 0.065, mcy: 0.025, may: 0.050 },
+    '2隣辺固定2隣辺ピン':          { mcx: 0.045, max: 0.075, mcy: 0.035, may: 0.065 },
+    '長辺2辺固定短辺2辺ピン':      { mcx: 0.060, max: 0.090, mcy: 0.030, may: 0.000 },
+    '短辺2辺固定長辺2辺ピン':      { mcx: 0.030, max: 0.000, mcy: 0.060, may: 0.090 },
+    '1辺固定3辺ピン（長辺固定）':  { mcx: 0.065, max: 0.100, mcy: 0.040, may: 0.000 },
+    '1辺固定3辺ピン（短辺固定）':  { mcx: 0.050, max: 0.000, mcy: 0.075, may: 0.110 },
+    '4辺ピン':                     { mcx: 0.080, max: 0.000, mcy: 0.050, may: 0.000 }
+};
+*/
+
+
+/**
+ * [機能補完 スラブ検定実装] スラブ断面検定の実行
+ */
+function OBSOLETE_calculateFoundationSlabAnalysis(slabs, avgBuildingPressure) {
+    if (!slabs || slabs.length === 0) return;
+
+    slabs.forEach(slab => {
+        const p = slab.props || {};
+        const D = p.slabThickness || 150;
+        const dt = p.coverDepth || 70; // [機能補完 スラブ計算全結合] 標準かぶりを70mmへ
+        const topH = p.slabTopHeight || 50;
+        
+        // [バグ修正 NaNカスケード防止と描画復旧] 接地圧算出の数値安全化
+        const bp = Number(avgBuildingPressure) || 0;
+        const wSelf = Number(((Number(D) + Number(topH)) / 1000) * 24.0) || 0;
+        const wLive = 1.3; // 木造積載荷重 (通常1.3)
+        const qTotal = bp + wSelf + wLive;
+        p.groundPressure = qTotal;
+
+        // 2. 形状特性
+        const bounds = getSlabBounds(slab); 
+        const lx = Math.min(bounds.width, bounds.height) / 1000;
+        const ly = Math.max(bounds.width, bounds.height) / 1000;
+        const lambda = ly / lx;
+
+        // 3. モーメント算出 Mx = α * q * lx^2
+        if (p.support === '片持ち') { // [機能改善 片持ちスラブ対応]
+            const L = Number(p.cantileverLength) || 0.9;
+            const Mx_center = 0.5 * qTotal * (L ** 2);
+            const Mx_end = 0;
+            const My_center = 0;
+            const My_end = 0;
+
+            const d = D - dt;
+            const j = d * (7/8);
+            const steelShort = fd_getSteelStrength(p.rebarShort?.type || 'D13');
+            const Ma_short = steelShort.ft * (p.rebarShort?.at || 0) * j / 1e6;
+            const Ma_long = 0;
+
+            const ratioShort = Mx_center / (Ma_short || 1);
+            const ratioLong = 0;
+
+            slab.fdStress = {
+                qTotal, wSelf, wLive, avgBuildingPressure,
+                cantileverLength: L,
+                Mx_center, Mx_end, My_center, My_end,
+                Ma_short, Ma_long,
+                ratioShort, ratioLong,
+                isNG: (ratioShort > 1.0)
+            };
+        } else {
+            const coeffs = FD_SLAB_COEFFS[p.support] || FD_SLAB_COEFFS['4辺固定'];
+            
+            // 長辺/短辺比 lambda による補正 (簡易: 1.5以上の場合は1方向板に近づく)
+            const lambdaFactor = Math.min(1.0, 1.5 / lambda); 
+
+            const Mx_center = coeffs.mcx * qTotal * (lx ** 2);
+            const Mx_end    = coeffs.max * qTotal * (lx ** 2);
+            const My_center = coeffs.mcy * qTotal * (lx ** 2) * lambdaFactor;
+            const My_end    = coeffs.may * qTotal * (lx ** 2) * lambdaFactor;
+
+            // 4. 許容耐力算出 Ma = ft * at * (7/8 * d) / 1e6 (kN·m/m)
+            const d = D - dt;
+            const j = d * (7/8);
+            
+            const steelShort = fd_getSteelStrength(p.rebarShort?.type || 'D13');
+            const steelLong  = fd_getSteelStrength(p.rebarLong?.type || 'D13');
+
+            const Ma_short = steelShort.ft * (p.rebarShort?.at || 0) * j / 1e6;
+            const Ma_long  = steelLong.ft  * (p.rebarLong?.at || 0)  * j / 1e6;
+
+            // 5. 判定 (最大値を採用)
+            const ratioShort = Math.max(Mx_center, Mx_end) / (Ma_short || 1);
+            const ratioLong  = Math.max(My_center, My_end) / (Ma_long || 1);
+
+            slab.fdStress = {
+                qTotal, wSelf, wLive, avgBuildingPressure,
+                lx, ly, lambda,
+                Mx_center, Mx_end, My_center, My_end,
+                Ma_short, Ma_long,
+                ratioShort, ratioLong,
+                isNG: (ratioShort > 1.0 || ratioLong > 1.0)
+            };
+        }
+    });
+}
+
+function getSlabBounds(slab) {
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    slab.vertices.forEach(v => {
+        minX = Math.min(minX, v.x); maxX = Math.max(maxX, v.x);
+        minY = Math.min(minY, v.y); maxY = Math.max(maxY, v.y);
+    });
+    return { width: maxX - minX, height: maxY - minY };
+}
+
+/**
+ * [機能補完 スラブ検定実装] スラブ断面検定レポートHTML
+ */
+function OBSOLETE_getFoundationSlabReportHtml(slab) {
+    if (!slab || !slab.fdStress) return '<p style="color:#888;">検定データなし</p>';
+    const s = slab.fdStress;
+    const fmt = (v, d = 2) => v != null ? v.toFixed(d) : '—';
+    const fmtR = (r) => {
+        const ok = r <= 1.0;
+        return `<span style="color:${ok ? '#27ae60' : '#e74c3c'};font-weight:bold;">${(r * 100).toFixed(1)}% ${ok ? 'OK' : 'NG'}</span>`;
+    };
+
+    if (slab.props && slab.props.support === '片持ち') { // [機能改善 片持ちスラブ対応]
+        return `
+        <div style="background:#fef9e7; border:1px solid #f1c40f; border-radius:4px; padding:8px; font-size:11px;">
+            <div style="font-weight:bold; color:#7d6608; border-bottom:1px solid #f1c40f; margin-bottom:5px;">📋 片持ちスラブ断面検定</div>
+            <table style="width:100%; border-collapse:collapse;">
+                <tr><td>接地圧 q</td><td style="text-align:right; font-weight:bold;">${fmt(s.qTotal, 2)}</td><td>kN/㎡</td></tr>
+                <tr><td>片持ち長さ L</td><td style="text-align:right; font-weight:bold;">${fmt(s.cantileverLength, 2)}</td><td>m</td></tr>
+                <tr style="background:#eee;"><td colspan="3" style="font-weight:bold; height:1px;"></td></tr>
+                <tr style="font-size:10px; color:#666;"><td colspan="3">算定式: M = 1/2 ・ q ・ L²</td></tr>
+                <tr><td>モーメント M</td><td colspan="2" style="text-align:right; font-weight:bold;">${fmt(s.Mx_center, 2)} kN・m/m</td></tr>
+                <tr><td>許容耐力 Ma</td><td colspan="2" style="text-align:right; font-weight:bold;">${fmt(s.Ma_short, 2)} kN・m/m</td></tr>
+                <tr style="font-size:9px; color:#888;"><td colspan="3">(※短辺配筋を主筋として計算)</td></tr>
+                <tr style="background:#eee;"><td colspan="3" style="font-weight:bold; height:1px;"></td></tr>
+                <tr><td>検定比 M/Ma</td><td colspan="2" style="text-align:right;">${fmtR(s.ratioShort)}</td></tr>
+            </table>
+        </div>`;
+    }
+
+    return `
+    <div style="background:#f8f9fa; border:1px solid #ddd; border-radius:4px; padding:8px; font-size:11px;">
+        <div style="font-weight:bold; color:#2c3e50; border-bottom:1px solid #ccc; margin-bottom:5px;">📋 断面検定結果</div>
+        <table style="width:100%; border-collapse:collapse;">
+            <tr><td>総接地圧 q</td><td style="text-align:right; font-weight:bold;">${fmt(s.qTotal, 2)}</td><td>kN/㎡</td></tr>
+            <tr style="font-size:10px; color:#666;">
+                <td colspan="3">(建物:${fmt(s.avgBuildingPressure, 1)} + 自重:${fmt(s.wSelf, 1)} + 積載:${fmt(s.wLive, 1)})</td>
+            </tr>
+            <tr style="background:#eee;"><td colspan="3" style="font-weight:bold; height:1px;"></td></tr>
+            <tr><td>短辺 M/Ma</td><td colspan="2" style="text-align:right;">${fmt(Math.max(s.Mx_center, s.Mx_end), 2)} / ${fmt(s.Ma_short, 2)}</td></tr>
+            <tr><td>短辺 判定</td><td colspan="2" style="text-align:right;">${fmtR(s.ratioShort)}</td></tr>
+            <tr style="background:#eee;"><td colspan="3" style="font-weight:bold; height:1px;"></td></tr>
+            <tr><td>長辺 M/Ma</td><td colspan="2" style="text-align:right;">${fmt(Math.max(s.My_center, s.My_end), 2)} / ${fmt(s.Ma_long, 2)}</td></tr>
+            <tr><td>長辺 判定</td><td colspan="2" style="text-align:right;">${fmtR(s.ratioLong)}</td></tr>
+        </table>
+    </div>`;
+}
+// ============================================================
+// [機能追加 7-3応力図と強調表示] 基礎梁応力図 (N・M・Q図) の SVG 生成
+// ============================================================
+/**
+ * 基礎梁の応力図（N, M, Q）を1つのSVGとして生成します。
+ * @param {Object} beam 基礎梁オブジェクト
+ * @returns {string} SVG文字列
+ */
+// [機能追加 山場Step2: 連続梁図表の完全実装] 連続梁対応のSVG生成
+function generateBeamNMQSvg(beam) {
+    if (!beam || !beam.spans || beam.spans.length === 0) return '';
+    
+    // 全スパンの合計長さを算出
+    const totalL_mm = beam.spans.reduce((sum, s) => sum + (s.spanLength || 0), 0);
+    const totalL_m = totalL_mm / 1000;
+    if (totalL_m <= 0) return '';
+    
+    // SVG設定
+    const w = 840; // 基準幅 (少し広めに)
+    const hSection = 140; // 各図の高さ
+    const pad = 50;
+    const hTotal = hSection * 3 + pad * 2;
+    const viewBox = `0 0 ${w} ${hTotal}`;
+    
+    // スケール
+    const beamStartX = pad * 2;
+    const beamEndX = w - pad * 2;
+    const beamW = beamEndX - beamStartX;
+    const toX = (posM) => beamStartX + (totalL_m > 0 ? (posM / totalL_m) * beamW : 0);
+
+    // 最大応力の取得 (全体のスケーリング用)
+    let maxM = 1.0, maxQ = 1.0, maxN = 10.0;
+    beam.spans.forEach(s => {
+        const fs = s.fdStress;
+        if (fs && fs.stressData) {
+            const mC_Long = fs.stressData.M_long_mid_Nmm / 1e6;
+            const mC_Short = (fs.stressData.M_short_end_Nmm || 0) / 2; // 山形のピーク想定
+            const mE_Short = (fs.stressData.M_short_end_Nmm || 0) / 1e6;
+            maxM = Math.max(maxM, mC_Long + mC_Short, mE_Short);
+            maxQ = Math.max(maxQ, (fs.stressData.Q_long_N + fs.stressData.Qe_N) / 1e3);
+            maxN = Math.max(maxN, (fs.leftPat?.Td_kN || 0), (fs.rightPat?.Td_kN || 0));
+        }
+    });
+
+    const fmt = (v) => (typeof v === 'number' && isFinite(v)) ? v.toFixed(2) : '0';
+    let svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${viewBox}" width="100%" style="background:#fff; font-family:'Meiryo',sans-serif;">`;
+    
+    // 背景グリッドライン (各図のベースライン)
+    const nY = pad + hSection / 2;
+    const mY = pad + hSection + hSection / 2;
+    const qY = pad + hSection * 2 + hSection / 2;
+
+    // --- 各図のタイトルとベースライン ---
+    svg += `<g stroke="#eee" stroke-width="1">
+        <line x1="${beamStartX}" y1="${nY}" x2="${beamEndX}" y2="${nY}" />
+        <line x1="${beamStartX}" y1="${mY}" x2="${beamEndX}" y2="${mY}" />
+        <line x1="${beamStartX}" y1="${qY}" x2="${beamEndX}" y2="${qY}" />
+    </g>`;
+    svg += `<text x="${pad}" y="${pad + 15}" font-size="12" font-weight="bold" fill="#2c3e50">N図 (軸力) [kN]</text>`;
+    svg += `<text x="${pad}" y="${pad + hSection + 15}" font-size="12" font-weight="bold" fill="#2c3e50">M図 (曲げモーメント) [kN・m]</text>`;
+    svg += `<text x="${pad}" y="${pad + hSection * 2 + 15}" font-size="12" font-weight="bold" fill="#2c3e50">Q図 (せん断力) [kN]</text>`;
+
+    // --- スパン境界線 (柱位置) の描画 ---
+    let currentPosM = 0;
+    svg += `<g stroke="#bdc3c7" stroke-width="1" stroke-dasharray="5,3">`;
+    svg += `<line x1="${toX(0)}" y1="${pad}" x2="${toX(0)}" y2="${hTotal - pad}" />`; // 開始点
+    beam.spans.forEach(s => {
+        currentPosM += (s.spanLength || 0) / 1000;
+        const x = toX(currentPosM);
+        svg += `<line x1="${x}" y1="${pad}" x2="${x}" y2="${hTotal - pad}" />`;
+    });
+    svg += `</g>`;
+
+    // --- スパンごとの応力図描画 ---
+    currentPosM = 0;
+    beam.spans.forEach((s, idx) => {
+        const spanL = (s.spanLength || 0) / 1000;
+        const xStart = toX(currentPosM);
+        const xEnd = toX(currentPosM + spanL);
+        const fs = s.fdStress;
+        if (!fs) { currentPosM += spanL; return; }
+
+        const mScale = (hSection * 0.4) / (maxM || 1);
+        const qScale = (hSection * 0.4) / (maxQ || 1);
+        const nScale = (hSection * 0.3) / (maxN || 1);
+
+        // 1. N図 (矩形)
+        const nVal = fs.cap?.N_kN || 0;
+        if (nVal > 0) {
+            const nH = nVal * nScale;
+            svg += `<rect x="${xStart}" y="${nY - nH}" width="${xEnd - xStart}" height="${nH}" fill="rgba(231, 76, 60, 0.15)" stroke="#e74c3c" stroke-width="1" />`;
+            svg += `<text x="${(xStart + xEnd) / 2}" y="${nY - nH - 5}" font-size="10" text-anchor="middle" fill="#c0392b">${fmt(nVal)}</text>`;
+        }
+
+        // 2. M図 (包絡線)
+        const mL_mid = (fs.stressData.M_long_mid_Nmm || 0) / 1e6;
+        const mS_mid = (fs.stressData.M_short_end_Nmm || 0) / 2 / 1e6;
+        const mS_end = (fs.stressData.M_short_end_Nmm || 0) / 1e6;
+        
+        let mPathTotal = `M ${xStart} ${mY + mS_end * mScale}`; // 端部負モーメント
+        for (let i = 1; i <= 20; i++) {
+            const localX = (spanL * i) / 20;
+            const factorML = 4 * (localX / spanL) * (1 - localX / spanL); // パラボラ
+            const factorMS = (localX <= spanL / 2) ? (2 * localX / spanL) : (2 * (1 - localX / spanL)); // 山形
+            const val = (mL_mid * factorML) + (mS_mid * factorMS) - (mS_end * (1 - factorMS)); // 簡易包絡
+            mPathTotal += ` L ${toX(currentPosM + localX)} ${mY + val * mScale}`;
+        }
+        svg += `<path d="${mPathTotal}" fill="none" stroke="#2980b9" stroke-width="2" />`;
+        // ラベル (中央)
+        svg += `<text x="${(xStart + xEnd) / 2}" y="${mY + (mL_mid + mS_mid) * mScale + 12}" font-size="10" text-anchor="middle" fill="#2980b9">${fmt(mL_mid + mS_mid)}</text>`;
+        // ラベル (端部 - 負モーメント)
+        if (idx === 0) svg += `<text x="${xStart}" y="${mY - mS_end * mScale - 5}" font-size="9" text-anchor="start" fill="#2980b9">-${fmt(mS_end)}</text>`;
+        svg += `<text x="${xEnd}" y="${mY - mS_end * mScale - 5}" font-size="9" text-anchor="end" fill="#2980b9">-${fmt(mS_end)}</text>`;
+
+        // 3. Q図 (階段状/直線)
+        const qL = (fs.stressData.Q_long_N || 0) / 1e3;
+        const qS = (fs.stressData.Qe_N || 0) / 1e3;
+        const qTotal = qL + qS;
+        const qH1 = qTotal * qScale;
+        const qH2 = -qTotal * qScale;
+        svg += `<path d="M ${xStart} ${qY} L ${xStart} ${qY - qH1} L ${xEnd} ${qY - qH2} L ${xEnd} ${qY} Z" fill="rgba(155, 89, 182, 0.15)" stroke="#8e44ad" stroke-width="1.5" />`;
+        svg += `<text x="${xStart + 3}" y="${qY - qH1 - 5}" font-size="10" text-anchor="start" fill="#8e44ad">${fmt(qTotal)}</text>`;
+        svg += `<text x="${xEnd - 3}" y="${qY - qH2 + 12}" font-size="10" text-anchor="end" fill="#8e44ad">-${fmt(qTotal)}</text>`;
+
+        currentPosM += spanL;
+    });
+
+    svg += `</svg>`;
+    return svg;
+}
+
+// ============================================================
+// [機能改善 連続梁・スパンモデル化] 連続梁・スパン管理ロジック
+// ============================================================
+
+/**
+ * 重複する梁セグメントを統合し、1本の連続梁に再構成する
+ */
+window.reconstructContinuousBeams = function() {
+    const beams = window.AppState.foundationBeams || [];
+    const pillars = window.AppState.pillars || [];
+    if (beams.length === 0) return;
+
+    // 1. 同一線上にあるセグメントをグループ化 (水平・垂直)
+    const groups = [];
+    beams.forEach(b => {
+        // [バグ修正 スパンデータ生成の正常化] 数値型を保証
+        const bP1x = Number(b.p1.x), bP1y = Number(b.p1.y);
+        const bP2x = Number(b.p2.x), bP2y = Number(b.p2.y);
+        
+        // 正規化 (必ず p1 < p2 にする)
+        const p1 = bP1x < bP2x || (bP1x === bP2x && bP1y < bP2y) ? {x:bP1x, y:bP1y} : {x:bP2x, y:bP2y};
+        const p2 = bP1x < bP2x || (bP1x === bP2x && bP1y < bP2y) ? {x:bP2x, y:bP2y} : {x:bP1x, y:bP1y};
+        
+        let found = false;
+        const isH = Math.abs(p1.y - p2.y) < 5;
+        const isV = Math.abs(p1.x - p2.x) < 5;
+
+        for (const g of groups) {
+            const gIsH = Math.abs(g[0].p1.y - g[0].p2.y) < 5;
+            const gIsV = Math.abs(g[0].p1.x - g[0].p2.x) < 5;
+
+            if (isH && gIsH && Math.abs(p1.y - g[0].p1.y) < 5) { g.push({b, p1, p2}); found = true; break; }
+            if (isV && gIsV && Math.abs(p1.x - g[0].p1.x) < 5) { g.push({b, p1, p2}); found = true; break; }
+        }
+        if (!found) groups.push([{b, p1, p2}]);
+    });
+
+    const newBeams = [];
+    groups.forEach(g => {
+        const isH = Math.abs(g[0].p1.y - g[0].p2.y) < 5;
+        // 開始座標でソート
+        g.sort((a, b) => isH ? a.p1.x - b.p1.x : a.p1.y - b.p1.y);
+
+        let current = null;
+        g.forEach(item => {
+            if (!current) {
+                // [バグ修正 基礎梁・スパンの座標欠損修復] 新しいオブジェクトとして座標をコピー
+                current = { 
+                    ...item.b, 
+                    p1: { x: Number(item.p1.x), y: Number(item.p1.y) }, 
+                    p2: { x: Number(item.p2.x), y: Number(item.p2.y) }, 
+                    originalBeams: [item.b],
+                    spans: [] 
+                };
+            } else {
+                const posStart = isH ? item.p1.x : item.p1.y;
+                const currEnd = isH ? current.p2.x : current.p2.y;
+                
+                // 連結判定 (50mm以内の隙間なら連結とみなす)
+                if (posStart <= currEnd + 50) {
+                    const posEnd = isH ? item.p2.x : item.p2.y;
+                    if (posEnd > currEnd) {
+                        // [バグ修正 基礎梁・スパンの座標欠損修復] 終点を更新
+                        current.p2 = { x: Number(item.p2.x), y: Number(item.p2.y) };
+                    }
+                    current.originalBeams.push(item.b);
+                } else {
+                    newBeams.push(current);
+                    current = { 
+                        ...item.b, 
+                        p1: { x: Number(item.p1.x), y: Number(item.p1.y) }, 
+                        p2: { x: Number(item.p2.x), y: Number(item.p2.y) }, 
+                        originalBeams: [item.b],
+                        spans: []
+                    };
+                }
+            }
+        });
+        if (current) newBeams.push(current);
+    });
+
+    // プロパティの継承 (最も長い元のセグメントから引き継ぐ)
+    newBeams.forEach(nb => {
+        if (nb.originalBeams && nb.originalBeams.length > 0) {
+            nb.originalBeams.sort((a, b) => {
+                const la = Math.hypot(a.p2.x - a.p1.x, a.p2.y - a.p1.y);
+                const lb = Math.hypot(b.p2.x - b.p1.x, b.p2.y - b.p1.y);
+                return lb - la;
+            });
+            // 最長のセグメントのプロパティとIDを代表として採用
+            nb.props = JSON.parse(JSON.stringify(nb.originalBeams[0].props));
+            nb.id = nb.originalBeams[0].id;
+        }
+        delete nb.originalBeams;
+    });
+
+    // 状態の更新
+    window.AppState.foundationBeams = newBeams;
+    
+    // [バグ修正 基礎梁描画の絶対可視化] 診断プロット: エンジン層での生成確認
+    console.log(`[基礎エンジンデバッグ] reconstructContinuousBeams finished. New beams count: ${newBeams.length}`);
+
+    // スパン分割処理の呼び出し
+    window.splitBeamsIntoSpans(newBeams, pillars);
+    const spanCount = newBeams.reduce((sum, b) => sum + (b.spans ? b.spans.length : 0), 0);
+    console.log(`[基礎エンジンデバッグ] splitBeamsIntoSpans finished. Total spans across all beams: ${spanCount}`);
+};
+
+/**
+ * 連続梁を支点(柱・交点)でマーキングし、spans配列へ分割・格納する
+ */
+window.splitBeamsIntoSpans = function(beams, pillars) {
+    beams.forEach(beam => {
+        // [バグ修正 スパンデータ生成の正常化] 明確な数値座標オブジェクトを保証
+        if (!beam.p1 || !beam.p2 || isNaN(beam.p1.x) || isNaN(beam.p1.y)) return;
+
+        const nodes = [];
+        const beamP1x = Number(beam.p1.x), beamP1y = Number(beam.p1.y);
+        const beamP2x = Number(beam.p2.x), beamP2y = Number(beam.p2.y);
+        
+        const isH = Math.abs(beamP1y - beamP2y) < 5;
+        const isV = Math.abs(beamP1x - beamP2x) < 5;
+        
+        // 1. 端点を初期ノードとして追加
+        nodes.push({ x: beamP1x, y: beamP1y, type: 'end' });
+        nodes.push({ x: beamP2x, y: beamP2y, type: 'end' });
+
+        // 2. この梁の上にある柱を検出
+        pillars.forEach(p => {
+            if (p.isDeleted) return;
+            const px = Number(p.x), py = Number(p.y);
+            let onBeam = false;
+            if (isH && Math.abs(py - beamP1y) < 10 && px >= Math.min(beamP1x, beamP2x) - 10 && px <= Math.max(beamP1x, beamP2x) + 10) {
+                onBeam = true;
+            } else if (isV && Math.abs(px - beamP1x) < 10 && py >= Math.min(beamP1y, beamP2y) - 10 && py <= Math.max(beamP1y, beamP2y) + 10) {
+                onBeam = true;
+            }
+            if (onBeam) {
+                nodes.push({ x: px, y: py, type: 'pillar', pillarId: p.id });
+            }
+        });
+
+        // 3. 直交する他の梁との交点を検出
+        beams.forEach(ob => {
+            if (ob.id === beam.id || !ob.p1 || !ob.p2) return;
+            const obP1x = Number(ob.p1.x), obP1y = Number(ob.p1.y);
+            const obP2x = Number(ob.p2.x), obP2y = Number(ob.p2.y);
+            const obIsH = Math.abs(obP1y - obP2y) < 5;
+            const obIsV = Math.abs(obP1x - obP2x) < 5;
+            
+            if (isH && obIsV) { // この梁が水平、相手が垂直
+                if (obP1x >= Math.min(beamP1x, beamP2x) - 5 && obP1x <= Math.max(beamP1x, beamP2x) + 5 && 
+                    beamP1y >= Math.min(obP1y, obP2y) - 5 && beamP1y <= Math.max(obP1y, obP2y) + 5) {
+                    nodes.push({ x: obP1x, y: beamP1y, type: 'intersect', beamId: ob.id });
+                }
+            } else if (isV && obIsH) { // この梁が垂直、相手が水平
+                if (obP1y >= Math.min(beamP1y, beamP2y) - 5 && obP1y <= Math.max(beamP1y, beamP2y) + 5 && 
+                    beamP1x >= Math.min(obP1x, obP2x) - 5 && beamP1x <= Math.max(obP1x, obP2x) + 5) {
+                    nodes.push({ x: beamP1x, y: obP1y, type: 'intersect', beamId: ob.id });
+                }
+            }
+        });
+
+        // 重複座標のノードを整理
+        const uniqueNodes = [];
+        nodes.forEach(n => {
+            let existing = uniqueNodes.find(un => Math.abs(un.x - n.x) < 20 && Math.abs(un.y - n.y) < 20);
+            if (!existing) {
+                uniqueNodes.push(n);
+            } else {
+                // 柱情報がある場合は優先的に保持
+                if (n.type === 'pillar') {
+                    existing.type = 'pillar';
+                    existing.pillarId = n.pillarId;
+                }
+            }
+        });
+
+        // 梁の方向に沿ってソート
+        uniqueNodes.sort((a, b) => isH ? a.x - b.x : a.y - b.y);
+
+        // ノード間をスパンとして分割
+        const spans = [];
+        for (let i = 0; i < uniqueNodes.length - 1; i++) {
+            const n1 = uniqueNodes[i];
+            const n2 = uniqueNodes[i + 1];
+            const spanLen = Math.hypot(n2.x - n1.x, n2.y - n1.y);
+            
+            if (spanLen > 50) { // 極小スパンは除外
+                spans.push({
+                    startNode: n1,
+                    endNode: n2,
+                    spanLength: spanLen,
+                    connectedSlabIds: [] 
+                });
+            }
+        }
+
+        // [バグ修正 基礎梁・スパンの座標欠損修復] 支点がなくても最低限1スパン生成
+        if (spans.length === 0) {
+            spans.push({
+                startNode: { x: beamP1x, y: beamP1y, type: 'end' },
+                endNode: { x: beamP2x, y: beamP2y, type: 'end' },
+                spanLength: Math.hypot(beamP2x - beamP1x, beamP2y - beamP1y),
+                connectedSlabIds: []
+            });
+        }
+        
+        beam.spans = spans;
+    });
+};
+
+// [機能追加 山場Step2: 連続梁図表の完全実装] 連続梁構造計算書HTML生成
+function generateContinuousBeamReportHtml(beam) {
+    if (!beam || !beam.spans || beam.spans.length === 0) return '<p>計算データがありません。</p>';
+    
+    const fmt = (v, d = 2) => (typeof v === 'number' && isFinite(v)) ? v.toFixed(d) : '-';
+    const fmtR = (r) => {
+        if (!isFinite(r)) return '-';
+        const ok = r <= 1.0;
+        return `<span style="color:${ok ? '#27ae60' : '#e74c3c'}; font-weight:bold;">${(r * 100).toFixed(1)}% ${ok ? 'OK' : 'NG'}</span>`;
+    };
+
+    let html = `
+    <div class="beam-report-container" style="color:#2c3e50; font-family:'Hiragino Kaku Gothic ProN','Meiryo',sans-serif; padding:10px;">
+        <!-- セクション1: 応力図 -->
+        <div style="margin-bottom:30px; background:#fff; border:1px solid #ddd; border-radius:8px; padding:15px; box-shadow:0 2px 4px rgba(0,0,0,0.05);">
+            <!-- [バグ修正 文字化けの物理的修復] タイトル -->
+            <div style="font-weight:bold; border-left:4px solid #2980b9; padding-left:10px; margin-bottom:15px; font-size:16px;">■ 基礎梁の断面と配筋の検定 (N・M・Q図)</div>
+            ${generateBeamNMQSvg(beam)}
+            <div style="margin-top:10px; display:flex; justify-content:center; gap:20px; font-size:11px; color:#7f8c8d;">
+                <span style="display:flex; align-items:center; gap:5px;"><span style="width:12px; height:2px; background:#2980b9; display:inline-block;"></span> 設計曲げモーメント M</span>
+                <span style="display:flex; align-items:center; gap:5px;"><span style="width:12px; height:2px; background:#8e44ad; display:inline-block;"></span> 設計せん断力 Q</span>
+            </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns: 1fr; gap:25px;">
+            <!-- セクション2: 節点(柱位置)応力表 -->
+            <section>
+                <div style="font-weight:bold; margin-bottom:10px; font-size:14px; background:#f8f9fa; padding:5px 10px; border-left:4px solid #34495e;">① 節点応力 (水平時引抜力)</div>
+                <table style="width:100%; border-collapse:collapse; font-size:12px; border:1px solid #bdc3c7;">
+                    <tr style="background:#34495e; color:#fff;">
+                        <!-- [バグ修正 文字化けの物理的修復] ヘッダー -->
+                        <th style="border:1px solid #bdc3c7; padding:8px;">節点No.</th>
+                        <th style="border:1px solid #bdc3c7; padding:8px;">種別 / 位置</th>
+                        <th style="border:1px solid #bdc3c7; padding:8px;">引抜力 N (kN)</th>
+                        <th style="border:1px solid #bdc3c7; padding:8px;">備考</th>
+                    </tr>
+                    ${beam.spans.map((s, i) => `
+                        <tr>
+                            <td style="border:1px solid #bdc3c7; padding:8px; text-align:center;">${i + 1}</td>
+                            <td style="border:1px solid #bdc3c7; padding:8px;">
+                                <!-- [バグ修正 文字化けの物理的修復] ラベル -->
+                                ${s.startNode.type === 'pillar' ? '柱位置' : '交差/端点'}: <strong>${getGridNameFromCoords(s.startNode.x, s.startNode.y)}</strong>
+                            </td>
+                            <td style="border:1px solid #bdc3c7; padding:8px; text-align:right; font-weight:bold; color:#e74c3c;">
+                                ${fmt(Math.abs(s.fdStress?.leftPat?.Td_kN || 0), 2)}
+                            </td>
+                            <!-- [バグ修正 文字化けの物理的修復] 備考 -->
+                            <td style="border:1px solid #bdc3c7; padding:8px; color:#7f8c8d; font-size:11px;">${i === 0 ? '始端部' : `中間節点`}</td>
+                        </tr>
+                    `).join('')}
+                    <tr>
+                        <td style="border:1px solid #bdc3c7; padding:8px; text-align:center;">${beam.spans.length + 1}</td>
+                        <td style="border:1px solid #bdc3c7; padding:8px;">
+                            <!-- [バグ修正 文字化けの物理的修復] 終端表示 -->
+                            終端点: <strong>${getGridNameFromCoords(beam.spans[beam.spans.length-1].endNode.x, beam.spans[beam.spans.length-1].endNode.y)}</strong>
+                        </td>
+                        <td style="border:1px solid #bdc3c7; padding:8px; text-align:right; font-weight:bold; color:#e74c3c;">
+                            ${fmt(Math.abs(beam.spans[beam.spans.length - 1].fdStress?.leftPat?.lastTd_kN || 0), 2)}
+                        </td>
+                        <td style="border:1px solid #bdc3c7; padding:8px; color:#7f8c8d; font-size:11px;">終端部</td>
+                    </tr>
+                </table>
+            </section>
+
+            <!-- セクション3: スパン応力表 -->
+            <section>
+                <div style="font-weight:bold; margin-bottom:10px; font-size:14px; background:#f8f9fa; padding:5px 10px; border-left:4px solid #34495e;">② 設計応力 (長期・短期組み合わせ)</div>
+                <table style="width:100%; border-collapse:collapse; font-size:12px; border:1px solid #bdc3c7; text-align:center;">
+                    <tr style="background:#34495e; color:#fff;">
+                        <!-- [バグ修正 文字化けの物理的修復] ヘッダー -->
+                        <th rowspan="2" style="border:1px solid #bdc3c7; padding:8px;">柱間</th>
+                        <th rowspan="2" style="border:1px solid #bdc3c7; padding:8px;">長さ(m)</th>
+                        <th colspan="2" style="border:1px solid #bdc3c7; padding:8px;">長期 (L)</th>
+                        <th colspan="2" style="border:1px solid #bdc3c7; padding:8px;">短期 左加力 (S L)</th>
+                        <th colspan="2" style="border:1px solid #bdc3c7; padding:8px;">短期 右加力 (S R)</th>
+                    </tr>
+                    <tr style="background:#ecf0f1; color:#333;">
+                        <th style="border:1px solid #bdc3c7; padding:5px;">中央 M</th><th style="border:1px solid #bdc3c7; padding:5px;">せん断 Q</th>
+                        <th style="border:1px solid #bdc3c7; padding:5px;">端部 M</th><th style="border:1px solid #bdc3c7; padding:5px;">せん断 Q</th>
+                        <th style="border:1px solid #bdc3c7; padding:5px;">端部 M</th><th style="border:1px solid #bdc3c7; padding:5px;">せん断 Q</th>
+                    </tr>
+                    ${beam.spans.map((s, i) => `
+                        <tr>
+                            <td style="border:1px solid #bdc3c7; padding:8px; font-weight:bold;">${i + 1}</td>
+                            <td style="border:1px solid #bdc3c7; padding:8px;">${fmt(s.spanLength/1000, 2)}</td>
+                            <td style="border:1px solid #bdc3c7; padding:8px;">${fmt(s.fdStress?.stressData?.M_long_mid_Nmm/1e6)}</td>
+                            <td style="border:1px solid #bdc3c7; padding:8px;">${fmt(s.fdStress?.stressData?.Q_long_N/1e3)}</td>
+                            <td style="border:1px solid #bdc3c7; padding:8px; background:#fdf9f9;">${fmt((s.fdStress?.stressData?.M_long_end_Nmm + (s.fdStress?.leftPat?.Mwf_kNm || 0)*1e6)/1e6)}</td>
+                            <td style="border:1px solid #bdc3c7; padding:8px; background:#fdf9f9;">${fmt((s.fdStress?.stressData?.Q_long_N + (s.fdStress?.leftPat?.Qe_kN || 0)*1e3)/1e3)}</td>
+                            <td style="border:1px solid #bdc3c7; padding:8px; background:#f9fdfa;">${fmt((s.fdStress?.stressData?.M_long_end_Nmm + (s.fdStress?.rightPat?.Mwf_kNm || 0)*1e6)/1e6)}</td>
+                            <td style="border:1px solid #bdc3c7; padding:8px; background:#f9fdfa;">${fmt((s.fdStress?.stressData?.Q_long_N + (s.fdStress?.rightPat?.Qe_kN || 0)*1e3)/1e3)}</td>
+                        </tr>
+                    `).join('')}
+                </table>
+                <div style="font-size:10px; color:#95a5a6; margin-top:5px;">* Mはスパン中央および端部の最大値を採用しています</div>
+            </section>
+
+            <!-- セクション4: スパン耐力表 -->
+            <section>
+                <div style="font-weight:bold; margin-bottom:10px; font-size:14px; background:#f8f9fa; padding:5px 10px; border-left:4px solid #34495e;">③ 断面定数・許容耐力</div>
+                <table style="width:100%; border-collapse:collapse; font-size:11px; border:1px solid #bdc3c7; text-align:center;">
+                    <tr style="background:#34495e; color:#fff;">
+                        <!-- [バグ修正 文字化けの物理的修復] ヘッダー -->
+                        <th style="border:1px solid #bdc3c7; padding:8px;">Span</th>
+                        <th style="border:1px solid #bdc3c7; padding:8px;">幅</th>
+                        <th style="border:1px solid #bdc3c7; padding:8px;">高さ</th>
+                        <th style="border:1px solid #bdc3c7; padding:8px;">上端主筋</th>
+                        <th style="border:1px solid #bdc3c7; padding:8px;">下端主筋</th>
+                        <th style="border:1px solid #bdc3c7; padding:8px;">スターラップ</th>
+                        <th style="border:1px solid #bdc3c7; padding:8px;">断面積 (mm²)</th>
+                        <th style="border:1px solid #bdc3c7; padding:8px;">ピッチ</th>
+                    </tr>
+                    ${beam.spans.map((s, i) => {
+                        const p = s.props || beam.props;
+                        const c = s.fdStress?.cap;
+                        return `
+                        <tr>
+                            <td style="border:1px solid #bdc3c7; padding:8px; font-weight:bold;">${i + 1}</td>
+                            <td style="border:1px solid #bdc3c7; padding:8px;">${p.width}</td>
+                            <td style="border:1px solid #bdc3c7; padding:8px;">${p.height}</td>
+                            <td style="border:1px solid #bdc3c7; padding:8px;">${p.topRebar}</td>
+                            <td style="border:1px solid #bdc3c7; padding:8px;">${p.bottomRebar}</td>
+                            <td style="border:1px solid #bdc3c7; padding:8px;">${p.stirrup}</td>
+                            <td style="border:1px solid #bdc3c7; padding:8px;">${fmt(c?.botRebar?.area, 1)}</td>
+                            <td style="border:1px solid #bdc3c7; padding:8px;">${c?.st?.pitch || '-'}</td>
+                        </tr>`;
+                    }).join('')}
+                </table>
+            </section>
+
+            <!-- セクション5: 判定表 -->
+            <section style="background:#fcfcfc; border:1px solid #bdc3c7; padding:15px; border-radius:4px;">
+                <div style="font-weight:bold; margin-bottom:10px; font-size:14px; color:#2c3e50;">④ 断面判定 (検定比)</div>
+                <table style="width:100%; border-collapse:collapse; font-size:12px; border:2px solid #34495e; text-align:center; background:#fff;">
+                    <tr style="background:#34495e; color:#fff;">
+                        <!-- [バグ修正 文字化けの物理的修復] ヘッダー -->
+                        <th style="border:1px solid #bdc3c7; padding:10px;">Span No.</th>
+                        <th style="border:1px solid #bdc3c7; padding:10px;">曲げ (長期)</th>
+                        <th style="border:1px solid #bdc3c7; padding:10px;">せん断 (長期)</th>
+                        <th style="border:1px solid #bdc3c7; padding:10px;">曲げ (短期)</th>
+                        <th style="border:1px solid #bdc3c7; padding:10px;">せん断 (短期)</th>
+                        <th style="border:1px solid #bdc3c7; padding:10px;">判定</th>
+                    </tr>
+                    ${beam.spans.map((s, i) => `
+                        <tr style="${s.isNG ? 'background:#fef5f5;' : ''}">
+                            <td style="border:1px solid #bdc3c7; padding:10px; font-weight:bold;">Span ${i + 1}</td>
+                            <td style="border:1px solid #bdc3c7; padding:10px;">${fmtR(s.fdStress?.ratioM_L)}</td>
+                            <td style="border:1px solid #bdc3c7; padding:10px;">${fmtR(s.fdStress?.ratioQ_L)}</td>
+                            <td style="border:1px solid #bdc3c7; padding:10px;">${fmtR(s.fdStress?.ratioM_S)}</td>
+                            <td style="border:1px solid #bdc3c7; padding:10px;">${fmtR(s.fdStress?.ratioQ_S)}</td>
+                            <td style="border:1px solid #bdc3c7; padding:10px;">
+                                <!-- [バグ修正 文字化けの物理的修復] 判定ラベル -->
+                                <span style="background:${s.isNG ? '#e74c3c' : '#27ae60'}; color:#fff; padding:4px 12px; border-radius:15px; font-size:12px; font-weight:bold; box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+                                    ${s.isNG ? 'NG' : 'OK'}
+                                </span>
+                            </td>
+                        </tr>
+                    `).join('')}
+                </table>
+            </section>
+        </div>
+    </div>`;
+    return html;
+}

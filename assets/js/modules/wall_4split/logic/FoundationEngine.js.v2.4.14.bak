@@ -1,0 +1,385 @@
+/**
+ * logic/FoundationEngine.js - 基礎計算エンジン (v2.4.14)
+ */
+
+window.FoundationEngine = {
+    /**
+     * 基礎関連要素の整合・解析計算の統合エントリー
+     */
+    calculateAll: function() {
+        const s = window.AppState;
+        if (!s) return;
+
+        // 1. 各梁スパンの分割（人通口による分割・ノード境界適合）
+        this.reconstructBeamSpans();
+
+        // 2. スラブへの荷重集計と断面検定
+        this.calculateSlabAnalysis();
+
+        // 3. 梁応力解析への荷重伝達と断面検定
+        this.calculateBeamAnalysis();
+    },
+
+    /**
+     * 各階の外壁総延長と建物単位重量、床面積から建物荷重を算出し、
+     * 各スラブ（接地圧）に伝播する建物全体・均し荷重の総計をアップデートします
+     */
+    calculateBuildingLoads: function() {
+        const s = window.AppState;
+        if (!s || !window.MathUtils) return;
+
+        const a1 = s.config?.floorAreas['1F'] || 0;
+        const a2 = s.config?.floorAreas['2F'] || 0;
+        const aRoof = Math.max(a1, a2);
+        
+        const wRoof = ( (s.config?.weights?.roof || 500) + (s.config?.weights?.solar || 0) + (s.config?.weights?.ceilingIns || 100) ) / 1000;
+        const wFloor = 2.4; 
+        const wWallSpec = ( (s.config?.weights?.exteriorWall || 600) + (s.config?.weights?.wallIns || 70) ) / 1000;
+
+        // 各階の実外壁線（s.exteriorWalls）の総延長（m）を算出
+        let len1F = 0, len2F = 0;
+        (s.exteriorWalls || []).forEach(ew => {
+            if (!ew.vertices || ew.vertices.length < 2) return;
+            let len = 0;
+            const vts = ew.closed ? [...ew.vertices, ew.vertices[0]] : ew.vertices;
+            for (let i = 0; i < vts.length - 1; i++) {
+                len += Math.hypot(vts[i + 1].x - vts[i].x, vts[i + 1].y - vts[i].y);
+            }
+            if (ew.floor === '1F') len1F += len / 1000;
+            if (ew.floor === '2F') len2F += len / 1000;
+        });
+
+        const h1 = s.config.floorHeight1F || 2.7;
+        const h2 = s.config.floorHeight2F || 2.7;
+
+        // 実外壁面積、未作図の場合は従来デフォルト (a1 + a2) * 1.0 にフォールバック
+        let aWallEst = (len1F * h1) + (len2F * h2);
+        if (aWallEst === 0) {
+            aWallEst = (a1 + a2) * 1.0;
+        }
+        
+        const buildingW = (a1 * wFloor) + (a2 * wFloor) + (aRoof * wRoof) + (aWallEst * wWallSpec);
+        const totalSlabArea = (s.foundationSlabs || []).reduce((sum, sl) => sum + (window.MathUtils.Geometry.polygonArea(sl.vertices) / 1000000), 0);
+        const foundationW = totalSlabArea * 5.0; 
+        const totalW = buildingW + foundationW;
+        
+        if (totalSlabArea > 0) {
+            s.averageBuildingPressure = buildingW / totalSlabArea;
+            s.averageGroundPressure = totalW / totalSlabArea;
+        } else {
+            s.averageBuildingPressure = 0;
+            s.averageGroundPressure = 0;
+        }
+    },
+
+    /**
+     * 1. 梁スパン構築
+     */
+    reconstructBeamSpans: function() {
+        const s = window.AppState;
+        const beams = s.foundationBeams || [];
+        const mhs = s.manholes || [];
+
+        beams.forEach(b => {
+            b.spans = [];
+            const subMhs = mhs.filter(m => m.parentBeamId === b.id && !m.isDeleted);
+            if (subMhs.length === 0) {
+                b.spans.push({
+                    startNode: b.p1,
+                    endNode: b.p2,
+                    props: JSON.parse(JSON.stringify(b.props || {}))
+                });
+            } else {
+                subMhs.sort((a, bVal) => a.position - bVal.position);
+                let lastNode = b.p1;
+                subMhs.forEach(mh => {
+                    const t = mh.position;
+                    const mx = b.p1.x + (b.p2.x - b.p1.x) * t;
+                    const my = b.p1.y + (b.p2.y - b.p1.y) * t;
+                    const midNode = { x: mx, y: my };
+
+                    b.spans.push({
+                        startNode: lastNode,
+                        endNode: midNode,
+                        props: JSON.parse(JSON.stringify(b.props || {}))
+                    });
+                    lastNode = midNode;
+                });
+                b.spans.push({
+                    startNode: lastNode,
+                    endNode: b.p2,
+                    props: JSON.parse(JSON.stringify(b.props || {}))
+                });
+            }
+        });
+    },
+
+    /**
+     * 2. スラブへの荷重集計と断面検定 (v2.4.14 - H-d standing height & 0 slab self-weight)
+     */
+    calculateSlabAnalysis: function() {
+        this.calculateBuildingLoads();
+
+        const slabs = window.AppState.foundationSlabs;
+        if (!slabs) return;
+        const s = window.AppState;
+        const pillars = (s.pillars || []).filter(p => !p.isDeleted);
+        const beams = (s.foundationBeams || []).filter(b => !b.isDeleted);
+        const M = window.MathUtils;
+
+        // 1. Pre-calculate beam adjacency to handle 1/2 shared weight
+        const beamAdjacency = {};
+        beams.forEach(b => beamAdjacency[b.id] = 0);
+        slabs.forEach(slab => {
+            const pts = slab.vertices;
+            beams.forEach(b => {
+                if (this._isBeamOnSlabBoundary(b, pts)) beamAdjacency[b.id]++;
+            });
+        });
+
+        slabs.forEach(slab => {
+            const p = slab.props || {};
+            const area = M.polygonArea(slab.vertices) / 1000000;
+            const D = Number(p.slabThickness) || 150;
+            const topH = Number(p.slabTopHeight) || 50;
+
+            // --- 画像ロジックに基づく集計 ---
+            
+            // (1) 軸力 (kN) 集計
+            let totalAxial_kN = 0;
+            pillars.forEach(pill => {
+                const isInside = M.isPointInPolygon(pill, slab.vertices);
+                const isOnBoundary = this._isPointOnBoundary(pill, slab.vertices);
+                if (isInside || isOnBoundary) {
+                    // 共有判定: 他のスラブの境界上にもあるか
+                    let sharedCount = 0;
+                    slabs.forEach(other => {
+                        if (M.isPointInPolygon(pill, other.vertices) || this._isPointOnBoundary(pill, other.vertices)) sharedCount++;
+                    });
+                    // Use Long-term Axial Force for Ground Pressure
+                    totalAxial_kN += (pill.longTermAxial_kN || 0) / (sharedCount || 1);
+                }
+            });
+
+            // (2) 立上り重量 (kN) 集計
+            let stemWeight_kN = 0;
+            const d_m = s.fdThicknessM !== undefined ? s.fdThicknessM : 0.15;
+            beams.forEach(b => {
+                if (this._isBeamOnSlabBoundary(b, slab.vertices)) {
+                    const bp = b.props || {};
+                    const bW = (bp.width || 150) / 1000;
+                    const bH = Math.max(0, (bp.height || 640) / 1000 - d_m);
+                    const bL = Math.hypot(b.p2.x - b.p1.x, b.p2.y - b.p1.y) / 1000;
+                    const weight = bW * bH * bL * 24.0;
+                    const factor = 1 / (beamAdjacency[b.id] || 1);
+                    stemWeight_kN += weight * factor;
+                }
+            });
+
+            // (3) 均し荷重 (kN/m2) の構成要素
+            const D_val = p.slabThickness || 150;
+            const topH_val = p.slabTopHeight || 50;
+            const slabMatWeight = 0; // 画像およびユーザーのご要望に基づきスラブ自重は拾わない
+            
+            const axialPressure = area > 0 ? (totalAxial_kN / area) : 0;
+            const stemPressure = area > 0 ? (stemWeight_kN / area) : 0;
+            
+            // 均し荷重 = (軸力/面積) + (立上り/面積) + スラブ自重
+            const deadLoad = axialPressure + stemPressure + slabMatWeight;
+
+            // (4) 床荷重 (kN/m2)
+            // 積載荷重 1.30 + 仕上げ 0.44 = 1.74 (住宅)
+            const floorLoad = 1.740; 
+            
+            // (5) 接地圧 σe (kN/m2)
+            const qTotal = deadLoad + floorLoad;
+            p.groundPressure = qTotal;
+
+            // --- モーメント計算 (既存ロジック維持) ---
+            let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+            slab.vertices.forEach(v => {
+                minX = Math.min(minX, v.x); maxX = Math.max(maxX, v.x);
+                minY = Math.min(minY, v.y); maxY = Math.max(maxY, v.y);
+            });
+            const lx = Math.min(maxX - minX, maxY - minY) / 1000;
+            const ly = Math.max(maxX - minX, maxY - minY) / 1000;
+
+            const isCantilever = (p.support === '片持ち');
+            let Mx_center = 0, Mx_end = 0, My_center = 0, My_end = 0;
+
+            if (isCantilever) {
+                const L_c = Number(p.cantileverLength) || 0.9;
+                Mx_center = (qTotal * L_c * L_c) / 2;
+                Mx_end = Mx_center;
+            } else {
+                // 固定条件による4辺/3辺ピン係数
+                const coeff = window.FD_SLAB_COEFFS ? window.FD_SLAB_COEFFS.getCoefficients(p.support, lx, ly) : { center_x: 0.02, end_x: 0.04, center_y: 0.02, end_y: 0.04 };
+                Mx_center = coeff.center_x * qTotal * lx * lx;
+                Mx_end = coeff.end_x * qTotal * lx * lx;
+                My_center = coeff.center_y * qTotal * lx * lx;
+                My_end = coeff.end_y * qTotal * lx * lx;
+            }
+
+            // 配筋に対する許容曲げモーメント算定
+            const dShort = D - (p.coverDepth || 70); 
+            const dLong = dShort - 10; 
+            const ft = 195; // SD295の許容張力
+            const Fc = s.concreteFc || 21;
+
+            const asShort = p.rebarShort?.at || 633.5; 
+            const asLong = p.rebarLong?.at || 633.5; 
+
+            // 簡易応力算定: Ma = ft * at * j (j = 7/8 * d)
+            const Ma_short = (ft * asShort * (7/8 * dShort)) / 1e6; 
+            const Ma_long = (ft * asLong * (7/8 * dLong)) / 1e6; 
+
+            const ratioShort = Ma_short > 0 ? (Math.max(Mx_center, Mx_end) / Ma_short) : 0;
+            const ratioLong = Ma_long > 0 ? (Math.max(My_center, My_end) / Ma_long) : 0;
+
+            slab.fdStress = {
+                lx, ly, area, isCantilever,
+                cantileverLength: p.cantileverLength,
+                totalAxial_kN, stemWeight_kN,
+                axialPressure, stemPressure, slabMatWeight, deadLoad, floorLoad, qTotal,
+                Mx_center, Mx_end, My_center, My_end,
+                Ma_short, Ma_long, ratioShort, ratioLong
+            };
+
+            slab.isNG = (ratioShort > 1.0) || (ratioLong > 1.0);
+        });
+
+        // スラブの応力結果から梁負担へのポリゴン割り付け
+        this._generateSlabTributaries();
+    },
+
+    /**
+     * 3. 基礎梁解析への荷重伝達と断面検定
+     */
+    calculateBeamAnalysis: function() {
+        const s = window.AppState;
+        const beams = s.foundationBeams || [];
+        const slabs = s.foundationSlabs || [];
+
+        beams.forEach(beam => {
+            const bp = beam.props || {};
+            beam.isNG = false;
+
+            const processSpan = (span) => {
+                const sp = span.props || bp;
+                const bW = (sp.width || 150) / 1000;
+                const bH = (sp.height || 640) / 1000;
+                const bL = Math.hypot(span.endNode.x - span.startNode.x, span.endNode.y - span.startNode.y) / 1000;
+
+                // スラブ負担重量の合算
+                let q_slab_kN_m = 0;
+                slabs.forEach(slab => {
+                    if (!slab.tributaryPolygons) return;
+                    slab.tributaryPolygons.forEach(tp => {
+                        if (tp.beamId === beam.id) {
+                            const slabPressure = slab.fdStress?.qTotal || 10.0;
+                            const tribArea_m2 = tp.area / 1000000;
+                            const load_kN = slabPressure * tribArea_m2;
+                            if (bL > 0) q_slab_kN_m += load_kN / bL;
+                        }
+                    });
+                });
+
+                // 自重
+                const selfWeight_kN_m = bW * bH * 24.0;
+                const q_total_kN_m = q_slab_kN_m + selfWeight_kN_m;
+
+                // 長期モーメント（等分布荷重M_mid = w*L^2/8）
+                const M_mid_kNm = (q_total_kN_m * bL * bL) / 8;
+                const Q_max_kN = (q_total_kN_m * bL) / 2;
+
+                // 短期（地震時）スパン端部応力（簡易軸力モデル）
+                const Ne_N = 15000; 
+
+                // 断面検定
+                const ft = 195; // SD295
+                const as_top = 286.5; // 1-D13想定
+                const as_bot = 286.5;
+                const d = (sp.height || 640) - (sp.coverDepth || 70);
+                const Ma = (ft * as_bot * (7/8 * d)) / 1e6;
+
+                const ratioM_L = Ma > 0 ? (M_mid_kNm / Ma) : 0;
+                const isNG = (ratioM_L > 1.0);
+
+                span.fdStress = {
+                    q_total_kN_m, M_mid_kNm, Q_max_kN, ratioM_L, Ma, Ne_N,
+                    ratioCombined_S: ratioM_L 
+                };
+                span.isNG = isNG;
+                if (isNG) beam.isNG = true;
+            };
+
+            if (beam.spans && beam.spans.length > 0) {
+                beam.spans.forEach(processSpan);
+            } else {
+                beam.isNG = false;
+            }
+        });
+    },
+
+    // --- 内部ヘルパー ---
+
+    _generateSlabTributaries: function() {
+        const s = window.AppState;
+        const slabs = s.foundationSlabs || [];
+        const beams = (s.foundationBeams || []).filter(b => !b.isDeleted);
+        const M = window.MathUtils;
+
+        slabs.forEach(slab => {
+            slab.tributaryPolygons = [];
+            const pts = slab.vertices;
+            if (!pts || pts.length < 3) return;
+
+            const cx = pts.reduce((sum, v) => sum + v.x, 0) / pts.length;
+            const cy = pts.reduce((sum, v) => sum + v.y, 0) / pts.length;
+            const centroid = { x: cx, y: cy };
+
+            // 45度分配（長方形近似）の簡易実装
+            beams.forEach(b => {
+                if (this._isBeamOnSlabBoundary(b, pts)) {
+                    // 梁端点とスラブ重心を結ぶ3角形/台形を構築
+                    const triangle = [b.p1, b.p2, centroid];
+                    const tribArea = M.polygonArea(triangle);
+                    const beamLen = Math.hypot(b.p2.x - b.p1.x, b.p2.y - b.p1.y);
+                    const tribWidth = beamLen > 0 ? (tribArea / beamLen) : 0;
+
+                    slab.tributaryPolygons.push({
+                        beamId: b.id,
+                        polygon: triangle,
+                        area: tribArea,
+                        width: tribWidth / 1000 
+                    });
+                }
+            });
+        });
+    },
+
+    _isBeamOnSlabBoundary: function(beam, slabVertices) {
+        const TOL = 15.0;
+        const p1On = this._isPointOnBoundary(beam.p1, slabVertices, TOL);
+        const p2On = this._isPointOnBoundary(beam.p2, slabVertices, TOL);
+        return p1On && p2On;
+    },
+
+    _isPointOnBoundary: function(pt, vertices, TOL = 15.0) {
+        for (let i = 0; i < vertices.length; i++) {
+            const v1 = vertices[i];
+            const v2 = vertices[(i + 1) % vertices.length];
+            const d = this._pointToSegmentDistance(pt, v1, v2);
+            if (d < TOL) return true;
+        }
+        return false;
+    },
+
+    _pointToSegmentDistance: function(p, a, bVal) {
+        const l2 = Math.pow(bVal.x - a.x, 2) + Math.pow(bVal.y - a.y, 2);
+        if (l2 === 0) return Math.hypot(p.x - a.x, p.y - a.y);
+        let t = ((p.x - a.x) * (bVal.x - a.x) + (p.y - a.y) * (bVal.y - a.y)) / l2;
+        t = Math.max(0, Math.min(1, t));
+        return Math.hypot(p.x - (a.x + t * (bVal.x - a.x)), p.y - (a.y + t * (bVal.y - a.y)));
+    }
+};

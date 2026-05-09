@@ -1,0 +1,196 @@
+// ==========================================
+// wall_4split_state.js - 定数・状態管理 (Phase 1.1)
+// ==========================================
+
+window.AppConfig = {
+    TOLERANCE: {
+        GRID_SNAP: 150,
+        MANUAL_GRID: 50,
+        TEXT_GRID: 1000
+    }
+};
+
+window.AppState = {
+    // UI・表示状態
+    currentFloor: '1F',
+    isPrintMode: false,
+    scale: 1.0,
+    offsetX: 0,
+    offsetY: 0,
+
+    // [基礎計算追加 Phase1] アプリ全体のメインモード ('wall' = 壁量計算, 'foundation' = 基礎計算)
+    currentAppMode: 'wall',
+
+    // [機能補完 最終調整] 三角形状割増係数 (風圧力計算用)
+    triangleMultiplier: 1.33,
+    // [機能補完 最終調整] 平均接地圧 (kN/m2)
+    averageGroundPressure: 0,
+    // [バグ修正 NaNカスケード防止] 建物重量のみによる平均接地圧 (kN/m2)
+    averageBuildingPressure: 0,
+
+    // [機能拡張 スラブ設計条件と自動判定] コンクリート強度 (Fc21, Fc24等)
+    concreteFc: 21,
+
+    // [基礎UI改善 タスク1] 基礎モード内のサブモード（初期をスラブに変更）
+    // 'f_select' | 'f_beam' | 'f_ext_wall' | 'f_slab' | 'f_manhole' | 'f_delete'
+    foundationMode: 'f_slab',
+
+    // [基礎計算追加 Phase2] 基礎モード作図中の中間点バッファ
+    fdSelectedPillarLike: null,   // f_beam の始点（柱ではなく自由点）
+    fdDrawPoints: [],             // f_ext_wall / f_slab 用多角形中間点
+
+    // [基礎UI改善 タスク1] 選択された基礎要素（全タイプ共通）
+    fdSelection: { type: null, item: null },
+
+    // 計算結果
+    reqWall: { '1F': { qX: 0, qY: 0, eq: 0, a_eff: 0 }, '2F': { qX: 0, qY: 0, eq: 0, a_eff: 0 } },
+    currentTotalVal: 0,
+    currentG: null,
+    currentC: null,
+
+    // [機能改善 外壁仕様追加] 外壁の単位面積当たり重量 (N/m2)
+    exteriorWallWeight: 600,
+
+    // [機能改善 荷重仕様拡充] 屋根・断熱・太陽光の仕様と算出データ (N)
+    roofWeight: 500,
+    solarWeight: 0,
+    ceilingInsWeight: 100,
+    wallInsWeight: 70,
+
+    // [機能改善 要素レイヤ切替] UI要素の表示・非表示フラグ
+    elementVisibility: {
+        pillars: true, pillarNValues: true, walls: true, windows: true, areas: true,
+        f_beams: true, f_slabs: true, f_ext_walls: true, f_manholes: true,
+        grids: true
+    },
+    
+    // DXF・図形データ
+    bgLinesOriginal: [],
+    bgTextsOriginal: [],
+    gridBubbles: [],
+    docDrawings: {
+        floor: { entities: [], loaded: false, rawDxf: null },
+        elev: { entities: [], loaded: false, rawDxf: null },
+        div4: { entities: [], loaded: false, rawDxf: null }
+    },
+    window_currentDxfRaw: null,
+    
+    // 建築要素データ
+    pillars: [],
+    walls: [],
+    windowsArr: [],
+    areaLines: [],
+    pIdCounter: 1,
+
+    // [基礎計算追加 Phase1] 外壁線データ (荷重算出用 - 1F/2Fそれぞれの閉鎖ポリライン群)
+    // 各要素: { id, floor: '1F'|'2F', vertices: [{x,y},...], closed: true }
+    exteriorWalls: [],
+
+    // [基礎計算追加 Phase1] 基礎梁データ
+    // デフォルトプロパティ: W=150, H=640, 根入れ=240, 上下主筋 1-D13, ST 1-D10@200
+    // 各要素: { id, p1: {x,y}, p2: {x,y}, props: { width: 150, height: 640, embedDepth: 240,
+    //           topRebar: '1-D13', bottomRebar: '1-D13', stirrup: '1-D10@200', slabTopHeight: 50 } }
+    foundationBeams: [],
+
+    // [機能補完 スラブ計算全結合] べた基礎スラブデータ
+    // 各要素: { id, vertices: [{x,y},...], props: { slabTopHeight: 50, slabThickness: 150, coverDepth: 70, support: '4辺固定',
+    //           rebarShort: { type: 'D13', pitch: 200, at: 633.5 }, rebarLong: { type: 'D13', pitch: 200, at: 633.5 } }, closed: true }
+    foundationSlabs: [],
+
+    // [基礎計算追加 Phase1] 人通口データ (基礎梁上に配置)
+    // 各要素: { id, beamId, position: 0.0~1.0 (梁上の相対位置), width: 600, height: 350 }
+    manholes: [],
+
+    // グリッドデータ
+    gridXNames: [],
+    gridYNames: [],
+    gridXCoords: [],
+    gridYCoords: [],
+    manualGridX: [],
+    manualGridY: [],
+    deletedGridX: [],
+    deletedGridY: [],
+    userEditedGridX: {},
+    userEditedGridY: {},
+    
+    // マウス操作・作図状態
+    isDragging: false,
+    lastMouseX: 0,
+    lastMouseY: 0,
+    mouseX: 0,
+    mouseY: 0,
+    hoveredPillar: null,
+    selectedPillar: null,
+    snapPoint: null,
+    areaDrawPoints: [],
+    
+    // 履歴
+    historyStack: [],
+    redoStack: [],
+    
+    // --- UI同期用コンフィグ ---
+    config: {
+        calcMode: 'kijun',
+        atticHeight: 1.4,
+        triangleMultiplier: 1.33,
+        floorAreas: { '1F': 0, '2F': 0 },
+        reqWallCoeffs: {
+            '1F': { seismic: 0.29, wind: 0.50 },
+            '2F': { seismic: 0.15, wind: 0.50 }
+        },
+        projectedAreas: {
+            '1F': { x: 0, y: 0 },
+            '2F': { x: 0, y: 0 }
+        }
+    },
+
+    /**
+     * UIの入力値からAppStateを同期します
+     */
+    init: function() {
+        const getVal = (id) => {
+            const el = document.getElementById(id);
+            return el ? (el.type === 'number' ? parseFloat(el.value) || 0 : el.value) : null;
+        };
+
+        this.config.calcMode = getVal('calc-mode-select') || 'kijun';
+        this.config.atticHeight = getVal('attic-height') || 1.4;
+        this.config.triangleMultiplier = getVal('global-triangle-mult') || 1.33;
+        this.triangleMultiplier = this.config.triangleMultiplier;
+
+        this.config.floorAreas['1F'] = getVal('a-f1') || 0;
+        this.config.floorAreas['2F'] = getVal('a-f2') || 0;
+
+        this.config.reqWallCoeffs['1F'].seismic = getVal('c-q1') || 0.29;
+        this.config.reqWallCoeffs['2F'].seismic = getVal('c-q2') || 0.15;
+        this.config.reqWallCoeffs['1F'].wind = getVal('c-w') || 0.50;
+        this.config.reqWallCoeffs['2F'].wind = getVal('c-w') || 0.50;
+
+        this.config.projectedAreas['1F'].x = getVal('a-wx1') || 0;
+        this.config.projectedAreas['1F'].y = getVal('a-wy1') || 0;
+        this.config.projectedAreas['2F'].x = getVal('a-wx2') || 0;
+        this.config.projectedAreas['2F'].y = getVal('a-wy2') || 0;
+        
+        // [軸力図連携] 階高の同期
+        this.config.floorHeight1F = getVal('n-h1') || 2.7;
+        this.config.floorHeight2F = getVal('n-h2') || 2.7;
+
+        this.concreteFc = getVal('global-fc') || 21;
+        this.exteriorWallWeight = getVal('prop-ext-wall') || 600;
+        this.roofWeight = getVal('prop-roof-type') || 500;
+        this.solarWeight = getVal('prop-solar') || 0;
+        this.ceilingInsWeight = getVal('prop-ceiling-ins') || 100;
+        this.wallInsWeight = getVal('prop-wall-ins') || 70;
+    },
+
+    // Canvas
+    canvas: null,
+    ctx: null
+};
+
+// グローバルエラーハンドラ
+window.onerror = function (msg, url, line, col, error) {
+    console.error("⚠️システムエラー:", msg, "行:", line, error);
+    alert("⚠️システムエラーが発生しました。詳細はコンソールをご確認ください。\n" + msg);
+    return false;
+};

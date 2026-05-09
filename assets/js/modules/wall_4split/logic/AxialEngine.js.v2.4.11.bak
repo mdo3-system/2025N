@@ -1,0 +1,92 @@
+/**
+ * logic/AxialEngine.js - Seismic Axial Force Calculation Engine
+ * Dedicated to calculating Sigma N for foundation and reporting.
+ */
+
+window.AxialEngine = {
+    /**
+     * Calculate cumulative seismic axial forces (Sigma N) for all pillars.
+     * Logic based on ElevationRenderer's table: N = alpha * 1.96 * H
+     */
+    calculateAllAxialForces: function(state) {
+        const s = state || window.AppState;
+        
+        // 1. Initialize seismicAxial for all pillars
+        s.pillars.forEach(p => {
+            p.seismicAxial = 0; // Cumulative Sigma N at the base (1F)
+            p.seismicAxial2F = 0; // Sigma N at 2F floor level
+        });
+
+        const h1 = s.config.floorHeight1F || 2.7;
+        const h2 = s.config.floorHeight2F || 2.7;
+
+        // 2. Process each pillar
+        s.pillars.filter(p => !p.isDeleted).forEach(p => {
+            const floors = ['2F', '1F'];
+            let cumulativeN = 0;
+
+            floors.forEach(f => {
+                // Get floor height (considering manual override)
+                const pForH = s.pillars.find(p_h => p_h.floor === f && Math.hypot(p_h.x - p.x, p_h.y - p.y) < 5);
+                const h = (pForH && pForH.manualH) ? pForH.manualH : (f === '2F' ? h2 : h1);
+
+                // Find connected walls in ANY direction (not just report axes)
+                const connectedWalls = s.walls.filter(w => {
+                    if (w.floor !== f) return false;
+                    return (Math.hypot(w.p1.x - p.x, w.p1.y - p.y) < 5 || Math.hypot(w.p2.x - p.x, w.p2.y - p.y) < 5);
+                });
+
+                let totalN_N = 0;
+
+                connectedWalls.forEach(w => {
+                    const alpha = window.WallEngine.getTotalMultiplier(w);
+                    if (alpha <= 0) return;
+                    
+                    const N_kN = alpha * 1.96 * h; 
+                    
+                    // We treat Sigma N as a MAGNITUDE for the foundation load contribution
+                    // In foundation beams, we usually take the worst case or sum of absolute components
+                    // Per user request "Sigma N * 0.5", we'll use the cumulative magnitude.
+                    totalN_N += (N_kN * 1000);
+                });
+
+                cumulativeN += totalN_N;
+                if (f === '2F') p.seismicAxial2F = cumulativeN;
+                if (f === '1F') p.seismicAxial = cumulativeN;
+            });
+        });
+
+        console.log("📊 [AxialEngine] Seismic axial forces calculated.");
+    },
+
+    /**
+     * Calculate long-term (static) axial forces for ground pressure.
+     * Uses tributary areas from AreaEngine and average building weight.
+     */
+    calculateLongTermAxialForces: function(state) {
+        const s = state || window.AppState;
+        
+        // Ensure tributary areas are updated
+        // 表計算ツール（設定パネル）のロジックに完全に従う (v2.4.11)
+        const wRoof = ( (s.roofWeight || 500) + (s.solarWeight || 0) + (s.ceilingInsWeight || 100) ) / 1000;
+        const wWall = ( (s.exteriorWallWeight || 600) + (s.wallInsWeight || 70) ) / 1000 * 1.0; // 壁面積比1.0
+        const wFloorSkeleton = 2.4; // 床組・骨組の標準自重 [kN/m2]
+
+        const UNIT_WEIGHT_PER_FLOOR = wRoof + wWall + wFloorSkeleton;
+        
+        s.pillars.filter(p => !p.isDeleted).forEach(p => {
+            const p2F = s.pillars.find(p2 => p2.floor === '2F' && Math.hypot(p2.x - p.x, p2.y - p.y) < 10);
+            
+            // 2階建ての場合、1階の柱は「2階床+屋根+壁」と「1階の壁+骨組」を支える
+            // ここでは各階の負担面積に、その階の単位重量を掛けて合計する
+            let n_total = (p.loadArea || 0) * UNIT_WEIGHT_PER_FLOOR;
+            if (p.floor === '1F' && p2F) {
+                n_total += (p2F.loadArea || 0) * UNIT_WEIGHT_PER_FLOOR;
+            }
+            
+            p.longTermAxial_kN = n_total;
+        });
+        
+        console.log(`📊 [AxialEngine] Long-term axial forces calculated using spreadsheet logic (w_floor=${UNIT_WEIGHT_PER_FLOOR.toFixed(2)} kN/m2).`);
+    }
+};

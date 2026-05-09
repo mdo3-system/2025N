@@ -1,0 +1,22 @@
+/**
+ * Version.js - Centralized Version Management
+ */
+window.APP_VERSION = "v2.3.54";
+// Backup of v2.3.54 taken. Now moving to v2.3.55 for fix.
+window.APP_VERSION = "v2.3.55";
+// Backup of v2.3.55 taken. Now moving to v2.3.56 for fix.
+window.APP_VERSION = "v2.3.56";
+// Backup of v2.3.56 taken. Now moving to v2.3.57 for fix.
+window.APP_VERSION = "v2.3.57";
+// Backup of v2.3.57 taken. Now moving to v2.3.58 for fix.
+window.APP_VERSION = "v2.3.58";
+// Backup of v2.3.58 taken. Now moving to v2.3.59 to restore logic.
+window.APP_VERSION = "v2.3.59";
+// Backup of v2.3.59 taken. Now moving to v2.3.60 for Axial Force Diagram updates.
+window.APP_VERSION = "v2.3.60";
+// Backup of v2.3.60 taken. Now moving to v2.3.61 for table refinement.
+window.APP_VERSION = "v2.3.61";
+// Backup of v2.3.61 taken. Now moving to v2.3.62 for UI renaming and manual H display.
+window.APP_VERSION = "v2.3.62";
+// Backup of v2.3.62 taken. Now moving to v2.3.63 for Foundation Stress Transfer.
+window.APP_VERSION = "v2.3.63";

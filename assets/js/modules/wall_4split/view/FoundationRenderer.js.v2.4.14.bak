@@ -1,0 +1,262 @@
+// Pre-change backup of FoundationRenderer.js at v2.4.14
+// Copied entire file content to back up
+
+/**
+ * view/FoundationRenderer.js - 基礎レイヤー描画エンジン
+ * v2.3.0 リファクタリング
+ */
+
+window.FoundationRenderer = {
+    /**
+     * 基礎レイヤーの描画
+     * @param {Object} state - アプリケーション状態
+     * @param {Function} toCanvas - 座標変換関数
+     */
+    render: function(state, toCanvas) {
+        const ctx = state.ctx;
+        if (!ctx) return;
+
+        const fdSel = state.fdSelection || { type: null, item: null };
+
+        // 1. スラブ描画
+        this.drawSlabs(state, toCanvas, fdSel);
+
+        // 2. 負担エリア (Tributary)
+        this.drawTributary(state, toCanvas);
+
+        // 3. 外壁線
+        this.drawExteriorWalls(state, toCanvas, fdSel);
+
+        // 4. 基礎梁
+        this.drawBeams(state, toCanvas, fdSel);
+
+        // 5. 人通口
+        this.drawManholes(state, toCanvas, fdSel);
+
+        // 6. プレビュー
+        this.drawPreviews(state, toCanvas);
+    },
+
+    drawSlabs: function(state, toCanvas, fdSel) {
+        const ctx = state.ctx;
+        (state.foundationSlabs || []).filter(s => !state.elementVisibility || state.elementVisibility.f_slabs !== false).forEach((slab, si) => {
+            if (!slab.vertices || slab.vertices.length < 3) return;
+            ctx.save();
+            const isSelected = (fdSel.type === 'slab' && fdSel.item?.id === slab.id) || (window.highlightedSlabIndex === si);
+            
+            ctx.fillStyle = isSelected ? 'rgba(255, 105, 180, 0.3)' : 'rgba(52, 152, 219, 0.15)';
+            ctx.strokeStyle = isSelected ? '#e74c3c' : '#2980b9';
+            ctx.lineWidth = isSelected ? 4 : 2;
+            
+            ctx.beginPath();
+            slab.vertices.forEach((v, i) => {
+                const p = toCanvas(v, null);
+                if (p.cx != null) i === 0 ? ctx.moveTo(p.cx, p.cy) : ctx.lineTo(p.cx, p.cy);
+            });
+            ctx.closePath();
+            ctx.fill(); ctx.stroke();
+
+            // ラベル
+            const cx = slab.vertices.reduce((s, v) => s + v.x, 0) / slab.vertices.length;
+            const cy = slab.vertices.reduce((s, v) => s + v.y, 0) / slab.vertices.length;
+            const lp = toCanvas(cx, cy);
+            if (lp.cx != null) {
+                ctx.font = 'bold 13px sans-serif'; ctx.fillStyle = '#1460a8'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                ctx.fillText('スラブ', lp.cx, lp.cy - 10);
+                if (state.averageGroundPressure) {
+                    ctx.font = 'bold 12px sans-serif'; ctx.fillStyle = '#e67e22';
+                    ctx.fillText(`${state.averageGroundPressure.toFixed(2)} kN/m2`, lp.cx, lp.cy + 10);
+                }
+            }
+            ctx.restore();
+        });
+    },
+
+    drawTributary: function(state, toCanvas) {
+        if (!state.elementVisibility.f_slabs) return;
+        const ctx = state.ctx;
+        const fdSel = state.fdSelection || { type: null, item: null };
+        const selectedBeamId = (fdSel.type === 'beam' || fdSel.type === 'beam_span') ? fdSel.item?.id : null;
+
+        (state.foundationSlabs || []).forEach(slab => {
+            if (!slab.tributaryPolygons) return;
+            slab.tributaryPolygons.forEach((tribEntry, i) => {
+                const poly = tribEntry.polygon;
+                if (!poly || poly.length < 3) return;
+                
+                const isTarget = selectedBeamId === tribEntry.beamId;
+
+                ctx.save();
+                if (isTarget) {
+                    ctx.fillStyle = 'rgba(46, 204, 113, 0.3)'; // Highlight green
+                    ctx.beginPath();
+                    poly.forEach((v, idx) => {
+                        const p = toCanvas(v, null);
+                        if (p.cx != null) idx === 0 ? ctx.moveTo(p.cx, p.cy) : ctx.lineTo(p.cx, p.cy);
+                    });
+                    ctx.closePath(); ctx.fill();
+                }
+
+                ctx.setLineDash([6, 3]); 
+                ctx.strokeStyle = isTarget ? '#27ae60' : '#bdc3c7'; 
+                ctx.lineWidth = isTarget ? 2 : 1;
+                
+                ctx.beginPath();
+                poly.forEach((v, idx) => {
+                    const p = toCanvas(v, null);
+                    if (p.cx != null) idx === 0 ? ctx.moveTo(p.cx, p.cy) : ctx.lineTo(p.cx, p.cy);
+                });
+                ctx.closePath(); ctx.stroke();
+
+                // 面積ラベル (選択時はよりはっきりと)
+                let cxSum = poly.reduce((s, v) => s + v.x, 0) / poly.length;
+                let cySum = poly.reduce((s, v) => s + v.y, 0) / poly.length;
+                const pC = toCanvas(cxSum, cySum);
+                if (pC.cx != null) {
+                    let areaA = tribEntry.area / 1e6 || 0;
+                    let widthB = tribEntry.width || 0;
+                    ctx.font = isTarget ? 'bold 12px sans-serif' : '10px sans-serif'; 
+                    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                    ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 3;
+                    
+                    const labelA = `A = ${areaA.toFixed(2)} ㎡`;
+                    const labelB = widthB > 0 ? `B = ${widthB.toFixed(2)} m` : '';
+
+                    ctx.strokeText(labelA, pC.cx, pC.cy - (labelB ? 7 : 0));
+                    ctx.fillStyle = isTarget ? '#1e8449' : '#7f8c8d';
+                    ctx.fillText(labelA, pC.cx, pC.cy - (labelB ? 7 : 0));
+                    
+                    if (labelB) {
+                        ctx.strokeText(labelB, pC.cx, pC.cy + 7);
+                        ctx.fillText(labelB, pC.cx, pC.cy + 7);
+                    }
+                }
+                ctx.restore();
+            });
+        });
+    },
+
+    drawExteriorWalls: function(state, toCanvas, fdSel) {
+        if (!state.elementVisibility.f_ext_walls) return;
+        const ctx = state.ctx;
+        (state.exteriorWalls || []).filter(ew => ew.floor === state.currentFloor).forEach(ew => {
+            if (!ew.vertices || ew.vertices.length < 2) return;
+            ctx.save();
+            const isSelected = fdSel.type === 'ext_wall' && fdSel.item?.id === ew.id;
+            ctx.strokeStyle = isSelected ? '#ff00ff' : '#e67e22';
+            ctx.lineWidth = isSelected ? 8 : 3;
+            ctx.setLineDash(isSelected ? [] : [12, 6]);
+            ctx.beginPath();
+            ew.vertices.forEach((v, i) => {
+                const p = toCanvas(v, null);
+                if (p.cx != null) i === 0 ? ctx.moveTo(p.cx, p.cy) : ctx.lineTo(p.cx, p.cy);
+            });
+            if (ew.closed) ctx.closePath();
+            ctx.stroke();
+            ctx.restore();
+        });
+    },
+
+    drawBeams: function(state, toCanvas, fdSel) {
+        if (!state.elementVisibility || state.elementVisibility.f_beams === false) return;
+        const ctx = state.ctx;
+        (state.foundationBeams || []).forEach(b => {
+            if (b.spans && b.spans.length > 0) {
+                b.spans.forEach((span, idx) => {
+                    if (!span || !span.startNode || !span.endNode) return;
+                    const isSelected = fdSel.type === 'beam_span' && fdSel.item?.id === b.id && fdSel.spanIndex === idx;
+                    this.drawBeamSegment(ctx, span.startNode, span.endNode, span.props || b.props, isSelected, span.isNG, toCanvas);
+                });
+            } else {
+                if (!b.p1 || !b.p2) return;
+                const isSelected = fdSel.type === 'beam' && fdSel.item?.id === b.id;
+                this.drawBeamSegment(ctx, b.p1, b.p2, b.props, isSelected, b.isNG, toCanvas);
+            }
+        });
+    },
+
+    drawBeamSegment: function(ctx, p1Obj, p2Obj, props, isSelected, isNG, toCanvas) {
+        const p1 = toCanvas(p1Obj, null), p2 = toCanvas(p2Obj, null);
+        if (p1.cx == null) return;
+
+        ctx.save();
+        ctx.beginPath(); ctx.moveTo(p1.cx, p1.cy); ctx.lineTo(p2.cx, p2.cy);
+        ctx.globalAlpha = 1.0;
+        ctx.strokeStyle = isSelected ? '#ff00ff' : '#7f8c8d';
+        ctx.lineWidth = isSelected ? 8 : 6;
+        ctx.lineCap = 'round';
+        ctx.stroke();
+
+        const mx = (p1.cx + p2.cx) / 2, my = (p1.cy + p2.cy) / 2;
+        const lstr = `${props?.width || 150}x${props?.height || 640}`;
+        ctx.font = 'bold 11px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillStyle = isSelected ? '#ff00ff' : '#2c3e50';
+        ctx.fillText(lstr, mx, my);
+
+        if (isNG) {
+            ctx.fillStyle = '#e74c3c'; ctx.fillText('判定 NG', mx, my - 14);
+        }
+        ctx.restore();
+    },
+
+    drawManholes: function(state, toCanvas, fdSel) {
+        if (!state.elementVisibility.f_manholes) return;
+        const ctx = state.ctx;
+        (state.manholes || []).forEach(mh => {
+            const mp = toCanvas(mh, null);
+            if (mp.cx == null) return;
+            const beam = (state.foundationBeams || []).find(b => b.id === mh.parentBeamId);
+            const beamWidthPx = Math.max(8, (beam?.props?.width || 150) * state.scale);
+            const mhHalfW = (mh.width / 2) * state.scale;
+            const mhHalfH = beamWidthPx / 2;
+            
+            ctx.save();
+            ctx.fillStyle = 'rgba(255,255,255,0.9)';
+            ctx.fillRect(mp.cx - mhHalfW, mp.cy - mhHalfH, mhHalfW * 2, mhHalfH * 2);
+            ctx.strokeStyle = '#e74c3c'; ctx.lineWidth = 2;
+            ctx.strokeRect(mp.cx - mhHalfW, mp.cy - mhHalfH, mhHalfW * 2, mhHalfH * 2);
+            ctx.beginPath();
+            ctx.moveTo(mp.cx - mhHalfW, mp.cy - mhHalfH); ctx.lineTo(mp.cx + mhHalfW, mp.cy + mhHalfH);
+            ctx.moveTo(mp.cx + mhHalfW, mp.cy - mhHalfH); ctx.lineTo(mp.cx - mhHalfW, mp.cy + mhHalfH);
+            ctx.stroke();
+            
+            const isSelected = fdSel.type === 'manhole' && fdSel.item?.id === mh.id;
+            if (isSelected) {
+                ctx.strokeStyle = '#00ffff'; ctx.lineWidth = 3;
+                ctx.beginPath(); ctx.arc(mp.cx, mp.cy, mhHalfW + 10, 0, Math.PI * 2); ctx.stroke();
+            }
+            ctx.restore();
+        });
+    },
+
+    drawPreviews: function(state, toCanvas) {
+        const fm = state.foundationMode || 'f_beam';
+        const fdPts = state.fdDrawPoints || [];
+        const fdSel = state.fdSelectedPillarLike;
+        const ctx = state.ctx;
+
+        if (fm === 'f_beam' && fdSel) {
+            const sp = toCanvas(fdSel, null);
+            if (sp.cx != null) {
+                ctx.save(); ctx.fillStyle = '#f39c12';
+                ctx.beginPath(); ctx.arc(sp.cx, sp.cy, 8, 0, Math.PI * 2); ctx.fill();
+                const ep = state.snapPoint ? toCanvas(state.snapPoint, null) : { cx: state.mouseX, cy: state.mouseY };
+                ctx.strokeStyle = '#f39c12'; ctx.lineWidth = 3; ctx.setLineDash([6, 4]);
+                ctx.beginPath(); ctx.moveTo(sp.cx, sp.cy); ctx.lineTo(ep.cx, ep.cy); ctx.stroke();
+                ctx.restore();
+            }
+        }
+        if ((fm === 'f_ext_wall' || fm === 'f_slab') && fdPts.length > 0) {
+            ctx.save(); ctx.strokeStyle = fm === 'f_ext_wall' ? '#e67e22' : '#2980b9';
+            ctx.lineWidth = 2; ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            fdPts.forEach((pt, i) => {
+                const p = toCanvas(pt, null);
+                if (p.cx != null) i === 0 ? ctx.moveTo(p.cx, p.cy) : ctx.lineTo(p.cx, p.cy);
+            });
+            const ep = state.snapPoint ? toCanvas(state.snapPoint, null) : { cx: state.mouseX, cy: state.mouseY };
+            ctx.lineTo(ep.cx, ep.cy); ctx.stroke();
+            ctx.restore();
+        }
+    }
+};

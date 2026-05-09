@@ -1,0 +1,8 @@
+/**
+ * Version.js - Centralized Version Management
+ */
+window.APP_VERSION = "v2.3.54";
+// Backup of v2.3.54 taken. Now moving to v2.3.55 for fix.
+window.APP_VERSION = "v2.3.55";
+// Backup of v2.3.55 taken. Now moving to v2.3.56 for fix.
+window.APP_VERSION = "v2.3.56";

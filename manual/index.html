@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>操作解説完全マニュアル - 上善如水 壁量計算WEB</title>
+    <style>
+        :root { --primary-color: #004a99; --accent-color: #d35400; --danger-color: #c0392b; --text-color: #333; }
+        body { font-family: "Meiryo", sans-serif; line-height: 1.8; color: var(--text-color); background: #f8f9fa; margin: 0; padding: 0; }
+        header { background: #fff; border-bottom: 4px solid var(--primary-color); padding: 40px; text-align: center; }
+        header h1 { margin: 0; font-size: 28px; color: var(--primary-color); }
+        .container { max-width: 1000px; margin: 40px auto; background: #fff; padding: 50px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        h2 { background: #e8f4f8; padding: 15px 20px; border-left: 6px solid var(--primary-color); font-size: 22px; margin-top: 50px; }
+        h3 { color: var(--primary-color); font-size: 19px; border-bottom: 2px solid #eee; padding-bottom: 8px; margin-top: 40px; }
+        h4 { color: var(--accent-color); font-size: 17px; margin-top: 30px; border-left: 4px solid var(--accent-color); padding-left: 10px; }
+        .info-box { border: 1px solid #ddd; padding: 25px; border-radius: 8px; margin: 25px 0; background: #fff; }
+        .info-box.danger { border-top: 6px solid var(--danger-color); background: #fdfaf9; }
+        .info-box.accent { border-top: 6px solid var(--accent-color); background: #fffaf5; }
+        .manual-img { display: block; max-width: 100%; height: auto; margin: 20px auto; border: 1px solid #ccc; border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .img-caption { text-align: center; font-size: 14px; color: #666; font-weight: bold; margin-bottom: 30px; }
+        .faq-q { font-weight: bold; color: var(--primary-color); font-size: 16px; margin-top: 25px; background: #f1f3f5; padding: 15px; border-radius: 4px; }
+        .faq-a { margin-left: 15px; padding: 15px; border-left: 3px solid var(--accent-color); margin-bottom: 20px; background: #fafafa; }
+        .download-btn { display: inline-block; background: #27ae60; color: #fff; padding: 10px 20px; text-decoration: none; border-radius: 4px; font-weight: bold; transition: opacity 0.2s; }
+        .download-btn:hover { opacity: 0.8; }
+        .sample-btn { display: inline-block; background: #3498db; color: #fff; padding: 6px 15px; text-decoration: none; border-radius: 4px; font-size: 13px; font-weight: bold; margin-top: 8px; margin-right: 10px; transition: opacity 0.2s; }
+        .sample-btn:hover { opacity: 0.8; }
+        .highlight { font-weight: bold; color: var(--danger-color); }
+        .testimonial { background: linear-gradient(135deg, #004a99, #0073e6); color: #fff; padding: 30px; border-radius: 8px; margin: 30px 0; text-align: center; font-size: 17px; box-shadow: 0 4px 15px rgba(0,74,153,0.3); }
+        /* インライン動画用のCSS */
+        .inline-video { position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; margin: 15px 0 25px 0; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); border: 1px solid #ddd; background: #000; }
+        .inline-video iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>上善如水 壁量計算WEB - 操作解説完全マニュアル</h1>
+</header>
+
+<div class="container">
+    <div class="testimonial">
+        <strong>【年間150件以上の構造審査を通す実務者が開発】</strong><br>
+        「本日、斜め壁の厄介な仕事を請け困っていたところ。このツールを使ってみたら、これすごいです。<br>
+        実務者自身もびっくり！な圧倒的な計算・作図ツールが完成しました。」<br>
+        <span style="font-size: 14px; opacity: 0.9;">設計者の皆様が「最短」で「正確」な計算書を作成するためのノウハウが凝縮されています。</span>
+    </div>
+
+    <div class="info-box" style="border-color: #27ae60; background: #f0fdf4;">
+        <h3 style="margin-top:0; border:none; color:#27ae60;">🔄 いつでも簡単に解約可能です（ご契約と解約について）</h3>
+        <p>本ツールは、必要な時に必要な期間だけ安心してご利用いただけるよう、非常にシンプルで分かりやすい解約システムを採用しています。</p>
+        <ul style="margin-bottom: 0;">
+            <li><strong>引き止めや複雑な手続きは一切ありません。</strong> 設定画面の「解約ボタン」を1クリックするだけで即座に解約手続きが完了します。</li>
+            <li>解約手続きを行った後も、<strong>現在ご契約いただいている期間の最終日時までは、引き続きすべての機能（計算書のPDF出力など）をご利用いただけます。</strong></li>
+            <li>単発のプロジェクトでのご利用など、1ヶ月だけ使ってすぐに解約する、といった使い方も大歓迎です。</li>
+        </ul>
+    </div>
+
+    <p>本マニュアルは、本WEBプログラムの各機能と具体的な操作手順を詳細に解説するものです。</p>
+
+    <div class="info-box danger">
+        <h3 style="margin-top:0; border:none; color:var(--danger-color);">⚠️ ご利用前の重要同意事項（免責事項）</h3>
+        <p>本プログラムを起動すると、初回に「免責事項および利用条件」の同意モーダルが表示されます。</p>
+        <ul>
+            <li>本ツールは法適合性を確認する補助ツールです。画面上の計算は無償ですが、計算書を出力（確認申請にそのまま出しても使えるPDF形式等）する際は有償となります。</li>
+            <li>出力結果を用いた申請等に関するすべての責任は利用者（設計者ご自身）に帰属します。</li>
+            <li>操作や結果に対する個別サポートは行っておりません（ユーザー専用BBSをご利用ください）。</li>
+        </ul>
+        <p>これらの条件を確認し、「同意する」にチェックを入れて利用を開始してください。</p>
+    </div>
+
+    <div class="info-box danger" style="border-top-color: #34495e;">
+        <h3 style="margin-top:0; border:none; color:#34495e;">🚫 1アカウントの複数人利用（同時ログイン）の禁止</h3>
+        <p>本ツールはセキュリティ保護およびデータ破損防止のため、<strong>同じアカウントで複数の端末（またはブラウザ）から同時に利用することはできません。</strong><br>
+        別の端末からログインが行われた場合、先の端末は自動的に強制ログアウトされ、保存前の作業データは失われます。必ず「1人1アカウント」でご契約・ご利用ください。</p>
+    </div>
+
+    <h2>第1章：事前準備と基本設定</h2>
+
+    <h3>1-1. お使いのCADでのDXFデータ作成</h3>
+    <div class="inline-video">
+        <iframe src="https://www.youtube.com/embed/3dRqIqXyllU" frameborder="0" allowfullscreen></iframe>
+    </div>
+    
+    <p>本ツールは、DXF出力可能なすべてのCADに対応しています。以下のレイヤ設定で平面図を作成し、DXF保存してください。</p>
+    <ul>
+        <li><strong>通り芯:</strong> <code>GLID</code> レイヤ（※<code>GRID</code> も認めています）</li>
+        <li><strong>柱:</strong> <code>COL_1F</code>, <code>COL_2F</code> レイヤ（※通り芯の交点に「点」か「〇」を配置）</li>
+        <li><strong>背景下図:</strong> <code>BG_1F</code>, <code>BG_2F</code>, <code>BG_RF</code> レイヤ（※部屋の間取り、外周線の壁位置、窓などを自由に下絵として描いてください）</li>
+    </ul>
+
+    <div style="background: #fdfaf9; border: 1px solid #eee; padding: 20px; border-radius: 6px; margin-top: 15px;">
+        <strong style="color: var(--primary-color);">【サンプルCADデータ（DXF）】</strong><br>
+        <p style="margin-top: 5px; margin-bottom: 15px; font-size: 14px;">レイヤ設定の参考に、以下のサンプルデータをダウンロードしてCADで開いてご確認ください。これらをテンプレートとして実務にご活用いただくのが最も確実です。</p>
+        <a href="manualmodel_plan.dxf" class="sample-btn" download>📐 平面図サンプルをダウンロード</a>
+        <a href="manualmodel_elev.dxf" class="sample-btn" download>📐 立面・挿絵用サンプルをダウンロード</a>
+    </div>
+
+    <h4 style="margin-top: 40px; font-size: 18px; color: #2c3e50; border-bottom: 2px solid #ccc; padding-bottom: 5px;">【実践編】ARCHITREND ZERO からの連携と見付面積の作図フロー</h4>
+    <p>アーキトレンドで作図した立面図をJw_cad（JW）へ書き出し、見付面積を作図してDXF保存するまでの一連の流れを動画で解説しています。</p>
+    
+    <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+        <div style="flex: 1; min-width: 300px;">
+            <strong>① 立面図からJW・DXFへの書き出し</strong>
+            <div class="inline-video">
+                <iframe src="https://www.youtube.com/embed/vTk2JBG7YQ8" frameborder="0" allowfullscreen></iframe>
+            </div>
+        </div>
+        <div style="flex: 1; min-width: 300px;">
+            <strong>② 見付図（面積）の作図手順</strong>
+            <div class="inline-video">
+                <iframe src="https://www.youtube.com/embed/IWXXXfv-tYc" frameborder="0" allowfullscreen></iframe>
+            </div>
+        </div>
+        <div style="flex: 1; min-width: 300px;">
+            <strong>③ DXF立面図のレイヤ設定</strong>
+            <div class="inline-video">
+                <iframe src="https://www.youtube.com/embed/tlVM5hwq0Bw" frameborder="0" allowfullscreen></iframe>
+            </div>
+        </div>
+    </div>
+
+    <h3>1-2. データの読み込みとレイヤマネージャー</h3>
+    <div class="inline-video">
+        <iframe src="https://www.youtube.com/embed/3cil1A0M5Tc" frameborder="0" allowfullscreen></iframe>
+    </div>
+    
+    <p>作成したDXFファイルを、画面右側の「DXF読込」パネルの指定場所からアップロードします。</p>
+    
+    <img src="img_dxf_upload.png" alt="DXF読込パネル" class="manual-img">
+    <p class="img-caption">【図】画面右側のDXFデータ読込パネル</p>
+    
+    <p>画面右上の「DXFレイヤ表示設定」パネルで、下絵として不要なレイヤのチェックを外すと画面がスッキリと整理されます。</p>
+
+    <h3>1-3. 画面左側パネル：基本設定と数値の入力</h3>
+    <div class="inline-video">
+        <iframe src="https://www.youtube.com/embed/cn08LiODj_k" frameborder="0" allowfullscreen></iframe>
+    </div>
+    
+    <p>画面左側のパネルには、建物の基本情報や面積を入力する項目が並んでいます。</p>
+
+    <img src="img_left_settings.png" alt="基本設定パネル" class="manual-img">
+    <p class="img-caption">【図】画面左側の重量割増係数・見付面積などの入力欄</p>
+    
+    <ul>
+        <li><strong>重量割増係数などの入力:</strong> 公益財団法人 日本住宅・木材技術センターが配布している表計算ツールで算出した、2025年改正法に基づく係数をここに入力します。<br>
+        <a href="https://www.howtec.or.jp/publics/index/441/" target="_blank" class="download-btn" style="margin-top:10px;">🔗 日本住宅・木材技術センター 配布ページへ</a><br>
+        <span style="font-size:14px; color:#555;">※上記リンク先より<strong>「壁量等の基準（令和7年施行）に対応した表計算ツール（多機能版）」</strong>をダウンロードしてご利用ください。</span></li>
+    </ul>
+
+    <div class="info-box danger" style="background:#fff3cd; border-color:#ffeeba;">
+        <strong style="color:#856404; font-size:16px;">⚠️ 見付面積の手入力（超重要）</strong><br>
+        平面図（DXF）からは建物の「高さ」が読み取れません。風圧力を計算するための<strong>「見付面積（X方向・Y方向）」は、設計者ご自身で立面図等から算出し、必ず左側パネルに【手入力】</strong>してください。ここの入力を忘れると、風圧力に対する必要壁量が正しく計算されず、重大な計算ミスにつながります。
+    </div>
+
+    <h2>第2章：各入力ツールの詳細と使い方</h2>
+    <p>画面右側のツールバーからモードを切り替えて操作します。入力内容はすべて、リアルタイムで左側パネルの計算結果に連動します。</p>
+
+    <img src="img_right_tools.png" alt="ツール群" class="manual-img">
+    <p class="img-caption">【図】画面右側に並ぶ入力ツール群</p>
+
+    <h4>🔧 床面積入力ツール</h4>
+    <div class="inline-video">
+        <iframe src="https://www.youtube.com/embed/h8m79BvGVQI" frameborder="0" allowfullscreen></iframe>
+    </div>
+    <p><strong>何ができるか:</strong> 1階・2階・屋根の床面積（水平投影面積）を定義します。<br>
+    <strong>使い方:</strong> DXFの通り芯の交点（柱が配置されていなくてもスナップします）をクリックし、面積ポリゴンを作成します。<br>
+    <span class="highlight">【⚠️ 審査担当者への配慮について】</span><br>
+    審査機関の担当者が、計算式と結果を容易に照合（検算）できるよう、複雑な多角形（五角形以上など）での登録は審査でNGとなる場合があります。<strong>必ず「三角形」「長方形」「台形」などの基本形状に分割して登録</strong>してください。作成された面積の数値は左側パネルの面積項目に自動で転記（反映）されます。</p>
+
+    <h4>🔧 グリッド（通り芯）編集ツール</h4>
+    <div class="inline-video">
+        <iframe src="https://www.youtube.com/embed/JJaf4wNqlN0" frameborder="0" allowfullscreen></iframe>
+    </div>
+    <p><strong>何ができるか:</strong> DXFから読み込んだ通り芯に対して、新しい線の「追加」や、不要な線の「削除」ができます。<br>
+    <strong>使い方:</strong> 任意の座標を指定して線を引くか、既存の線を選択して削除します。<br>
+    <strong>利用シーン:</strong> CADデータ側で通り芯を引き忘れた場合などの微調整を行いたい時に、CADに戻らずにブラウザ上で完結させることができます。</p>
+
+    <h4>🔧 柱入力・編集ツール</h4>
+    <div class="inline-video">
+        <iframe src="https://www.youtube.com/embed/pH3LtgYUK6o" frameborder="0" allowfullscreen></iframe>
+    </div>
+    <p><strong>何ができるか:</strong> 柱の追加・削除、および金物の設定を行います。</p>
+
+    <img src="img_column_prop.png" alt="柱プロパティ" class="manual-img">
+    <p class="img-caption">【図】柱を選択した際に表示される金物・属性設定パネル</p>
+    
+    <p><strong>使い方:</strong> 通り芯の交点をクリックして柱を配置します。配置された柱をクリックすると、システム上で選択中の柱がハイライトされ、使用する「柱頭・柱脚金物」をリストから選択できます。</p>
+    <div style="background:#ffebee; padding:15px; border-left:4px solid #f44336; margin:15px 0;">
+        <strong>【⚠️ 隅柱の必須設定】</strong><br>
+        N値計算を正確に行うため、建物の角にある柱をクリックし、プロパティから必ず<strong>「隅柱（出隅）である」</strong>という個別設定を行ってください。これを忘れるとN値の引抜力計算が法規通りに行われません。
+    </div>
+
+    <h4>🔧 開口部（窓・ドア）入力ツール</h4>
+    <div class="inline-video">
+        <iframe src="https://www.youtube.com/embed/rGtYDf0lvnE" frameborder="0" allowfullscreen></iframe>
+    </div>
+    <p><strong>何ができるか:</strong> 通り芯上に「開口部（壁がない場所）」を設定します。<br>
+    <strong>使い方:</strong> 柱と柱の間をクリックして開口部として指定します。<br>
+    <strong>利用シーン:</strong> ここに開口部を設定しておくことで、後から誤ってその場所に「耐力壁」を配置してしまうミスを防ぎます（ロック機能）。下絵のDXFを見ながら、先に窓の位置をなぞっておくのがコツです。</p>
+
+    <h4 style="font-size: 20px; border-bottom: 2px solid var(--accent-color); padding-bottom: 5px;">🔧 耐力壁入力ツール（メイン機能）と任意仕様の登録</h4>
+    <div class="inline-video">
+        <iframe src="https://www.youtube.com/embed/ZhYq8iW-gWU" frameborder="0" allowfullscreen></iframe>
+    </div>
+    
+    <p>建物の強さを決定する、本ツールの最も重要な機能です。</p>
+
+    <p><strong>【基本的な使い方】</strong><br>
+    画面右下のパネルから壁の仕様（筋違、構造用合板など）を選択し、キャンバス上の「柱と柱の間」をクリックして配置します。</p>
+
+    <img src="img_wall_list.png" alt="壁の仕様リスト" class="manual-img">
+    <p class="img-caption">【図】右下パネル：壁の仕様リストと任意面材登録</p>
+
+    <div class="info-box accent" style="background-color: #f0f7ff; border-color: #3498db;">
+        <strong style="font-size: 18px; color: #2980b9;">✨ 「告示以外」の任意面材・任意金物の登録（超重要機能）</strong><br>
+        <p>本ツールは、あらかじめ用意された告示仕様の壁だけでなく、メーカー独自の大臣認定耐力壁やオリジナル金物を自由に登録して使用することができます。</p>
+        
+        <p><strong>① 任意面材（壁）の登録手順</strong><br>
+        1. ツールパネル右下の「壁の仕様」リストの一番下にある<strong>「任意面材追加」</strong>ボタンをクリックします。<br>
+        2. ポップアップ画面が表示されたら、「名称（例：○○ボード 倍率2.5）」と「壁倍率（例：2.5）」を入力して保存します。<br>
+        3. 登録された面材は「告示以外」のリストに追加され、通常の壁と全く同じようにクリックで配置可能になります。<br>
+        <span class="highlight">※注意：任意面材（大臣認定耐力壁等）を使用した場合、確認申請時にはその認定書の写しを必ず本ツールの計算書に添付して提出してください。</span></p>
+
+        <p><strong>② 任意金物の登録手順</strong><br>
+        1. 配置された柱をクリックして選択状態にします。<br>
+        2. 画面下部に表示される柱プロパティの金物リスト一番下にある<strong>「任意金物追加」</strong>を選択します。<br>
+        3. 「名称（例：オリジナルHD20）」と「短期許容引抜耐力（例：20.0kN）」を入力して保存します。これにより、メーカー独自の金物をN値計算の判定基準として使用できます。</p>
+    </div>
+
+    <div class="info-box accent">
+        <strong>【⚠️ 大臣認定耐力壁の 1P 割付について】</strong><br>
+        大臣認定耐力壁の中には「1P（910mm等）の幅で配置すること」が認定条件となっているものがあります。その場合、<strong>必ず 1P の間隔で柱を配置し、その柱の間に耐力壁を配置</strong>してください。半端な寸法で配置すると認定外となります。
+    </div>
+
+    <div class="info-box accent">
+        <strong>【💡 耐力壁の配置アドバイス（Tips）】</strong><br>
+        建物外周部に構造用合板などを張ることが決まっている場合は、<strong>まずは外壁ぐるりにその指定面材を配置し、画面上の「重心（G）」と「剛心（K）」の位置を確認する</strong>ことをお勧めします。<br>
+        その後で、バランスを整えるために内部に耐力壁を追加したり、外周部の過剰な耐力壁を外したりすることで、全体の配置を確定していくのがプロのコツです。
+    </div>
+    
+    <div class="info-box accent" style="background-color: #fff9f0; border-color: #f39c12;">
+        <strong style="font-size: 18px; color: #d35400;">💡 【Tips】厄介な「斜め壁」も自動計算で一発処理！</strong><br>
+        <p>実務で非常に手間のかかる「斜め壁」の水平成分の算出も、本ツールなら直感的な操作で完結します。柱間をクリックするだけで、システムが角度を自動計算し、cosθ・sinθのべき乗を用いた有効壁倍率を瞬時にX・Y方向へ按分します。</p>
+        <div class="inline-video">
+            <iframe src="https://www.youtube.com/embed/u813BLbbu0s" frameborder="0" allowfullscreen></iframe>
+        </div>
+    </div>
+
+    <h4 style="margin-top: 40px;">📝 耐力壁入力に関する徹底Q&A</h4>
+    
+    <div class="faq-q">Q1. デフォルトのリストにない「告示以外」の壁を追加するには？</div>
+    <div class="faq-a">A. 上記の【任意面材の登録手順】に従い、名称と倍率を入力して追加してください。追加した仕様はリストから何度でも選択可能です。</div>
+
+    <div class="faq-q">Q2. 大臣認定壁の倍率が「2.54」のように小数点第2位までありますが、入力できますか？</div>
+    <div class="faq-a">A. はい、可能です。任意面材追加のポップアップにて正確に数値を入力してください。計算システムは入力された数値をそのまま使用して壁量を算出します。</div>
+
+    <div class="faq-q">Q3. 壁を置こうとしても、エラーになったり配置できません。</div>
+    <div class="faq-a">A. 本ツールは「柱と柱の間」にのみ壁を配置できる仕様です。壁が置けない箇所には、柱が配置されていない（またはグリッドが存在しない）状態です。柱入力ツールで柱を配置してから壁を置いてください。</div>
+
+    <div class="faq-q">Q4. 斜め壁はどのように配置すればよいですか？</div>
+    <div class="faq-a">A. 平面図上で斜めに配置された柱と柱の間をクリックするだけで、システムが自動的に斜め壁として認識し配置されます。</div>
+
+    <div class="faq-q">Q5. 斜め壁の壁倍率（水平成分）はどのように計算されますか？</div>
+    <div class="faq-a">A. システムが配置された壁の角度を自動で計算し、設定された壁倍率に<strong>「cosθ」「sinθ」のべき乗（2乗等）</strong>を乗じて、X方向・Y方向それぞれの有効な壁倍率（水平成分）として自動計算・按分します。</div>
+
+    <div class="faq-q">Q6. 一度配置した壁の仕様を、後から別の仕様に一括で変更できますか？</div>
+    <div class="faq-a">A. 変更したい新しい仕様をリストから選択した状態で、キャンバス上の既に配置されている壁をクリックすると、その壁の仕様が上書きされます。</div>
+
+    <div class="faq-q">Q7. 間違えて配置してしまった壁を消すにはどうすればよいですか？</div>
+    <div class="faq-a">A. ツールバーから「削除ツール」を選択し、消したい壁をクリックしてください。</div>
+
+    <div class="faq-q">Q8. 窓（開口部）を設定した場所に壁を配置しようとするとどうなりますか？</div>
+    <div class="faq-a">A. 誤配置を防ぐため、システムが配置をブロックし、開口部の上には耐力壁を置けない仕様になっています。</div>
+
+    <div class="faq-q">Q9. 大臣認定の「1P指定」を忘れて、半端な幅で配置してしまったらどうなりますか？</div>
+    <div class="faq-a">A. 確認申請時に審査機関から「認定外」として指摘・否決されます。認定条件の幅（1Pなど）は設計者の責任で必ず守って配置してください。</div>
+
+    <div class="faq-q">Q10. 剛心を寄せるための配置のコツはありますか？</div>
+    <div class="faq-a">A. 重心（G）に対して剛心（K）が離れている場合、剛心を寄せたい方向（重心から見て剛心と反対側）の外周部付近に、壁倍率の高い耐力壁を集中して配置すると、効率よく剛心が移動し偏心率が改善します。</div>
+
+
+    <h2>第3章：検定結果の確認と出力</h2>
+
+    <h3>3-1. リアルタイム・オールクリアの確認</h3>
+    <p>耐力壁の配置を進めると、画面左側のパネルで以下の計算が常時行われます。</p>
+
+    <img src="img_calc_result.png" alt="計算結果" class="manual-img">
+    <p class="img-caption">【図】リアルタイムで連動・判定される計算結果パネル</p>
+
+    <ul>
+        <li><strong>壁量計算</strong>（必要壁量と存在壁量の比較）</li>
+        <li><strong>四分割計算</strong>（端部の壁量バランス、斜め壁の自動振り分け含む）<br>
+        <span style="color:#7f8c8d; font-size:14px;">※充足率が「1.0」を超えた場合、側端部分の壁量割合は建築基準法上「確認不要」となるため、割合（率）は「ー」と表示され、判定は無条件で「OK」となります。</span></li>
+        <li><strong>N値計算</strong>（精算法による各柱の引抜力と金物判定）</li>
+    </ul>
+    <p>すべての項目が「OK（クリア）」になるように、壁の仕様や配置、柱の金物を調整してください。</p>
+
+    <h3>3-2. 計算書出力（有償）とデータ保存</h3>
+    <div class="inline-video">
+        <iframe src="https://www.youtube.com/embed/L0QhRoUUjyc" frameborder="0" allowfullscreen></iframe>
+    </div>
+
+    <img src="img_output_btn.png" alt="出力ボタン" class="manual-img">
+    <p class="img-caption">【図】画面上部に配置された出力・保存ボタン群</p>
+
+    <ul>
+        <li style="margin-bottom: 15px;"><strong>計算書出力:</strong> すべての検定がOKになったら、「計算書出力」ボタンを押します。確認申請にそのまま出しても使える、見やすく整理されたPDFレポートが出力されます。（※この出力機能の利用時のみ課金が必要となります）<br>
+        <a href="sample.pdf" class="sample-btn" download>📄 出力サンプル (PDF) をダウンロード</a></li>
+        
+        <li style="margin-bottom: 15px;"><strong>CSV / DXF 出力:</strong> 自己責任における結果の検証や、別ソフトでの修正作業のために、計算結果や座標データをCSVやDXFとして出力することが可能です。<br>
+        <a href="jyouzen_n-value.csv" class="sample-btn" download>📊 サンプル (CSV) をダウンロード</a>
+        <a href="sample_dxf.dxf" class="sample-btn" download>📐 サンプル (DXF) をダウンロード</a></li>
+        
+        <li style="margin-bottom: 15px;"><strong>JSONデータ保存:</strong> 現在の作業状態（壁や柱の配置、カスタム登録した金物など）をすべてPCに保存します。次回はこのJSONファイルを読み込むだけで、続きから作業を再開できます。<br>
+        <a href="jyouzen_data_sample.json" class="sample-btn" download>💾 サンプル (JSON) をダウンロード</a></li>
+    </ul>
+
+    <h2>第4章：設計者向けQ&A（DXF・その他トラブルシューティング）</h2>
+    
+    <div class="faq-q">Q1. DXFを読み込んだのに、柱や通り芯が表示されません。</div>
+    <div class="faq-a">A. レイヤ名 <code>GLID</code> に加え <code>GRID</code> も認識しますが、それ以外で表示されない場合、以下の原因が考えられます。<br>
+    ① ブロック化されている（CAD上で分解・EXPLODEしてからDXF保存してください）<br>
+    ② Z座標（高さ）を持っている3Dデータになっている（Z=0の2D平面データにしてください）<br>
+    ③ レイヤ名の前後に全角スペースなどが混ざっている。</div>
+
+    <div class="faq-q">Q2. 「見付面積」を入力しても壁量計算の判定が変わりません。</div>
+    <div class="faq-a">A. 壁量計算は、地震力と風圧力で計算された必要壁量のうち、<strong>「大きい方の数値」</strong>が採用されます。<br>
+    地震力によって必要壁量が決まっている（支配している）状態のときは、風圧力用の見付面積の数値を変更しても、最終的な判定や必要壁量に変化は起きません。エラーではありませんのでご安心ください。<br>
+    <span class="highlight">※大臣認定耐力壁を使用した場合、認定書をこの計算書に添付して申請してください。</span></div>
+
+    <h2>第5章：【解説動画】法改正と壁量計算の基本</h2>
+    <p>以下の動画は、マニュアル内からいつでもご視聴いただけます。<br>
+    初回ログイン時の制限は、下記動画のうち1つでも視聴すれば解除されます。</p>
+    
+    <ol style="font-weight:bold; font-size:16px; line-height:2.0;">
+        <li><a href="https://youtu.be/VbRIgr0EGrY" target="_blank" style="color: #004a99; text-decoration: underline;">2025年法改正の概要と壁量計算</a></li>
+        <li><a href="https://youtu.be/6DZcBYkosd0" target="_blank" style="color: #004a99; text-decoration: underline;">必要壁量の算出</a></li>
+        <li><a href="https://youtu.be/tr8xOWnlg8Y" target="_blank" style="color: #004a99; text-decoration: underline;">4分割法とは</a></li>
+        <li><a href="https://youtu.be/de3cYo4gwuY" target="_blank" style="color: #004a99; text-decoration: underline;">Ｎ値計算とは</a></li>
+        <li><a href="https://youtu.be/lXgQAclO0FM" target="_blank" style="color: #004a99; text-decoration: underline;">柱の小径等、2025年の法改正で新たに追加された基準です</a></li>
+    </ol>
+
+
+    <div class="info-box" style="margin-top: 50px; border-top: 6px solid #000;">
+        <h3 style="margin-top:0; border:none; color:#000;">【更新情報・不具合報告について】</h3>
+        <p>本プログラムは原則ノーサポートですが、更新案内やバグ修正の進捗は <a href="https://x.com/Jozen_Josui_DX" target="_blank">X（旧Twitter）</a> にて随時お知らせしています。<br>
+        バグの報告についてはXのリプライ（返信）にて受け付けております。個別の回答はいたしかねますが、修正の参考にさせていただきます。<br>
+        詳細な解説や仕様変更の内容は <a href="https://note.com/mdo3" target="_blank">note</a> をご確認ください。</p>
+        <p style="margin-bottom: 0;">
+            Xのアカウントは　<a href="https://x.com/Jozen_Josui_DX" target="_blank">@Jozen_Josui_DX</a><br>
+            note IDは　<a href="https://note.com/mdo3" target="_blank">mdo3</a>
+        </p>
+    </div>
+</div>
+
+</body>
+</html>

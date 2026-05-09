@@ -1,0 +1,90 @@
+/**
+ * logic/StructuralLogic.js - Core Structural Logic (Legacy Bridge)
+ * v2.3.14 Refactoring
+ */
+
+const Geometry = window.MathUtils;
+
+function updateCalculations() {
+    window.StructuralEngine.runAnalysis();
+}
+
+/**
+ * 必要壁量計算 (Legacy Bridge)
+ * エンジン側の計算結果をDOMへ反映する役割も兼ねる
+ */
+function calcRequired() {
+    const s = window.AppState;
+    const c = s.config;
+    if (!window.AreaEngine || !s.requiredAreas) return;
+
+    // v2.3.24: state.config を計算の根拠とする
+    const r = s.requiredAreas;
+    const triMult = c.triangleMultiplier || 1.33;
+
+    ['1F', '2F'].forEach(f => {
+        const lv = f === '1F' ? '1' : '2';
+        const cq = c.reqWallCoeffs[f].seismic;
+        const cw = c.reqWallCoeffs[f].wind;
+        
+        // 見付面積 (configから取得)
+        const awx = c.projectedAreas[f].x + (f === '1F' ? c.projectedAreas['2F'].x : 0);
+        const awy = c.projectedAreas[f].y + (f === '1F' ? c.projectedAreas['2F'].y : 0);
+        
+        const eq = r[f].seismic * cq;
+        
+        if (window.reqWall) {
+            window.reqWall[f] = {
+                qX: Math.max(eq, awx * cw * triMult),
+                qY: Math.max(eq, awy * cw * triMult),
+                eq: eq,
+                a_eff: r[f].seismic
+            };
+        }
+    });
+
+    // DOMへのフィードバック (結果表示用)
+    const setVal = (id, val) => {
+        let el = document.getElementById(id);
+        if (el) {
+            el.value = (typeof val === 'number') ? val.toFixed(2) : val;
+            el.style.backgroundColor = '#fffff0';
+        }
+    };
+
+    setVal('a-f1', c.floorAreas['1F']);
+    setVal('a-f2', c.floorAreas['2F']);
+    // その他結果表示フィールドがあればここに追加
+}
+
+/**
+ * 柱負担面積計算 (Legacy Bridge)
+ */
+function calcPillarAreas() {
+    if (window.AreaEngine) {
+        window.AreaEngine.calculatePillarLoadAreas(window.AppState);
+    }
+}
+
+/**
+ * 以下の関数は StructuralEngine に統合済み
+ */
+const calculateSlabTributary = (s, b) => window.StructuralEngine.calculateSlabTributary(s, b);
+const updateAverageGroundPressure = () => window.StructuralEngine.updateAverageGroundPressure();
+
+function getFloorArea(floor) {
+    return window.AreaEngine.getFloorArea(floor, window.AppState);
+}
+
+function getBuildingPolygons(floor, pillarsOfFloor) {
+    return window.AreaEngine.getBuildingPolygons(floor, pillarsOfFloor, window.AppState);
+}
+
+/**
+ * N値計算 (将来的に NValueEngine へ完全移行)
+ */
+function calcNValues() {
+    if (window.NValueEngine) {
+        window.NValueEngine.calculateNValues(window.AppState);
+    }
+}
