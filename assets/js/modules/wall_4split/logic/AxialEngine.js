@@ -62,27 +62,7 @@ window.AxialEngine = {
                     const force_N = N_kN * sign * 1000;
 
                     // Determine axis name for this wall
-                    const n1 = window.GridEngine.getPillarName(w.p1, s);
-                    const n2 = window.GridEngine.getPillarName(w.p2, s);
-                    let wallAxis = '';
-                    if (n1 && n2) {
-                        const xNames = s.gridXNames || [];
-                        const yNames = s.gridYNames || [];
-                        const allGridNames = [...xNames, ...yNames];
-                        const common = allGridNames.filter(name => name && n1.includes(name) && n2.includes(name));
-                        if (common.length > 0) {
-                            wallAxis = common[0];
-                        } else {
-                            const match1 = n1.match(/[A-Z]+\d+/gi);
-                            const match2 = n2.match(/[A-Z]+\d+/gi);
-                            if (match1 && match2) {
-                                const commonFallback = match1.filter(pt => match2.includes(pt));
-                                if (commonFallback.length > 0) {
-                                    wallAxis = commonFallback[0];
-                                }
-                            }
-                        }
-                    }
+                    let wallAxis = window.GridEngine ? window.GridEngine.getLineAxisName(w.p1, w.p2, s) : '';
                     if (!wallAxis) {
                         wallAxis = isXAxis ? 'X' : 'Y';
                     }

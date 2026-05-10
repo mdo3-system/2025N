@@ -80,3 +80,25 @@ window.getPillarName = (p) => window.GridEngine.getPillarName(p, window.AppState
 window.getWallTotalVal = (w) => window.WallEngine.getTotalMultiplier(w);
 window.getWallSpec = (id) => window.WallEngine.getWallSpec(id);
 window.getBraceSpec = (id) => window.WallEngine.getBraceSpec(id);
+
+// ★ 座標変換の一元化 (Unified Coordinate Transformation)
+// 描画と入力の不一致を完全に解消するためのグローバル共通関数
+window.toCanvasPixel = (x_or_obj, y_val) => {
+    const s = window.AppState;
+    if (!s || !s.canvas) return { cx: 0, cy: 0 };
+    let wx = Number(typeof x_or_obj === 'object' ? (x_or_obj.globalX ?? x_or_obj.x) : x_or_obj);
+    let wy = Number(typeof x_or_obj === 'object' ? (x_or_obj.globalY ?? x_or_obj.y) : y_val);
+    return {
+        cx: wx * s.scale + s.offsetX,
+        cy: s.canvas.height - (wy * s.scale + s.offsetY)
+    };
+};
+
+window.toWorldCoord = (cx, cy) => {
+    const s = window.AppState;
+    if (!s || !s.canvas) return { x: 0, y: 0 };
+    return {
+        x: (cx - s.offsetX) / s.scale,
+        y: (s.canvas.height - cy - s.offsetY) / s.scale
+    };
+};

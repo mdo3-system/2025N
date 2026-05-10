@@ -201,70 +201,101 @@ window.FoundationInputController = {
     },
 
     trySelectElement: function(mx, my, state) {
-        // [目線を変えた修正] 「レールに乗っているか」のYes/No判定をやめ、「最も近いものはどれか」を全件比較する
-        // 判定範囲を 25px -> 35px に拡大し、画面上部などの座標ズレに対応
-        const HIT_PX = 35; 
-        const wp = window.toWorldCoord(mx, my);
-        const candidates = [];
+        // [原則] 全てはグリッド交点にある。この原理を活かした「レール判定」を実装。
+        const HIT_PX = 25; 
+        const canvasH = Math.round(state.canvas.height);
+        
+        // 世界座標 (mm)
+        const wp = { 
+            x: (mx - state.offsetX) / state.scale, 
+            y: (canvasH - my - state.offsetY) / state.scale 
+        };
 
-        // 1. 人通口 (点)
-        (state.manholes || []).forEach(mh => {
-            const p = window.toCanvasPixel(mh.x, mh.y);
-            const d = Math.hypot(mx - p.cx, my - p.cy);
-            if (d < HIT_PX) candidates.push({ type: 'manhole', item: mh, dist: d, priority: 1 });
-        });
+        // 補助関数: 世界座標から描画バッファ上のピクセル座標への変換
+        const toCanvasX = (wx) => wx * state.scale + state.offsetX;
+        const toCanvasY = (wy) => canvasH - (wy * state.scale + state.offsetY);
 
-        // 2. 基礎梁 (線分)
-        (state.foundationBeams || []).forEach(b => {
+        // --- 優先度 1: 人通口 (Manholes) ---
+        for (const mh of (state.manholes || [])) {
+            const cx = toCanvasX(mh.x), cy = toCanvasY(mh.y);
+            if (Math.hypot(mx - cx, my - cy) < HIT_PX) { 
+                window.PropertyController.showFdPopup('manhole', mh, mx, my); 
+                return true; 
+            }
+        }
+
+        // --- 優先度 2: 基礎梁 (Grid-Rail Selection) ---
+        // 近傍のグリッド（レール）を特定
+        const nearGridX = (state.gridXCoords || []).find(gx => Math.abs(mx - toCanvasX(gx)) < HIT_PX);
+        const nearGridY = (state.gridYCoords || []).find(gy => Math.abs(my - toCanvasY(gy)) < HIT_PX);
+
+        const beams = state.foundationBeams || [];
+        for (const b of beams) {
+            // スパン情報を考慮。解析前なら p1, p2 を使用
             const segments = (b.spans && b.spans.length > 0) 
                 ? b.spans.map(s => ({ p1: s.startNode, p2: s.endNode })) 
                 : [{ p1: b.p1, p2: b.p2 }];
 
-            segments.forEach((seg, idx) => {
-                const p1c = window.toCanvasPixel(seg.p1), p2c = window.toCanvasPixel(seg.p2);
-                const l2 = (p2c.cx - p1c.cx) ** 2 + (p2c.cy - p1c.cy) ** 2;
-                const t = l2 > 0 ? Math.max(0, Math.min(1, ((mx - p1c.cx) * (p2c.cx - p1c.cx) + (my - p1c.cy) * (p2c.cy - p1c.cy)) / l2)) : 0;
-                const d = Math.hypot(mx - (p1c.cx + t * (p2c.cx - p1c.cx)), my - (p1c.cy + t * (p2c.cy - p1c.cy)));
+            for (const seg of segments) {
+                if (!seg.p1 || !seg.p2) continue;
                 
-                if (d < HIT_PX) {
-                    candidates.push({ 
-                        type: b.spans && b.spans.length > 0 ? 'beam_span' : 'beam', 
-                        item: b, 
-                        spanIndex: idx,
-                        dist: d, 
-                        priority: 2 
-                    });
+                // 水平梁判定: Y座標が一致し、マウスがYグリッドレール上にあり、X範囲内にあるか
+                const isH = Math.abs(seg.p1.y - seg.p2.y) < 1.0;
+                if (isH && nearGridY !== undefined && Math.abs(seg.p1.y - nearGridY) < 1.0) {
+                    const xMin = Math.min(seg.p1.x, seg.p2.x), xMax = Math.max(seg.p1.x, seg.p2.x);
+                    if (wp.x >= xMin - 100 && wp.x <= xMax + 100) {
+                        window.PropertyController.showFdPopup('beam', b, mx, my);
+                        return true;
+                    }
                 }
-            });
-        });
+                
+                // 垂直梁判定: X座標が一致し、マウスがXグリッドレール上にあり、Y範囲内にあるか
+                const isV = Math.abs(seg.p1.x - seg.p2.x) < 1.0;
+                if (isV && nearGridX !== undefined && Math.abs(seg.p1.x - nearGridX) < 1.0) {
+                    const yMin = Math.min(seg.p1.y, seg.p2.y), yMax = Math.max(seg.p1.y, seg.p2.y);
+                    if (wp.y >= yMin - 100 && wp.y <= yMax + 100) {
+                        window.PropertyController.showFdPopup('beam', b, mx, my);
+                        return true;
+                    }
+                }
 
-        // 3. 外壁線 (線分)
-        (state.exteriorWalls || []).forEach(ew => {
-            if (ew.floor !== state.currentFloor) return;
-            const vts = ew.closed ? [...ew.vertices, ew.vertices[0]] : ew.vertices;
-            for (let i = 0; i < vts.length - 1; i++) {
-                const p1c = window.toCanvasPixel(vts[i]), p2c = window.toCanvasPixel(vts[i+1]);
-                const l2 = (p2c.cx - p1c.cx) ** 2 + (p2c.cy - p1c.cy) ** 2;
-                const t = l2 > 0 ? Math.max(0, Math.min(1, ((mx - p1c.cx) * (p2c.cx - p1c.cx) + (my - p1c.cy) * (p2c.cy - p1c.cy)) / l2)) : 0;
-                const d = Math.hypot(mx - (p1c.cx + t * (p2c.cx - p1c.cx)), my - (p1c.cy + t * (p2c.cy - p1c.cy)));
-                if (d < HIT_PX) candidates.push({ type: 'ext_wall', item: ew, dist: d, priority: 3 });
+                // 斜め梁判定 (Fallback: 従来の距離計算)
+                if (!isH && !isV) {
+                    const p1c = { x: toCanvasX(seg.p1.x), y: toCanvasY(seg.p1.y) };
+                    const p2c = { x: toCanvasX(seg.p2.x), y: toCanvasY(seg.p2.y) };
+                    const l2 = (p2c.x - p1c.x) ** 2 + (p2c.y - p1c.y) ** 2;
+                    const t = l2 > 0 ? Math.max(0, Math.min(1, ((mx - p1c.x) * (p2c.x - p1c.x) + (my - p1c.y) * (p2c.y - p1c.y)) / l2)) : 0;
+                    if (Math.hypot(mx - (p1c.x + t * (p2c.x - p1c.x)), my - (p1c.y + t * (p2c.y - p1c.y))) < HIT_PX) {
+                        window.PropertyController.showFdPopup('beam', b, mx, my);
+                        return true;
+                    }
+                }
             }
-        });
+        }
 
-        // 4. スラブ (面)
-        (state.foundationSlabs || []).forEach(s => {
-            if (window.MathUtils && window.MathUtils.isPointInPolygon(wp, s.vertices)) {
-                // スラブは「面」なので距離は 0 扱いだが、梁や点を優先するため priority を下げる
-                candidates.push({ type: 'slab', item: s, dist: 10, priority: 4 });
+        // --- 優先度 3: 外壁線 ---
+        for (const ew of (state.exteriorWalls || [])) {
+            if (ew.floor !== state.currentFloor) continue;
+            const vts = ew.vertices || [];
+            const edgeVts = ew.closed ? [...vts, vts[0]] : vts;
+            for (let i = 0; i < edgeVts.length - 1; i++) {
+                const p1c = { x: toCanvasX(edgeVts[i].x), y: toCanvasY(edgeVts[i].y) };
+                const p2c = { x: toCanvasX(edgeVts[i+1].x), y: toCanvasY(edgeVts[i+1].y) };
+                const l2 = (p2c.x - p1c.x) ** 2 + (p2c.y - p1c.y) ** 2;
+                const t = l2 > 0 ? Math.max(0, Math.min(1, ((mx - p1c.x) * (p2c.x - p1c.x) + (my - p1c.y) * (p2c.y - p1c.y)) / l2)) : 0;
+                if (Math.hypot(mx - (p1c.x + t * (p2c.x - p1c.x)), my - (p1c.y + t * (p2c.y - p1c.y))) < HIT_PX) {
+                    window.PropertyController.showFdPopup('ext_wall', ew, mx, my);
+                    return true;
+                }
             }
-        });
+        }
 
-        if (candidates.length > 0) {
-            // 優先度(priority)が低い（数字が小さい）ものを優先、同優先度なら距離(dist)が近いものを優先
-            candidates.sort((a, b) => (a.priority - b.priority) || (a.dist - b.dist));
-            const best = candidates[0];
-            window.PropertyController.showFdPopup(best.type, best.item, mx, my, best.spanIndex);
-            return true;
+        // --- 優先度 4: スラブ ---
+        for (const s of (state.foundationSlabs || [])) {
+            if (window.MathUtils && window.MathUtils.isPointInPolygon(wp, s.vertices)) { 
+                window.PropertyController.showFdPopup('slab', s, mx, my); 
+                return true; 
+            }
         }
 
         window.PropertyController.hideFdPopup();
@@ -272,21 +303,13 @@ window.FoundationInputController = {
     },
 
     getFdSnapPoint: function(mx, my, state) {
-        const wp = window.toWorldCoord(mx, my);
+        const wp = { x: (mx - state.offsetX) / state.scale, y: (state.canvas.height - my - state.offsetY) / state.scale };
         let best = null, bestD = Infinity;
-        // 原理原則: グリッドの交点にしか配せない。よって強制的にグリッド交点を探す。
-        const gXs = state.gridXCoords || [];
-        const gYs = state.gridYCoords || [];
-        
-        if (gXs.length > 0 && gYs.length > 0) {
-            gXs.forEach(gx => gYs.forEach(gy => {
-                const d = Math.hypot(wp.x - gx, wp.y - gy);
-                if (d < bestD) { bestD = d; best = { x: Math.round(gx), y: Math.round(gy) }; }
-            }));
-        }
-        
+        (state.gridXCoords || []).forEach(gx => (state.gridYCoords || []).forEach(gy => {
+            const d = Math.hypot(wp.x - gx, wp.y - gy);
+            if (d < bestD) { bestD = d; best = { x: Math.round(gx), y: Math.round(gy) }; }
+        }));
         if (best) return best;
-        // グリッドがない場合の最終フォールバック（ミリ単位の丸め）
         return { x: Math.round(wp.x), y: Math.round(wp.y) };
     }
 };

@@ -1154,30 +1154,19 @@ window.splitBeamsIntoSpans = function(beams, pillars) {
                 const p1 = beamPillars[i];
                 const p2 = beamPillars[i + 1];
                 
-                // [最重要] 投影座標の強制適用
-                // 柱の実際座標が理想的な直線からズレていても、投影座標を使用して完璧な直線を維持する
-                const L_ideal = Math.hypot(bP2x - bP1x, bP2y - bP1y);
-                const dx_beam = bP2x - bP1x;
-                const dy_beam = bP2y - bP1y;
+                // 強制直線アライメント（通り芯誤差・ピボット座標のブレを完全に打ち消す）
+                let sNodeX = p1.globalX;
+                let sNodeY = p1.globalY;
+                let eNodeX = p2.globalX;
+                let eNodeY = p2.globalY;
 
-                const getProjected = (pt) => {
-                    const vx = pt.globalX - bP1x, vy = pt.globalY - bP1y;
-                    const t = (vx * dx_beam + vy * dy_beam) / (L_ideal * L_ideal || 1);
-                    const clampedT = Math.max(0, Math.min(1, t));
-                    return {
-                        x: bP1x + clampedT * dx_beam,
-                        y: bP1y + clampedT * dy_beam
-                    };
-                };
-
-                const proj1 = getProjected(p1);
-                const proj2 = getProjected(p2);
-
-                let sNodeX = proj1.x, sNodeY = proj1.y;
-                let eNodeX = proj2.x, eNodeY = proj2.y;
-
-                // [バグ修正] 以前の単純な isH/isV 判定による座標上書きは、投影座標の導入により不要になったため削除
-                // 全ての角度の梁に対して投影座標が適用されるため、常に直線性が保証される
+                if (isH) {
+                    sNodeY = bP1y;
+                    eNodeY = bP1y;
+                } else if (isV) {
+                    sNodeX = bP1x;
+                    eNodeX = bP1x;
+                }
 
                 const spanLen = Math.hypot(eNodeX - sNodeX, eNodeY - sNodeY);
                 if (spanLen > 50) {

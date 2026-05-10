@@ -140,8 +140,8 @@ window.APP_VERSION = "v2.4.57";
 // Backup of v2.4.57 taken. Now moving to v2.4.58: correct MainRenderer's 4-division calculation method call to use window.GridEngine.get4DivisionBounds, completely restoring the 4-division bounds render functionality.
 // Backup of v2.4.58 taken. Now moving to v2.4.59: restore grid offset functionality, improve基準点(base point) logic, and fix history stack synchronization.
 window.APP_VERSION = "v2.4.59";
-// Backup of v2.4.73 taken. Now moving to v2.4.74: Fix foundation selection hit-test and coordinate resolution discrepancies.
-window.APP_VERSION = "v2.4.74";
+// Backup of v2.4.69 taken. Now moving to v2.4.70: solve the persistent "unselectable horizontal beams in 1F areas" issue by further increasing hit tolerance to 25px and ensuring absolute priority for beam selection over slabs/areas.
+window.APP_VERSION = "v2.4.70";
 
 
 

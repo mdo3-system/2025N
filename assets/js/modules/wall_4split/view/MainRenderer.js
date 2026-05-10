@@ -78,16 +78,11 @@ window.MainRenderer = {
     },
 
     /**
-     * 座標変換ヘルパー
+     * 座標変換ヘルパー (ブリッジ関数へ委譲)
      */
     toCanvas: function(x, y, state) {
-        let tx = Number(typeof x === 'object' ? x.x : x);
-        let ty = Number(typeof x === 'object' ? x.y : y);
-        if (!Number.isFinite(tx) || !Number.isFinite(ty)) return { cx: null, cy: null };
-        return {
-            cx: tx * state.scale + state.offsetX,
-            cy: state.canvas.height - (ty * state.scale + state.offsetY)
-        };
+        const p = window.toCanvasPixel(x, y);
+        return { cx: p.cx, cy: p.cy };
     },
 
     draw4DivisionBounds: function(state) {

@@ -68,21 +68,7 @@ window.PropertyController = {
         const scrollEl = content.querySelector('.calc-box');
         const savedScrollTop = scrollEl ? scrollEl.scrollTop : 0;
 
-        try {
-            content.innerHTML = this.generateFdContentHtml(type, item);
-        } catch (err) {
-            console.error("Foundation Modal Rendering Error:", err);
-            content.innerHTML = `
-                <div style="padding:20px; color:#c0392b; background:#fdf2f2; border:1px solid #f5b7b1; border-radius:8px; font-family:sans-serif;">
-                    <div style="font-weight:bold; font-size:16px; margin-bottom:10px;">❌ 表示エラーが発生しました</div>
-                    <div style="font-size:12px; line-height:1.6;">
-                        データの整合性エラーにより詳細画面を表示できません。<br>
-                        「解析の再実行」ボタンを押すか、通り芯・柱の配置を再度確認してください。
-                    </div>
-                    <pre style="margin-top:15px; font-size:10px; background:#fff; padding:10px; border:1px solid #ddd; overflow:auto;">${err.stack || err.message}</pre>
-                </div>
-            `;
-        }
+        content.innerHTML = this.generateFdContentHtml(type, item);
 
         const newScrollEl = content.querySelector('.calc-box');
         if (newScrollEl) newScrollEl.scrollTop = savedScrollTop;
@@ -292,7 +278,7 @@ window.PropertyController = {
 
     generateFdContentHtml: function(type, item) {
         // (既存の main.js からの移植 - 基礎梁、スラブ等のHTML生成)
-        if (type === 'beam' || type === 'beam_span') return this.generateBeamHtml(item);
+        if (type === 'beam') return this.generateBeamHtml(item);
         if (type === 'slab') return this.generateSlabHtml(item);
         if (type === 'manhole') return `<div class="calc-box"><div class="calc-row"><label>開口幅(mm)</label><input type="number" value="${item.width}" onchange="window.PropertyController.updateFdProp('manhole', ${item.id}, 'width', this.value)"></div></div>`;
         if (type === 'ext_wall') {
@@ -341,7 +327,22 @@ window.PropertyController = {
 
         // 通り名の特定
         const getBeamAxisName = () => {
-            return window.GridEngine ? window.GridEngine.getLineAxisName(beam.p1, beam.p2, window.AppState) : '';
+            const s = window.AppState;
+            const n1 = window.GridEngine.getPillarName(beam.p1, s);
+            const n2 = window.GridEngine.getPillarName(beam.p2, s);
+            const dx = beam.p2.x - beam.p1.x, dy = beam.p2.y - beam.p1.y;
+            const isHorizontal = Math.abs(dx) >= Math.abs(dy);
+            if (n1 && n2) {
+                const xNames = s.gridXNames || [], yNames = s.gridYNames || [];
+                const common = [...xNames, ...yNames].filter(name => name && n1.includes(name) && n2.includes(name));
+                if (common.length > 0) return common[0];
+            }
+            const nm = window.getGridNameAt ? window.getGridNameAt(beam.p1.x, beam.p1.y) : '';
+            if (nm) {
+                const m = nm.match(/[A-Z]+\d+/gi);
+                if (m) return isHorizontal ? m.find(t => t.startsWith('Y')) || m[0] : m.find(t => t.startsWith('X')) || m[0];
+            }
+            return '';
         };
         const beamAxisName = getBeamAxisName();
 
@@ -369,12 +370,19 @@ window.PropertyController = {
         if (beam.fdStress && beam.fdStress.pillars && beam.fdStress.pillars.length > 0) {
             const getFreshPillarName = (p) => {
                 if (!p) return '支点';
-                const px = p.globalX ?? (p.x * 1000) ?? 0;
-                const py = p.globalY ?? (p.y * 1000) ?? 0;
+                let px = 0, py = 0;
+                if (p.globalX !== undefined) {
+                    px = p.globalX; py = p.globalY;
+                } else if (p.x !== undefined && p.x > 100) {
+                    px = p.x; py = p.y !== undefined ? p.y : 0;
+                } else {
+                    px = (p.x || 0) * 1000; py = (p.y || 0) * 1000;
+                }
                 const gridName = window.getGridNameAt ? window.getGridNameAt(px, py) : null;
-                const isDefault = !p.name || /^(P|M)_?(P|M)?\d+$/i.test(p.name) || p.name.toLowerCase().startsWith('pillar') || p.name === `P_${p.id}` || p.name === p.id || p.name.startsWith('支点') || (p.id && p.id.startsWith('support'));
+                const isDefault = !p.name || /^(P|M)_?(P|M)?\d+$/i.test(p.name) || p.name.toLowerCase().startsWith('pillar') || p.name === `P_${p.id}` || p.name === p.id || p.name.startsWith('支点') || (p.id && p.id.startsWith('support')) || (p.name && p.name.startsWith('support'));
                 let rawName = isDefault ? (gridName || p.name || `P_${p.id}`) : p.name;
                 
+                // 特定された通り名を除外（相対的な通り名にする）
                 if (beamAxisName && rawName.includes(beamAxisName)) {
                     rawName = rawName.replace(beamAxisName, '').replace(/^[ -]+|[ -]+$/g, '');
                 }
@@ -388,7 +396,7 @@ window.PropertyController = {
                 return `${p1Name}-${p2Name}`;
             };
 
-            // (0) 応力分布図
+            // (0) 応力分布図 (短期軸力図、M図、Q図)
             html += `<div style="font-size:11px; font-weight:bold; color:#2c3e50; border-bottom:1px solid #8e44ad; margin:15px 0 8px 0; padding-bottom:3px;">📊 応力分布図（短期軸力図・M図・Q図）</div>`;
             html += this.generateStressDiagramsSvg(beam, beamAxisName);
 
@@ -397,7 +405,6 @@ window.PropertyController = {
             const B_val = bp.B_val !== undefined ? parseFloat(bp.B_val) : 0.5;
             const modelType = bp.modelType || 'both_ends';
             const dispB = (modelType === 'pillar_supported') ? 1.0 : B_val;
-            
             let table1 = `<table style="width:100%; border-collapse:collapse; font-size:9px; margin-bottom:12px; border:1px solid #ddd;">
                 <thead>
                     <tr style="background:#f2f4f4; border-bottom:1px solid #ddd;">
@@ -420,28 +427,30 @@ window.PropertyController = {
                 <tbody>`;
             
             const pillars = beam.fdStress.pillars;
-            const seismic = beam.fdStress.seismic || { leftward: { Td:[], Qe:[], Mf:[] }, rightward: { Td:[], Qe:[], Mf:[] } };
+            const seismic = beam.fdStress.seismic;
 
             pillars.forEach((p, idx) => {
-                const l_Td = (seismic.leftward.Td?.[idx] ?? 0).toFixed(3);
-                const l_R_val = (idx === seismic.leftward.supportIdx1 ? (seismic.leftward.R_left ?? 0) : (idx === seismic.leftward.supportIdx2 ? (seismic.leftward.R_right ?? 0) : 0));
-                const l_Qe = (seismic.leftward.Qe?.[idx] ?? 0).toFixed(3);
-                const l_Mf = (seismic.leftward.Mf?.[idx] ?? 0).toFixed(3);
+                const l_Td = (seismic.leftward.Td[idx] || 0).toFixed(3);
+                const l_R_val = (idx === seismic.leftward.supportIdx1 ? seismic.leftward.R_left : (idx === seismic.leftward.supportIdx2 ? seismic.leftward.R_right : 0));
+                const l_R = l_R_val.toFixed(3);
+                const l_Qe = (seismic.leftward.Qe[idx] || 0).toFixed(3);
+                const l_Mf = (seismic.leftward.Mf[idx] || 0).toFixed(3);
 
-                const r_Td = (seismic.rightward.Td?.[idx] ?? 0).toFixed(3);
-                const r_R_val = (idx === seismic.rightward.supportIdx1 ? (seismic.rightward.R_left ?? 0) : (idx === seismic.rightward.supportIdx2 ? (seismic.rightward.R_right ?? 0) : 0));
-                const r_Qe = (seismic.rightward.Qe?.[idx] ?? 0).toFixed(3);
-                const r_Mf = (seismic.rightward.Mf?.[idx] ?? 0).toFixed(3);
+                const r_Td = (seismic.rightward.Td[idx] || 0).toFixed(3);
+                const r_R_val = (idx === seismic.rightward.supportIdx1 ? seismic.rightward.R_left : (idx === seismic.rightward.supportIdx2 ? seismic.rightward.R_right : 0));
+                const r_R = r_R_val.toFixed(3);
+                const r_Qe = (seismic.rightward.Qe[idx] || 0).toFixed(3);
+                const r_Mf = (seismic.rightward.Mf[idx] || 0).toFixed(3);
 
                 table1 += `<tr>
                     <td style="border:1px solid #ddd; padding:3px; font-weight:bold;">${getFreshPillarName(p)}</td>
-                    <td style="border:1px solid #ddd; padding:3px; text-align:right;">${(p.x ?? 0).toFixed(3)}</td>
+                    <td style="border:1px solid #ddd; padding:3px; text-align:right;">${p.x.toFixed(3)}</td>
                     <td style="border:1px solid #ddd; padding:3px; text-align:right; background:#f4f6f7;">${l_Td}</td>
-                    <td style="border:1px solid #ddd; padding:3px; text-align:right; background:#f4f6f7;">${l_R_val.toFixed(3)}</td>
+                    <td style="border:1px solid #ddd; padding:3px; text-align:right; background:#f4f6f7;">${l_R}</td>
                     <td style="border:1px solid #ddd; padding:3px; text-align:right; font-weight:bold; color:#2980b9;">${l_Qe}</td>
                     <td style="border:1px solid #ddd; padding:3px; text-align:right; font-weight:bold; color:#27ae60;">${l_Mf}</td>
                     <td style="border:1px solid #ddd; padding:3px; text-align:right; background:#fdfefe;">${r_Td}</td>
-                    <td style="border:1px solid #ddd; padding:3px; text-align:right; background:#fdfefe;">${r_R_val.toFixed(3)}</td>
+                    <td style="border:1px solid #ddd; padding:3px; text-align:right; background:#fdfefe;">${r_R}</td>
                     <td style="border:1px solid #ddd; padding:3px; text-align:right; font-weight:bold; color:#c0392b;">${r_Qe}</td>
                     <td style="border:1px solid #ddd; padding:3px; text-align:right; font-weight:bold; color:#d35400;">${r_Mf}</td>
                 </tr>`;
@@ -469,12 +478,12 @@ window.PropertyController = {
             spans.forEach(span => {
                 table2 += `<tr>
                     <td style="border:1px solid #ddd; padding:3px; font-weight:bold;">${getFreshSpanName(span)}</td>
-                    <td style="border:1px solid #ddd; padding:3px; text-align:right;">${(span.L ?? 0).toFixed(3)}</td>
-                    <td style="border:1px solid #ddd; padding:3px; text-align:right;">${(span.sigma_e ?? 0).toFixed(3)}</td>
-                    <td style="border:1px solid #ddd; padding:3px; text-align:right;">${(span.B_trib ?? 0).toFixed(3)}</td>
-                    <td style="border:1px solid #ddd; padding:3px; text-align:right; font-weight:bold; color:#27ae60;">${(span.M_mid ?? 0).toFixed(3)}</td>
-                    <td style="border:1px solid #ddd; padding:3px; text-align:right; font-weight:bold; color:#2980b9;">${(span.M_end ?? 0).toFixed(3)}</td>
-                    <td style="border:1px solid #ddd; padding:3px; text-align:right; font-weight:bold; color:#7d3c98;">${(span.Q_L ?? 0).toFixed(3)}</td>
+                    <td style="border:1px solid #ddd; padding:3px; text-align:right;">${span.L.toFixed(3)}</td>
+                    <td style="border:1px solid #ddd; padding:3px; text-align:right;">${span.sigma_e.toFixed(3)}</td>
+                    <td style="border:1px solid #ddd; padding:3px; text-align:right;">${span.B_trib.toFixed(3)}</td>
+                    <td style="border:1px solid #ddd; padding:3px; text-align:right; font-weight:bold; color:#27ae60;">${span.M_mid.toFixed(3)}</td>
+                    <td style="border:1px solid #ddd; padding:3px; text-align:right; font-weight:bold; color:#2980b9;">${span.M_end.toFixed(3)}</td>
+                    <td style="border:1px solid #ddd; padding:3px; text-align:right; font-weight:bold; color:#7d3c98;">${span.Q_L.toFixed(3)}</td>
                 </tr>`;
             });
             table2 += `</tbody></table>`;
@@ -486,8 +495,8 @@ window.PropertyController = {
                 <thead>
                     <tr style="background:#f2f4f4; border-bottom:1px solid #ddd;">
                         <th rowspan="2" style="border:1px solid #ddd; padding:3px;">柱間</th>
-                        <th colspan="3" style="border:1px solid #ddd; padding:3px; text-align:center; background:#ebf5fb;">左加力 (QL + Qe)</th>
-                        <th colspan="3" style="border:1px solid #ddd; padding:3px; text-align:center; background:#fdf2e9;">右加力 (QL + Qe)</th>
+                        <th colspan="3" style="border:1px solid #ddd; padding:3px; text-align:center; background:#ebf5fb;">左加力 (QL + 2.0Qe)</th>
+                        <th colspan="3" style="border:1px solid #ddd; padding:3px; text-align:center; background:#fdf2e9;">右加力 (QL + 2.0Qe)</th>
                     </tr>
                     <tr style="background:#f2f4f4; border-bottom:1px solid #ddd;">
                         <th style="border:1px solid #ddd; padding:2px;">M端(左)</th>
@@ -503,12 +512,12 @@ window.PropertyController = {
             spans.forEach(span => {
                 table3 += `<tr>
                     <td style="border:1px solid #ddd; padding:3px; font-weight:bold;">${getFreshSpanName(span)}</td>
-                    <td style="border:1px solid #ddd; padding:3px; text-align:right; color:#2980b9;">${(span.leftward?.M_left ?? 0).toFixed(3)}</td>
-                    <td style="border:1px solid #ddd; padding:3px; text-align:right; color:#27ae60;">${(span.leftward?.M_right ?? 0).toFixed(3)}</td>
-                    <td style="border:1px solid #ddd; padding:3px; text-align:right; font-weight:bold; color:#7d3c98;">${(span.leftward?.Q ?? 0).toFixed(3)}</td>
-                    <td style="border:1px solid #ddd; padding:3px; text-align:right; color:#c0392b;">${(span.rightward?.M_left ?? 0).toFixed(3)}</td>
-                    <td style="border:1px solid #ddd; padding:3px; text-align:right; color:#e67e22;">${(span.rightward?.M_right ?? 0).toFixed(3)}</td>
-                    <td style="border:1px solid #ddd; padding:3px; text-align:right; font-weight:bold; color:#e74c3c;">${(span.rightward?.Q ?? 0).toFixed(3)}</td>
+                    <td style="border:1px solid #ddd; padding:3px; text-align:right; color:#2980b9;">${span.leftward.M_left.toFixed(3)}</td>
+                    <td style="border:1px solid #ddd; padding:3px; text-align:right; color:#27ae60;">${span.leftward.M_right.toFixed(3)}</td>
+                    <td style="border:1px solid #ddd; padding:3px; text-align:right; font-weight:bold; color:#7d3c98;">${span.leftward.Q.toFixed(3)}</td>
+                    <td style="border:1px solid #ddd; padding:3px; text-align:right; color:#c0392b;">${span.rightward.M_left.toFixed(3)}</td>
+                    <td style="border:1px solid #ddd; padding:3px; text-align:right; color:#e67e22;">${span.rightward.M_right.toFixed(3)}</td>
+                    <td style="border:1px solid #ddd; padding:3px; text-align:right; font-weight:bold; color:#e74c3c;">${span.rightward.Q.toFixed(3)}</td>
                 </tr>`;
             });
             table3 += `</tbody></table>`;
@@ -548,8 +557,8 @@ window.PropertyController = {
                 const botCountId = `bot-count-${beam.id}-${sIdx}`;
                 const botTypeId = `bot-type-${beam.id}-${sIdx}`;
 
-                const topArea = (window.FoundationEngine && window.FoundationEngine.parseRebar) ? window.FoundationEngine.parseRebar(sTopRebar).area : 127;
-                const botArea = (window.FoundationEngine && window.FoundationEngine.parseRebar) ? window.FoundationEngine.parseRebar(sBottomRebar).area : 127;
+                const topArea = window.FoundationEngine.parseRebar(sTopRebar).area;
+                const botArea = window.FoundationEngine.parseRebar(sBottomRebar).area;
 
                 table4 += `<tr>
                     <td style="border:1px solid #ddd; padding:3px; font-weight:bold;">${getFreshSpanName(span)}</td>
@@ -560,24 +569,30 @@ window.PropertyController = {
                         <input type="number" id="${topCountId}" min="1" value="${currentTop.count}" onchange="const typeVal = document.getElementById('${topTypeId}').value; window.PropertyController.updateFdProp('beam_span', ${beam.id}, 'topRebar', this.value + '-' + typeVal, ${sIdx})" style="width:35px; padding:2px; font-size:9px; border:1px solid #ccc; border-radius:3px; text-align:right;">-
                         <select id="${topTypeId}" onchange="const countVal = document.getElementById('${topCountId}').value; window.PropertyController.updateFdProp('beam_span', ${beam.id}, 'topRebar', countVal + '-' + this.value, ${sIdx})" style="padding:2px; font-size:9px; border:1px solid #ccc; border-radius:3px; background:#fff; max-width:75px;">
                             <option value="D13" ${currentTop.type === 'D13' ? 'selected' : ''}>D13</option>
+                            <option value="D13D16" ${currentTop.type === 'D13D16' ? 'selected' : ''}>D13D16</option>
                             <option value="D16" ${currentTop.type === 'D16' ? 'selected' : ''}>D16</option>
+                            <option value="D13D19" ${currentTop.type === 'D13D19' ? 'selected' : ''}>D13D19</option>
+                            <option value="D16D19" ${currentTop.type === 'D16D19' ? 'selected' : ''}>D16D19</option>
                             <option value="D19" ${currentTop.type === 'D19' ? 'selected' : ''}>D19</option>
                         </select>
                     </td>
                     <td style="border:1px solid #ddd; padding:3px; text-align:right;">${topArea.toFixed(1)}</td>
-                    <td style="border:1px solid #ddd; padding:3px; text-align:right; font-weight:bold; color:#27ae60;">${(span.cap?.lMa_top ?? 0).toFixed(3)}</td>
-                    <td style="border:1px solid #ddd; padding:3px; text-align:right; font-weight:bold; color:#16a085;">${(span.cap?.sMa_top ?? 0).toFixed(3)}</td>
+                    <td style="border:1px solid #ddd; padding:3px; text-align:right; font-weight:bold; color:#27ae60;">${span.cap.lMa_top.toFixed(3)}</td>
+                    <td style="border:1px solid #ddd; padding:3px; text-align:right; font-weight:bold; color:#16a085;">${span.cap.sMa_top.toFixed(3)}</td>
                     <td style="border:1px solid #ddd; padding:3px; text-align:center; white-space:nowrap;">
                         <input type="number" id="${botCountId}" min="1" value="${currentBot.count}" onchange="const typeVal = document.getElementById('${botTypeId}').value; window.PropertyController.updateFdProp('beam_span', ${beam.id}, 'bottomRebar', this.value + '-' + typeVal, ${sIdx})" style="width:35px; padding:2px; font-size:9px; border:1px solid #ccc; border-radius:3px; text-align:right;">-
                         <select id="${botTypeId}" onchange="const countVal = document.getElementById('${botCountId}').value; window.PropertyController.updateFdProp('beam_span', ${beam.id}, 'bottomRebar', countVal + '-' + this.value, ${sIdx})" style="padding:2px; font-size:9px; border:1px solid #ccc; border-radius:3px; background:#fff; max-width:75px;">
                             <option value="D13" ${currentBot.type === 'D13' ? 'selected' : ''}>D13</option>
+                            <option value="D13D16" ${currentBot.type === 'D13D16' ? 'selected' : ''}>D13D16</option>
                             <option value="D16" ${currentBot.type === 'D16' ? 'selected' : ''}>D16</option>
+                            <option value="D13D19" ${currentBot.type === 'D13D19' ? 'selected' : ''}>D13D19</option>
+                            <option value="D16D19" ${currentBot.type === 'D16D19' ? 'selected' : ''}>D16D19</option>
                             <option value="D19" ${currentBot.type === 'D19' ? 'selected' : ''}>D19</option>
                         </select>
                     </td>
                     <td style="border:1px solid #ddd; padding:3px; text-align:right;">${botArea.toFixed(1)}</td>
-                    <td style="border:1px solid #ddd; padding:3px; text-align:right; font-weight:bold; color:#2980b9;">${(span.cap?.lMa_bot ?? 0).toFixed(3)}</td>
-                    <td style="border:1px solid #ddd; padding:3px; text-align:right; font-weight:bold; color:#2e4053;">${(span.cap?.sMa_bot ?? 0).toFixed(3)}</td>
+                    <td style="border:1px solid #ddd; padding:3px; text-align:right; font-weight:bold; color:#2980b9;">${span.cap.lMa_bot.toFixed(3)}</td>
+                    <td style="border:1px solid #ddd; padding:3px; text-align:right; font-weight:bold; color:#2e4053;">${span.cap.sMa_bot.toFixed(3)}</td>
                 </tr>`;
             });
             table4 += `</tbody></table>`;
@@ -617,14 +632,14 @@ window.PropertyController = {
                 const stTypeId = `st-type-${beam.id}-${sIdx}`;
                 const stPitchId = `st-pitch-${beam.id}-${sIdx}`;
 
-                const stArea = (window.FoundationEngine && window.FoundationEngine.parseStirrups) ? window.FoundationEngine.parseStirrups(sStirrup).area : 71;
+                const parsedSt = window.FoundationEngine.parseStirrups(sStirrup);
+                const stArea = parsedSt.area;
 
-                const alpha_L = span.cap?.alpha_L != null ? span.cap.alpha_L.toFixed(3) : '--';
-                const alpha_S_L = span.cap?.alpha_S_L != null ? span.cap.alpha_S_L.toFixed(3) : '--';
-                const alpha_S_R = span.cap?.alpha_S_R != null ? span.cap.alpha_S_R.toFixed(3) : '--';
+                const alpha_L = span.cap.alpha_L != null ? span.cap.alpha_L.toFixed(3) : '--';
+                const alpha_S_L = span.cap.alpha_S_L != null ? span.cap.alpha_S_L.toFixed(3) : '--';
+                const alpha_S_R = span.cap.alpha_S_R != null ? span.cap.alpha_S_R.toFixed(3) : '--';
 
-                const pwValue = span.cap?.pw ?? 0;
-                const pwWarning = pwValue < 0.002 ? 'background:#fff9c4; color:#d32f2f; font-weight:bold;' : '';
+                const pwWarning = span.cap.pw < 0.002 ? 'background:#fff9c4; color:#d32f2f; font-weight:bold;' : '';
 
                 table5 += `<tr>
                     <td style="border:1px solid #ddd; padding:3px; font-weight:bold;">${getFreshSpanName(span)}</td>
@@ -647,19 +662,19 @@ window.PropertyController = {
                             <option value="100" ${currentSt.pitch === '100' ? 'selected' : ''}>@100</option>
                         </select>
                     </td>
-                    <td style="border:1px solid #ddd; padding:3px; text-align:right; ${pwWarning}">${pwValue.toFixed(5)}</td>
+                    <td style="border:1px solid #ddd; padding:3px; text-align:right; ${pwWarning}">${span.cap.pw.toFixed(5)}</td>
                     <td style="border:1px solid #ddd; padding:3px; text-align:right; font-weight:bold; color:#117a65;">${alpha_L}</td>
-                    <td style="border:1px solid #ddd; padding:3px; text-align:right; font-weight:bold; color:#27ae60;">${(span.cap?.lQa ?? 0).toFixed(3)}</td>
+                    <td style="border:1px solid #ddd; padding:3px; text-align:right; font-weight:bold; color:#27ae60;">${span.cap.lQa.toFixed(3)}</td>
                     <td style="border:1px solid #ddd; padding:3px; text-align:right; font-weight:bold; color:#117a65;">${alpha_S_L}</td>
-                    <td style="border:1px solid #ddd; padding:3px; text-align:right; font-weight:bold; color:#2980b9;">${(span.cap?.sQa_L ?? 0).toFixed(3)}</td>
+                    <td style="border:1px solid #ddd; padding:3px; text-align:right; font-weight:bold; color:#2980b9;">${span.cap.sQa_L.toFixed(3)}</td>
                     <td style="border:1px solid #ddd; padding:3px; text-align:right; font-weight:bold; color:#117a65;">${alpha_S_R}</td>
-                    <td style="border:1px solid #ddd; padding:3px; text-align:right; font-weight:bold; color:#7d3c98;">${(span.cap?.sQa_R ?? 0).toFixed(3)}</td>
+                    <td style="border:1px solid #ddd; padding:3px; text-align:right; font-weight:bold; color:#7d3c98;">${span.cap.sQa_R.toFixed(3)}</td>
                 </tr>`;
             });
             table5 += `</tbody></table>`;
             
             // pw < 0.002 警告メッセージ
-            if (spans.some(s => (s.cap?.pw ?? 0) < 0.002)) {
+            if (spans.some(s => s.cap.pw < 0.002)) {
                 html += `<div style="background:#fff9c4; border-left:4px solid #fbc02d; padding:8px; margin-bottom:12px; font-size:10px; color:#856404; font-weight:bold;">
                     ⚠️ せん断補強筋比(pw)が0.002を下回っています。鉄筋の本数・径を増やすか、ピッチを細かく(例:@100)修正してください。
                 </div>`;
@@ -686,21 +701,14 @@ window.PropertyController = {
             spans.forEach(span => {
                 const badge = span.isNG ? `<span style="background:#e74c3c; color:#fff; padding:2px 4px; border-radius:3px; font-weight:bold; font-size:8px;">NG</span>` : `<span style="background:#27ae60; color:#fff; padding:2px 4px; border-radius:3px; font-weight:bold; font-size:8px;">OK</span>`;
                 
-                const rM_L = span.rM_L ?? 0;
-                const rQ_L = span.rQ_L ?? 0;
-                const rM_S_L = Math.max(span.leftward?.rM_left ?? 0, span.leftward?.rM_right ?? 0);
-                const rQ_S_L = span.leftward?.rQ ?? 0;
-                const rM_S_R = Math.max(span.rightward?.rM_left ?? 0, span.rightward?.rM_right ?? 0);
-                const rQ_S_R = span.rightward?.rQ ?? 0;
-
                 table6 += `<tr>
                     <td style="border:1px solid #ddd; padding:3px; font-weight:bold;">${getFreshSpanName(span)}</td>
-                    <td style="border:1px solid #ddd; padding:3px; text-align:right; font-weight:bold; color:${rM_L > 1.0 ? 'red' : '#2980b9'}">${rM_L.toFixed(3)}</td>
-                    <td style="border:1px solid #ddd; padding:3px; text-align:right; font-weight:bold; color:${rQ_L > 1.0 ? 'red' : '#27ae60'}">${rQ_L.toFixed(3)}</td>
-                    <td style="border:1px solid #ddd; padding:3px; text-align:right; font-weight:bold; color:${rM_S_L > 1.0 ? 'red' : '#7d3c98'}">${rM_S_L.toFixed(3)}</td>
-                    <td style="border:1px solid #ddd; padding:3px; text-align:right; font-weight:bold; color:${rQ_S_L > 1.0 ? 'red' : '#138d75'}">${rQ_S_L.toFixed(3)}</td>
-                    <td style="border:1px solid #ddd; padding:3px; text-align:right; font-weight:bold; color:${rM_S_R > 1.0 ? 'red' : '#d35400'}">${rM_S_R.toFixed(3)}</td>
-                    <td style="border:1px solid #ddd; padding:3px; text-align:right; font-weight:bold; color:${rQ_S_R > 1.0 ? 'red' : '#900c3f'}">${rQ_S_R.toFixed(3)}</td>
+                    <td style="border:1px solid #ddd; padding:3px; text-align:right; font-weight:bold; color:${span.rM_L > 1.0 ? 'red' : '#2980b9'}">${span.rM_L.toFixed(3)}</td>
+                    <td style="border:1px solid #ddd; padding:3px; text-align:right; font-weight:bold; color:${span.rQ_L > 1.0 ? 'red' : '#27ae60'}">${span.rQ_L.toFixed(3)}</td>
+                    <td style="border:1px solid #ddd; padding:3px; text-align:right; font-weight:bold; color:${Math.max(span.leftward.rM_left, span.leftward.rM_right) > 1.0 ? 'red' : '#7d3c98'}">${Math.max(span.leftward.rM_left, span.leftward.rM_right).toFixed(3)}</td>
+                    <td style="border:1px solid #ddd; padding:3px; text-align:right; font-weight:bold; color:${span.leftward.rQ > 1.0 ? 'red' : '#138d75'}">${span.leftward.rQ.toFixed(3)}</td>
+                    <td style="border:1px solid #ddd; padding:3px; text-align:right; font-weight:bold; color:${Math.max(span.rightward.rM_left, span.rightward.rM_right) > 1.0 ? 'red' : '#d35400'}">${Math.max(span.rightward.rM_left, span.rightward.rM_right).toFixed(3)}</td>
+                    <td style="border:1px solid #ddd; padding:3px; text-align:right; font-weight:bold; color:${span.rightward.rQ > 1.0 ? 'red' : '#900c3f'}">${span.rightward.rQ.toFixed(3)}</td>
                     <td style="border:1px solid #ddd; padding:3px; text-align:center;">${badge}</td>
                 </tr>`;
             });
@@ -796,8 +804,8 @@ window.PropertyController = {
         `;
         pillars.forEach((p, idx) => {
             const px = getX(p.x);
-            const l_val = seismic.leftward?.Td?.[idx] ?? 0;
-            const r_val = seismic.rightward?.Td?.[idx] ?? 0;
+            const l_val = seismic.leftward.Td[idx] || 0;
+            const r_val = seismic.rightward.Td[idx] || 0;
             
             const ly = y1 - (l_val / maxTd) * 35;
             const ry = y1 - (r_val / maxTd) * 35;
@@ -829,7 +837,7 @@ window.PropertyController = {
         let lMPath = "";
         pillars.forEach((p, idx) => {
             const px = getX(p.x);
-            const val = seismic.leftward?.Mf?.[idx] ?? 0;
+            const val = seismic.leftward.Mf[idx] || 0;
             const py = y2 + (val / maxM) * 35;
             lMPath += `${idx === 0 ? 'M' : 'L'} ${px} ${py} `;
         });
@@ -839,7 +847,7 @@ window.PropertyController = {
         let rMPath = "";
         pillars.forEach((p, idx) => {
             const px = getX(p.x);
-            const val = seismic.rightward?.Mf?.[idx] ?? 0;
+            const val = seismic.rightward.Mf[idx] || 0;
             const py = y2 + (val / maxM) * 35;
             rMPath += `${idx === 0 ? 'M' : 'L'} ${px} ${py} `;
         });
@@ -848,8 +856,8 @@ window.PropertyController = {
         // Draw labels
         pillars.forEach((p, idx) => {
             const px = getX(p.x);
-            const l_val = seismic.leftward?.Mf?.[idx] ?? 0;
-            const r_val = seismic.rightward?.Mf?.[idx] ?? 0;
+            const l_val = seismic.leftward.Mf[idx] || 0;
+            const r_val = seismic.rightward.Mf[idx] || 0;
             const ly = y2 + (l_val / maxM) * 35;
             const ry = y2 + (r_val / maxM) * 35;
 
@@ -874,51 +882,44 @@ window.PropertyController = {
         spans.forEach((span, sIdx) => {
             const pLeft = pillars[sIdx];
             const pRight = pillars[sIdx + 1];
-            if (!pLeft || !pRight) return;
             const xL = getX(pLeft.x);
             const xR = getX(pRight.x);
-            const Qe = seismic.leftward?.Qe?.[sIdx] ?? 0;
+            const Qe = seismic.leftward.Qe[sIdx] || 0;
             const py = y3 - (Qe / maxQ) * 35;
             lQPoints.push({ x: xL, y: py });
             lQPoints.push({ x: xR, y: py });
         });
-        if (lQPoints.length > 0) {
-            let lQPath = "";
-            lQPoints.forEach((pt, idx) => {
-                lQPath += `${idx === 0 ? 'M' : 'L'} ${pt.x} ${pt.y} `;
-            });
-            svg += `<path d="${lQPath}" fill="none" stroke="#3b82f6" stroke-width="1.5" />`;
-        }
+        let lQPath = "";
+        lQPoints.forEach((pt, idx) => {
+            lQPath += `${idx === 0 ? 'M' : 'L'} ${pt.x} ${pt.y} `;
+        });
+        svg += `<path d="${lQPath}" fill="none" stroke="#3b82f6" stroke-width="1.5" />`;
 
         // Draw step (flat) lines for rightward shear Qe
         let rQPoints = [];
         spans.forEach((span, sIdx) => {
             const pLeft = pillars[sIdx];
             const pRight = pillars[sIdx + 1];
-            if (!pLeft || !pRight) return;
             const xL = getX(pLeft.x);
             const xR = getX(pRight.x);
-            const Qe = seismic.rightward?.Qe?.[sIdx] ?? 0;
+            const Qe = seismic.rightward.Qe[sIdx] || 0;
             const py = y3 - (Qe / maxQ) * 35;
             rQPoints.push({ x: xL, y: py });
             rQPoints.push({ x: xR, y: py });
         });
-        if (rQPoints.length > 0) {
-            let rQPath = "";
-            rQPoints.forEach((pt, idx) => {
-                rQPath += `${idx === 0 ? 'M' : 'L'} ${pt.x} ${pt.y} `;
-            });
-            svg += `<path d="${rQPath}" fill="none" stroke="#f97316" stroke-width="1.5" />`;
-        }
+        let rQPath = "";
+        rQPoints.forEach((pt, idx) => {
+            rQPath += `${idx === 0 ? 'M' : 'L'} ${pt.x} ${pt.y} `;
+        });
+        svg += `<path d="${rQPath}" fill="none" stroke="#f97316" stroke-width="1.5" />`;
 
         // Draw step value labels in the middle of each span
         spans.forEach((span, sIdx) => {
             const pLeft = pillars[sIdx];
             const pRight = pillars[sIdx + 1];
-            if (!pLeft || !pRight) return;
             const xMid = (getX(pLeft.x) + getX(pRight.x)) / 2;
-            const l_Qe = seismic.leftward?.Qe?.[sIdx] ?? 0;
-            const r_Qe = seismic.rightward?.Qe?.[sIdx] ?? 0;
+            const l_Qe = seismic.leftward.Qe[sIdx] || 0;
+            const r_Qe = seismic.rightward.Qe[sIdx] || 0;
             
             const ly = y3 - (l_Qe / maxQ) * 35;
             const ry = y3 - (r_Qe / maxQ) * 35;
@@ -1364,11 +1365,11 @@ window.getFoundationSlabReportHtml = function(slab) {
     html += `<div>面積 Area: <b>${fmt(s.area)}</b> ㎡</div>`;
     html += `</div>`;
 
-    // 算定条件の明示 (Detailed Building Load Breakdown)
-    const dl = s.detailedLoads || {};
-    const wR = dl.wR || 0.60;
-    const wW = dl.wW || 0.67;
-    const wF = dl.wF || 2.40;
+    // 算定条件の明示 (Strict Spreadsheet Logic Synchronization)
+    const state = window.AppState;
+    const wR = ( (state.roofWeight || 500) + (state.solarWeight || 0) + (state.ceilingInsWeight || 100) ) / 1000;
+    const wW = ( (state.exteriorWallWeight || 600) + (state.wallInsWeight || 70) ) / 1000;
+    const wF = 2.4; // 骨組標準
     const wTotal = wR + wW + wF;
 
     html += `<div style="margin-bottom:10px; padding:6px; background:#fdfdfe; border:1px solid #dee2e6; border-left:4px solid #8e44ad; font-size:10px;">`;
@@ -1377,11 +1378,10 @@ window.getFoundationSlabReportHtml = function(slab) {
     html += `<div>・スラブ厚 D: <b>${slab.props?.slabThickness || 150}</b> mm</div>`;
     html += `<div>・スラブ天端高 dt: <b>${slab.props?.slabTopHeight || 50}</b> mm</div>`;
     html += `<div>・建物荷重(仕様合計): <b>${wTotal.toFixed(2)}</b> kN/㎡</div>`;
-    html += `<div>　(屋根:${wR.toFixed(2)} + 外壁:${wW.toFixed(2)} + 骨組:${wF.toFixed(2)})</div>`;
+    html += `<div>　(屋根:${wR.toFixed(2)} + 壁:${wW.toFixed(2)} + 骨組:${wF.toFixed(2)})</div>`;
     html += `<div>・床積載+仕上: <b>1.74</b> kN/㎡</div>`;
     html += `</div>`;
-    html += `<div style="margin-top:4px; color:#666; font-size:9px;">※建物軸力 ΣN = 各階の負担面積合計 × 建物荷重(仕様合計) に基づき、スラブ上の1階・2階面積から算出</div>`;
-    html += `<div style="margin-top:2px; color:#666; font-size:9px;">※立上り自重には、スラブ境界にある<b>内部・外周全ての基礎梁</b>の重量が含まれます</div>`;
+    html += `<div style="margin-top:4px; color:#666; font-size:9px;">※建物軸力 ΣN = 各階の負担面積合計 × 建物荷重(仕様合計)</div>`;
     html += `</div>`;
 
     // (2) 荷重の内訳表

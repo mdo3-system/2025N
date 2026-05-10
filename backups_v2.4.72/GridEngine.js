@@ -77,19 +77,10 @@ window.GridEngine = {
             if (!masterYs.some(y => Math.abs(y - sy) < TOL_SNAP)) masterYs.push(sy); 
         });
 
-        // 基礎梁の端点を追加（基礎モードでの通り芯消失を防止）
-        (state.foundationBeams || []).forEach(b => {
-            let s1x = snapToModule(b.p1.x), s1y = snapToModule(b.p1.y);
-            let s2x = snapToModule(b.p2.x), s2y = snapToModule(b.p2.y);
-            if (!masterXs.some(x => Math.abs(x - s1x) < TOL_SNAP)) masterXs.push(s1x);
-            if (!masterYs.some(y => Math.abs(y - s1y) < TOL_SNAP)) masterYs.push(s1y);
-            if (!masterXs.some(x => Math.abs(x - s2x) < TOL_SNAP)) masterXs.push(s2x);
-            if (!masterYs.some(y => Math.abs(y - s2y) < TOL_SNAP)) masterYs.push(s2y);
-        });
-
         masterXs.sort((a, b) => a - b); masterYs.sort((a, b) => a - b);
         
         // ブラックリスト（削除済みグリッド）を除外
+        // 手動追加されたものは削除リストにあっても優先
         const manualXCoords = state.manualGridX.map(m => snapToModule(m.coord));
         masterXs = masterXs.filter(mx => {
             if (manualXCoords.includes(mx)) return true;
@@ -161,9 +152,11 @@ window.GridEngine = {
                 }
             });
 
-            // 全階層共通のマスター設定として同期 (階のループ内だが最後に設定したものが勝つ = 全階層包含)
-            state.gridXCoords = masterXs; state.gridXNames = nx;
-            state.gridYCoords = masterYs; state.gridYNames = ny;
+            // 現在表示中の階の設定を同期
+            if (targetFloor === state.currentFloor) {
+                state.gridXCoords = masterXs; state.gridXNames = nx;
+                state.gridYCoords = masterYs; state.gridYNames = ny;
+            }
         });
     },
 
@@ -245,52 +238,6 @@ window.GridEngine = {
             yLineT: maxY - zxt, 
             yLineB: minY + zxb 
         };
-    },
-
-    /**
-     * 梁または壁（線分）が属する通り芯名を統一的に取得します
-     */
-    getLineAxisName: function(p1, p2, state) {
-        const s = state || window.AppState;
-        const n1 = this.getPillarName(p1, s);
-        const n2 = this.getPillarName(p2, s);
-        
-        const dx = Math.abs(p2.x - p1.x);
-        const dy = Math.abs(p2.y - p1.y);
-        const isHorizontal = dx >= dy;
-
-        // 1. 両端の柱名の共通項から通りを特定 (X1Y1, X5Y1 -> Y1)
-        if (n1 && n2) {
-            const xNames = s.gridXNames || [];
-            const yNames = s.gridYNames || [];
-            const allNames = [...xNames, ...yNames];
-            const common = allNames.filter(name => name && n1.includes(name) && n2.includes(name));
-            if (common.length > 0) return common[0];
-            
-            // 正規表現による抽出試行
-            const m1 = n1.match(/[A-Z]+\d+/gi);
-            const m2 = n2.match(/[A-Z]+\d+/gi);
-            if (m1 && m2) {
-                const commonFallback = m1.filter(pt => m2.includes(pt));
-                if (commonFallback.length > 0) return commonFallback[0];
-            }
-        }
-
-        // 2. 共通項がない場合、中点から最も近いグリッド座標を探す
-        const mid = { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
-        let best = '', minD = Infinity;
-        if (isHorizontal) {
-            (s.gridYCoords || []).forEach((gy, i) => { 
-                const d = Math.abs(gy - mid.y);
-                if (d < minD) { minD = d; best = s.gridYNames[i]; } 
-            });
-        } else {
-            (s.gridXCoords || []).forEach((gx, i) => { 
-                const d = Math.abs(gx - mid.x);
-                if (d < minD) { minD = d; best = s.gridXNames[i]; } 
-            });
-        }
-        return (minD < 250) ? best : '';
     }
 };
 

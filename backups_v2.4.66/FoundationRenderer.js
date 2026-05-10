@@ -180,21 +180,16 @@ window.FoundationRenderer = {
         if (!state.elementVisibility || state.elementVisibility.f_beams === false) return;
         const ctx = state.ctx;
         (state.foundationBeams || []).forEach(b => {
-            const bp = b.props || {};
             if (b.spans && b.spans.length > 0) {
                 b.spans.forEach((span, idx) => {
                     if (!span || !span.startNode || !span.endNode) return;
                     const isSelected = fdSel.type === 'beam_span' && fdSel.item?.id === b.id && fdSel.spanIndex === idx;
-                    
-                    // [修正] スパン固有のプロパティと梁全体のプロパティをマージして参照する
-                    // これにより、個別設定がない場合は全体のデフォルト値が正しく表示される
-                    const effectiveProps = { ...bp, ...(span.props || {}) };
-                    this.drawBeamSegment(ctx, span.startNode, span.endNode, effectiveProps, isSelected, span.isNG, toCanvas);
+                    this.drawBeamSegment(ctx, span.startNode, span.endNode, span.props || b.props, isSelected, span.isNG, toCanvas);
                 });
             } else {
                 if (!b.p1 || !b.p2) return;
                 const isSelected = fdSel.type === 'beam' && fdSel.item?.id === b.id;
-                this.drawBeamSegment(ctx, b.p1, b.p2, bp, isSelected, b.isNG, toCanvas);
+                this.drawBeamSegment(ctx, b.p1, b.p2, b.props, isSelected, b.isNG, toCanvas);
             }
         });
     },
