@@ -148,3 +148,57 @@
 - **本精度表示規則から除外する対象（整数・定格表示）**:
   1. **鉄筋径**: D10, D13, D16 などの呼び名、および定格断面積
   2. **配筋・鉄筋本数**: 配筋ピッチ（200mm等、整数表示）や本数（整数表示）
+
+---
+
+## 5. 通り芯（グリッド）の追加・オフセット・履歴管理ロジック
+
+通り芯の動的な追加および削除、ならびにそれらの操作の履歴同期に関する確定ロジック。
+
+### ① グリッド追加（オフセット）の基準点選定ロジック
+ユーザーがキャンバス上をクリックして通り芯を追加する際、基準となる座標（$Base$）は以下の優先順位で決定される。
+1. **既存通り芯へのスナップ**:
+   クリック位置から 100px 以内に既存の通り芯（$Grid$）が存在する場合、その通り芯の座標を $Base$ とする。
+2. **クリック位置の採用**:
+   近傍に通り芯が存在しない場合、クリック位置の座標を標準モジュール（455mm）にスナップさせた値を $Base$ とする。
+   $$Base = \text{round}\left( \frac{\text{ClickPos}}{\text{Module}} \right) \times \text{Module}$$
+
+### ② 手動追加グリッドの優先順位（ブラックリスト回避）
+DXF解析等により自動生成された通り芯が「削除（Blacklist）」状態にある場合でも、ユーザーが明示的に手動追加（`manualGrid`）した座標は、削除リスト（`deletedGrid`）を上書きして優先的に表示・計算対象とする。
+- **解析時ロジック**:
+  $$Grids_{final} = \left( Grids_{auto} \cup Grids_{manual} \right) - \left( Grids_{deleted} - Grids_{manual} \right)$$
+
+### ③ 履歴（Undo/Redo）同期ロジック
+グリッドの状態変更（追加・削除・名称変更）は、柱や壁のデータと同様に `historyStack` に完全なスナップショットとして保存される。
+- **保存対象**: `manualGridX/Y`, `deletedGridX/Y`, `gridXNames/YNames`
+- **復元**: 履歴からの復元時、`GridEngine.analyzeGrids()` を即座に実行し、最新の物理座標配列（`gridXCoords/YCoords`）を再生成する。
+
+---
+
+## 6. 4分割法（壁の釣り合い）計算ロジック
+
+建物各階の四分割図における側端部の必要壁量と存在壁量の算定ロジック。
+
+### ① 側端部領域の定義（境界線）
+建物の外郭（境界ポリゴン）の最小・最大座標に基づき、各方向の 1/4 領域を定義する。
+- `xLineL = minX + (W / 4)`
+- `xLineR = maxX - (W / 4)`
+- `yLineT = maxY - (H / 4)`
+- `yLineB = minY + (H / 4)`
+
+### ② 側端部必要壁量の面積算定（AreaEngine）
+側端部面積（$Area_{side}$）は、建物構成ポリゴンを上記の境界線でクリッピングした面積の合計とする。
+- **X方向・上側（XT）**: `yLineT` から `maxY` までの範囲
+- **X方向・下側（XB）**: `minY` から `yLineB` までの範囲
+- **Y方向・左側（YL）**: `minX` から `xLineL` までの範囲
+- **Y方向・右側（YR）**: `xLineR` から `maxX` までの範囲
+
+### ③ 側端部存在壁量の集計（StructuralEngine）
+各側端部領域に重心（中心点）が含まれる耐力壁の有効壁長を合計する。
+- **X方向（水平壁）**: `vxt`, `vxb` に集計
+- **Y方向（垂直壁）**: `vyl`, `vyr` に集計
+
+### ④ 判定ロジック
+1. **充足率の算出**: $Sufficiency = Existence / (Area_{side} \times q)$
+2. **壁率比の算出**: $Ratio = \min(Sufficiency1, Sufficiency2) / \max(Sufficiency1, Sufficiency2)$
+3. **合格判定**: $(Sufficiency1 \ge 1.0 \text{ かつ } Sufficiency2 \ge 1.0)$ または $Ratio \ge 0.5$ の場合に **OK** と判定する。

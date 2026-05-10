@@ -248,10 +248,10 @@ window.AreaEngine = {
             const poly = area.vertices.map(v => ({ x: v.x, y: v.y }));
             M.ensureCCW(poly);
 
-            // X-Top (上/奥) - yLineB to maxY (SVG coordinates are inverted relative to physical architectural North)
-            res.xt += (M.polygonArea(M.clipPolygonByRect(poly, -1e8, 1e8, b.yLineB, 1e8)) / 1000000) * factor;
-            // X-Bottom (下/前) - minY to yLineT
-            res.xb += (M.polygonArea(M.clipPolygonByRect(poly, -1e8, 1e8, -1e8, b.yLineT)) / 1000000) * factor;
+            // X-Top (上/奥) - yLineT to maxY
+            res.xt += (M.polygonArea(M.clipPolygonByRect(poly, -1e8, 1e8, b.yLineT, 1e8)) / 1000000) * factor;
+            // X-Bottom (下/前) - minY to yLineB
+            res.xb += (M.polygonArea(M.clipPolygonByRect(poly, -1e8, 1e8, -1e8, b.yLineB)) / 1000000) * factor;
             // Y-Left (左) - minX to xLineL
             res.yl += (M.polygonArea(M.clipPolygonByRect(poly, -1e8, b.xLineL, -1e8, 1e8)) / 1000000) * factor;
             // Y-Right (右) - xLineR to maxX
