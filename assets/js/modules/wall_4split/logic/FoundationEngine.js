@@ -145,7 +145,7 @@ window.FoundationEngine = {
         // 1F と 2F が同じXY座標に存在する場合、両方を拾うと spans が2倍になり選択ロジックが破綻する
         const targetFloorPillars = (s.pillars || []).filter(p =>
             !p.isDeleted && (p.floor === '1F' || p.floor === 'ALL') &&
-            window.MathUtils.distToBeamLine(p.x, p.y, p1.x, p1.y, p2.x, p2.y) < 10
+            window.MathUtils.distToBeamLine(p.x, p.y, p1.x, p1.y, p2.x, p2.y) < 50
         );
 
         const mapped = targetFloorPillars.map(p => {

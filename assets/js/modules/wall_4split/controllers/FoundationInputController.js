@@ -9,11 +9,10 @@ window.FoundationInputController = {
      */
     handleMouseDown: function(e, state) {
         const rect = state.canvas.getBoundingClientRect();
-        // [改善] 高DPI（4Kモニタ等）やブラウザの拡大率に左右されない、描画バッファベースの正確なマウス座標を算出
         const scaleX = state.canvas.width / rect.width;
         const scaleY = state.canvas.height / rect.height;
-        const amx = (e.clientX - rect.left) * scaleX;
-        const amy = (e.clientY - rect.top) * scaleY;
+        const amx = e.offsetX * scaleX;
+        const amy = e.offsetY * scaleY;
         
         const fm = state.foundationMode || 'f_beam';
         const snap = this.getFdSnapPoint(amx, amy, state);
@@ -202,8 +201,9 @@ window.FoundationInputController = {
 
     trySelectElement: function(mx, my, state) {
         // [目線を変えた修正] 「レールに乗っているか」のYes/No判定をやめ、「最も近いものはどれか」を全件比較する
-        // 判定範囲を 25px -> 35px に拡大し、画面上部などの座標ズレに対応
-        const HIT_PX = 35; 
+        // 判定範囲を 25px -> 50px に拡大し、画面上部などの座標ズレに対応
+        const HIT_PX = 50; 
+        const HIT_WORLD = 150; // mm fallback
         const wp = window.toWorldCoord(mx, my);
         const candidates = [];
 
@@ -217,22 +217,25 @@ window.FoundationInputController = {
         // 2. 基礎梁 (線分)
         (state.foundationBeams || []).forEach(b => {
             const segments = (b.spans && b.spans.length > 0) 
-                ? b.spans.map(s => ({ p1: s.startNode, p2: s.endNode })) 
-                : [{ p1: b.p1, p2: b.p2 }];
+                ? b.spans.map((s, i) => ({ p1: s.startNode, p2: s.endNode, spanIdx: i })) 
+                : [{ p1: b.p1, p2: b.p2, spanIdx: null }];
 
-            segments.forEach((seg, idx) => {
+            segments.forEach((seg) => {
                 const p1c = window.toCanvasPixel(seg.p1), p2c = window.toCanvasPixel(seg.p2);
                 const l2 = (p2c.cx - p1c.cx) ** 2 + (p2c.cy - p1c.cy) ** 2;
                 const t = l2 > 0 ? Math.max(0, Math.min(1, ((mx - p1c.cx) * (p2c.cx - p1c.cx) + (my - p1c.cy) * (p2c.cy - p1c.cy)) / l2)) : 0;
-                const d = Math.hypot(mx - (p1c.cx + t * (p2c.cx - p1c.cx)), my - (p1c.cy + t * (p2c.cy - p1c.cy)));
+                const distPx = Math.hypot(mx - (p1c.cx + t * (p2c.cx - p1c.cx)), my - (p1c.cy + t * (p2c.cy - p1c.cy)));
                 
-                if (d < HIT_PX) {
+                // ワールド座標系での距離（念のためのフォールバック）
+                const distWorld = window.MathUtils.distToBeamLine(wp.x, wp.y, seg.p1.x || seg.p1.globalX, seg.p1.y || seg.p1.globalY, seg.p2.x || seg.p2.globalX, seg.p2.y || seg.p2.globalY);
+
+                if (distPx < HIT_PX || distWorld < HIT_WORLD) {
                     candidates.push({ 
                         type: b.spans && b.spans.length > 0 ? 'beam_span' : 'beam', 
                         item: b, 
-                        spanIndex: idx,
-                        dist: d, 
-                        priority: 2 
+                        dist: distPx, 
+                        priority: 2, 
+                        spanIndex: seg.spanIdx 
                     });
                 }
             });
