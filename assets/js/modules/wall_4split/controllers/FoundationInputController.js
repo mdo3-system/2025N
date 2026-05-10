@@ -8,11 +8,16 @@ window.FoundationInputController = {
      * 基礎モードの mousedown ハンドラ
      */
     handleMouseDown: function(e, state) {
+        // [v2.4.75 根本修正] e.offsetX はCSS論理ピクセル。canvas.width は物理ピクセル。
+        // toWorldCoord は (cx - offsetX) / scale で計算するため、
+        // scale が物理px/mm、offsetX が物理px の場合は物理px座標を渡す必要がある。
+        // resizeCanvas で ctx.setTransform(dpr,...) を設定しているため描画は論理px だが
+        // scale/offsetX はinitViewForce で物理px基準で計算されている。
+        // よって: amx = e.offsetX * (canvas.width / rect.width) = e.offsetX * dpr (物理px)
         const rect = state.canvas.getBoundingClientRect();
-        const scaleX = state.canvas.width / rect.width;
-        const scaleY = state.canvas.height / rect.height;
-        const amx = e.offsetX * scaleX;
-        const amy = e.offsetY * scaleY;
+        const dpr = state.canvas.width / rect.width;
+        const amx = e.offsetX * dpr;
+        const amy = e.offsetY * dpr;
         
         const fm = state.foundationMode || 'f_beam';
         const snap = this.getFdSnapPoint(amx, amy, state);
@@ -200,57 +205,57 @@ window.FoundationInputController = {
     },
 
     trySelectElement: function(mx, my, state) {
-        // [目線を変えた修正] 「レールに乗っているか」のYes/No判定をやめ、「最も近いものはどれか」を全件比較する
-        // 判定範囲を 25px -> 50px に拡大し、画面上部などの座標ズレに対応
-        const HIT_PX = 50; 
-        const HIT_WORLD = 150; // mm fallback
+        // [v2.4.75 根本修正] 梁のヒットテストを世界座標(mm)で統一
+        // 理由: toCanvasPixel が返す物理ピクセル座標と、ctx.setTransform(dpr,...) による
+        //       描画位置(論理ピクセル)は DPR 倍ずれるため。
+        //       スラブが isPointInPolygon(wp, ...) で正しく選択できるのと同じ方式に統一する。
+        const HIT_WORLD = 300; // mm（世界座標での梁から300mm以内をヒットとする）
+        const HIT_MANHOLE_PX = 30; // 人通口は点なのでピクセル判定を維持
         const wp = window.toWorldCoord(mx, my);
         const candidates = [];
 
-        // 1. 人通口 (点)
+        // 1. 人通口 (点) - ピクセル距離判定を維持
         (state.manholes || []).forEach(mh => {
             const p = window.toCanvasPixel(mh.x, mh.y);
             const d = Math.hypot(mx - p.cx, my - p.cy);
-            if (d < HIT_PX) candidates.push({ type: 'manhole', item: mh, dist: d, priority: 1 });
+            if (d < HIT_MANHOLE_PX) candidates.push({ type: 'manhole', item: mh, dist: d, priority: 1 });
         });
 
-        // 2. 基礎梁 (線分)
+        // 2. 基礎梁 (線分) - [v2.4.75] 世界座標(mm)で距離判定
         (state.foundationBeams || []).forEach(b => {
-            const segments = (b.spans && b.spans.length > 0) 
-                ? b.spans.map((s, i) => ({ p1: s.startNode, p2: s.endNode, spanIdx: i })) 
+            // スパンがある場合はスパンの startNode/endNode で、なければ b.p1/b.p2 で判定
+            const segments = (b.spans && b.spans.length > 0)
+                ? b.spans.map((s, i) => ({ p1: s.startNode, p2: s.endNode, spanIdx: i }))
                 : [{ p1: b.p1, p2: b.p2, spanIdx: null }];
 
             segments.forEach((seg) => {
-                const p1c = window.toCanvasPixel(seg.p1), p2c = window.toCanvasPixel(seg.p2);
-                const l2 = (p2c.cx - p1c.cx) ** 2 + (p2c.cy - p1c.cy) ** 2;
-                const t = l2 > 0 ? Math.max(0, Math.min(1, ((mx - p1c.cx) * (p2c.cx - p1c.cx) + (my - p1c.cy) * (p2c.cy - p1c.cy)) / l2)) : 0;
-                const distPx = Math.hypot(mx - (p1c.cx + t * (p2c.cx - p1c.cx)), my - (p1c.cy + t * (p2c.cy - p1c.cy)));
-                
-                // ワールド座標系での距離（念のためのフォールバック）
-                const distWorld = window.MathUtils.distToBeamLine(wp.x, wp.y, seg.p1.x || seg.p1.globalX, seg.p1.y || seg.p1.globalY, seg.p2.x || seg.p2.globalX, seg.p2.y || seg.p2.globalY);
+                if (!seg.p1 || !seg.p2) return;
+                // globalX/Y を優先、なければ x/y を使用（単位は mm）
+                const x1 = seg.p1.globalX ?? seg.p1.x;
+                const y1 = seg.p1.globalY ?? seg.p1.y;
+                const x2 = seg.p2.globalX ?? seg.p2.x;
+                const y2 = seg.p2.globalY ?? seg.p2.y;
 
-                if (distPx < HIT_PX || distWorld < HIT_WORLD) {
-                    candidates.push({ 
-                        type: b.spans && b.spans.length > 0 ? 'beam_span' : 'beam', 
-                        item: b, 
-                        dist: distPx, 
-                        priority: 2, 
-                        spanIndex: seg.spanIdx 
+                const distWorld = window.MathUtils.distToBeamLine(wp.x, wp.y, x1, y1, x2, y2);
+                if (distWorld < HIT_WORLD) {
+                    candidates.push({
+                        type: b.spans && b.spans.length > 0 ? 'beam_span' : 'beam',
+                        item: b,
+                        dist: distWorld,
+                        priority: 2,
+                        spanIndex: seg.spanIdx
                     });
                 }
             });
         });
 
-        // 3. 外壁線 (線分)
+        // 3. 外壁線 (線分) - 世界座標(mm)で判定に統一
         (state.exteriorWalls || []).forEach(ew => {
             if (ew.floor !== state.currentFloor) return;
             const vts = ew.closed ? [...ew.vertices, ew.vertices[0]] : ew.vertices;
             for (let i = 0; i < vts.length - 1; i++) {
-                const p1c = window.toCanvasPixel(vts[i]), p2c = window.toCanvasPixel(vts[i+1]);
-                const l2 = (p2c.cx - p1c.cx) ** 2 + (p2c.cy - p1c.cy) ** 2;
-                const t = l2 > 0 ? Math.max(0, Math.min(1, ((mx - p1c.cx) * (p2c.cx - p1c.cx) + (my - p1c.cy) * (p2c.cy - p1c.cy)) / l2)) : 0;
-                const d = Math.hypot(mx - (p1c.cx + t * (p2c.cx - p1c.cx)), my - (p1c.cy + t * (p2c.cy - p1c.cy)));
-                if (d < HIT_PX) candidates.push({ type: 'ext_wall', item: ew, dist: d, priority: 3 });
+                const d = window.MathUtils.distToBeamLine(wp.x, wp.y, vts[i].x, vts[i].y, vts[i+1].x, vts[i+1].y);
+                if (d < HIT_WORLD) candidates.push({ type: 'ext_wall', item: ew, dist: d, priority: 3 });
             }
         });
 

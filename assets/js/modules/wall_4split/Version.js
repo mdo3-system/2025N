@@ -142,6 +142,8 @@ window.APP_VERSION = "v2.4.57";
 window.APP_VERSION = "v2.4.59";
 // Backup of v2.4.73 taken. Now moving to v2.4.74: Fix foundation selection hit-test and coordinate resolution discrepancies.
 window.APP_VERSION = "v2.4.74";
+// Backup of v2.4.74 taken (e178bfb). Now moving to v2.4.75: ROOT FIX - switch foundation beam hit-test from physical-pixel to world-coordinate (mm) to resolve DPR mismatch between ctx.setTransform(dpr) rendering and pixel-based selection.
+window.APP_VERSION = "v2.4.75";
 
 
 
