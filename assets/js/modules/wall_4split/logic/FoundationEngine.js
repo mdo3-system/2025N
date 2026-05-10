@@ -531,14 +531,14 @@ window.FoundationEngine = {
                 const M_end_right = (i === pillars.length - 2) ? 0 : M_end;
 
                 // Short term combination
-                const n_coef = 2.0;
+                const n_coef = 1.0; // 画像の式 (QL + Qe) に基づき、係数2.0を1.0に変更
                 const M_combo_L_left = M_end_left + seismic.leftward.Mf[i];
                 const M_combo_L_right = M_end_right + seismic.leftward.Mf[i + 1];
-                const Q_combo_L = Q_L + n_coef * seismic.leftward.Qe[i];
+                const Q_combo_L = Q_L + n_coef * Math.abs(seismic.leftward.Qe[i]);
 
                 const M_combo_R_left = M_end_left + seismic.rightward.Mf[i];
                 const M_combo_R_right = M_end_right + seismic.rightward.Mf[i + 1];
-                const Q_combo_R = Q_L + n_coef * seismic.rightward.Qe[i];
+                const Q_combo_R = Q_L + n_coef * Math.abs(seismic.rightward.Qe[i]);
 
                 // Span-specific custom properties support
                 const existingSpan = (beam.spans && beam.spans[i]);
@@ -570,15 +570,20 @@ window.FoundationEngine = {
                 const pw = stRebar.area / (b * stRebar.pitch);
                 const fs = fcVal / 30;
 
-                // Shear Span Ratio
-                const alpha_L = Math.max(1.0, Math.min(2.0, 4.0 / ((M_end / (Q_L * d / 1000 || 1)) + 1)));
+                // Shear Span Ratio (α) - 画像の式に基づき修正
+                // 長期: α = 4 / (M_end / (QL * d) + 1)
+                const M_ratio_L = Math.max(Math.abs(M_end_left), Math.abs(M_end_right));
+                const alpha_L = Math.max(1.0, Math.min(2.0, 4.0 / ((M_ratio_L / (Q_L * d / 1000 || 1)) + 1)));
                 const Qa_steel_L = stRebar.area * (stSteel.fts / 1.5) * j / (stRebar.pitch || 200) * 1e-3;
                 const lQa = (alpha_L * fs * b * j * 1e-3) + Qa_steel_L;
 
-                const alpha_S_L = Math.max(1.0, Math.min(2.0, 4.0 / ((Math.max(Math.abs(M_combo_L_left), Math.abs(M_combo_L_right)) / (Q_combo_L * d / 1000 || 1)) + 1)));
+                // 短期: α = 4 / (ML / (QS * d) + 1)  ※QS = QL + Qe
+                // 左加力
+                const alpha_S_L = Math.max(1.0, Math.min(2.0, 4.0 / ((M_ratio_L / (Q_combo_L * d / 1000 || 1)) + 1)));
                 const sQa_L = (alpha_S_L * fs * b * j * 1.5 * 1e-3) + (stRebar.area * stSteel.fts * j / (stRebar.pitch || 200) * 1e-3);
 
-                const alpha_S_R = Math.max(1.0, Math.min(2.0, 4.0 / ((Math.max(Math.abs(M_combo_R_left), Math.abs(M_combo_R_right)) / (Q_combo_R * d / 1000 || 1)) + 1)));
+                // 右加力
+                const alpha_S_R = Math.max(1.0, Math.min(2.0, 4.0 / ((M_ratio_L / (Q_combo_R * d / 1000 || 1)) + 1)));
                 const sQa_R = (alpha_S_R * fs * b * j * 1.5 * 1e-3) + (stRebar.area * stSteel.fts * j / (stRebar.pitch || 200) * 1e-3);
 
                 // Ratios

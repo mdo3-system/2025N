@@ -43,11 +43,11 @@ window.PropertyController = {
             if (cp) {
                 const rect = cp.getBoundingClientRect();
                 width = Math.max(480, Math.round(rect.width * 0.7));
-                const height = Math.round(rect.height * 0.7); // 全体高さの70%に設定
+                const height = Math.round(rect.height * 0.8); // 80%に設定
                 let px = rect.left + (rect.width - width) / 2;
-                let py = rect.top + (rect.height - height) / 2; // 中央配置（高さ70%ベース）
+                let py = rect.top + (rect.height - height) / 2;
                 popup.style.width = width + 'px';
-                popup.style.height = height + 'px'; // 高さを明示的に指定
+                popup.style.height = height + 'px';
                 popup.style.left = Math.max(10, px) + 'px';
                 popup.style.top = Math.max(10, py) + 'px';
             } else {
@@ -589,7 +589,7 @@ window.PropertyController = {
                     </tr>
                     <tr style="background:#f2f4f4; border-bottom:1px solid #ddd;">
                         <th style="border:1px solid #ddd; padding:2px;">鉄筋</th>
-                        <th style="border:1px solid #ddd; padding:2px;">断面積(㎟)</th>
+                        <th style="border:1px solid #ddd; padding:2px;">at(㎟)</th>
                         <th style="border:1px solid #ddd; padding:2px;">ピッチ(mm)</th>
                         <th style="border:1px solid #ddd; padding:2px;">α</th>
                         <th style="border:1px solid #ddd; padding:2px;">lQa (kN)</th>
@@ -624,8 +624,8 @@ window.PropertyController = {
                         <input type="number" step="10" value="${span.props?.width || bp.width || 150}" onchange="window.PropertyController.updateFdProp('beam_span', ${beam.id}, 'width', this.value, ${sIdx})" style="width:45px; padding:2px; font-size:9px; border:1px solid #ccc; border-radius:3px; text-align:right;">
                     </td>
                     <td style="border:1px solid #ddd; padding:3px; text-align:center; white-space:nowrap;">
-                        <input type="number" id="${stCountId}" min="1" value="${currentSt.count}" onchange="const typeVal = document.getElementById('${stTypeId}').value; const pitchVal = document.getElementById('${stPitchId}').value; window.PropertyController.updateFdProp('beam_span', ${beam.id}, 'stirrup', this.value + '-' + typeVal + '@' + pitchVal, ${sIdx})" style="width:20px; padding:2px; font-size:9px; border:1px solid #ccc; border-radius:3px; text-align:right;">-
-                        <select id="${stTypeId}" onchange="const countVal = document.getElementById('${stCountId}').value; const pitchVal = document.getElementById('${stPitchId}').value; window.PropertyController.updateFdProp('beam_span', ${beam.id}, 'stirrup', countVal + '-' + this.value + '@' + pitchVal, ${sIdx})" style="padding:2px; font-size:9px; border:1px solid #ccc; border-radius:3px; background:#fff; max-width:45px;">
+                        <input type="number" id="${stCountId}" min="1" value="${currentSt.count}" onchange="const typeVal = document.getElementById('${stTypeId}').value; const pitchVal = document.getElementById('${stPitchId}').value; window.PropertyController.updateFdProp('beam_span', ${beam.id}, 'stirrup', this.value + '-' + typeVal + '@' + pitchVal, ${sIdx})" style="width:22px; padding:2px; font-size:9px; border:1px solid #ccc; border-radius:3px; text-align:right;">-
+                        <select id="${stTypeId}" onchange="const countVal = document.getElementById('${stCountId}').value; const pitchVal = document.getElementById('${stPitchId}').value; window.PropertyController.updateFdProp('beam_span', ${beam.id}, 'stirrup', countVal + '-' + this.value + '@' + pitchVal, ${sIdx})" style="padding:2px; font-size:9px; border:1px solid #ccc; border-radius:3px; background:#fff; max-width:48px;">
                             <option value="D10" ${currentSt.type === 'D10' ? 'selected' : ''}>D10</option>
                             <option value="D13" ${currentSt.type === 'D13' ? 'selected' : ''}>D13</option>
                         </select>
