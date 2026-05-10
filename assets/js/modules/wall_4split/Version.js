@@ -140,8 +140,8 @@ window.APP_VERSION = "v2.4.57";
 // Backup of v2.4.57 taken. Now moving to v2.4.58: correct MainRenderer's 4-division calculation method call to use window.GridEngine.get4DivisionBounds, completely restoring the 4-division bounds render functionality.
 // Backup of v2.4.58 taken. Now moving to v2.4.59: restore grid offset functionality, improve基準点(base point) logic, and fix history stack synchronization.
 window.APP_VERSION = "v2.4.59";
-// Backup of v2.4.59 taken. Now moving to v2.4.60: fix 4-division area calculation bounds for X-direction and update FIXED_LOGICS.md specification.
-window.APP_VERSION = "v2.4.60";
+// Backup of v2.4.60 taken. Now moving to v2.4.61: refine foundation beam modal UI (70% height, bottom-aligned position, fixed pull-down overlap), add step="10" for height arrows, and implement pw < 0.002 warning alert.
+window.APP_VERSION = "v2.4.61";
 
 
 

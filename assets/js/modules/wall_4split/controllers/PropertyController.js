@@ -39,13 +39,15 @@ window.PropertyController = {
         // すでに表示されている場合はウィンドウ位置を維持
         if (popup.style.display !== 'block') {
             const cp = document.getElementById('center-panel');
-            let width = 750; // デフォルト幅
+            let width = 750; 
             if (cp) {
                 const rect = cp.getBoundingClientRect();
                 width = Math.max(480, Math.round(rect.width * 0.7));
+                const height = Math.round(rect.height * 0.7); // 全体高さの70%に設定
                 let px = rect.left + (rect.width - width) / 2;
-                let py = rect.top + (rect.height - 500) / 2;
+                let py = rect.top + (rect.height - height) / 2; // 中央配置（高さ70%ベース）
                 popup.style.width = width + 'px';
+                popup.style.height = height + 'px'; // 高さを明示的に指定
                 popup.style.left = Math.max(10, px) + 'px';
                 popup.style.top = Math.max(10, py) + 'px';
             } else {
@@ -321,7 +323,7 @@ window.PropertyController = {
             return { count: parseInt(m[1]) || 1, type: 'D' + m[2], pitch: m[3] };
         };
 
-        let html = `<div class="calc-box" style="padding:10px; max-height:75vh; overflow-y:auto; font-family:sans-serif;">
+        let html = `<div class="calc-box" style="padding:10px; height:100%; overflow-y:auto; font-family:sans-serif; box-sizing:border-box;">
             <div style="font-size:12px; font-weight:bold; color:#2c3e50; border-bottom:2px solid #8e44ad; margin-bottom:10px; padding-bottom:5px;">🏗️ 基礎梁 計算条件</div>
             
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; background:#fdfafa; padding:8px; border-radius:6px; margin-bottom:12px; border:1px solid #f1e5f5; font-size:11px;">
@@ -538,11 +540,11 @@ window.PropertyController = {
                 table4 += `<tr>
                     <td style="border:1px solid #ddd; padding:3px; font-weight:bold;">${getFreshSpanName(span)}</td>
                     <td style="border:1px solid #ddd; padding:3px; text-align:center;">
-                        <input type="number" value="${span.props?.height || bp.height || 640}" onchange="window.PropertyController.updateFdProp('beam_span', ${beam.id}, 'height', this.value, ${sIdx})" style="width:45px; padding:2px; font-size:9px; border:1px solid #ccc; border-radius:3px; text-align:right;">
+                        <input type="number" step="10" value="${span.props?.height || bp.height || 640}" onchange="window.PropertyController.updateFdProp('beam_span', ${beam.id}, 'height', this.value, ${sIdx})" style="width:45px; padding:2px; font-size:9px; border:1px solid #ccc; border-radius:3px; text-align:right;">
                     </td>
                     <td style="border:1px solid #ddd; padding:3px; text-align:center; white-space:nowrap;">
-                        <input type="number" id="${topCountId}" min="1" value="${currentTop.count}" onchange="const typeVal = document.getElementById('${topTypeId}').value; window.PropertyController.updateFdProp('beam_span', ${beam.id}, 'topRebar', this.value + '-' + typeVal, ${sIdx})" style="width:30px; padding:2px; font-size:9px; border:1px solid #ccc; border-radius:3px; text-align:right;">-
-                        <select id="${topTypeId}" onchange="const countVal = document.getElementById('${topCountId}').value; window.PropertyController.updateFdProp('beam_span', ${beam.id}, 'topRebar', countVal + '-' + this.value, ${sIdx})" style="padding:2px; font-size:9px; border:1px solid #ccc; border-radius:3px; background:#fff;">
+                        <input type="number" id="${topCountId}" min="1" value="${currentTop.count}" onchange="const typeVal = document.getElementById('${topTypeId}').value; window.PropertyController.updateFdProp('beam_span', ${beam.id}, 'topRebar', this.value + '-' + typeVal, ${sIdx})" style="width:25px; padding:2px; font-size:9px; border:1px solid #ccc; border-radius:3px; text-align:right;">-
+                        <select id="${topTypeId}" onchange="const countVal = document.getElementById('${topCountId}').value; window.PropertyController.updateFdProp('beam_span', ${beam.id}, 'topRebar', countVal + '-' + this.value, ${sIdx})" style="padding:2px; font-size:9px; border:1px solid #ccc; border-radius:3px; background:#fff; max-width:55px;">
                             <option value="D13" ${currentTop.type === 'D13' ? 'selected' : ''}>D13</option>
                             <option value="D13D16" ${currentTop.type === 'D13D16' ? 'selected' : ''}>D13D16</option>
                             <option value="D16" ${currentTop.type === 'D16' ? 'selected' : ''}>D16</option>
@@ -555,8 +557,8 @@ window.PropertyController = {
                     <td style="border:1px solid #ddd; padding:3px; text-align:right; font-weight:bold; color:#27ae60;">${span.cap.lMa_top.toFixed(3)}</td>
                     <td style="border:1px solid #ddd; padding:3px; text-align:right; font-weight:bold; color:#16a085;">${span.cap.sMa_top.toFixed(3)}</td>
                     <td style="border:1px solid #ddd; padding:3px; text-align:center; white-space:nowrap;">
-                        <input type="number" id="${botCountId}" min="1" value="${currentBot.count}" onchange="const typeVal = document.getElementById('${botTypeId}').value; window.PropertyController.updateFdProp('beam_span', ${beam.id}, 'bottomRebar', this.value + '-' + typeVal, ${sIdx})" style="width:30px; padding:2px; font-size:9px; border:1px solid #ccc; border-radius:3px; text-align:right;">-
-                        <select id="${botTypeId}" onchange="const countVal = document.getElementById('${botCountId}').value; window.PropertyController.updateFdProp('beam_span', ${beam.id}, 'bottomRebar', countVal + '-' + this.value, ${sIdx})" style="padding:2px; font-size:9px; border:1px solid #ccc; border-radius:3px; background:#fff;">
+                        <input type="number" id="${botCountId}" min="1" value="${currentBot.count}" onchange="const typeVal = document.getElementById('${botTypeId}').value; window.PropertyController.updateFdProp('beam_span', ${beam.id}, 'bottomRebar', this.value + '-' + typeVal, ${sIdx})" style="width:25px; padding:2px; font-size:9px; border:1px solid #ccc; border-radius:3px; text-align:right;">-
+                        <select id="${botTypeId}" onchange="const countVal = document.getElementById('${botCountId}').value; window.PropertyController.updateFdProp('beam_span', ${beam.id}, 'bottomRebar', countVal + '-' + this.value, ${sIdx})" style="padding:2px; font-size:9px; border:1px solid #ccc; border-radius:3px; background:#fff; max-width:55px;">
                             <option value="D13" ${currentBot.type === 'D13' ? 'selected' : ''}>D13</option>
                             <option value="D13D16" ${currentBot.type === 'D13D16' ? 'selected' : ''}>D13D16</option>
                             <option value="D16" ${currentBot.type === 'D16' ? 'selected' : ''}>D16</option>
@@ -614,28 +616,30 @@ window.PropertyController = {
                 const alpha_S_L = span.cap.alpha_S_L != null ? span.cap.alpha_S_L.toFixed(3) : '--';
                 const alpha_S_R = span.cap.alpha_S_R != null ? span.cap.alpha_S_R.toFixed(3) : '--';
 
+                const pwWarning = span.cap.pw < 0.002 ? 'background:#fff9c4; color:#d32f2f; font-weight:bold;' : '';
+
                 table5 += `<tr>
                     <td style="border:1px solid #ddd; padding:3px; font-weight:bold;">${getFreshSpanName(span)}</td>
                     <td style="border:1px solid #ddd; padding:3px; text-align:center;">
-                        <input type="number" value="${span.props?.width || bp.width || 150}" onchange="window.PropertyController.updateFdProp('beam_span', ${beam.id}, 'width', this.value, ${sIdx})" style="width:45px; padding:2px; font-size:9px; border:1px solid #ccc; border-radius:3px; text-align:right;">
+                        <input type="number" step="10" value="${span.props?.width || bp.width || 150}" onchange="window.PropertyController.updateFdProp('beam_span', ${beam.id}, 'width', this.value, ${sIdx})" style="width:45px; padding:2px; font-size:9px; border:1px solid #ccc; border-radius:3px; text-align:right;">
                     </td>
                     <td style="border:1px solid #ddd; padding:3px; text-align:center; white-space:nowrap;">
-                        <input type="number" id="${stCountId}" min="1" value="${currentSt.count}" onchange="const typeVal = document.getElementById('${stTypeId}').value; const pitchVal = document.getElementById('${stPitchId}').value; window.PropertyController.updateFdProp('beam_span', ${beam.id}, 'stirrup', this.value + '-' + typeVal + '@' + pitchVal, ${sIdx})" style="width:25px; padding:2px; font-size:9px; border:1px solid #ccc; border-radius:3px; text-align:right;">-
-                        <select id="${stTypeId}" onchange="const countVal = document.getElementById('${stCountId}').value; const pitchVal = document.getElementById('${stPitchId}').value; window.PropertyController.updateFdProp('beam_span', ${beam.id}, 'stirrup', countVal + '-' + this.value + '@' + pitchVal, ${sIdx})" style="padding:2px; font-size:9px; border:1px solid #ccc; border-radius:3px; background:#fff;">
+                        <input type="number" id="${stCountId}" min="1" value="${currentSt.count}" onchange="const typeVal = document.getElementById('${stTypeId}').value; const pitchVal = document.getElementById('${stPitchId}').value; window.PropertyController.updateFdProp('beam_span', ${beam.id}, 'stirrup', this.value + '-' + typeVal + '@' + pitchVal, ${sIdx})" style="width:20px; padding:2px; font-size:9px; border:1px solid #ccc; border-radius:3px; text-align:right;">-
+                        <select id="${stTypeId}" onchange="const countVal = document.getElementById('${stCountId}').value; const pitchVal = document.getElementById('${stPitchId}').value; window.PropertyController.updateFdProp('beam_span', ${beam.id}, 'stirrup', countVal + '-' + this.value + '@' + pitchVal, ${sIdx})" style="padding:2px; font-size:9px; border:1px solid #ccc; border-radius:3px; background:#fff; max-width:45px;">
                             <option value="D10" ${currentSt.type === 'D10' ? 'selected' : ''}>D10</option>
                             <option value="D13" ${currentSt.type === 'D13' ? 'selected' : ''}>D13</option>
                         </select>
                     </td>
                     <td style="border:1px solid #ddd; padding:3px; text-align:right;">${stArea.toFixed(1)}</td>
                     <td style="border:1px solid #ddd; padding:3px; text-align:center;">
-                        <select id="${stPitchId}" onchange="const countVal = document.getElementById('${stCountId}').value; const typeVal = document.getElementById('${stTypeId}').value; window.PropertyController.updateFdProp('beam_span', ${beam.id}, 'stirrup', countVal + '-' + typeVal + '@' + this.value, ${sIdx})" style="padding:2px; font-size:9px; border:1px solid #ccc; border-radius:3px; background:#fff;">
+                        <select id="${stPitchId}" onchange="const countVal = document.getElementById('${stCountId}').value; const typeVal = document.getElementById('${stTypeId}').value; window.PropertyController.updateFdProp('beam_span', ${beam.id}, 'stirrup', countVal + '-' + typeVal + '@' + this.value, ${sIdx})" style="padding:2px; font-size:9px; border:1px solid #ccc; border-radius:3px; background:#fff; max-width:55px;">
                             <option value="300" ${currentSt.pitch === '300' ? 'selected' : ''}>@300</option>
                             <option value="200" ${currentSt.pitch === '200' ? 'selected' : ''}>@200</option>
                             <option value="150" ${currentSt.pitch === '150' ? 'selected' : ''}>@150</option>
                             <option value="100" ${currentSt.pitch === '100' ? 'selected' : ''}>@100</option>
                         </select>
                     </td>
-                    <td style="border:1px solid #ddd; padding:3px; text-align:right;">${span.cap.pw.toFixed(5)}</td>
+                    <td style="border:1px solid #ddd; padding:3px; text-align:right; ${pwWarning}">${span.cap.pw.toFixed(5)}</td>
                     <td style="border:1px solid #ddd; padding:3px; text-align:right; font-weight:bold; color:#117a65;">${alpha_L}</td>
                     <td style="border:1px solid #ddd; padding:3px; text-align:right; font-weight:bold; color:#27ae60;">${span.cap.lQa.toFixed(3)}</td>
                     <td style="border:1px solid #ddd; padding:3px; text-align:right; font-weight:bold; color:#117a65;">${alpha_S_L}</td>
@@ -645,6 +649,13 @@ window.PropertyController = {
                 </tr>`;
             });
             table5 += `</tbody></table>`;
+            
+            // pw < 0.002 警告メッセージ
+            if (spans.some(s => s.cap.pw < 0.002)) {
+                html += `<div style="background:#fff9c4; border-left:4px solid #fbc02d; padding:8px; margin-bottom:12px; font-size:10px; color:#856404; font-weight:bold;">
+                    ⚠️ せん断補強筋比(pw)が0.002を下回っています。鉄筋の本数・径を増やすか、ピッチを細かく(例:@100)修正してください。
+                </div>`;
+            }
             html += table5;
 
             // (6) 総合判定表
