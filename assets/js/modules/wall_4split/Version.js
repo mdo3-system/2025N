@@ -144,6 +144,8 @@ window.APP_VERSION = "v2.4.59";
 window.APP_VERSION = "v2.4.74";
 // Backup of v2.4.74 taken (e178bfb). Now moving to v2.4.75: ROOT FIX - switch foundation beam hit-test from physical-pixel to world-coordinate (mm) to resolve DPR mismatch between ctx.setTransform(dpr) rendering and pixel-based selection.
 window.APP_VERSION = "v2.4.75";
+// Backup of v2.4.75 taken (93d1b7f). Now moving to v2.4.76: Fix ReferenceError where wF is not defined in FoundationEngine.js.
+window.APP_VERSION = "v2.4.76";
 
 
 

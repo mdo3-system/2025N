@@ -111,7 +111,8 @@ window.FoundationEngine = {
             const sArea1F = intersectArea(poly, a1Polys), sArea2F = intersectArea(poly, a2Polys);
             const wR = ((s.config?.weights?.roof || 500) + (s.config?.weights?.solar || 0) + (s.config?.weights?.ceilingIns || 100)) / 1000;
             const wW = ((s.config?.weights?.exteriorWall || 600) + (s.config?.weights?.wallIns || 70)) / 1000;
-            const axial_kN = (sArea1F * (2.4 + wW)) + (sArea2F * 2.4) + (Math.max(sArea1F, sArea2F) * wR);
+            const wF = 2.4;
+            const axial_kN = (sArea1F * (wF + wW)) + (sArea2F * wF) + (Math.max(sArea1F, sArea2F) * wR);
             let stem_kN = 0; const d_m = s.config?.fdThicknessM || 0.15;
             beams.forEach(b => { if (this._isBeamOnSlabBoundary(b, slab.vertices)) { const weight = ((b.props?.width || 150) / 1000) * Math.max(0, (b.props?.height || 640) / 1000 - d_m) * (Math.hypot(b.p2.x - b.p1.x, b.p2.y - b.p1.y) / 1000) * 24.0; stem_kN += weight / (beamAdjacency[b.id] || 1); } });
             const qTotal = (area > 0 ? (axial_kN + stem_kN) / area : 0) + 1.740;
