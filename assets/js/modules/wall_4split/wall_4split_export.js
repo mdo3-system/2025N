@@ -14,7 +14,7 @@ window.AppExport = {
         ['2F', '1F'].forEach(f => {
             pillars.filter(p => p.floor === f && !p.isDeleted && !p.isInvalidPos).forEach(p => {
                 if (p.nValue > 0 || p.Ax > 0 || p.Ay > 0) {
-                    c += `${f[0]},${p.gx},${p.gy},${p.isC ? '〇' : '×'},"${p.cStrX}",${p.nCalcX.toFixed(2)},"${p.cStrY}",${p.nCalcY.toFixed(2)},${p.nValue.toFixed(2)},${p.nMark}\n`;
+                    c += `${f[0]},${p.gx},${p.gy},${p.isC ? '〇' : '×'},"${p.cStrX || ''}",${(p.nCalcX || 0).toFixed(2)},"${p.cStrY || ''}",${(p.nCalcY || 0).toFixed(2)},${(p.nValue || 0).toFixed(2)},${p.nMark || '-'}\n`;
                 }
             });
         });

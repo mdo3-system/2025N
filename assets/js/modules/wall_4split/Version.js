@@ -159,6 +159,8 @@ window.APP_VERSION = "v2.4.79";
 window.APP_VERSION = "v2.5.0";
 // Backup of v2.5.0 taken. Now moving to v2.5.1: Fix undefined variable in 4-division bounds calculation (GridEngine property name sync) & Phase 1-3 Diagonal Wall Integration.
 window.APP_VERSION = "v2.5.1";
+// Backup of v2.5.1 taken. Now moving to v2.5.2: Fix undefined properties .toFixed error in exportCSV.
+window.APP_VERSION = "v2.5.2";
 
 
 
