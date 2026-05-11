@@ -254,6 +254,28 @@ window.GridEngine = {
         const s = state || window.AppState;
         const n1 = this.getPillarName(p1, s);
         const n2 = this.getPillarName(p2, s);
+
+        // 0. [v2.5.0] 斜め通り芯の判定 (幾何学的一致を優先)
+        if (s.manualGridAngle && s.manualGridAngle.length > 0) {
+            for (const g of s.manualGridAngle) {
+                if (!g.p1 || !g.p2) continue;
+                // 直線の方程式 Ax + By + C = 0
+                const A = g.p2.y - g.p1.y;
+                const B = g.p1.x - g.p2.x;
+                const C = g.p1.y * g.p2.x - g.p1.x * g.p2.y;
+                const den = Math.hypot(A, B);
+                if (den < 1) continue;
+
+                // 線分の両端点から直線への距離を算出
+                const d1 = Math.abs(A * p1.x + B * p1.y + C) / den;
+                const d2 = Math.abs(A * p2.x + B * p2.y + C) / den;
+
+                // 許容誤差100mm以内で両端が直線上にあれば、その斜め軸名を採用
+                if (d1 < 100 && d2 < 100) {
+                    return g.name || 'DA';
+                }
+            }
+        }
         
         const dx = Math.abs(p2.x - p1.x);
         const dy = Math.abs(p2.y - p1.y);

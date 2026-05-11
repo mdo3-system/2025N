@@ -29,7 +29,9 @@ window.SlabBeamSynchronizer = {
             return { B: 0, sigma: s.averageGroundPressure || 12.0 };
         }
 
-        const isVertical = Math.abs(x2 - x1) < Math.abs(y2 - y1);
+        // [v2.5.0] Calculate normalized directional vector for the beam
+        const uX = (x2 - x1) / L_span;
+        const uY = (y2 - y1) / L_span;
         
         let B_side1 = 0, B_side2 = 0;
         let sigma_B_side1 = 0, sigma_B_side2 = 0;
@@ -50,31 +52,17 @@ window.SlabBeamSynchronizer = {
                     if (dist >= 150) return;
                 }
 
-                // スラブ分配ポリゴンの座標バウンディングボックスの取得
-                const polyX = tp.polygon.map(pt => pt.x);
-                const polyY = tp.polygon.map(pt => pt.y);
-                const minPx = Math.min(...polyX), maxPx = Math.max(...polyX);
-                const minPy = Math.min(...polyY), maxPy = Math.max(...polyY);
-
-                let overlap = 0;
-                if (isVertical) {
-                    // Y軸方向の重複長
-                    const sMin = Math.min(y1, y2);
-                    const sMax = Math.max(y1, y2);
-                    overlap = Math.max(0, Math.min(maxPy, sMax) - Math.max(minPy, sMin));
-                } else {
-                    // X軸方向の重複長
-                    const sMin = Math.min(x1, x2);
-                    const sMax = Math.max(x1, x2);
-                    overlap = Math.max(0, Math.min(maxPx, sMax) - Math.max(minPx, sMin));
-                }
+                // [v2.5.0] Project polygon vertices onto the beam vector to calculate true 1D overlap
+                const polyT = tp.polygon.map(pt => (pt.x - x1) * uX + (pt.y - y1) * uY);
+                const minT = Math.min(...polyT);
+                const maxT = Math.max(...polyT);
+                
+                let overlap = Math.max(0, Math.min(maxT, L_span) - Math.max(minT, 0));
 
                 // 重複が検出されない場合、重心（代表点）がスパン内にあるかをチェックするフォールバック
                 if (overlap <= 0.1) {
-                    const sMin = isVertical ? Math.min(y1, y2) : Math.min(x1, x2);
-                    const sMax = isVertical ? Math.max(y1, y2) : Math.max(x1, x2);
-                    const mVal = isVertical ? my : mx;
-                    if (mVal >= sMin && mVal <= sMax) {
+                    const mT = (mx - x1) * uX + (my - y1) * uY;
+                    if (mT >= 0 && mT <= L_span) {
                         overlap = L_span; // 簡略的にスパン全体に載っているとみなす
                     } else {
                         return; // 重複なし

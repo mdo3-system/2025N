@@ -3,6 +3,8 @@
  * v2.3.25 リファクタリング
  */
 
+let diagGridPoints = []; // [v2.5.0] 斜め通り芯の2点選択用バッファ
+
 function initCanvasInput(canvas) {
     if (!canvas) return;
 
@@ -48,7 +50,7 @@ function initCanvasInput(canvas) {
 
         // ドラッグ（パン）開始
         // 左クリック時は、作図・選択・削除のいずれのモードでもない場合にのみドラッグを開始する
-        const interactionModes = ['add-pillar', 'draw-area', 'select', 'delete-unified', 'wall', 'window', 'add-grid', 'del-grid', 'edit-text'];
+        const interactionModes = ['add-pillar', 'draw-area', 'select', 'delete-unified', 'wall', 'window', 'add-grid', 'del-grid', 'add-diag-grid', 'edit-text'];
         if (e.button === 1 || e.button === 2 || (e.button === 0 && !hoveredPillar && !interactionModes.includes(mode))) {
             isDragging = true; lastMouseX = e.clientX; lastMouseY = e.clientY;
             return;
@@ -88,6 +90,10 @@ function initCanvasInput(canvas) {
             // 通り芯文字の編集
             else if (mode === 'edit-text') {
                 handleEditText(e, state);
+            }
+            // [v2.5.0] 斜め通り芯追加
+            else if (mode === 'add-diag-grid' && snapPoint) {
+                handleDiagGridInput(state);
             }
         }
     });
@@ -409,7 +415,7 @@ function handleGeneralMouseMove(mx, my, state) {
     }
     // スナップ点計算
     const mode = getMode();
-    if (['add-pillar', 'draw-area'].includes(mode)) {
+    if (['add-pillar', 'draw-area', 'add-diag-grid'].includes(mode)) {
         let bestD = 30;
         state.gridXCoords.forEach(gx => state.gridYCoords.forEach(gy => {
             const pt = toC(gx, gy);
@@ -453,11 +459,34 @@ function findHitElement(mx, my, state) {
 }
 
 function cancelDrawing() {
-    areaDrawPoints = []; selectedPillar = null;
+    areaDrawPoints = []; selectedPillar = null; diagGridPoints = [];
     const state = window.AppState;
     if (state) {
         state.fdDrawPoints = [];
         state.fdSelectedPillarLike = null;
+    }
+    window.AppController.refreshAll();
+}
+function handleDiagGridInput(state) {
+    if (!snapPoint) return;
+    diagGridPoints.push({ x: snapPoint.x, y: snapPoint.y });
+    
+    if (diagGridPoints.length === 2) {
+        const p1 = diagGridPoints[0];
+        const p2 = diagGridPoints[1];
+        
+        // 同一点チェック
+        if (Math.hypot(p1.x - p2.x, p1.y - p2.y) > 5) {
+            if (!state.manualGridAngle) state.manualGridAngle = [];
+            const id = Date.now();
+            // 連番のデフォルト名生成
+            const count = state.manualGridAngle.length + 1;
+            const name = "DA" + count; 
+            
+            state.manualGridAngle.push({ id, name, p1, p2 });
+            console.log(`📐 Added Diagonal Grid: ${name}`);
+        }
+        diagGridPoints = []; // リセット
     }
     window.AppController.refreshAll();
 }

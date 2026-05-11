@@ -112,7 +112,7 @@ function showCenterCalc() {
                     <table class="report-table">
                         <tr><th>項目</th><th>X方向 (縦分割)</th><th>Y方向 (横分割)</th></tr>
                         <tr><td>全体スパン</td><td>${(b.maxX - b.minX).toFixed(0)} mm</td><td>${(b.maxY - b.minY).toFixed(0)} mm</td></tr>
-                        <tr><td>1/4ライン</td><td>左:${b.xLeft.toFixed(0)} / 右:${b.xRight.toFixed(0)}</td><td>上:${b.yTop.toFixed(0)} / 下:${b.yBottom.toFixed(0)}</td></tr>
+                        <tr><td>1/4ライン</td><td>左:${b.xLineL.toFixed(0)} / 右:${b.xLineR.toFixed(0)}</td><td>上:${b.yLineT.toFixed(0)} / 下:${b.yLineB.toFixed(0)}</td></tr>
                     </table>
                  </div>`;
     });
@@ -132,6 +132,8 @@ window.getAxesToReport = function() {
     const s = window.AppState;
     if (s.gridXNames) s.gridXNames.forEach(n => { if(n && n !== '?') axes.add(n); });
     if (s.gridYNames) s.gridYNames.forEach(n => { if(n && n !== '?') axes.add(n); });
+    // [v2.5.0] 斜め通り芯の名称を追加
+    if (s.manualGridAngle) s.manualGridAngle.forEach(g => { if (g.name) axes.add(g.name); });
 
     return Array.from(axes).sort((a, b) => {
         return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });

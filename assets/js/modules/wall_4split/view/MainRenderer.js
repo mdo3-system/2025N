@@ -250,6 +250,47 @@ window.MainRenderer = {
                 ctx.restore();
             }
         });
+
+        // --- [v2.5.0] 斜め通り芯描画 ---
+        if (state.manualGridAngle && state.manualGridAngle.length > 0) {
+            const labelFontSize = 12;
+            state.manualGridAngle.forEach(g => {
+                const c1 = this.toCanvas(g.p1.x, g.p1.y, state);
+                const c2 = this.toCanvas(g.p2.x, g.p2.y, state);
+                if (!c1 || !c2) return;
+
+                const dx = c2.cx - c1.cx, dy = c2.cy - c1.cy;
+                const len = Math.hypot(dx, dy);
+                if (len < 5) return; 
+
+                const ux = dx / len, uy = dy / len;
+
+                // ビューポートを十分に横切る破線を描画
+                const drawLen = 8000; 
+                ctx.beginPath();
+                ctx.moveTo(c1.cx - ux * drawLen, c1.cy - uy * drawLen);
+                ctx.lineTo(c1.cx + ux * drawLen, c1.cy + uy * drawLen);
+                ctx.stroke();
+
+                // ラベル描画: 「上/左」にある方を始点にオフセット
+                const isC1Hi = (c1.cy < c2.cy) || (Math.abs(c1.cy - c2.cy) < 2 && c1.cx < c2.cx);
+                const anchor = isC1Hi ? c1 : c2;
+                const dir = isC1Hi ? -1 : 1;
+                const lx = anchor.cx + ux * dir * 35, ly = anchor.cy + uy * dir * 35;
+
+                ctx.save();
+                ctx.setLineDash([]); 
+                ctx.font = `bold ${labelFontSize}px sans-serif`;
+                ctx.textAlign = "center"; ctx.textBaseline = "middle";
+                
+                const txt = g.name || 'DA';
+                ctx.strokeStyle = state.isPrintMode ? '#fff' : 'rgba(30,30,30,0.7)'; ctx.lineWidth = 3;
+                ctx.strokeText(txt, lx, ly);
+                ctx.fillStyle = state.isPrintMode ? '#2c3e50' : '#e74c3c'; 
+                ctx.fillText(txt, lx, ly);
+                ctx.restore();
+            });
+        }
         ctx.restore();
     },
 

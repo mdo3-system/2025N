@@ -168,6 +168,7 @@ window.AppState = {
     gridYCoords: [],
     manualGridX: [],
     manualGridY: [],
+    manualGridAngle: [], // Array of { id, name, p1: {x,y}, p2: {x,y} } 既存交点スナップ強制
     deletedGridX: [],
     deletedGridY: [],
     userEditedGridX: {},

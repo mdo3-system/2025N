@@ -22,6 +22,10 @@ window.ElevationRenderer = {
                 const h = (f === '2F') ? h2 : h1;
                 const wallsOnAxis = s.walls.filter(w => {
                     if (w.floor !== f) return false;
+                    if (window.MathUtils && window.MathUtils.isPointOnAxis) {
+                        return window.MathUtils.isPointOnAxis(w.p1, axisName, s) && 
+                               window.MathUtils.isPointOnAxis(w.p2, axisName, s);
+                    }
                     const n1 = window.GridEngine.getPillarName(w.p1, s);
                     const n2 = window.GridEngine.getPillarName(w.p2, s);
                     return (n1 && (n1.startsWith(axisName) || n1.endsWith(axisName))) && 
@@ -30,6 +34,9 @@ window.ElevationRenderer = {
                 const pillarsOnAxis = s.pillars.filter(p => {
                     if (p.floor !== f && p.floor !== 'ALL') return false;
                     if (p.isDeleted) return false;
+                    if (window.MathUtils && window.MathUtils.isPointOnAxis) {
+                        return window.MathUtils.isPointOnAxis(p, axisName, s);
+                    }
                     const nm = window.GridEngine.getPillarName(p, s);
                     return nm && (nm.startsWith(axisName) || nm.endsWith(axisName));
                 });
@@ -39,10 +46,19 @@ window.ElevationRenderer = {
                 }
             });
             if (axisPillars.length > 0) {
-                const minX = Math.min(...axisPillars.map(p => p.x)), maxX = Math.max(...axisPillars.map(p => p.x));
-                const minY = Math.min(...axisPillars.map(p => p.y)), maxY = Math.max(...axisPillars.map(p => p.y));
-                const dx = maxX - minX, dy = maxY - minY;
-                maxW = Math.max(maxW, Math.max(dx, dy));
+                // [v2.5.0] Use 1D projection to get true axis width including diagonals
+                const getPos = window.MathUtils && window.MathUtils.getAxisProjectionFn ? window.MathUtils.getAxisProjectionFn(axisName, s) : null;
+                let axisW = 0;
+                if (getPos) {
+                    const projected = axisPillars.map(p => getPos(p));
+                    axisW = Math.max(...projected) - Math.min(...projected);
+                } else {
+                    const minX = Math.min(...axisPillars.map(p => p.x)), maxX = Math.max(...axisPillars.map(p => p.x));
+                    const minY = Math.min(...axisPillars.map(p => p.y)), maxY = Math.max(...axisPillars.map(p => p.y));
+                    const dx = maxX - minX, dy = maxY - minY;
+                    axisW = Math.max(dx, dy);
+                }
+                maxW = Math.max(maxW, axisW);
                 maxH = Math.max(maxH, totalH);
             }
         });
@@ -63,6 +79,10 @@ window.ElevationRenderer = {
             const h = (f === '2F') ? h2 : h1;
             const wallsOnAxis = s.walls.filter(w => {
                 if (w.floor !== f) return false;
+                if (window.MathUtils && window.MathUtils.isPointOnAxis) {
+                    return window.MathUtils.isPointOnAxis(w.p1, axisName, s) && 
+                           window.MathUtils.isPointOnAxis(w.p2, axisName, s);
+                }
                 const n1 = window.GridEngine.getPillarName(w.p1, s);
                 const n2 = window.GridEngine.getPillarName(w.p2, s);
                 return (n1 && (n1.startsWith(axisName) || n1.endsWith(axisName))) && 
@@ -72,6 +92,9 @@ window.ElevationRenderer = {
             const pillarsOnAxis = s.pillars.filter(p => {
                 if (p.floor !== f && p.floor !== 'ALL') return false;
                 if (p.isDeleted) return false;
+                if (window.MathUtils && window.MathUtils.isPointOnAxis) {
+                    return window.MathUtils.isPointOnAxis(p, axisName, s);
+                }
                 const nm = window.GridEngine.getPillarName(p, s);
                 return nm && (nm.startsWith(axisName) || nm.endsWith(axisName));
             });
@@ -91,10 +114,22 @@ window.ElevationRenderer = {
         const minY = Math.min(...allP.map(p => p.y)), maxY = Math.max(...allP.map(p => p.y));
         const dx = maxX - minX, dy = maxY - minY;
         
-        const isXHorizontal = dx >= dy;
-        const getPos = (p) => isXHorizontal ? p.x : p.y;
-        const startPos = isXHorizontal ? minX : minY;
-        const currentW = Math.max(isXHorizontal ? dx : dy, 100);
+        // [v2.5.0] Use 1D projection mapping dynamically regardless of orthogonal constraints
+        let getPos;
+        let startPos;
+        let currentW;
+        if (window.MathUtils && window.MathUtils.getAxisProjectionFn) {
+            getPos = window.MathUtils.getAxisProjectionFn(axisName, s);
+            const projectedVals = allP.map(p => getPos(p));
+            startPos = Math.min(...projectedVals);
+            currentW = Math.max(Math.max(...projectedVals) - startPos, 100);
+        } else {
+            // Fallback
+            const isXHorizontal = dx >= dy;
+            getPos = (p) => isXHorizontal ? p.x : p.y;
+            startPos = isXHorizontal ? minX : minY;
+            currentW = Math.max(isXHorizontal ? dx : dy, 100);
+        }
 
         const padding = 80;
         const svgW = 800;
@@ -247,6 +282,10 @@ window.ElevationRenderer = {
         ['2F', '1F'].forEach(f => {
             const wallsOnAxis = s.walls.filter(w => {
                 if (w.floor !== f) return false;
+                if (window.MathUtils && window.MathUtils.isPointOnAxis) {
+                    return window.MathUtils.isPointOnAxis(w.p1, axisName, s) && 
+                           window.MathUtils.isPointOnAxis(w.p2, axisName, s);
+                }
                 const n1 = window.GridEngine.getPillarName(w.p1, s);
                 const n2 = window.GridEngine.getPillarName(w.p2, s);
                 return (n1 && (n1.startsWith(axisName) || n1.endsWith(axisName))) && 
@@ -255,6 +294,9 @@ window.ElevationRenderer = {
             const pillarsOnAxis = s.pillars.filter(p => {
                 if (p.floor !== f && p.floor !== 'ALL') return false;
                 if (p.isDeleted) return false;
+                if (window.MathUtils && window.MathUtils.isPointOnAxis) {
+                    return window.MathUtils.isPointOnAxis(p, axisName, s);
+                }
                 const nm = window.GridEngine.getPillarName(p, s);
                 return nm && (nm.startsWith(axisName) || nm.endsWith(axisName));
             });
@@ -345,13 +387,19 @@ window.ElevationRenderer = {
                     const P_kN = alpha * 1.96 * L;
                     const N_kN = alpha * 1.96 * h; // Magnitude
                     
-                    // 正負の判定
-                    const isXAxis = Math.abs(dx) > Math.abs(dy);
-                    const p1Coord = isXAxis ? w.p1.x : w.p1.y;
-                    const p2Coord = isXAxis ? w.p2.x : w.p2.y;
-                    const currentCoord = isXAxis ? pos.x : pos.y;
-                    
-                    const isLeftEnd = (Math.abs(currentCoord - Math.min(p1Coord, p2Coord)) < 5);
+                    // [v2.5.0] Use MathUtils to determine left/right
+                    let isLeftEnd = false;
+                    if (window.MathUtils && window.MathUtils.getWallProjectionInfo) {
+                        const info = window.MathUtils.getWallProjectionInfo(w, pos, axisName, s);
+                        isLeftEnd = info.isLeftEnd;
+                    } else {
+                        // Fallback
+                        const isXAxis = Math.abs(dx) > Math.abs(dy);
+                        const p1Coord = isXAxis ? w.p1.x : w.p1.y;
+                        const p2Coord = isXAxis ? w.p2.x : w.p2.y;
+                        const currentCoord = isXAxis ? pos.x : pos.y;
+                        isLeftEnd = (Math.abs(currentCoord - Math.min(p1Coord, p2Coord)) < 5);
+                    }
                     const signLeft = isLeftEnd ? 1 : -1;
                     const signRight = -signLeft;
                     

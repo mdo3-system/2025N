@@ -5,6 +5,111 @@
 
 window.MathUtils = {
     /**
+     * [v2.5.0] 指定された軸（通り芯名）に沿った1次元の射影位置（ローカル座標）を計算する関数を返す
+     * 斜め軸（DA1等）の場合は、その斜めベクトル上への投影座標を返す。
+     * 直交軸（X1, Y1等）の場合は、そのまま x または y を返す。
+     */
+    getAxisProjectionFn: function(axisName, state) {
+        const s = state || window.AppState;
+        if (!axisName) return (pt) => pt.x;
+        
+        // 1. 斜め通り芯の判定
+        if (s.manualGridAngle) {
+            const diag = s.manualGridAngle.find(g => g.name === axisName);
+            if (diag && diag.p1 && diag.p2) {
+                const vX = diag.p2.x - diag.p1.x;
+                const vY = diag.p2.y - diag.p1.y;
+                const len = Math.hypot(vX, vY);
+                if (len > 0) {
+                    const uX = vX / len;
+                    const uY = vY / len;
+                    // p1を原点とした、ベクトルu方向への投影距離
+                    return (pt) => (pt.x - diag.p1.x) * uX + (pt.y - diag.p1.y) * uY;
+                }
+            }
+        }
+        
+        // 2. 既存の直交軸の判定（"Y"を含むなら横方向=x座標基準, "X"を含むなら縦方向=y座標基準）
+        if (axisName.toUpperCase().includes('Y')) {
+            return (pt) => pt.x;
+        } else if (axisName.toUpperCase().includes('X')) {
+            return (pt) => pt.y;
+        }
+        
+        return (pt) => pt.x;
+    },
+
+    /**
+     * [v2.5.0] 壁または部材の、指定軸における投影情報を取得する
+     * 左右加力の判定(isLeftEnd)や、1次元座標化に使用
+     */
+    getWallProjectionInfo: function(w, currentPoint, axisName, state) {
+        const s = state || window.AppState;
+        
+        // 斜め軸かどうかを確認
+        if (s.manualGridAngle) {
+            const diag = s.manualGridAngle.find(g => g.name === axisName);
+            if (diag) {
+                const fn = this.getAxisProjectionFn(axisName, s);
+                if (fn) {
+                    const p1c = fn(w.p1);
+                    const p2c = fn(w.p2);
+                    const cc = fn(currentPoint);
+                    return {
+                        getPos: fn,
+                        isLeftEnd: Math.abs(cc - Math.min(p1c, p2c)) < 5
+                    };
+                }
+            }
+        }
+        
+        // 通常の直交軸の場合は、壁の dx/dy の大きさで判定（既存ロジック互換）
+        const dx = w.p2.x - w.p1.x;
+        const dy = w.p2.y - w.p1.y;
+        const isXAxis = Math.abs(dx) > Math.abs(dy); // X軸と平行（横方向）なら true
+        
+        const fn = (pt) => isXAxis ? pt.x : pt.y;
+        const p1c = fn(w.p1);
+        const p2c = fn(w.p2);
+        const cc = fn(currentPoint);
+        
+        return {
+            getPos: fn,
+            isLeftEnd: Math.abs(cc - Math.min(p1c, p2c)) < 5
+        };
+    },
+
+    /**
+     * [v2.5.0] 点が指定された通り芯上にあるかを判定します（斜め軸対応）
+     */
+    isPointOnAxis: function(p, axisName, state) {
+        const s = state || window.AppState;
+        if (!p || !axisName) return false;
+
+        // 1. 斜め軸の判定
+        if (s.manualGridAngle) {
+            const diag = s.manualGridAngle.find(g => g.name === axisName);
+            if (diag && diag.p1 && diag.p2) {
+                const A = diag.p2.y - diag.p1.y;
+                const B = diag.p1.x - diag.p2.x;
+                const C = diag.p1.y * diag.p2.x - diag.p1.x * diag.p2.y;
+                const len = Math.hypot(A, B);
+                if (len > 0) {
+                    const dist = Math.abs(A * p.x + B * p.y + C) / len;
+                    if (dist < 100) return true;
+                }
+            }
+        }
+
+        // 2. 直交軸の判定 (旧来の getPillarName との後方互換)
+        if (window.GridEngine && window.GridEngine.getPillarName) {
+            const nm = window.GridEngine.getPillarName(p, s);
+            return nm && (nm.startsWith(axisName) || nm.endsWith(axisName));
+        }
+        return false;
+    },
+
+    /**
      * Get numeric value from AppState or DOM (Standardization Bridge)
      */
     getVal: function(id) {

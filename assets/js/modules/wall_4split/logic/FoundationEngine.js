@@ -117,9 +117,21 @@ window.FoundationEngine = {
             beams.forEach(b => { if (this._isBeamOnSlabBoundary(b, slab.vertices)) { const weight = ((b.props?.width || 150) / 1000) * Math.max(0, (b.props?.height || 640) / 1000 - d_m) * (Math.hypot(b.p2.x - b.p1.x, b.p2.y - b.p1.y) / 1000) * 24.0; stem_kN += weight / (beamAdjacency[b.id] || 1); } });
             const qTotal = (area > 0 ? (axial_kN + stem_kN) / area : 0) + 1.740;
             slab.props = slab.props || {}; slab.props.groundPressure = qTotal;
-            let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-            slab.vertices.forEach(v => { minX = Math.min(minX, v.x); maxX = Math.max(maxX, v.x); minY = Math.min(minY, v.y); maxY = Math.max(maxY, v.y); });
-            const lx = Math.min(maxX - minX, maxY - minY) / 1000, ly = Math.max(maxX - minX, maxY - minY) / 1000;
+            // [v2.5.0] Use actual geometric edge lengths instead of orthogonal bounding boxes for accurate diagonal slab lx/ly
+            let edgeLengths = [];
+            for (let i = 0; i < slab.vertices.length; i++) {
+                const p1 = slab.vertices[i], p2 = slab.vertices[(i + 1) % slab.vertices.length];
+                edgeLengths.push(Math.hypot(p2.x - p1.x, p2.y - p1.y) / 1000);
+            }
+            edgeLengths.sort((a, b) => a - b);
+            
+            let lx = edgeLengths[0] || 0;
+            let ly = edgeLengths[edgeLengths.length - 1] || 0;
+            if (edgeLengths.length >= 4) {
+                // For rotated rectangles, median of the shortest 2 is lx, median of longest 2 is ly
+                lx = (edgeLengths[0] + edgeLengths[1]) / 2;
+                ly = (edgeLengths[edgeLengths.length - 1] + edgeLengths[edgeLengths.length - 2]) / 2;
+            }
             const dt = (slab.props.coverDepth || 70), D = (slab.props.slabThickness || 150), d = D - dt, j = d * 0.875;
             const Ma_short = 195 * (slab.props.rebarShort?.at || 0) * j / 1e6;
             const Ma_long  = 195 * (slab.props.rebarLong?.at || 0)  * j / 1e6;

@@ -49,23 +49,33 @@ window.AxialEngine = {
                     
                     const N_kN = alpha * 1.96 * h; 
                     
-                    const dx = w.p2.x - w.p1.x;
-                    const dy = w.p2.y - w.p1.y;
-                    const isXAxis = Math.abs(dx) > Math.abs(dy);
-                    const p1Coord = isXAxis ? w.p1.x : w.p1.y;
-                    const p2Coord = isXAxis ? w.p2.x : w.p2.y;
-                    const currentCoord = isXAxis ? p.x : p.y;
- 
-                    const isLeftEnd = (Math.abs(currentCoord - Math.min(p1Coord, p2Coord)) < 5);
+                    // [v2.5.0] Determine axis name for this wall FIRST
+                    let wallAxis = window.GridEngine ? window.GridEngine.getLineAxisName(w.p1, w.p2, s) : '';
+                    if (!wallAxis) {
+                        const dx = w.p2.x - w.p1.x;
+                        const dy = w.p2.y - w.p1.y;
+                        wallAxis = Math.abs(dx) > Math.abs(dy) ? 'X' : 'Y';
+                    }
+
+                    // [v2.5.0] Use MathUtils to get the correct 1D projection and left/right orientation
+                    let isLeftEnd = false;
+                    if (window.MathUtils && window.MathUtils.getWallProjectionInfo) {
+                        const info = window.MathUtils.getWallProjectionInfo(w, p, wallAxis, s);
+                        isLeftEnd = info.isLeftEnd;
+                    } else {
+                        // Fallback
+                        const dx = w.p2.x - w.p1.x;
+                        const dy = w.p2.y - w.p1.y;
+                        const isXAxis = Math.abs(dx) > Math.abs(dy);
+                        const currentCoord = isXAxis ? p.x : p.y;
+                        const p1Coord = isXAxis ? w.p1.x : w.p1.y;
+                        const p2Coord = isXAxis ? w.p2.x : w.p2.y;
+                        isLeftEnd = (Math.abs(currentCoord - Math.min(p1Coord, p2Coord)) < 5);
+                    }
+
                     const sign = isLeftEnd ? 1 : -1; // Tension (+) for left end, compression (-) for right end under leftward load
 
                     const force_N = N_kN * sign * 1000;
-
-                    // Determine axis name for this wall
-                    let wallAxis = window.GridEngine ? window.GridEngine.getLineAxisName(w.p1, w.p2, s) : '';
-                    if (!wallAxis) {
-                        wallAxis = isXAxis ? 'X' : 'Y';
-                    }
 
                     cumulativeAccum[wallAxis] = (cumulativeAccum[wallAxis] || 0) + force_N;
                 });
