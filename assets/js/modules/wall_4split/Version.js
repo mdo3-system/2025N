@@ -157,7 +157,8 @@ window.APP_VERSION = "v2.4.79";
 // Foundation Selection Perfected, Staggered Text, and Full Sync Baseline
 // ========================================================
 window.APP_VERSION = "v2.5.0";
-
+// Backup of v2.5.0 taken. Now moving to v2.5.1: Fix undefined variable in 4-division bounds calculation (GridEngine property name sync) & Phase 1-3 Diagonal Wall Integration.
+window.APP_VERSION = "v2.5.1";
 
 
 
