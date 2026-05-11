@@ -114,7 +114,30 @@ window.FoundationEngine = {
             const wF = 2.4;
             const axial_kN = (sArea1F * (wF + wW)) + (sArea2F * wF) + (Math.max(sArea1F, sArea2F) * wR);
             let stem_kN = 0; const d_m = s.config?.fdThicknessM || 0.15;
-            beams.forEach(b => { if (this._isBeamOnSlabBoundary(b, slab.vertices)) { const embed = b.props?.embedmentDepth ?? 240; const hGL = Math.max(0, (b.props?.height || 640) - embed); const weight = ((b.props?.width || 150) / 1000) * (hGL / 1000) * (Math.hypot(b.p2.x - b.p1.x, b.p2.y - b.p1.y) / 1000) * 24.0; stem_kN += weight / (beamAdjacency[b.id] || 1); } });
+            beams.forEach(b => {
+                if (this._isBeamOnSlabBoundary(b, slab.vertices)) {
+                    let bVol = 0, bLen = 0;
+                    const spans = b.spans || [];
+                    if (spans.length > 0) {
+                        spans.forEach(sp => {
+                            const sp_b = sp.props?.width !== undefined ? parseFloat(sp.props.width) : (b.props?.width || 150);
+                            const sp_h = sp.props?.height !== undefined ? parseFloat(sp.props.height) : (b.props?.height || 640);
+                            const sp_emb = sp.props?.embedmentDepth !== undefined ? parseFloat(sp.props.embedmentDepth) : (b.props?.embedmentDepth ?? 240);
+                            const sp_L = sp.L || 0;
+                            bVol += (sp_b / 1000) * Math.max(0, (sp_h - sp_emb) / 1000) * sp_L;
+                            bLen += sp_L;
+                        });
+                    }
+                    if (bLen <= 0) {
+                        bLen = Math.hypot(b.p2.x - b.p1.x, b.p2.y - b.p1.y) / 1000;
+                        const def_b = b.props?.width || 150, def_h = b.props?.height || 640, def_emb = b.props?.embedmentDepth ?? 240;
+                        bVol = (def_b / 1000) * Math.max(0, (def_h - def_emb) / 1000) * bLen;
+                    }
+                    const geomLen = Math.hypot(b.p2.x - b.p1.x, b.p2.y - b.p1.y) / 1000;
+                    const finalWeight = (bLen > 0 ? (bVol / bLen) : 0) * geomLen * 24.0;
+                    stem_kN += finalWeight / (beamAdjacency[b.id] || 1);
+                }
+            });
             const qTotal = (area > 0 ? (axial_kN + stem_kN) / area : 0) + 1.740;
             slab.props = slab.props || {}; slab.props.groundPressure = qTotal;
             // [v2.5.0] Use actual geometric edge lengths instead of orthogonal bounding boxes for accurate diagonal slab lx/ly
@@ -238,15 +261,11 @@ window.FoundationEngine = {
             const pillars = this.getBeamPillars(beam, s);
             const seismic = this.calculateSeismicForces(beam, pillars, s);
             
-            // 梁自重 (kN/m)
-            const embed = beam.props?.embedmentDepth ?? 240;
-            const w_self = ((beam.props?.width || 150) * Math.max(0, (beam.props?.height || 640) - embed) / 1e6) * 24.0;
-            
+            // --- (変更) スパン個別プロパティの継承と自重算出の動的化 ---
             const spans = [];
             let isNG = false;
             
             if (pillars.length < 2) {
-                // 柱（支点）が足りない場合でも最低限のデータ構造を維持
                 beam.fdStress = { pillars, seismic, spans: [], isNG: false };
                 return;
             }
@@ -254,100 +273,90 @@ window.FoundationEngine = {
             for (let i = 0; i < pillars.length - 1; i++) {
                 const p1 = pillars[i], p2 = pillars[i+1], L = Math.max(0.1, p2.x - p1.x);
                 
-                // スラブ荷重の取得 (kN/㎡)
+                // 1. 既存の個別スパン設定(props)を継承
+                const existingSpan = (beam.spans && beam.spans[i]) ? beam.spans[i] : null;
+                const sp = existingSpan?.props ? JSON.parse(JSON.stringify(existingSpan.props)) : {};
+                
+                // 2. スパン別次元の確定 (個別指定が無ければ全体デフォルト)
+                const b_val = sp.width !== undefined ? parseFloat(sp.width) : (beam.props?.width || 150);
+                const h_val = sp.height !== undefined ? parseFloat(sp.height) : (beam.props?.height || 640);
+                const embed_val = sp.embedmentDepth !== undefined ? parseFloat(sp.embedmentDepth) : (beam.props?.embedmentDepth ?? 240);
+                
+                // 3. 自重(w_self)をスパンごとに再算出して分布荷重へ加算
+                const w_self_span = (b_val * Math.max(0, h_val - embed_val) / 1e6) * 24.0;
+
                 const load = (window.SlabBeamSynchronizer && typeof window.SlabBeamSynchronizer.calculateSpanSlabLoad === 'function')
                     ? window.SlabBeamSynchronizer.calculateSpanSlabLoad(slabs, beam, { p1, p2 }, s)
-                    : { sigma: 12.0, B: 1.0 }; // Fallback
+                    : { sigma: 12.0, B: 1.0 };
                 
-                const w = (load.sigma * load.B) + w_self;
+                const w = (load.sigma * load.B) + w_self_span;
                 
-                // 長期応力 (kNm, kN)
                 const M_mid = (w * L * L) / 8;
                 const M_end = (w * L * L) / 12;
                 const Q_L = (w * L) / 2;
                 
                 const check = (isLeft) => {
                     const res = isLeft ? seismic.leftward : seismic.rightward;
-                    // 短期応力 (長期 + 地震影響)
-                    // M_s_l, M_s_r: 端部モーメント
                     const M_s_l = (i === 0 ? 0 : M_end) + (res.Mf[i] || 0);
                     const M_s_r = (i === pillars.length - 2 ? 0 : M_end) + (res.Mf[i + 1] || 0);
                     const Q_s = Q_L + Math.abs(res.Qe[i] || 0);
                     
-                    const b = beam.props?.width || 150;
-                    const h = beam.props?.height || 640;
-                    const d = Math.max(10, h - 70);
+                    // スパン別断面検定 (b_val, h_valを使用)
+                    const d = Math.max(10, h_val - 70);
                     const j = d * 0.875;
                     
-                    const topRebar = this.parseRebar(beam.props?.topRebar || '1-D13');
-                    const botRebar = this.parseRebar(beam.props?.bottomRebar || '1-D13');
-                    const st = this.parseStirrups(beam.props?.stirrup || '1-D10@200');
+                    // 鉄筋もスパン別上書きに対応
+                    const topRebarStr = sp.topRebar || beam.props?.topRebar || '1-D13';
+                    const botRebarStr = sp.bottomRebar || beam.props?.bottomRebar || '1-D13';
+                    const stirrupStr = sp.stirrup || beam.props?.stirrup || '1-D10@200';
                     
-                    // 許容耐力の算定 (195: 長期, 292.5: 短期)
+                    const topRebar = this.parseRebar(topRebarStr);
+                    const botRebar = this.parseRebar(botRebarStr);
+                    const st = this.parseStirrups(stirrupStr);
+                    
                     const lMa_top = (topRebar.area * 195 * j) / 1e6;
                     const lMa_bot = (botRebar.area * 195 * j) / 1e6;
                     const sMa_top = lMa_top * 1.5;
                     const sMa_bot = lMa_bot * 1.5;
                     
-                    const fs = (s.config?.concreteFc || 21) / 30; // コンクリートせん断許容
-                    const Qa_conc_L = 1.0 * fs * b * j / 1000;
+                    const fs = (s.config?.concreteFc || 21) / 30;
+                    const Qa_conc_L = 1.0 * fs * b_val * j / 1000;
                     const Qa_steel_L = (st.area * 295 * j / (st.pitch || 200)) / 1000;
-                    
                     const lQa = Qa_conc_L + Qa_steel_L;
                     
                     const M_ratio = Math.max(Math.abs(M_end), 1e-6);
                     const alpha_L = Math.max(1.0, Math.min(2.0, 4.0 / ((M_ratio / (Q_L * d / 1000 || 1)) + 1)));
                     const alpha_S = Math.max(1.0, Math.min(2.0, 4.0 / ((M_ratio / (Q_s * d / 1000 || 1)) + 1)));
-                    
-                    const sQa = (alpha_S * fs * b * j * 1.5 / 1000) + Qa_steel_L;
+                    const sQa = (alpha_S * fs * b_val * j * 1.5 / 1000) + Qa_steel_L;
                     
                     return {
                         M_left: M_s_l, M_right: M_s_r, Q: Q_s,
                         lMa_top, lMa_bot, sMa_top, sMa_bot, lQa, sQa,
-                        alpha_L, alpha_S, pw: st.area / (b * (st.pitch || 200)),
+                        alpha_L, alpha_S, pw: st.area / (b_val * (st.pitch || 200)),
                         ok: Math.abs(M_s_l) < sMa_top && Math.abs(M_s_r) < sMa_bot && Q_s < sQa
                     };
                 };
                 
                 const resL = check(true);
                 const resR = check(false);
-                
                 if (!resL.ok || !resR.ok) isNG = true;
                 
-                // 検定比
                 const rM_L = Math.max(Math.abs(M_mid), Math.abs(M_end)) / (resL.lMa_bot || 1);
                 const rQ_L = Q_L / (resL.lQa || 1);
                 
                 spans.push({
                     spanName: `${p1.name}-${p2.name}`,
-                    startNode: p1,
-                    endNode: p2,
+                    startNode: p1, endNode: p2,
                     L, sigma_e: load.sigma, B_trib: load.B, w,
-                    M_mid, M_end, Q_L,
-                    rM_L, rQ_L,
-                    // 検定比 (UI表示用)
+                    M_mid, M_end, Q_L, rM_L, rQ_L,
                     ratioM_L: rM_L, ratioQ_L: rQ_L,
                     ratioM_S: Math.max(Math.abs(resL.M_left)/resL.sMa_top, Math.abs(resL.M_right)/resL.sMa_bot, Math.abs(resR.M_left)/resR.sMa_top, Math.abs(resR.M_right)/resR.sMa_bot),
                     ratioQ_S: Math.max(resL.Q/resL.sQa, resR.Q/resR.sQa),
-                    
-                    leftward: { 
-                        ...resL, 
-                        rM_left: Math.abs(resL.M_left)/(resL.sMa_top || 1), 
-                        rM_right: Math.abs(resL.M_right)/(resL.sMa_bot || 1), 
-                        rQ: resL.Q/(resL.sQa || 1) 
-                    },
-                    rightward: { 
-                        ...resR, 
-                        rM_left: Math.abs(resR.M_left)/(resR.sMa_top || 1), 
-                        rM_right: Math.abs(resR.M_right)/(resR.sMa_bot || 1), 
-                        rQ: resR.Q/(resR.sQa || 1) 
-                    },
-                    cap: { 
-                        ...resL, 
-                        alpha_S_L: resL.alpha_S, 
-                        alpha_S_R: resR.alpha_S 
-                    },
-                    isNG: !resL.ok || !resR.ok
+                    leftward: { ...resL, rM_left: Math.abs(resL.M_left)/(resL.sMa_top || 1), rM_right: Math.abs(resL.M_right)/(resL.sMa_bot || 1), rQ: resL.Q/(resL.sQa || 1) },
+                    rightward: { ...resR, rM_left: Math.abs(resR.M_left)/(resR.sMa_top || 1), rM_right: Math.abs(resR.M_right)/(resR.sMa_bot || 1), rQ: resR.Q/(resR.sQa || 1) },
+                    cap: { ...resL, alpha_S_L: resL.alpha_S, alpha_S_R: resR.alpha_S },
+                    isNG: !resL.ok || !resR.ok,
+                    props: sp // 4. 個別スパン設定を永続化するために格納
                 });
             }
             beam.fdStress = { pillars, seismic, spans, isNG };

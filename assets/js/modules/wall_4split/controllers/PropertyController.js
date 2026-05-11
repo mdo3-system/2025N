@@ -525,6 +525,7 @@ window.PropertyController = {
                     <tr style="background:#f2f4f4; border-bottom:1px solid #ddd;">
                         <th rowspan="2" style="border:1px solid #ddd; padding:3px;">柱間</th>
                         <th rowspan="2" style="border:1px solid #ddd; padding:3px;">成 D(mm)</th>
+                        <th rowspan="2" style="border:1px solid #ddd; padding:3px;">埋込 h(mm)</th>
                         <th colspan="4" style="border:1px solid #ddd; padding:3px; text-align:center; background:#ebf5fb;">上端主筋</th>
                         <th colspan="4" style="border:1px solid #ddd; padding:3px; text-align:center; background:#fdf2e9;">下端主筋</th>
                     </tr>
@@ -558,7 +559,10 @@ window.PropertyController = {
                 table4 += `<tr>
                     <td style="border:1px solid #ddd; padding:3px; font-weight:bold;">${getFreshSpanName(span)}</td>
                     <td style="border:1px solid #ddd; padding:3px; text-align:center;">
-                        <input type="number" step="10" value="${span.props?.height || bp.height || 640}" onchange="window.PropertyController.updateFdProp('beam_span', ${beam.id}, 'height', this.value, ${sIdx})" style="width:45px; padding:2px; font-size:9px; border:1px solid #ccc; border-radius:3px; text-align:right;">
+                        <input type="number" step="10" value="${span.props?.height || bp.height || 640}" onchange="window.PropertyController.updateFdProp('beam_span', ${beam.id}, 'height', this.value, ${sIdx})" style="width:42px; padding:2px; font-size:9px; border:1px solid #ccc; border-radius:3px; text-align:right;">
+                    </td>
+                    <td style="border:1px solid #ddd; padding:3px; text-align:center;">
+                        <input type="number" step="10" value="${span.props?.embedmentDepth !== undefined ? span.props.embedmentDepth : (bp.embedmentDepth !== undefined ? bp.embedmentDepth : 240)}" onchange="window.PropertyController.updateFdProp('beam_span', ${beam.id}, 'embedmentDepth', this.value, ${sIdx})" style="width:42px; padding:2px; font-size:9px; border:1px solid #ccc; border-radius:3px; text-align:right;">
                     </td>
                     <td style="border:1px solid #ddd; padding:3px; text-align:center; white-space:nowrap;">
                         <input type="number" id="${topCountId}" min="1" value="${currentTop.count}" onchange="const typeVal = document.getElementById('${topTypeId}').value; window.PropertyController.updateFdProp('beam_span', ${beam.id}, 'topRebar', this.value + '-' + typeVal, ${sIdx})" style="width:35px; padding:2px; font-size:9px; border:1px solid #ccc; border-radius:3px; text-align:right;">-

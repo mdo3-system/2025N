@@ -163,6 +163,8 @@ window.APP_VERSION = "v2.5.1";
 window.APP_VERSION = "v2.5.2";
 // Backup of v2.5.2 taken. Now moving to v2.5.3: Implement dynamic Embedment Depth logic for Foundation Weight (BeamHeight - Embedment) & Adaptive Modal Styling.
 window.APP_VERSION = "v2.5.3";
+// Backup of v2.5.3 taken. Now moving to v2.5.4: Restore individual Span Override Persistence, Span-level Embedment Depths, and dynamic Slab Weight aggregations.
+window.APP_VERSION = "v2.5.4";
 
 
 
