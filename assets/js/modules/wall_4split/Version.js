@@ -165,6 +165,8 @@ window.APP_VERSION = "v2.5.2";
 window.APP_VERSION = "v2.5.3";
 // Backup of v2.5.3 taken. Now moving to v2.5.4: Restore individual Span Override Persistence, Span-level Embedment Depths, and dynamic Slab Weight aggregations.
 window.APP_VERSION = "v2.5.4";
+// Backup of v2.5.4 taken. Now moving to v2.5.5: Unify UI text to "根入れ深さ" and align internal variable keys to "embedDepth" for full data continuity.
+window.APP_VERSION = "v2.5.5";
 
 
 

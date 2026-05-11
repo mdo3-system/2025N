@@ -122,7 +122,7 @@ window.FoundationEngine = {
                         spans.forEach(sp => {
                             const sp_b = sp.props?.width !== undefined ? parseFloat(sp.props.width) : (b.props?.width || 150);
                             const sp_h = sp.props?.height !== undefined ? parseFloat(sp.props.height) : (b.props?.height || 640);
-                            const sp_emb = sp.props?.embedmentDepth !== undefined ? parseFloat(sp.props.embedmentDepth) : (b.props?.embedmentDepth ?? 240);
+                            const sp_emb = sp.props?.embedDepth !== undefined ? parseFloat(sp.props.embedDepth) : (b.props?.embedDepth ?? 250);
                             const sp_L = sp.L || 0;
                             bVol += (sp_b / 1000) * Math.max(0, (sp_h - sp_emb) / 1000) * sp_L;
                             bLen += sp_L;
@@ -130,7 +130,7 @@ window.FoundationEngine = {
                     }
                     if (bLen <= 0) {
                         bLen = Math.hypot(b.p2.x - b.p1.x, b.p2.y - b.p1.y) / 1000;
-                        const def_b = b.props?.width || 150, def_h = b.props?.height || 640, def_emb = b.props?.embedmentDepth ?? 240;
+                        const def_b = b.props?.width || 150, def_h = b.props?.height || 640, def_emb = b.props?.embedDepth ?? 250;
                         bVol = (def_b / 1000) * Math.max(0, (def_h - def_emb) / 1000) * bLen;
                     }
                     const geomLen = Math.hypot(b.p2.x - b.p1.x, b.p2.y - b.p1.y) / 1000;
@@ -280,7 +280,7 @@ window.FoundationEngine = {
                 // 2. スパン別次元の確定 (個別指定が無ければ全体デフォルト)
                 const b_val = sp.width !== undefined ? parseFloat(sp.width) : (beam.props?.width || 150);
                 const h_val = sp.height !== undefined ? parseFloat(sp.height) : (beam.props?.height || 640);
-                const embed_val = sp.embedmentDepth !== undefined ? parseFloat(sp.embedmentDepth) : (beam.props?.embedmentDepth ?? 240);
+                const embed_val = sp.embedDepth !== undefined ? parseFloat(sp.embedDepth) : (beam.props?.embedDepth ?? 250);
                 
                 // 3. 自重(w_self)をスパンごとに再算出して分布荷重へ加算
                 const w_self_span = (b_val * Math.max(0, h_val - embed_val) / 1e6) * 24.0;
