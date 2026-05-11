@@ -8,16 +8,10 @@ window.FoundationInputController = {
      * 基礎モードの mousedown ハンドラ
      */
     handleMouseDown: function(e, state) {
-        // [v2.4.75 根本修正] e.offsetX はCSS論理ピクセル。canvas.width は物理ピクセル。
-        // toWorldCoord は (cx - offsetX) / scale で計算するため、
-        // scale が物理px/mm、offsetX が物理px の場合は物理px座標を渡す必要がある。
-        // resizeCanvas で ctx.setTransform(dpr,...) を設定しているため描画は論理px だが
-        // scale/offsetX はinitViewForce で物理px基準で計算されている。
-        // よって: amx = e.offsetX * (canvas.width / rect.width) = e.offsetX * dpr (物理px)
-        const rect = state.canvas.getBoundingClientRect();
-        const dpr = state.canvas.width / rect.width;
-        const amx = e.offsetX * dpr;
-        const amy = e.offsetY * dpr;
+        // [v2.4.76 座標ズレ修正] wall_4split_input.js (findHitElement) と同様に、
+        // DPR倍せずに論理座標（e.offsetX/Y）をそのまま渡す仕様に合わせる。
+        const amx = e.offsetX;
+        const amy = e.offsetY;
         
         const fm = state.foundationMode || 'f_beam';
         const snap = this.getFdSnapPoint(amx, amy, state);
@@ -210,15 +204,16 @@ window.FoundationInputController = {
         //       描画位置(論理ピクセル)は DPR 倍ずれるため。
         //       スラブが isPointInPolygon(wp, ...) で正しく選択できるのと同じ方式に統一する。
         const HIT_WORLD = 300; // mm（世界座標での梁から300mm以内をヒットとする）
-        const HIT_MANHOLE_PX = 30; // 人通口は点なのでピクセル判定を維持
+        const HIT_MANHOLE_WORLD = 400; // mm（世界座標での人通口から400mm以内）
         const wp = window.toWorldCoord(mx, my);
+        // [v2.4.75 診断ログ] 万が一の座標ズレ検証用
+        console.log(`[Foundation HitTest] CanvasPx:(${Math.round(mx)}, ${Math.round(my)}) -> WorldCoord:(${Math.round(wp.x)}, ${Math.round(wp.y)}) | Scl:${state.scale.toFixed(4)} Off:(${Math.round(state.offsetX)},${Math.round(state.offsetY)})`);
         const candidates = [];
 
-        // 1. 人通口 (点) - ピクセル距離判定を維持
+        // 1. 人通口 (点) - [v2.4.76] 世界座標(mm)で判定に統一し、ピクセル演算のズレを排除
         (state.manholes || []).forEach(mh => {
-            const p = window.toCanvasPixel(mh.x, mh.y);
-            const d = Math.hypot(mx - p.cx, my - p.cy);
-            if (d < HIT_MANHOLE_PX) candidates.push({ type: 'manhole', item: mh, dist: d, priority: 1 });
+            const d = Math.hypot(wp.x - mh.x, wp.y - mh.y);
+            if (d < HIT_MANHOLE_WORLD) candidates.push({ type: 'manhole', item: mh, dist: d, priority: 1 });
         });
 
         // 2. 基礎梁 (線分) - [v2.4.75] 世界座標(mm)で距離判定
@@ -230,11 +225,11 @@ window.FoundationInputController = {
 
             segments.forEach((seg) => {
                 if (!seg.p1 || !seg.p2) return;
-                // globalX/Y を優先、なければ x/y を使用（単位は mm）
-                const x1 = seg.p1.globalX ?? seg.p1.x;
-                const y1 = seg.p1.globalY ?? seg.p1.y;
-                const x2 = seg.p2.globalX ?? seg.p2.x;
-                const y2 = seg.p2.globalY ?? seg.p2.y;
+                // globalX/Y を優先、なければ x/y を使用（[v2.4.77] 値が小さい場合はメートルとみなして1000倍しmmに正規化）
+                const x1 = seg.p1.globalX ?? (Math.abs(seg.p1.x) < 100 ? seg.p1.x * 1000 : seg.p1.x);
+                const y1 = seg.p1.globalY ?? (Math.abs(seg.p1.y) < 100 ? seg.p1.y * 1000 : seg.p1.y);
+                const x2 = seg.p2.globalX ?? (Math.abs(seg.p2.x) < 100 ? seg.p2.x * 1000 : seg.p2.x);
+                const y2 = seg.p2.globalY ?? (Math.abs(seg.p2.y) < 100 ? seg.p2.y * 1000 : seg.p2.y);
 
                 const distWorld = window.MathUtils.distToBeamLine(wp.x, wp.y, x1, y1, x2, y2);
                 if (distWorld < HIT_WORLD) {
@@ -268,6 +263,7 @@ window.FoundationInputController = {
         });
 
         if (candidates.length > 0) {
+            console.log(`[Foundation HitTest] Found ${candidates.length} candidates. Top priority: ${candidates[0].type}`);
             // 優先度(priority)が低い（数字が小さい）ものを優先、同優先度なら距離(dist)が近いものを優先
             candidates.sort((a, b) => (a.priority - b.priority) || (a.dist - b.dist));
             const best = candidates[0];

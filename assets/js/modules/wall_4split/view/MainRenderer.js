@@ -170,13 +170,35 @@ window.MainRenderer = {
         const labelFontSize = Math.max(10, Math.min(20, 14 / state.scale));
         const labelPad = 10 / state.scale;
 
-        state.gridXCoords.forEach((x, i) => {
+        let lastCx = -Infinity;
+        let staggerLevelX = 0;
+        const sortedXIndices = state.gridXCoords.map((v, i) => i).sort((a, b) => state.gridXCoords[a] - state.gridXCoords[b]);
+
+        sortedXIndices.forEach(i => {
+            const x = state.gridXCoords[i];
             const cx = this.toCanvas(x, 0, state).cx;
             if (cx != null) {
-                ctx.beginPath(); ctx.moveTo(cx, topY); ctx.lineTo(cx, botY); ctx.stroke();
-                let labelY = Math.max(this.toCanvas(0, visibleTop - labelPad, state).cy, 15);
+                
+                const baseLabelY = Math.max(this.toCanvas(0, visibleTop - labelPad, state).cy, 15);
+                // [v2.4.78] 近接判定: ラベルが重なるほど近い場合は段階的に下げる (3段階)
+                const textEstWidth = labelFontSize * 1.8;
+                if (cx - lastCx < textEstWidth) {
+                    staggerLevelX = (staggerLevelX + 1) % 3;
+                } else {
+                    staggerLevelX = 0;
+                }
+                lastCx = cx;
+                
+                const labelY = baseLabelY + staggerLevelX * (labelFontSize + 4);
+
                 ctx.save();
-                ctx.font = `bold ${labelFontSize}px sans-serif`; ctx.textAlign = "center";
+                ctx.font = `bold ${labelFontSize}px sans-serif`;
+                
+                // [v2.4.79 延長] labelY(文字のベースライン)の少し下からグリッド線を引く
+                const lineTopY = labelY + 6; 
+                ctx.beginPath(); ctx.moveTo(cx, lineTopY); ctx.lineTo(cx, botY); ctx.stroke();
+
+                ctx.textAlign = "center";
                 ctx.strokeStyle = state.isPrintMode ? '#fff' : 'rgba(30,30,30,0.7)'; ctx.lineWidth = 3;
                 ctx.strokeText(state.gridXNames[i] || '', cx, labelY);
                 ctx.fillStyle = state.isPrintMode ? '#2c3e50' : '#2ecc71';
@@ -185,17 +207,46 @@ window.MainRenderer = {
             }
         });
 
-        state.gridYCoords.forEach((y, i) => {
+        let lastCy = -Infinity;
+        let staggerLevelY = 0;
+        // Y座標は下から上に並んでいる（キャンバス座標は上から下）ため、キャンバス座標順にソートして判定
+        const sortedYIndices = state.gridYCoords.map((v, i) => i).sort((a, b) => {
+            const cyA = this.toCanvas(0, state.gridYCoords[a], state).cy;
+            const cyB = this.toCanvas(0, state.gridYCoords[b], state).cy;
+            return cyA - cyB;
+        });
+
+        sortedYIndices.forEach(i => {
+            const y = state.gridYCoords[i];
             const cy = this.toCanvas(0, y, state).cy;
             if (cy != null) {
-                ctx.beginPath(); ctx.moveTo(leftX, cy); ctx.lineTo(rightX, cy); ctx.stroke();
-                let labelX = Math.max(this.toCanvas(visibleLeft + labelPad, 0, state).cx, 5);
+                const baseLabelX = Math.max(this.toCanvas(visibleLeft + labelPad, 0, state).cx, 5);
+                // [v2.4.78] Y軸方向の近接判定 (フォント高さ分重ならないようにずらす)
+                const textEstHeight = labelFontSize * 1.2;
+                if (cy - lastCy < textEstHeight) {
+                    staggerLevelY = (staggerLevelY + 1) % 3;
+                } else {
+                    staggerLevelY = 0;
+                }
+                lastCy = cy;
+
+                const labelX = baseLabelX + staggerLevelY * (labelFontSize * 2);
+
                 ctx.save();
-                ctx.font = `bold ${labelFontSize}px sans-serif`; ctx.textAlign = "left";
+                ctx.font = `bold ${labelFontSize}px sans-serif`;
+                
+                // [v2.4.79 延長] 文字の幅を測定し、文字の右側からグリッド線を引く
+                const txt = state.gridYNames[i] || '';
+                const tw = ctx.measureText(txt).width;
+                const lineStartX = labelX + tw + 6;
+
+                ctx.beginPath(); ctx.moveTo(lineStartX, cy); ctx.lineTo(rightX, cy); ctx.stroke();
+
+                ctx.textAlign = "left";
                 ctx.strokeStyle = state.isPrintMode ? '#fff' : 'rgba(30,30,30,0.7)'; ctx.lineWidth = 3;
-                ctx.strokeText(state.gridYNames[i] || '', labelX, cy + 5);
+                ctx.strokeText(txt, labelX, cy + 5);
                 ctx.fillStyle = state.isPrintMode ? '#2c3e50' : '#2ecc71';
-                ctx.fillText(state.gridYNames[i] || '', labelX, cy + 5);
+                ctx.fillText(txt, labelX, cy + 5);
                 ctx.restore();
             }
         });

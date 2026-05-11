@@ -55,8 +55,9 @@ function initViewForce() {
     minX = cx - dx / 2;
     minY = cy - dy / 2;
 
-    let cw = canvas ? (canvas.width || 800) : 800;
-    let ch = canvas ? (canvas.height || 600) : 600;
+    const activeCanvas = window.AppState.canvas || document.getElementById('cad-canvas');
+    let cw = activeCanvas ? activeCanvas.width : 800;
+    let ch = activeCanvas ? activeCanvas.height : 600;
     scale = Math.min((cw - 100) / dx, (ch - 100) / dy) || 1;
     offsetX = -minX * scale + (cw - dx * scale) / 2;
     offsetY = -minY * scale + (ch - dy * scale) / 2;

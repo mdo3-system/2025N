@@ -265,14 +265,18 @@ window.GridEngine = {
             const yNames = s.gridYNames || [];
             const allNames = [...xNames, ...yNames];
             const common = allNames.filter(name => name && n1.includes(name) && n2.includes(name));
-            if (common.length > 0) return common[0];
+            if (common.length > 0) {
+                // [v2.4.77] 長さが長いものを優先（例：X5よりもX5aを優先する）
+                return common.sort((a, b) => b.length - a.length)[0];
+            }
             
-            // 正規表現による抽出試行
-            const m1 = n1.match(/[A-Z]+\d+/gi);
-            const m2 = n2.match(/[A-Z]+\d+/gi);
+            // 正規表現による抽出試行 ([v2.4.77] 末尾のアルファベット枝番に対応)
+            const axisRegex = /[A-Z]+\d+[a-zA-Z]*/gi;
+            const m1 = n1.match(axisRegex);
+            const m2 = n2.match(axisRegex);
             if (m1 && m2) {
                 const commonFallback = m1.filter(pt => m2.includes(pt));
-                if (commonFallback.length > 0) return commonFallback[0];
+                if (commonFallback.length > 0) return commonFallback.sort((a, b) => b.length - a.length)[0];
             }
         }
 

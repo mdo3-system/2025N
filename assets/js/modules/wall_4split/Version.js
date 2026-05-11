@@ -146,6 +146,17 @@ window.APP_VERSION = "v2.4.74";
 window.APP_VERSION = "v2.4.75";
 // Backup of v2.4.75 taken (93d1b7f). Now moving to v2.4.76: Fix ReferenceError where wF is not defined in FoundationEngine.js.
 window.APP_VERSION = "v2.4.76";
+// Backup of v2.4.76 taken. Now moving to v2.4.77: Normalize foundation beam coordinates fallback (meters -> mm), fix grid name regex to support alpha suffix (e.g., X5a).
+window.APP_VERSION = "v2.4.77";
+// Backup of v2.4.77 taken. Now moving to v2.4.78: Implement staggered dynamic level layout for grid text anti-collision.
+window.APP_VERSION = "v2.4.78";
+// Backup of v2.4.78 taken. Now moving to v2.4.79: Extend grid lines to flow dynamically just before staggered text labels.
+window.APP_VERSION = "v2.4.79";
+// ========================================================
+// Stable Release FIX: v2.5.0
+// Foundation Selection Perfected, Staggered Text, and Full Sync Baseline
+// ========================================================
+window.APP_VERSION = "v2.5.0";
 
 
 
