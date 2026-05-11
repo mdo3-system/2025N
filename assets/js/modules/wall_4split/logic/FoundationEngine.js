@@ -114,7 +114,7 @@ window.FoundationEngine = {
             const wF = 2.4;
             const axial_kN = (sArea1F * (wF + wW)) + (sArea2F * wF) + (Math.max(sArea1F, sArea2F) * wR);
             let stem_kN = 0; const d_m = s.config?.fdThicknessM || 0.15;
-            beams.forEach(b => { if (this._isBeamOnSlabBoundary(b, slab.vertices)) { const weight = ((b.props?.width || 150) / 1000) * Math.max(0, (b.props?.height || 640) / 1000 - d_m) * (Math.hypot(b.p2.x - b.p1.x, b.p2.y - b.p1.y) / 1000) * 24.0; stem_kN += weight / (beamAdjacency[b.id] || 1); } });
+            beams.forEach(b => { if (this._isBeamOnSlabBoundary(b, slab.vertices)) { const embed = b.props?.embedmentDepth ?? 240; const hGL = Math.max(0, (b.props?.height || 640) - embed); const weight = ((b.props?.width || 150) / 1000) * (hGL / 1000) * (Math.hypot(b.p2.x - b.p1.x, b.p2.y - b.p1.y) / 1000) * 24.0; stem_kN += weight / (beamAdjacency[b.id] || 1); } });
             const qTotal = (area > 0 ? (axial_kN + stem_kN) / area : 0) + 1.740;
             slab.props = slab.props || {}; slab.props.groundPressure = qTotal;
             // [v2.5.0] Use actual geometric edge lengths instead of orthogonal bounding boxes for accurate diagonal slab lx/ly
@@ -239,7 +239,8 @@ window.FoundationEngine = {
             const seismic = this.calculateSeismicForces(beam, pillars, s);
             
             // 梁自重 (kN/m)
-            const w_self = ((beam.props?.width || 150) * Math.max(0, (beam.props?.height || 640) - (beam.props?.slabTopHeight || 50)) / 1e6) * 24.0;
+            const embed = beam.props?.embedmentDepth ?? 240;
+            const w_self = ((beam.props?.width || 150) * Math.max(0, (beam.props?.height || 640) - embed) / 1e6) * 24.0;
             
             const spans = [];
             let isNG = false;

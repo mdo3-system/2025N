@@ -161,6 +161,8 @@ window.APP_VERSION = "v2.5.0";
 window.APP_VERSION = "v2.5.1";
 // Backup of v2.5.1 taken. Now moving to v2.5.2: Fix undefined properties .toFixed error in exportCSV.
 window.APP_VERSION = "v2.5.2";
+// Backup of v2.5.2 taken. Now moving to v2.5.3: Implement dynamic Embedment Depth logic for Foundation Weight (BeamHeight - Embedment) & Adaptive Modal Styling.
+window.APP_VERSION = "v2.5.3";
 
 
 

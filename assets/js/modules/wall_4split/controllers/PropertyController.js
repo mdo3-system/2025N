@@ -348,20 +348,24 @@ window.PropertyController = {
         let html = `<div class="calc-box" style="padding:10px; height:100%; overflow:auto; font-family:sans-serif; box-sizing:border-box;">
             <div style="font-size:12px; font-weight:bold; color:#2c3e50; border-bottom:2px solid #8e44ad; margin-bottom:10px; padding-bottom:5px;">🏗️ 基礎梁 計算条件</div>
             
-            <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; background:#fdfafa; padding:8px; border-radius:6px; margin-bottom:12px; border:1px solid #f1e5f5; font-size:11px;">
+            <div style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:8px; background:#fdfafa; padding:8px; border-radius:6px; margin-bottom:12px; border:1px solid #f1e5f5; font-size:11px;">
                 <div>
                     <label style="font-weight:bold; color:#7d3c98; display:block; margin-bottom:2px;">配置通り芯</label>
                     <div style="background:#fff; border:1px solid #ddd; padding:4px; border-radius:4px; font-weight:bold; color:#2c3e50; text-align:center;">${beamAxisName ? beamAxisName + '通り' : '個別計算'}</div>
+                </div>
+                <div>
+                    <label style="font-weight:bold; color:#7d3c98; display:block; margin-bottom:2px;">埋込深さ(mm)</label>
+                    <input type="number" step="10" min="0" value="${bp.embedmentDepth !== undefined ? bp.embedmentDepth : 240}" onchange="window.PropertyController.updateFdProp('beam', ${beam.id}, 'embedmentDepth', this.value)" style="width:100%; box-sizing:border-box; padding:4px; border:1px solid #ccc; border-radius:4px;">
                 </div>
                 <div>
                     <label style="font-weight:bold; color:#7d3c98; display:block; margin-bottom:2px;">B (反曲点高比)</label>
                     <input type="number" step="0.05" min="0" max="1" value="${bp.B_val !== undefined ? bp.B_val : 0.5}" onchange="window.PropertyController.updateFdProp('beam', ${beam.id}, 'B_val', this.value)" style="width:100%; box-sizing:border-box; padding:4px; border:1px solid #ccc; border-radius:4px;">
                 </div>
                 <div>
-                    <label style="font-weight:bold; color:#7d3c98; display:block; margin-bottom:2px;">連続梁モデル選択</label>
+                    <label style="font-weight:bold; color:#7d3c98; display:block; margin-bottom:2px;">モデル選択</label>
                     <select onchange="window.PropertyController.updateFdProp('beam', ${beam.id}, 'modelType', this.value)" style="width:100%; box-sizing:border-box; padding:4px; border:1px solid #ccc; border-radius:4px; background:#fff;">
-                        <option value="both_ends" ${bp.modelType !== 'pillar_supported' ? 'selected' : ''}>両端支点連続梁モデル</option>
-                        <option value="pillar_supported" ${bp.modelType === 'pillar_supported' ? 'selected' : ''}>柱支点連続梁モデル</option>
+                        <option value="both_ends" ${bp.modelType !== 'pillar_supported' ? 'selected' : ''}>両端支点</option>
+                        <option value="pillar_supported" ${bp.modelType === 'pillar_supported' ? 'selected' : ''}>柱支点</option>
                     </select>
                 </div>
             </div>`;
