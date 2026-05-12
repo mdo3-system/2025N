@@ -960,7 +960,7 @@ window.PropertyController = {
         const rebars = ['D10', 'D10/D13', 'D13', 'D16', 'D13/D16'];
 
         return `
-            <div class="calc-box" style="padding:15px; max-height:600px; overflow-y:auto; font-family:sans-serif; background:#ffffff; border-radius:10px;">
+            <div class="calc-box" style="padding:15px; height:100%; overflow:auto; box-sizing:border-box; font-family:sans-serif; background:#ffffff; border-radius:10px;">
                 <div style="font-size:14px; font-weight:bold; color:#1e293b; border-bottom:3px solid #27ae60; margin-bottom:12px; padding-bottom:8px; display:flex; align-items:center; gap:6px;">
                     <span style="font-size:16px;">📐</span> 基礎スラブ設定・検定
                 </div>

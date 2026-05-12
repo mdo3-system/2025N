@@ -93,8 +93,21 @@ window.FoundationEngine = {
         if (!slabs) return;
         const s = window.AppState, M = window.MathUtils;
         const beams = (s.foundationBeams || []).filter(b => !b.isDeleted);
-        const beamAdjacency = {}; beams.forEach(b => beamAdjacency[b.id] = 0);
-        slabs.forEach(slab => beams.forEach(b => { if (this._isBeamOnSlabBoundary(b, slab.vertices)) beamAdjacency[b.id]++; }));
+        // Step 1: Highly granular pre-aggregation determining exactly how many slabs share each DISCRETE span boundary.
+        const spanAdjacency = {};
+        beams.forEach(b => {
+            const spans = b.spans || [];
+            spans.forEach((sp, idx) => {
+                const key = `${b.id}_${idx}`; spanAdjacency[key] = 0;
+                const p1 = { x: sp.startNode?.globalX ?? b.p1.x, y: sp.startNode?.globalY ?? b.p1.y };
+                const p2 = { x: sp.endNode?.globalX ?? b.p2.x, y: sp.endNode?.globalY ?? b.p2.y };
+                const spanObj = { p1, p2 };
+                slabs.forEach(slab => {
+                    if (this._isBeamOnSlabBoundary(spanObj, slab.vertices)) spanAdjacency[key]++;
+                });
+            });
+        });
+
         slabs.forEach(slab => {
             const area = M.polygonArea(slab.vertices) / 1000000;
             const a1Polys = (s.areaLines || []).filter(al => al.floor === '1F' && !['attic','balcony'].includes(al.areaType));
@@ -115,34 +128,38 @@ window.FoundationEngine = {
             const wW = ((s.config?.weights?.exteriorWall || 600) + (s.config?.weights?.wallIns || 70)) / 1000;
             const wF = 2.4;
             const axial_kN = (sArea1F * (wF + wW)) + (sArea2F * wF) + (Math.max(sArea1F, sArea2F) * wR);
-            let stem_kN = 0; const d_m = s.config?.fdThicknessM || 0.15;
+            let stem_kN = 0; 
+            
             beams.forEach(b => {
-                const involve = this._isBeamInvolvedInSlab(b, slab.vertices);
-                if (involve > 0) {
-                    let bVol = 0, bLen = 0;
-                    const spans = b.spans || [];
-                    if (spans.length > 0) {
-                        spans.forEach(sp => {
+                const spans = b.spans || [];
+                if (spans.length > 0) {
+                    spans.forEach((sp, idx) => {
+                        const key = `${b.id}_${idx}`;
+                        const p1 = { x: sp.startNode?.globalX ?? b.p1.x, y: sp.startNode?.globalY ?? b.p1.y };
+                        const p2 = { x: sp.endNode?.globalX ?? b.p2.x, y: sp.endNode?.globalY ?? b.p2.y };
+                        const spanObj = { p1, p2 };
+                        
+                        const involve = this._isBeamInvolvedInSlab(spanObj, slab.vertices);
+                        if (involve > 0) {
                             const sp_b = sp.props?.width !== undefined ? parseFloat(sp.props.width) : (b.props?.width || 150);
                             const sp_h = sp.props?.height !== undefined ? parseFloat(sp.props.height) : (b.props?.height || 640);
                             const sp_emb = sp.props?.embedDepth !== undefined ? parseFloat(sp.props.embedDepth) : (b.props?.embedDepth ?? 250);
-                            const sp_L = sp.L || 0;
-                            // Net concrete height + mandated 0.01m additive buffer
-                            bVol += (sp_b / 1000) * (Math.max(0, sp_h - sp_emb) / 1000 + 0.01) * sp_L;
-                            bLen += sp_L;
-                        });
-                    }
-                    if (bLen <= 0) {
-                        bLen = Math.hypot(b.p2.x - b.p1.x, b.p2.y - b.p1.y) / 1000;
+                            const sp_L = sp.L || Math.hypot(p2.x - p1.x, p2.y - p1.y) / 1000;
+                            
+                            const spanWeight = (sp_b / 1000) * (Math.max(0, sp_h - sp_emb) / 1000 + 0.01) * sp_L * 24.0;
+                            const divisor = (involve === 1) ? (spanAdjacency[key] || 1) : 1;
+                            stem_kN += spanWeight / divisor;
+                        }
+                    });
+                } else {
+                    // Fallback for initial load prior to span materialization using raw continuous geometry safely.
+                    const involve = this._isBeamInvolvedInSlab(b, slab.vertices);
+                    if (involve > 0) {
                         const def_b = b.props?.width || 150, def_h = b.props?.height || 640, def_emb = b.props?.embedDepth ?? 250;
-                        bVol = (def_b / 1000) * (Math.max(0, def_h - def_emb) / 1000 + 0.01) * bLen;
+                        const geomLen = Math.hypot(b.p2.x - b.p1.x, b.p2.y - b.p1.y) / 1000;
+                        const rawWeight = (def_b / 1000) * (Math.max(0, def_h - def_emb) / 1000 + 0.01) * geomLen * 24.0;
+                        stem_kN += rawWeight;
                     }
-                    const geomLen = Math.hypot(b.p2.x - b.p1.x, b.p2.y - b.p1.y) / 1000;
-                    const finalWeight = (bLen > 0 ? (bVol / bLen) : 0) * geomLen * 24.0;
-                    
-                    // If inside (involve === 2), force 100% allocation. Otherwise use adjacency count.
-                    const divisor = (involve === 1) ? (beamAdjacency[b.id] || 1) : 1;
-                    stem_kN += finalWeight / divisor;
                 }
             });
             const qTotal = (area > 0 ? (axial_kN + stem_kN) / area : 0) + 1.740;

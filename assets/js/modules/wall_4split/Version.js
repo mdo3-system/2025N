@@ -171,6 +171,8 @@ window.APP_VERSION = "v2.5.5";
 window.APP_VERSION = "v2.5.6";
 // Backup of v2.5.6 taken. Now moving to v2.5.7: Ensure Slab Analysis re-runs at end of lifecycle to fix real-time update delay bug.
 window.APP_VERSION = "v2.5.7";
+// Backup of v2.5.7 taken. Now moving to v2.5.8: Implement localized SPAN iteration for slab load tracking and fix Modal height constraints.
+window.APP_VERSION = "v2.5.8";
 
 
 
