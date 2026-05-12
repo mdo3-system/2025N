@@ -232,8 +232,27 @@ function handleUnifiedDeletion(e, state) {
         console.log(`✅ Window ${targetId} deleted.`);
     } else if (hit.type === 'area') {
         if (!confirm(`床面積 (${hit.item.areaType || 'floor'}) を削除しますか？`)) return;
+        
+        // 1. [v2.5.15 追加] 重複して描画されている可能性がある背景線（CADインポート由来）の除去
+        if (hit.item.vertices && state.bgLinesOriginal) {
+            const targetV = hit.item.vertices;
+            state.bgLinesOriginal = state.bgLinesOriginal.filter(bgL => {
+                if (!bgL.vertices || bgL.vertices.length !== targetV.length) return true;
+                // 全ての頂点座標がほぼ一致するかチェック
+                for (let k = 0; k < targetV.length; k++) {
+                    if (Math.abs(bgL.vertices[k].x - targetV[k].x) > 1 || Math.abs(bgL.vertices[k].y - targetV[k].y) > 1) return true;
+                }
+                return false; // 一致した場合は背景からも削除
+            });
+            // キャッシュ更新フラグを立てる
+            if (window.AppController && window.AppController.rebuildBgBuffer) {
+                 // もし背景キャッシュ化があれば再構築 (今回は無し、refreshAll内で処理される)
+            }
+        }
+
+        // 2. 構造データの床面積を削除
         state.areaLines = state.areaLines.filter(a => a.id != hit.item.id);
-        console.log(`✅ Area deleted.`);
+        console.log(`✅ Area deleted along with associated background lines.`);
     } else if (hit.type === 'diag-grid') {
         if (!confirm(`斜め通り芯 (${hit.item.name || 'DA'}) を削除しますか？`)) return;
         state.manualGridAngle = state.manualGridAngle.filter(g => g.id !== hit.item.id);

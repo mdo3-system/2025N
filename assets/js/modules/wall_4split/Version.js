@@ -182,6 +182,8 @@ window.APP_VERSION = "v2.5.10";
 window.APP_VERSION = "v2.5.13";
 // Backup of v2.5.13 taken. Now moving to v2.5.14: Enhanced Area (Floor) collision logic to support boundary/edge clicks and added explicit deletion confirmation prompt.
 window.APP_VERSION = "v2.5.14";
+// Backup of v2.5.14 taken. Now moving to v2.5.15: Fixed Ghosting Bug where deleted Area lines persisted as duplicate Background Lines imported from CAD.
+window.APP_VERSION = "v2.5.15";
 
 
 

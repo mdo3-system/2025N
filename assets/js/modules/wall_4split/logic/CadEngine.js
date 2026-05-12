@@ -71,8 +71,10 @@ window.CadEngine = {
                             // 面積ポリゴンの頂点も丸める
                             ent.vertices.forEach(v => { v.x = snapToModule(v.x); v.y = snapToModule(v.y); });
                             areaLines.push({ ...ent, layer: L, floor: f, id: Date.now() + Math.random() });
+                        } else {
+                            // 面積ポリゴンとして認識されない不正な線分のみ、背景線として登録
+                            newBgLines.push(ent);
                         }
-                        newBgLines.push(ent);
                     } else if (L.includes('GRID')) {
                         ent.isGridLine = true; ent.floor = 'ALL';
                         if (ent.type === 'LINE') {
