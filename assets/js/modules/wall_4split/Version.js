@@ -167,6 +167,10 @@ window.APP_VERSION = "v2.5.3";
 window.APP_VERSION = "v2.5.4";
 // Backup of v2.5.4 taken. Now moving to v2.5.5: Unify UI text to "根入れ深さ" and align internal variable keys to "embedDepth" for full data continuity.
 window.APP_VERSION = "v2.5.5";
+// Backup of v2.5.5 taken. Now moving to v2.5.6: Include internal slab beams in weight logic, clean up Modal UI redundancy, and add requested +0.01m load buffer.
+window.APP_VERSION = "v2.5.6";
+// Backup of v2.5.6 taken. Now moving to v2.5.7: Ensure Slab Analysis re-runs at end of lifecycle to fix real-time update delay bug.
+window.APP_VERSION = "v2.5.7";
 
 
 

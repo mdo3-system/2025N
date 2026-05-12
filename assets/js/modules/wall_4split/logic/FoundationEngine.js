@@ -28,6 +28,8 @@ window.FoundationEngine = {
         this.calculateSlabTributary(s.foundationSlabs, s.foundationBeams, s);
         this.runFoundationBeamAnalysis(s.foundationBeams, s.foundationSlabs, s);
         this.updateGroundPressure(s);
+        // [v2.5.7] Re-run Slab Analysis AFTER Beam Analysis to capture freshly materialized overrides perfectly.
+        this.calculateSlabAnalysis(s.foundationSlabs, s.averageBuildingPressure);
     },
 
     updateGroundPressure: function(state) {
@@ -115,7 +117,8 @@ window.FoundationEngine = {
             const axial_kN = (sArea1F * (wF + wW)) + (sArea2F * wF) + (Math.max(sArea1F, sArea2F) * wR);
             let stem_kN = 0; const d_m = s.config?.fdThicknessM || 0.15;
             beams.forEach(b => {
-                if (this._isBeamOnSlabBoundary(b, slab.vertices)) {
+                const involve = this._isBeamInvolvedInSlab(b, slab.vertices);
+                if (involve > 0) {
                     let bVol = 0, bLen = 0;
                     const spans = b.spans || [];
                     if (spans.length > 0) {
@@ -124,18 +127,22 @@ window.FoundationEngine = {
                             const sp_h = sp.props?.height !== undefined ? parseFloat(sp.props.height) : (b.props?.height || 640);
                             const sp_emb = sp.props?.embedDepth !== undefined ? parseFloat(sp.props.embedDepth) : (b.props?.embedDepth ?? 250);
                             const sp_L = sp.L || 0;
-                            bVol += (sp_b / 1000) * Math.max(0, (sp_h - sp_emb) / 1000) * sp_L;
+                            // Net concrete height + mandated 0.01m additive buffer
+                            bVol += (sp_b / 1000) * (Math.max(0, sp_h - sp_emb) / 1000 + 0.01) * sp_L;
                             bLen += sp_L;
                         });
                     }
                     if (bLen <= 0) {
                         bLen = Math.hypot(b.p2.x - b.p1.x, b.p2.y - b.p1.y) / 1000;
                         const def_b = b.props?.width || 150, def_h = b.props?.height || 640, def_emb = b.props?.embedDepth ?? 250;
-                        bVol = (def_b / 1000) * Math.max(0, (def_h - def_emb) / 1000) * bLen;
+                        bVol = (def_b / 1000) * (Math.max(0, def_h - def_emb) / 1000 + 0.01) * bLen;
                     }
                     const geomLen = Math.hypot(b.p2.x - b.p1.x, b.p2.y - b.p1.y) / 1000;
                     const finalWeight = (bLen > 0 ? (bVol / bLen) : 0) * geomLen * 24.0;
-                    stem_kN += finalWeight / (beamAdjacency[b.id] || 1);
+                    
+                    // If inside (involve === 2), force 100% allocation. Otherwise use adjacency count.
+                    const divisor = (involve === 1) ? (beamAdjacency[b.id] || 1) : 1;
+                    stem_kN += finalWeight / divisor;
                 }
             });
             const qTotal = (area > 0 ? (axial_kN + stem_kN) / area : 0) + 1.740;
@@ -282,8 +289,8 @@ window.FoundationEngine = {
                 const h_val = sp.height !== undefined ? parseFloat(sp.height) : (beam.props?.height || 640);
                 const embed_val = sp.embedDepth !== undefined ? parseFloat(sp.embedDepth) : (beam.props?.embedDepth ?? 250);
                 
-                // 3. 自重(w_self)をスパンごとに再算出して分布荷重へ加算
-                const w_self_span = (b_val * Math.max(0, h_val - embed_val) / 1e6) * 24.0;
+                // 3. 自重(w_self)をスパンごとに再算出して分布荷重へ加算 ( mandates + 0.01m additive buffer )
+                const w_self_span = (b_val * (Math.max(0, h_val - embed_val) + 10.0) / 1e6) * 24.0;
 
                 const load = (window.SlabBeamSynchronizer && typeof window.SlabBeamSynchronizer.calculateSpanSlabLoad === 'function')
                     ? window.SlabBeamSynchronizer.calculateSpanSlabLoad(slabs, beam, { p1, p2 }, s)
@@ -374,6 +381,12 @@ window.FoundationEngine = {
     },
     _intersect: function(p1, p2, a, b, c) { const d1 = a * p1.x + b * p1.y + c, d2 = a * p2.x + b * p2.y + c, t = d1 / (d1 - d2 || 1e-9); return { x: p1.x + t * (p2.x - p1.x), y: p1.y + t * (p2.y - p1.y) }; },
     _distToSegment: function(px, py, p1, p2) { const dx = p2.x - p1.x, dy = p2.y - p1.y, l2 = dx * dx + dy * dy; if (l2 === 0) return Math.hypot(px - p1.x, py - p1.y); let t = Math.max(0, Math.min(1, ((px - p1.x) * dx + (py - p1.y) * dy) / l2)); return Math.hypot(px - (p1.x + t * dx), py - (p1.y + t * dy)); },
+    _isBeamInvolvedInSlab: function(b, poly) {
+        if (this._isBeamOnSlabBoundary(b, poly)) return 1; // Boundary
+        const mid = { x: (b.p1.x + b.p2.x)/2, y: (b.p1.y + b.p2.y)/2 };
+        if (window.MathUtils && window.MathUtils.isPointInPolygon && window.MathUtils.isPointInPolygon(mid, poly)) return 2; // Internal
+        return 0; // None
+    },
     _isBeamOnSlabBoundary: function(b, poly) {
         const onBound = (p) => { for (let i = 0; i < poly.length; i++) { if (window.MathUtils.distToBeamLine(p.x, p.y, poly[i].x, poly[i].y, poly[(i+1)%poly.length].x, poly[(i+1)%poly.length].y) < 10) return true; } return false; };
         return onBound(b.p1) && onBound(b.p2) && onBound({ x: (b.p1.x + b.p2.x)/2, y: (b.p1.y + b.p2.y)/2 });
