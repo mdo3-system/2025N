@@ -100,6 +100,7 @@ window.Parsers = {
         if (d.gyc) s.gridYCoords = d.gyc;
         if (d.mgX) s.manualGridX = d.mgX;
         if (d.mgY) s.manualGridY = d.mgY;
+        if (d.mgAngle) s.manualGridAngle = d.mgAngle;
         if (d.ueGX) s.userEditedGridX = d.ueGX;
         if (d.ueGY) s.userEditedGridY = d.ueGY;
         if (d.deletedGX) s.deletedGridX = d.deletedGX;
@@ -129,8 +130,10 @@ window.Parsers = {
             Object.keys(d.inputs).forEach(id => {
                 const el = document.getElementById(id);
                 if (el) {
-                    el.value = d.inputs[id];
-                    // Trigger events if necessary, but refreshAll will handle most things
+                    const val = d.inputs[id];
+                    if (val !== undefined && val !== null) {
+                        el.value = val;
+                    }
                 }
             });
         }
@@ -173,7 +176,7 @@ window.Parsers = {
                 container.innerHTML = d.customWalls.map(cw => `
                     <div class="calc-row cust-wall-row" style="margin-bottom:5px;">
                         <input type="text" class="cust-w-n" value="${cw.name}" placeholder="名称" style="width:130px; margin:0;">
-                        <input type="number" class="cust-w-v" value="${cw.val}" placeholder="倍率" step="0.1" style="margin:0;">
+                        <input type="number" class="cust-w-v" value="${(cw.val !== undefined && cw.val !== null) ? cw.val : ''}" placeholder="倍率" step="0.1" style="margin:0;">
                     </div>
                 `).join('');
             }
@@ -184,7 +187,7 @@ window.Parsers = {
                 container.innerHTML = d.customHws.map(ch => `
                     <div class="calc-row cust-hw-row" style="margin-bottom:5px;">
                         <input type="text" class="cust-h-n" value="${ch.name}" placeholder="記号" style="width:130px; margin:0;">
-                        <input type="number" class="cust-h-v" value="${ch.n * 5.3}" placeholder="耐力(kN)" step="0.1" style="margin:0;">
+                        <input type="number" class="cust-h-v" value="${(ch.n !== undefined && ch.n !== null) ? ch.n * 5.3 : ''}" placeholder="耐力(kN)" step="0.1" style="margin:0;">
                     </div>
                 `).join('');
             }

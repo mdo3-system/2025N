@@ -162,7 +162,9 @@ window.FoundationEngine = {
                     }
                 }
             });
-            const qTotal = (area > 0 ? (axial_kN + stem_kN) / area : 0) + 1.740;
+            const topH = (slab.props?.slabTopHeight !== undefined) ? parseFloat(slab.props.slabTopHeight) : 50;
+            const slabTopLoad = (topH / 1000) * 24.0;
+            const qTotal = (area > 0 ? (axial_kN + stem_kN) / area : 0) + 1.740 + slabTopLoad;
             slab.props = slab.props || {}; slab.props.groundPressure = qTotal;
             // [v2.5.0] Use actual geometric edge lengths instead of orthogonal bounding boxes for accurate diagonal slab lx/ly
             let edgeLengths = [];

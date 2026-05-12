@@ -572,6 +572,16 @@ window.MainRenderer = {
             const lp = this.toCanvas(last, null, state);
             ctx.lineTo(lp.cx, lp.cy); ctx.stroke(); ctx.setLineDash([]);
         }
+
+        // [v2.5.10] 斜め通り芯の作図プレビュー
+        if (mode === 'add-diag-grid' && state.diagGridPoints && state.diagGridPoints.length > 0) {
+            ctx.lineWidth = 2; ctx.strokeStyle = '#8e44ad'; ctx.setLineDash([4, 4]);
+            const p1 = this.toCanvas(state.diagGridPoints[0], null, state);
+            const curr = state.snapPoint ? state.snapPoint : { x: (state.mouseX - state.offsetX)/state.scale, y: (state.canvas.height - state.mouseY - state.offsetY)/state.scale };
+            const p2 = this.toCanvas(curr, null, state);
+            ctx.beginPath(); ctx.moveTo(p1.cx, p1.cy); ctx.lineTo(p2.cx, p2.cy); ctx.stroke();
+            ctx.setLineDash([]);
+        }
     },
 
     /**

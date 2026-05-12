@@ -101,6 +101,7 @@ window.AppController = {
             areaLines: JSON.parse(JSON.stringify(state.areaLines)),
             manualGridX: JSON.parse(JSON.stringify(state.manualGridX || [])),
             manualGridY: JSON.parse(JSON.stringify(state.manualGridY || [])),
+            manualGridAngle: JSON.parse(JSON.stringify(state.manualGridAngle || [])),
             deletedGridX: [...(state.deletedGridX || [])],
             deletedGridY: [...(state.deletedGridY || [])],
             foundationBeams: JSON.parse(JSON.stringify(state.foundationBeams || [])),
@@ -152,6 +153,7 @@ window.AppController = {
         state.gridYNames = [...(data.gridYNames || [])];
         state.manualGridX = JSON.parse(JSON.stringify(data.manualGridX || []));
         state.manualGridY = JSON.parse(JSON.stringify(data.manualGridY || []));
+        state.manualGridAngle = JSON.parse(JSON.stringify(data.manualGridAngle || []));
         state.deletedGridX = [...(data.deletedGridX || [])];
         state.deletedGridY = [...(data.deletedGridY || [])];
         if (data.foundationBeams) state.foundationBeams = JSON.parse(JSON.stringify(data.foundationBeams));

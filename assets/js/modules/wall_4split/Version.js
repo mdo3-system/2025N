@@ -173,6 +173,15 @@ window.APP_VERSION = "v2.5.6";
 window.APP_VERSION = "v2.5.7";
 // Backup of v2.5.7 taken. Now moving to v2.5.8: Implement localized SPAN iteration for slab load tracking and fix Modal height constraints.
 window.APP_VERSION = "v2.5.8";
+// Backup of v2.5.8 taken. Now moving to v2.5.9: Add Slab Top Height setting in Modal and include corresponding uniform weight load calculation.
+window.APP_VERSION = "v2.5.9";
+// Backup of v2.5.9 taken. Now moving to v2.5.10: Resolved user reported Diagonal Grid inability (fixed dispatch exemptions & added export persistence) and fixed console 'undefined' parse warnings.
+window.APP_VERSION = "v2.5.10";
+// Backup of v2.5.10 taken. Now moving to v2.5.11: Comprehensive fix for Diagonal Grids (Pillar Snapping & Preview rendering) and total elimination of 'undefined' inputs in Parsers.js mapping loop.
+// Backup of v2.5.12 taken. Now moving to v2.5.13: Added Diagonal Grid collision support into General Delete Tool (handleUnifiedDeletion) for robust multi-tool functionality.
+window.APP_VERSION = "v2.5.13";
+// Backup of v2.5.13 taken. Now moving to v2.5.14: Enhanced Area (Floor) collision logic to support boundary/edge clicks and added explicit deletion confirmation prompt.
+window.APP_VERSION = "v2.5.14";
 
 
 

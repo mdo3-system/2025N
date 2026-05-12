@@ -3,7 +3,7 @@
  * v2.3.25 リファクタリング
  */
 
-let diagGridPoints = []; // [v2.5.0] 斜め通り芯の2点選択用バッファ
+// Removed local diagGridPoints, now handled in state.diagGridPoints
 
 function initCanvasInput(canvas) {
     if (!canvas) return;
@@ -43,7 +43,7 @@ function initCanvasInput(canvas) {
         }
 
         // 基礎モードへの委譲 (通り芯追加・通り芯削除・通り芯文字編集といった共通操作は委譲から除外して通常実行)
-        if (state.currentAppMode === 'foundation' && e.button === 0 && !['add-grid', 'del-grid', 'edit-text'].includes(mode)) {
+        if (state.currentAppMode === 'foundation' && e.button === 0 && !['add-grid', 'del-grid', 'edit-text', 'add-diag-grid'].includes(mode)) {
             if (window.FoundationInputController) window.FoundationInputController.handleMouseDown(e, state);
             return;
         }
@@ -231,10 +231,14 @@ function handleUnifiedDeletion(e, state) {
         state.windowsArr = state.windowsArr.filter(w => w.id != targetId);
         console.log(`✅ Window ${targetId} deleted.`);
     } else if (hit.type === 'area') {
+        if (!confirm(`床面積 (${hit.item.areaType || 'floor'}) を削除しますか？`)) return;
         state.areaLines = state.areaLines.filter(a => a.id != hit.item.id);
         console.log(`✅ Area deleted.`);
+    } else if (hit.type === 'diag-grid') {
+        if (!confirm(`斜め通り芯 (${hit.item.name || 'DA'}) を削除しますか？`)) return;
+        state.manualGridAngle = state.manualGridAngle.filter(g => g.id !== hit.item.id);
+        console.log(`✅ Diagonal Grid deleted via unified tool.`);
     }
-
     window.AppController.refreshAll();
 }
 
@@ -318,38 +322,57 @@ function handleGridInput(mode, state, clickX, clickY) {
         window.AppController.refreshAll();
     } else if (mode === 'del-grid') {
         // クリック位置に近いグリッドを検索
-        let bestIX = -1, bestIY = -1, minDX = 20, minDY = 20;
+        const toC = (x, y) => ({ cx: x * state.scale + state.offsetX, cy: state.canvas.height - (y * state.scale + state.offsetY) });
+        let bestIX = -1, bestIY = -1, minD = 20;
         let targetVal = null, targetAxis = null;
+        let targetDiag = null;
 
+        // X/Y検索
         state.gridXCoords.forEach((gx, i) => { 
             let d = Math.abs(clickX - (gx * state.scale + state.offsetX)); 
-            if(d < minDX){ minDX=d; bestIX=i; targetVal=gx; targetAxis='X'; } 
+            if(d < minD){ minD=d; bestIX=i; targetVal=gx; targetAxis='X'; } 
         });
         state.gridYCoords.forEach((gy, i) => { 
             let d = Math.abs(clickY - (state.canvas.height - (gy * state.scale + state.offsetY))); 
-            if(d < minDY){ minDY=d; bestIY=i; targetVal=gy; targetAxis='Y'; } 
+            if(d < minD){ minD=d; bestIY=i; targetVal=gy; targetAxis='Y'; } 
         });
+
+        // 斜め通り芯検索
+        if (state.manualGridAngle) {
+            state.manualGridAngle.forEach(g => {
+                const c1 = toC(g.p1.x, g.p1.y), c2 = toC(g.p2.x, g.p2.y);
+                const dx = c2.cx - c1.cx, dy = c2.cy - c1.cy;
+                const den = Math.hypot(dx, dy);
+                if (den < 5) return;
+                const dist = Math.abs(dy * clickX - dx * clickY + c2.cx * c1.cy - c2.cy * c1.cx) / den;
+                if (dist < minD) { minD = dist; targetDiag = g; targetAxis = 'Diag'; }
+            });
+        }
         
         if (targetAxis) {
-            // カスケード削除の対象（柱）を確認
-            const affectedPillars = state.pillars.filter(p => !p.isDeleted && (targetAxis === 'X' ? p.x === targetVal : p.y === targetVal));
-            
-            const msg = affectedPillars.length > 0 
-                ? `通り芯(${targetAxis}軸)を削除すると、配置されている柱(${affectedPillars.length}本)および関連する耐力壁・開口部も削除されます。\nよろしいですか？`
-                : `通り芯(${targetAxis}軸)を削除します。よろしいですか？`;
-            
-            if (!confirm(msg)) return;
-
-            // 1. 通り芯情報の論理/物理削除
-            if (targetAxis === 'X') {
-                if (!state.deletedGridX) state.deletedGridX = [];
-                state.deletedGridX.push(targetVal);
-                state.manualGridX = (state.manualGridX || []).filter(m => Math.abs(m.coord - targetVal) > 5);
+            if (targetAxis === 'Diag' && targetDiag) {
+                if (!confirm(`斜め通り芯 (${targetDiag.name || 'DA'}) を削除しますか？`)) return;
+                state.manualGridAngle = state.manualGridAngle.filter(g => g.id !== targetDiag.id);
             } else {
-                if (!state.deletedGridY) state.deletedGridY = [];
-                state.deletedGridY.push(targetVal);
-                state.manualGridY = (state.manualGridY || []).filter(m => Math.abs(m.coord - targetVal) > 5);
-            }
+                // カスケード削除の対象（柱）を確認
+                const affectedPillars = state.pillars.filter(p => !p.isDeleted && (targetAxis === 'X' ? p.x === targetVal : p.y === targetVal));
+                
+                const msg = affectedPillars.length > 0 
+                    ? `通り芯(${targetAxis}軸)を削除すると、配置されている柱(${affectedPillars.length}本)および関連する耐力壁・開口部も削除されます。\nよろしいですか？`
+                    : `通り芯(${targetAxis}軸)を削除します。よろしいですか？`;
+                
+                if (!confirm(msg)) return;
+
+                // 1. 通り芯情報の論理/物理削除
+                if (targetAxis === 'X') {
+                    if (!state.deletedGridX) state.deletedGridX = [];
+                    state.deletedGridX.push(targetVal);
+                    state.manualGridX = (state.manualGridX || []).filter(m => Math.abs(m.coord - targetVal) > 5);
+                } else {
+                    if (!state.deletedGridY) state.deletedGridY = [];
+                    state.deletedGridY.push(targetVal);
+                    state.manualGridY = (state.manualGridY || []).filter(m => Math.abs(m.coord - targetVal) > 5);
+                }
 
             // 2. 柱の論理削除
             const pillarIdsToRemove = new Set();
@@ -370,35 +393,59 @@ function handleGridInput(mode, state, clickX, clickY) {
             }
         }
     }
+}
     window.AppController.refreshAll();
 }
 
 function handleEditText(e, state) {
-    let bestGX = null, bestGY = null, minDX = 100, minDY = 100;
+    const toC = (x, y) => ({ cx: x * state.scale + state.offsetX, cy: state.canvas.height - (y * state.scale + state.offsetY) });
+    
+    let bestGX = null, bestGY = null, bestDiag = null;
+    let minD = 20; // 統合距離閾値（px）
+    let winnerType = null;
     let bestIX = -1, bestIY = -1;
     
+    // 1. X通りチェック
     state.gridXCoords.forEach((gx, i) => { 
         let d = Math.abs(e.offsetX - (gx * state.scale + state.offsetX)); 
-        if (d < minDX) { minDX = d; bestGX = gx; bestIX = i; } 
+        if (d < minD) { minD = d; bestGX = gx; bestIX = i; winnerType = 'X'; } 
     });
+    // 2. Y通りチェック
     state.gridYCoords.forEach((gy, i) => { 
         let d = Math.abs(e.offsetY - (state.canvas.height - (gy * state.scale + state.offsetY))); 
-        if (d < minDY) { minDY = d; bestGY = gy; bestIY = i; } 
+        if (d < minD) { minD = d; bestGY = gy; bestIY = i; winnerType = 'Y'; } 
     });
+    // 3. 斜め通り芯チェック
+    if (state.manualGridAngle) {
+        state.manualGridAngle.forEach(g => {
+            const c1 = toC(g.p1.x, g.p1.y), c2 = toC(g.p2.x, g.p2.y);
+            const dx = c2.cx - c1.cx, dy = c2.cy - c1.cy;
+            const den = Math.hypot(dx, dy);
+            if (den < 5) return;
+            const dist = Math.abs(dy * e.offsetX - dx * e.offsetY + c2.cx * c1.cy - c2.cy * c1.cx) / den;
+            if (dist < minD) { minD = dist; bestDiag = g; winnerType = 'Diag'; }
+        });
+    }
     
-    if (bestGX !== null && (bestGY === null || minDX <= minDY)) {
+    if (winnerType === 'X' && bestGX !== null) {
         const oldName = state.gridXNames[bestIX] || '';
         const newName = prompt(`X通り (${Math.round(bestGX)} mm) の通り芯名を編集してください:`, oldName);
         if (newName !== null) {
             if (!state.userEditedGridX) state.userEditedGridX = {};
             state.userEditedGridX[bestGX] = newName.trim();
         }
-    } else if (bestGY !== null) {
+    } else if (winnerType === 'Y' && bestGY !== null) {
         const oldName = state.gridYNames[bestIY] || '';
         const newName = prompt(`Y通り (${Math.round(bestGY)} mm) の通り芯名を編集してください:`, oldName);
         if (newName !== null) {
             if (!state.userEditedGridY) state.userEditedGridY = {};
             state.userEditedGridY[bestGY] = newName.trim();
+        }
+    } else if (winnerType === 'Diag' && bestDiag) {
+        const oldName = bestDiag.name || '';
+        const newName = prompt(`斜め通り芯 (${oldName}) の名称を編集してください:`, oldName);
+        if (newName !== null) {
+            bestDiag.name = newName.trim();
         }
     }
     window.AppController.refreshAll();
@@ -417,6 +464,13 @@ function handleGeneralMouseMove(mx, my, state) {
     const mode = getMode();
     if (['add-pillar', 'draw-area', 'add-diag-grid'].includes(mode)) {
         let bestD = 30;
+        // 1. 柱からのスナップ
+        for (const p of state.pillars.filter(p => !p.isDeleted && p.floor === state.currentFloor)) {
+            const pt = toC(p.x, p.y);
+            const d = Math.hypot(mx - pt.cx, my - pt.cy);
+            if (d < bestD) { bestD = d; snapPoint = { x: p.x, y: p.y }; }
+        }
+        // 2. 通り芯交点からのスナップ
         state.gridXCoords.forEach(gx => state.gridYCoords.forEach(gy => {
             const pt = toC(gx, gy);
             const d = Math.hypot(mx - pt.cx, my - pt.cy);
@@ -452,16 +506,46 @@ function findHitElement(mx, my, state) {
 
     // 3. 面積ポリゴン
     for (const a of state.areaLines.filter(a => a.floor === floor)) {
+        if (!a.vertices || a.vertices.length < 2) continue;
+        
+        // 3-a. 内部判定 (クリックが中にある場合)
         if (window.MathUtils.isPointInPolygon(wp, a.vertices)) return { type: 'area', item: a };
+        
+        // 3-b. 境界線（エッジ）判定 [v2.5.14 追加] - ユーザーは枠線をクリックしたいため
+        const edgeTolerance = 25 / state.scale;
+        const len = a.vertices.length;
+        for (let i = 0; i < len; i++) {
+            const p1 = a.vertices[i];
+            const p2 = a.vertices[(i + 1) % len];
+            if (!p1 || !p2) continue;
+            const dist = window.MathUtils.distToBeamLine(wp.x, wp.y, p1.x, p1.y, p2.x, p2.y);
+            if (dist < edgeTolerance) return { type: 'area', item: a };
+        }
+    }
+
+    // 4. 斜め通り芯 (判定優先度 低め) [v2.5.13]
+    if (state.manualGridAngle) {
+        const diagHitRadius = 25 / state.scale; // 25px 程度の余裕
+        for (const g of state.manualGridAngle) {
+            const A = g.p2.y - g.p1.y;
+            const B = g.p1.x - g.p2.x;
+            const C = g.p1.y * g.p2.x - g.p1.x * g.p2.y;
+            const len = Math.hypot(A, B);
+            if (len > 0) {
+                const dist = Math.abs(A * wp.x + B * wp.y + C) / len;
+                if (dist < diagHitRadius) return { type: 'diag-grid', item: g };
+            }
+        }
     }
 
     return null;
 }
 
 function cancelDrawing() {
-    areaDrawPoints = []; selectedPillar = null; diagGridPoints = [];
+    areaDrawPoints = []; selectedPillar = null; 
     const state = window.AppState;
     if (state) {
+        state.diagGridPoints = [];
         state.fdDrawPoints = [];
         state.fdSelectedPillarLike = null;
     }
@@ -469,11 +553,12 @@ function cancelDrawing() {
 }
 function handleDiagGridInput(state) {
     if (!snapPoint) return;
-    diagGridPoints.push({ x: snapPoint.x, y: snapPoint.y });
+    if (!state.diagGridPoints) state.diagGridPoints = [];
+    state.diagGridPoints.push({ x: snapPoint.x, y: snapPoint.y });
     
-    if (diagGridPoints.length === 2) {
-        const p1 = diagGridPoints[0];
-        const p2 = diagGridPoints[1];
+    if (state.diagGridPoints.length === 2) {
+        const p1 = state.diagGridPoints[0];
+        const p2 = state.diagGridPoints[1];
         
         // 同一点チェック
         if (Math.hypot(p1.x - p2.x, p1.y - p2.y) > 5) {
@@ -486,7 +571,7 @@ function handleDiagGridInput(state) {
             state.manualGridAngle.push({ id, name, p1, p2 });
             console.log(`📐 Added Diagonal Grid: ${name}`);
         }
-        diagGridPoints = []; // リセット
+        state.diagGridPoints = []; // リセット
     }
     window.AppController.refreshAll();
 }

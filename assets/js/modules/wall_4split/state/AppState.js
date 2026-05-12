@@ -182,6 +182,7 @@ window.AppState = {
     hoveredPillar: null,
     selectedPillar: null,
     snapPoint: null,
+    diagGridPoints: [], // [v2.5.10] Temporary points for drawing diagonal grids
     areaDrawPoints: [],
     selectedFoundationBeam: null,
     fdSelection: { type: null, item: null },

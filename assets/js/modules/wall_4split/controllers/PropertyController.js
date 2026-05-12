@@ -993,7 +993,7 @@ window.PropertyController = {
                     </div>
                     ` : ''}
 
-                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; background:#f1f5f9; padding:8px; border-radius:6px; border:1px solid #cbd5e1;">
+                    <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; background:#f1f5f9; padding:8px; border-radius:6px; border:1px solid #cbd5e1;">
                         <div style="display:flex; flex-direction:column;">
                             <label style="font-size:10px; color:#64748b; margin-bottom:3px; font-weight:500;">厚さ (mm)</label>
                             <div style="display:flex; align-items:center; gap:4px;">
@@ -1005,6 +1005,13 @@ window.PropertyController = {
                             <label style="font-size:10px; color:#64748b; margin-bottom:3px; font-weight:500;">かぶり (mm)</label>
                             <div style="display:flex; align-items:center; gap:4px;">
                                 <input type="number" value="${p.coverDepth || 70}" onchange="window.PropertyController.updateFdProp('slab', ${item.id}, 'coverDepth', this.value)" style="width:70px; padding:4px; border:1px solid #cbd5e1; border-radius:4px; font-size:11px; text-align:right;">
+                                <span style="font-size:10px; color:#475569;">mm</span>
+                            </div>
+                        </div>
+                        <div style="display:flex; flex-direction:column;">
+                            <label style="font-size:10px; color:#64748b; margin-bottom:3px; font-weight:500;">天端高 (mm)</label>
+                            <div style="display:flex; align-items:center; gap:4px;">
+                                <input type="number" value="${p.slabTopHeight !== undefined ? p.slabTopHeight : 50}" onchange="window.PropertyController.updateFdProp('slab', ${item.id}, 'slabTopHeight', this.value)" style="width:70px; padding:4px; border:1px solid #cbd5e1; border-radius:4px; font-size:11px; text-align:right;">
                                 <span style="font-size:10px; color:#475569;">mm</span>
                             </div>
                         </div>
