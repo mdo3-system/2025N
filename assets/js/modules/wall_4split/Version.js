@@ -185,7 +185,8 @@ window.APP_VERSION = "v2.5.14";
 // Backup of v2.5.14 taken. Now moving to v2.5.15: Fixed Ghosting Bug where deleted Area lines persisted as duplicate Background Lines imported from CAD.
 window.APP_VERSION = "v2.5.15";
 // Backup of v2.5.15 taken. Now moving to v2.5.16: Comprehensive background CAD line segment cleanup and fixed viewport shift on foundation mode switch.
-window.APP_VERSION = "v2.5.16";
+// Backup of v2.5.16 taken. Now moving to v2.5.17: Fixed root cause bug in unified deletion where area polygons matched window conditions and failed to trigger area-specific logic.
+window.APP_VERSION = "v2.5.17";
 
 
 

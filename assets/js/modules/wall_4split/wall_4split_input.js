@@ -219,14 +219,14 @@ function handleUnifiedDeletion(e, state) {
         state.windowsArr = state.windowsArr.filter(w => w.p1.id != pid && w.p2.id != pid);
         console.log(`✅ Pillar ${pid} and its connections deleted.`);
 
-    } else if (hit.type === 'wall' || hit.item.outPanelId !== undefined) {
-        // 耐力壁としての判定 (hit.type が 'wall' か、耐力壁特有のプロパティを持っている場合)
+    } else if (hit.type === 'wall') {
+        // 耐力壁としての判定 (hit.type が 'wall' の場合のみ処理)
         const targetId = hit.item.id;
         state.walls = state.walls.filter(w => w.id != targetId);
         console.log(`✅ Wall ${targetId} deleted.`);
 
-    } else if (hit.type === 'window' || hit.item.id !== undefined) {
-        // 開口部としての判定 (hit.type が 'window' か、IDが存在する場合)
+    } else if (hit.type === 'window') {
+        // 開口部としての判定 (hit.type が 'window' の場合のみ処理)
         const targetId = hit.item.id;
         state.windowsArr = state.windowsArr.filter(w => w.id != targetId);
         console.log(`✅ Window ${targetId} deleted.`);
