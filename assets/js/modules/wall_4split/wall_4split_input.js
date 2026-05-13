@@ -233,16 +233,43 @@ function handleUnifiedDeletion(e, state) {
     } else if (hit.type === 'area') {
         if (!confirm(`床面積 (${hit.item.areaType || 'floor'}) を削除しますか？`)) return;
         
-        // 1. [v2.5.15 追加] 重複して描画されている可能性がある背景線（CADインポート由来）の除去
+        // 1. [v2.5.16 強化] 重複して描画されている背景線（CADポリライン＋単体LINEセグメント両対応）の完全除去
         if (hit.item.vertices && state.bgLinesOriginal) {
             const targetV = hit.item.vertices;
             state.bgLinesOriginal = state.bgLinesOriginal.filter(bgL => {
-                if (!bgL.vertices || bgL.vertices.length !== targetV.length) return true;
-                // 全ての頂点座標がほぼ一致するかチェック
-                for (let k = 0; k < targetV.length; k++) {
-                    if (Math.abs(bgL.vertices[k].x - targetV[k].x) > 1 || Math.abs(bgL.vertices[k].y - targetV[k].y) > 1) return true;
+                if (!bgL.vertices || bgL.vertices.length < 2) return true;
+
+                // 1-a. LWPOLYLINE/POLYLINE として頂点数も一致し、座標群がほぼ一致する場合
+                if (bgL.vertices.length === targetV.length) {
+                    let allMatch = true;
+                    for (let k = 0; k < targetV.length; k++) {
+                        if (Math.abs(bgL.vertices[k].x - targetV[k].x) > 10 || Math.abs(bgL.vertices[k].y - targetV[k].y) > 10) {
+                            allMatch = false;
+                            break;
+                        }
+                    }
+                    if (allMatch) return false; // 一致した場合は背景から削除
                 }
-                return false; // 一致した場合は背景からも削除
+
+                // 1-b. 背景要素が単体 LINE (2頂点) の場合、対象ポリゴンのいずれかの辺(Edge)とぴったり重なるか判定
+                if (bgL.vertices.length === 2) {
+                    const bp1 = bgL.vertices[0];
+                    const bp2 = bgL.vertices[1];
+                    for (let i = 0; i < targetV.length; i++) {
+                        const tp1 = targetV[i];
+                        const tp2 = targetV[(i + 1) % targetV.length];
+                        
+                        // 順方向の一致判定 (許容誤差 15mm)
+                        const matchNormal = (Math.hypot(bp1.x - tp1.x, bp1.y - tp1.y) < 15 && Math.hypot(bp2.x - tp2.x, bp2.y - tp2.y) < 15);
+                        // 逆方向の一致判定 (許容誤差 15mm)
+                        const matchReverse = (Math.hypot(bp1.x - tp2.x, bp1.y - tp2.y) < 15 && Math.hypot(bp2.x - tp1.x, bp2.y - tp1.y) < 15);
+                        
+                        if (matchNormal || matchReverse) {
+                            return false; // 背景の該当する一辺を削除
+                        }
+                    }
+                }
+                return true;
             });
             // キャッシュ更新フラグを立てる
             if (window.AppController && window.AppController.rebuildBgBuffer) {

@@ -180,8 +180,9 @@ window.AppController = {
 
         if (mode === 'foundation') {
             this.updateFoundationUI();
-            // [v2.4.75 補強] スケールが未初期化(1.0)の場合は強制的にビュー計算を実行してズレを防ぐ
-            if (state.scale <= 1.0 && typeof initViewForce === 'function') initViewForce();
+            // [v2.5.16 修正] スケールが初期デフォルト値(1.0)かつオフセットもゼロ（＝完全未初期化状態）の場合のみ初期ビューを計算する
+            const isUninitialized = (state.scale === 1.0 && state.offsetX === 0 && state.offsetY === 0);
+            if (isUninitialized && typeof initViewForce === 'function') initViewForce();
         } else {
             this.updateWallUI();
         }
