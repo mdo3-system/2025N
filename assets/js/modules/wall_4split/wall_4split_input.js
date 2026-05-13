@@ -251,8 +251,28 @@ function handleUnifiedDeletion(e, state) {
         }
 
         // 2. 構造データの床面積を削除
-        state.areaLines = state.areaLines.filter(a => a.id != hit.item.id);
+        state.areaLines = state.areaLines.filter(a => a !== hit.item);
         console.log(`✅ Area deleted along with associated background lines.`);
+
+        // 3. 全ての該当タイプのポリゴンが削除された場合は入力値を0にリセットする
+        const f = hit.item.floor;
+        const type = hit.item.areaType || 'floor';
+        const remaining = state.areaLines.filter(a => a.floor === f && (a.areaType || 'floor') === type);
+        if (remaining.length === 0) {
+            const lv = f ? f.charAt(0) : '1';
+            let inputId = '';
+            if (type === 'floor') inputId = 'a-f' + lv;
+            else if (type === 'attic') inputId = 'a-attic' + lv;
+            else if (type === 'balcony') inputId = 'a-balcony' + lv;
+            else if (type === 'porch') inputId = 'a-porch' + lv;
+            else if (type === 'void') inputId = 'a-void' + lv;
+            
+            const el = document.getElementById(inputId);
+            if (el) {
+                el.value = "0.00";
+                console.log(`✅ Reset area input ${inputId} to 0.00 since last polygon was deleted.`);
+            }
+        }
     } else if (hit.type === 'diag-grid') {
         if (!confirm(`斜め通り芯 (${hit.item.name || 'DA'}) を削除しますか？`)) return;
         state.manualGridAngle = state.manualGridAngle.filter(g => g.id !== hit.item.id);
