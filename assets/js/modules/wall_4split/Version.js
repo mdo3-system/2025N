@@ -191,6 +191,9 @@ window.APP_VERSION = "v2.5.17";
 window.APP_VERSION = "v2.5.18";
 // Backup of v2.5.18 taken. Now moving to v2.5.19: Fixed mathematical geometry bug in foundation slab load distribution where duplicate and collinear vertices from polygon clipping caused _isTriangle to fail for all cases. Introduced IsTriangleRobust logic eliminating duplicate/collinear nodes to accurately apply the 1.33x load multiplier.
 window.APP_VERSION = "v2.5.19";
+// Backup of v2.5.19 taken. Now moving to v2.5.20: Fixed critical retrieval bug in ElevationRenderer where diagonal axes failed to pull alpha values and cumulative axial forces due to string-matching fallback. Centralized lookups to use window.MathUtils.isPointOnAxis, ensuring sub-millimeter grid placement deviations do not impede structural propagation.
+window.APP_VERSION = "v2.5.20";
+
 
 
 

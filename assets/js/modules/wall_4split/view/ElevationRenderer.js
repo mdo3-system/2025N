@@ -233,6 +233,10 @@ window.ElevationRenderer = {
                 const lookupCol = col || s.pillars.find(p => {
                     if (p.isDeleted) return false;
                     if (Math.abs(getPos(p) - pPos) >= 5) return false;
+                    // [v2.5.20 堅牢化] 斜め軸に対応するため isPointOnAxis を優先使用
+                    if (window.MathUtils && window.MathUtils.isPointOnAxis) {
+                        return window.MathUtils.isPointOnAxis(p, axisName, s);
+                    }
                     const nm = window.GridEngine.getPillarName(p, s);
                     return nm && nm.includes(axisName);
                 });
@@ -366,6 +370,11 @@ window.ElevationRenderer = {
                     if (w.floor !== f) return false;
                     const onPos = (Math.hypot(w.p1.x - pos.x, w.p1.y - pos.y) < 5 || Math.hypot(w.p2.x - pos.x, w.p2.y - pos.y) < 5);
                     if (!onPos) return false;
+                    // [v2.5.20 堅牢化] 斜め軸に対応するため isPointOnAxis を優先使用 (1mm程度のずれを許容)
+                    if (window.MathUtils && window.MathUtils.isPointOnAxis) {
+                        return window.MathUtils.isPointOnAxis(w.p1, axisName, s) && 
+                               window.MathUtils.isPointOnAxis(w.p2, axisName, s);
+                    }
                     const n1 = window.GridEngine.getPillarName(w.p1, s);
                     const n2 = window.GridEngine.getPillarName(w.p2, s);
                     return (n1 && (n1.startsWith(axisName) || n1.endsWith(axisName))) && 
@@ -414,6 +423,10 @@ window.ElevationRenderer = {
                     if (p.isDeleted) return false;
                     if (p.floor !== f && p.floor !== 'ALL') return false;
                     if (Math.hypot(p.x - pos.x, p.y - pos.y) >= 5) return false;
+                    // [v2.5.20 堅牢化] 斜め軸に対応するため isPointOnAxis を優先使用
+                    if (window.MathUtils && window.MathUtils.isPointOnAxis) {
+                        return window.MathUtils.isPointOnAxis(p, axisName, s);
+                    }
                     const nm = window.GridEngine.getPillarName(p, s);
                     return nm && nm.includes(axisName);
                 });
