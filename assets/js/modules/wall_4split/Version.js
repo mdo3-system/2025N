@@ -189,6 +189,9 @@ window.APP_VERSION = "v2.5.15";
 window.APP_VERSION = "v2.5.17";
 // Backup of v2.5.17 taken. Now moving to v2.5.18: Implemented robust history stack configuration restoration (manual sync), corrected foundation mouse coordinate projections, swapped left panel sequence to Slab-first workflow, fixed right panel layouts, and corrected text background rendering mask offsets.
 window.APP_VERSION = "v2.5.18";
+// Backup of v2.5.18 taken. Now moving to v2.5.19: Fixed mathematical geometry bug in foundation slab load distribution where duplicate and collinear vertices from polygon clipping caused _isTriangle to fail for all cases. Introduced IsTriangleRobust logic eliminating duplicate/collinear nodes to accurately apply the 1.33x load multiplier.
+window.APP_VERSION = "v2.5.19";
+
 
 
 

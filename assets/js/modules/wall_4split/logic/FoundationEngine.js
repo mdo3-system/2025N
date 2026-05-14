@@ -410,7 +410,58 @@ window.FoundationEngine = {
         const onBound = (p) => { for (let i = 0; i < poly.length; i++) { if (window.MathUtils.distToBeamLine(p.x, p.y, poly[i].x, poly[i].y, poly[(i+1)%poly.length].x, poly[(i+1)%poly.length].y) < 10) return true; } return false; };
         return onBound(b.p1) && onBound(b.p2) && onBound({ x: (b.p1.x + b.p2.x)/2, y: (b.p1.y + b.p2.y)/2 });
     },
-    _isTriangle: function(poly) { return poly.length === 3; },
+    _isTriangle: function(poly) {
+        if (!poly || poly.length < 3) return false;
+        // [v2.5.19 堅牢化] 多角形クリッピング(Sutherland-Hodgman)により発生する、
+        // 重複頂点および同一直線上（Collinear）の頂点を厳密に排除した上で三角形判定を行う。
+        
+        // 1. 連続する重複頂点を排除 (許容誤差 1e-4)
+        const unique = [];
+        for (let i = 0; i < poly.length; i++) {
+            const curr = poly[i];
+            if (unique.length === 0) {
+                unique.push(curr);
+            } else {
+                const prev = unique[unique.length - 1];
+                if (Math.hypot(curr.x - prev.x, curr.y - prev.y) > 1e-4) {
+                    unique.push(curr);
+                }
+            }
+        }
+        // 始点と終点の重複（ループ）チェック
+        if (unique.length > 2) {
+            const first = unique[0], last = unique[unique.length - 1];
+            if (Math.hypot(first.x - last.x, first.y - last.y) <= 1e-4) {
+                unique.pop();
+            }
+        }
+        if (unique.length < 3) return false;
+
+        // 2. 同一直線上の頂点（Collinear）を排除 (外積の正規化判定)
+        const nonCollinear = [];
+        for (let i = 0; i < unique.length; i++) {
+            const p1 = unique[i === 0 ? unique.length - 1 : i - 1];
+            const p2 = unique[i];
+            const p3 = unique[(i + 1) % unique.length];
+            
+            const dx1 = p2.x - p1.x, dy1 = p2.y - p1.y;
+            const dx2 = p3.x - p2.x, dy2 = p3.y - p2.y;
+            const L1 = Math.hypot(dx1, dy1), L2 = Math.hypot(dx2, dy2);
+            
+            if (L1 < 1e-4 || L2 < 1e-4) continue; // 微小エッジはスキップ
+            
+            // 外積（行列式）による回転面積
+            const cross = Math.abs(dx1 * dy2 - dy1 * dx2);
+            // sinθ による正規化判定
+            const sinTheta = cross / (L1 * L2);
+            
+            // sinθが極めて小さい（直線上）でなければ、幾何学的な頂点として採用
+            if (sinTheta > 1e-4) {
+                nonCollinear.push(p2);
+            }
+        }
+        return nonCollinear.length === 3;
+    },
     parseRebar: function(str) { 
         const m = (str || '').match(/(\d+)-D(\d+)/); 
         if (!m) return { area: 127 };
