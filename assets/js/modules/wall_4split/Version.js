@@ -195,6 +195,9 @@ window.APP_VERSION = "v2.5.19";
 window.APP_VERSION = "v2.5.20";
 // Backup of v2.5.20 taken. Now moving to v2.5.21: Tightened diagonal axis identification tolerance from 100mm down to an extremely safe 15mm within GridEngine and MathUtils. This perfectly satisfies sub-millimeter grid deviations while absolutely eliminating the risk of adjacent axis bleeding.
 window.APP_VERSION = "v2.5.21";
+// Backup of v2.5.21 taken. Now moving to v2.5.22: Fixed JSON parsing mismatch where custom walls and custom hardware failed to restore their DOM inputs due to {n,v} vs {name,val} key discrepancies. Implemented uniform restoration normalization and established active state-sync for custom hardware in PropertyController.
+window.APP_VERSION = "v2.5.22";
+
 
 
 

@@ -114,9 +114,22 @@ window.Parsers = {
         if (d.concreteFc !== undefined) s.concreteFc = d.concreteFc;
         if (d.averageGroundPressure !== undefined) s.averageGroundPressure = d.averageGroundPressure;
         
-        // 4. Custom Specs
-        if (d.customWalls) s.customWalls = d.customWalls;
-        if (d.customHws) s.customHws = d.customHws;
+        // 4. Custom Specs [v2.5.22 構造の正規化]
+        // 保存時のキー {n, v} とメモリ上のキー {name, val} の不一致をここで安全に吸収・統一します
+        if (d.customWalls && Array.isArray(d.customWalls)) {
+            s.customWalls = d.customWalls.map(cw => ({
+                name: cw.name || cw.n || "",
+                val: cw.val !== undefined ? cw.val : (cw.v !== undefined ? parseFloat(cw.v) : null)
+            }));
+        }
+        if (d.customHws && Array.isArray(d.customHws)) {
+            // AppState.js 側で利用される customHardware と、互換配列の両方に正規化して格納
+            s.customHardware = d.customHws.map(ch => ({
+                name: ch.name || ch.n || "",
+                val: ch.val !== undefined ? ch.val : (ch.v !== undefined ? parseFloat(ch.v) : null)
+            }));
+            s.customHws = s.customHardware;
+        }
         
         // 4. App State / Settings
         s.scale = d.scale || s.scale;
@@ -169,25 +182,25 @@ window.Parsers = {
             });
         }
         
-        // 8. Recreate Custom Spec DOM rows
-        if (d.customWalls && Array.isArray(d.customWalls)) {
+        // 8. Recreate Custom Spec DOM rows [v2.5.22 正規化された値によるDOM復元]
+        if (s.customWalls && Array.isArray(s.customWalls)) {
             const container = document.getElementById('custom-wall-container');
             if (container) {
-                container.innerHTML = d.customWalls.map(cw => `
+                container.innerHTML = s.customWalls.map(cw => `
                     <div class="calc-row cust-wall-row" style="margin-bottom:5px;">
-                        <input type="text" class="cust-w-n" value="${cw.name}" placeholder="名称" style="width:130px; margin:0;">
+                        <input type="text" class="cust-w-n" value="${cw.name || ''}" placeholder="名称" style="width:130px; margin:0;">
                         <input type="number" class="cust-w-v" value="${(cw.val !== undefined && cw.val !== null) ? cw.val : ''}" placeholder="倍率" step="0.1" style="margin:0;">
                     </div>
                 `).join('');
             }
         }
-        if (d.customHws && Array.isArray(d.customHws)) {
+        if (s.customHardware && Array.isArray(s.customHardware)) {
             const container = document.getElementById('custom-hw-container');
             if (container) {
-                container.innerHTML = d.customHws.map(ch => `
+                container.innerHTML = s.customHardware.map(ch => `
                     <div class="calc-row cust-hw-row" style="margin-bottom:5px;">
-                        <input type="text" class="cust-h-n" value="${ch.name}" placeholder="記号" style="width:130px; margin:0;">
-                        <input type="number" class="cust-h-v" value="${(ch.n !== undefined && ch.n !== null) ? ch.n * 5.3 : ''}" placeholder="耐力(kN)" step="0.1" style="margin:0;">
+                        <input type="text" class="cust-h-n" value="${ch.name || ''}" placeholder="記号" style="width:130px; margin:0;">
+                        <input type="number" class="cust-h-v" value="${(ch.val !== undefined && ch.val !== null) ? ch.val : ''}" placeholder="耐力(kN)" step="0.1" style="margin:0;">
                     </div>
                 `).join('');
             }

@@ -1285,6 +1285,17 @@ window.updateWallSelects = function(overrideItem = null) {
     if (typeof window.getCustomWallList === 'function') {
         state.customWalls = window.getCustomWallList();
     }
+    
+    // [v2.5.22] カスタム金物設定も DOM から AppState へアクティブ同期
+    let hwList = [];
+    document.querySelectorAll('.cust-hw-row').forEach(row => {
+        let nEl = row.querySelector('.cust-h-n');
+        let vEl = row.querySelector('.cust-h-v');
+        if (nEl && vEl && nEl.value && !isNaN(parseFloat(vEl.value))) {
+            hwList.push({ name: nEl.value, val: parseFloat(vEl.value) });
+        }
+    });
+    state.customHardware = hwList;
 
     const wallList = state.getMasterWallList().filter(w => w.type !== 'opening');
     const braceList = state.getMasterBraceList();
