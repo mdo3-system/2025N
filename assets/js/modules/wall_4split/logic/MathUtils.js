@@ -96,7 +96,7 @@ window.MathUtils = {
                 const len = Math.hypot(A, B);
                 if (len > 0) {
                     const dist = Math.abs(A * p.x + B * p.y + C) / len;
-                    if (dist < 100) return true;
+                    if (dist < 15) return true; // [v2.5.21 堅牢化] 100mmは広すぎるため隣の軸を誤認識する恐れあり。1mmの座標ズレを十分吸収できる極めて安全な「15mm」に制限。
                 }
             }
         }

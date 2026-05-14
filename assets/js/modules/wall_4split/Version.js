@@ -193,6 +193,9 @@ window.APP_VERSION = "v2.5.18";
 window.APP_VERSION = "v2.5.19";
 // Backup of v2.5.19 taken. Now moving to v2.5.20: Fixed critical retrieval bug in ElevationRenderer where diagonal axes failed to pull alpha values and cumulative axial forces due to string-matching fallback. Centralized lookups to use window.MathUtils.isPointOnAxis, ensuring sub-millimeter grid placement deviations do not impede structural propagation.
 window.APP_VERSION = "v2.5.20";
+// Backup of v2.5.20 taken. Now moving to v2.5.21: Tightened diagonal axis identification tolerance from 100mm down to an extremely safe 15mm within GridEngine and MathUtils. This perfectly satisfies sub-millimeter grid deviations while absolutely eliminating the risk of adjacent axis bleeding.
+window.APP_VERSION = "v2.5.21";
+
 
 
 
