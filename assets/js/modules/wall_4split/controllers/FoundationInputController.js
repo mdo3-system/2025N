@@ -37,13 +37,9 @@ window.FoundationInputController = {
      * 基礎モードの mousemove ハンドラ
      */
     handleMouseMove: function(mx, my, state) {
-        // [改善] バッファ座標ベースのスナップポイント取得
-        const rect = state.canvas.getBoundingClientRect();
-        const scaleX = state.canvas.width / rect.width;
-        const scaleY = state.canvas.height / rect.height;
-        const amx = mx * scaleX;
-        const amy = my * scaleY;
-        state.snapPoint = this.getFdSnapPoint(amx, amy, state);
+        // [v2.5.18 座標ズレ完全修正] handleMouseDownと同様に、物理ピクセル倍率(scaleX/Y)を掛けずに
+        // 論理CSS座標(mx, my)をそのままgetFdSnapPointに渡すように修正。
+        state.snapPoint = this.getFdSnapPoint(mx, my, state);
     },
 
     handleBeamInput: function(snap, state) {

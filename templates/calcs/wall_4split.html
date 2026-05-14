@@ -943,24 +943,6 @@
                 <div style="font-size:12px; font-weight:bold; color:#8e44ad; margin-bottom:10px;">⚙️ 基礎計算 デフォルト設定</div>
                 
                 <div class="calc-row">
-                    <label>基礎梁仕様</label>
-                    <div style="display: flex; gap: 4px; flex: 1;">
-                        <button type="button" id="btn-preset-fg1" onclick="setBeamPresetBtn('FG1')" style="flex:1; padding:5px 2px; font-size:10px; font-weight:bold; border-radius:4px; border:1px solid #8e44ad; background:#8e44ad; color:#fff; cursor:pointer; transition: all 0.2s;">FG1</button>
-                        <button type="button" id="btn-preset-fg2" onclick="setBeamPresetBtn('FG2')" style="flex:1; padding:5px 2px; font-size:10px; font-weight:bold; border-radius:4px; border:1px solid #d2b4de; background:#fff; color:#8e44ad; cursor:pointer; transition: all 0.2s;">FG2</button>
-                        <button type="button" id="btn-preset-fg3" onclick="setBeamPresetBtn('FG3')" style="flex:1; padding:5px 2px; font-size:10px; font-weight:bold; border-radius:4px; border:1px solid #d2b4de; background:#fff; color:#8e44ad; cursor:pointer; transition: all 0.2s;">FG3</button>
-                    </div>
-                </div>
-                <div class="calc-row"><label>梁 符号</label><input type="text" id="fd-beam-symbol" value="FG1" style="text-align:left;"></div>
-                <div class="calc-row"><label>梁幅 W(mm)</label><input type="number" id="fd-beam-width" value="150" step="5" min="120"></div>
-                <div class="calc-row"><label>梁成 H(mm)</label><input type="number" id="fd-beam-height" value="640" step="10" min="350"></div>
-
-                <div class="calc-row"><label>上主筋</label><input type="text" id="fd-top-rebar" value="1-D13" style="text-align:left;"></div>
-                <div class="calc-row"><label>下主筋</label><input type="text" id="fd-bot-rebar" value="1-D13" style="text-align:left;"></div>
-                <div class="calc-row"><label>ST筋</label><input type="text" id="fd-stirrup" value="1-D10@200" style="text-align:left;"></div>
-                
-                <hr style="border:0; border-top:1px dashed #d2b4de; margin:10px 0;">
-                
-                <div class="calc-row">
                     <label>スラブ仕様</label>
                     <div style="display: flex; gap: 4px; flex: 1;">
                         <button type="button" id="btn-preset-fs1" onclick="setSlabPresetBtn('FS1')" style="flex:1; padding:5px 2px; font-size:10px; font-weight:bold; border-radius:4px; border:1px solid #8e44ad; background:#8e44ad; color:#fff; cursor:pointer; transition: all 0.2s;">FS1</button>
@@ -993,6 +975,24 @@
                     <span style="font-size:10px; margin:0 2px;">@</span>
                     <input type="number" id="fd-slab-long-pitch" value="300" style="width:45px;">
                 </div>
+                
+                <hr style="border:0; border-top:1px dashed #d2b4de; margin:10px 0;">
+                
+                <div class="calc-row">
+                    <label>基礎梁仕様</label>
+                    <div style="display: flex; gap: 4px; flex: 1;">
+                        <button type="button" id="btn-preset-fg1" onclick="setBeamPresetBtn('FG1')" style="flex:1; padding:5px 2px; font-size:10px; font-weight:bold; border-radius:4px; border:1px solid #8e44ad; background:#8e44ad; color:#fff; cursor:pointer; transition: all 0.2s;">FG1</button>
+                        <button type="button" id="btn-preset-fg2" onclick="setBeamPresetBtn('FG2')" style="flex:1; padding:5px 2px; font-size:10px; font-weight:bold; border-radius:4px; border:1px solid #d2b4de; background:#fff; color:#8e44ad; cursor:pointer; transition: all 0.2s;">FG2</button>
+                        <button type="button" id="btn-preset-fg3" onclick="setBeamPresetBtn('FG3')" style="flex:1; padding:5px 2px; font-size:10px; font-weight:bold; border-radius:4px; border:1px solid #d2b4de; background:#fff; color:#8e44ad; cursor:pointer; transition: all 0.2s;">FG3</button>
+                    </div>
+                </div>
+                <div class="calc-row"><label>梁 符号</label><input type="text" id="fd-beam-symbol" value="FG1" style="text-align:left;"></div>
+                <div class="calc-row"><label>梁幅 W(mm)</label><input type="number" id="fd-beam-width" value="150" step="5" min="120"></div>
+                <div class="calc-row"><label>梁成 H(mm)</label><input type="number" id="fd-beam-height" value="640" step="10" min="350"></div>
+
+                <div class="calc-row"><label>上主筋</label><input type="text" id="fd-top-rebar" value="1-D13" style="text-align:left;"></div>
+                <div class="calc-row"><label>下主筋</label><input type="text" id="fd-bot-rebar" value="1-D13" style="text-align:left;"></div>
+                <div class="calc-row"><label>ST筋</label><input type="text" id="fd-stirrup" value="1-D10@200" style="text-align:left;"></div>
             </div>
 
             <script>
@@ -1106,7 +1106,7 @@
             </script>
             <div style="padding:10px; background:#1a0a2e; border:1px solid #6c3483; border-radius:6px; font-size:11px; color:#d7bde2; line-height:1.6;">
                 <b>💬 操作ガイド</b><br>
-                1. 基礎梁 → スラブ → 人通口の順で入力してください。<br>
+                1. スラブ → 基礎梁 → 人通口の順で入力してください。<br>
                 2. 入力後、基礎梁をクリックすると断面検定結果が表示されます。<br>
                 3. <b style="color:#e74c3c;">NGの標</b>が赤色で表示されます。
             </div>
@@ -1154,7 +1154,7 @@
     </div>
 
     <div id="right-panel">
-        <details open style="margin-bottom: 15px; border-color:#e67e22;">
+        <details style="margin-bottom: 15px; border-color:#e67e22;">
             <summary style="background:#fdebd0; color:#d35400;">📂 1. DXFデータ読込 (必須)</summary>
             <div style="padding:10px; background:#fff; font-size:11px;">
                 <div
@@ -1196,38 +1196,7 @@
             </div>
         </details>
 
-        <!-- [UI改修] 表示切替を右パネルへ移動 -->
-        <details class="layer-control" id="dxf-layer-panel" style="margin-bottom:15px; border:1px solid #bdc3c7; border-radius:4px;">
-            <summary style="background:#f1c40f; color:#333; padding:5px 8px; font-weight:bold; cursor:pointer;">👁 表示切替 (Layer Control)</summary>
-            <div style="padding:10px; font-size:11px; background:#fff; display:flex; flex-direction:column; gap:8px;">
-                <div>
-                    <div style="font-weight:bold; color:#2980b9; margin-bottom:3px; border-bottom:1px dashed #ccc;">共通</div>
-                    <label><input type="checkbox" id="v-layer-grids" checked> 通り芯・グリッド</label>
-                </div>
-                <div>
-                    <div style="font-weight:bold; color:#27ae60; margin-bottom:3px; border-bottom:1px dashed #ccc;">壁量モード用</div>
-                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:3px;">
-                        <label><input type="checkbox" id="v-layer-pillars" checked> 柱</label>
-                        <label><input type="checkbox" id="v-layer-pillarNValues" checked> N値・金物名</label>
-                        <label><input type="checkbox" id="vis-wall" checked> 耐力壁</label>
-                        <label><input type="checkbox" id="v-layer-windows" checked> 開口部</label>
-                        <label><input type="checkbox" id="vis-diaph" checked> 面積（エリア）</label>
-                        <label><input type="checkbox" id="v-layer-div4-sub" checked> 4分割枠</label>
-                    </div>
-                </div>
-                <div>
-                    <div style="font-weight:bold; color:#8e44ad; margin-bottom:3px; border-bottom:1px dashed #ccc;">基礎モード用</div>
-                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:3px;">
-                        <label><input type="checkbox" id="v-layer-f_beams" checked> 基礎梁</label>
-                        <label><input type="checkbox" id="v-layer-f_slabs" checked> スラブ</label>
-                         <label><input type="checkbox" id="v-layer-f_ext_walls" checked> 外壁線(荷重用)</label>
-                        <label><input type="checkbox" id="v-layer-f_manholes" checked> 人通口</label>
-                    </div>
-                </div>
-            </div>
-        </details>
-
-        <details open style="margin-bottom: 15px; border-color:#2980b9;">
+        <details style="margin-bottom: 15px; border-color:#2980b9;">
             <summary style="background:#e8f4f8; color:#0056b3;">⚙️ 2. 各種設定と仕様</summary>
             <div style="padding:10px; background:#fff; font-size:11px;">
                 
@@ -1343,6 +1312,37 @@
                     </div>
                 </div>
 
+            </div>
+        </details>
+
+        <!-- [UI改修] 表示切替を右パネルへ移動 -->
+        <details open class="layer-control" id="dxf-layer-panel" style="margin-bottom:15px; border:1px solid #bdc3c7; border-radius:4px;">
+            <summary style="background:#f1c40f; color:#333; padding:5px 8px; font-weight:bold; cursor:pointer;">👁 表示切替 (Layer Control)</summary>
+            <div style="padding:10px; font-size:11px; background:#fff; display:flex; flex-direction:column; gap:8px;">
+                <div>
+                    <div style="font-weight:bold; color:#2980b9; margin-bottom:3px; border-bottom:1px dashed #ccc;">共通</div>
+                    <label><input type="checkbox" id="v-layer-grids" checked> 通り芯・グリッド</label>
+                </div>
+                <div>
+                    <div style="font-weight:bold; color:#27ae60; margin-bottom:3px; border-bottom:1px dashed #ccc;">壁量モード用</div>
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:3px;">
+                        <label><input type="checkbox" id="v-layer-pillars" checked> 柱</label>
+                        <label><input type="checkbox" id="v-layer-pillarNValues" checked> N値・金物名</label>
+                        <label><input type="checkbox" id="vis-wall" checked> 耐力壁</label>
+                        <label><input type="checkbox" id="v-layer-windows" checked> 開口部</label>
+                        <label><input type="checkbox" id="vis-diaph" checked> 面積（エリア）</label>
+                        <label><input type="checkbox" id="v-layer-div4-sub" checked> 4分割枠</label>
+                    </div>
+                </div>
+                <div>
+                    <div style="font-weight:bold; color:#8e44ad; margin-bottom:3px; border-bottom:1px dashed #ccc;">基礎モード用</div>
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:3px;">
+                        <label><input type="checkbox" id="v-layer-f_beams" checked> 基礎梁</label>
+                        <label><input type="checkbox" id="v-layer-f_slabs" checked> スラブ</label>
+                         <label><input type="checkbox" id="v-layer-f_ext_walls" checked> 外壁線(荷重用)</label>
+                        <label><input type="checkbox" id="v-layer-f_manholes" checked> 人通口</label>
+                    </div>
+                </div>
             </div>
         </details>
 

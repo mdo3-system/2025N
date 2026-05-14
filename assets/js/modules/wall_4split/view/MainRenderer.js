@@ -440,7 +440,7 @@ window.MainRenderer = {
             const isVertical = Math.abs(p1.cy - p2.cy) > Math.abs(p1.cx - p2.cx);
             const offX = isVertical ? 15 : 0, offY = isVertical ? 0 : -8;
             ctx.fillStyle = isPrintMode ? 'rgba(255,255,255,0.9)' : 'rgba(30,30,30,0.8)';
-            ctx.fillRect(mX - tw/2 - offX - 3, mY + offY - 11, tw + 6, 16);
+            ctx.fillRect(mX - tw/2 + offX - 3, mY + offY - 11, tw + 6, 16);
             ctx.fillStyle = isPrintMode ? '#2c3e50' : '#f1c40f';
             ctx.fillText(mark, mX + offX, mY + offY);
         }

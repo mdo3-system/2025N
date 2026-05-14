@@ -67,7 +67,7 @@ window.AreaEngine = {
         const s = state || window.AppState;
         const areaLines = s.areaLines || [];
         const fAreas = areaLines.filter(a => a.floor === floor && (a.areaType === type || (type === 'floor' && !a.areaType)));
-        if (fAreas.length === 0) return 0;
+        if (fAreas.length === 0) return null; // [v2.5.18] Return null to align with getFloorArea and distinguish no-polygon state
         
         let total = 0;
         fAreas.forEach(area => {

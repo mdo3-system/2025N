@@ -21,27 +21,27 @@ window.AppController = {
             ['1F', '2F'].forEach(f => {
                 const lv = f.charAt(0);
                 const drawnFloor = window.AreaEngine.getFloorArea(f, state);
-                if (drawnFloor > 0) {
+                if (drawnFloor !== null) {
                     const el = document.getElementById('a-f' + lv);
                     if (el) el.value = drawnFloor.toFixed(2);
                 }
                 const drawnAttic = window.AreaEngine.getAreaByType(f, 'attic', state);
-                if (drawnAttic > 0) {
+                if (drawnAttic !== null) {
                     const el = document.getElementById('a-attic' + lv);
                     if (el) el.value = drawnAttic.toFixed(2);
                 }
                 const drawnBalcony = window.AreaEngine.getAreaByType(f, 'balcony', state);
-                if (drawnBalcony > 0) {
+                if (drawnBalcony !== null) {
                     const el = document.getElementById('a-balcony' + lv);
                     if (el) el.value = drawnBalcony.toFixed(2);
                 }
                 const drawnPorch = window.AreaEngine.getAreaByType(f, 'porch', state);
-                if (drawnPorch > 0) {
+                if (drawnPorch !== null) {
                     const el = document.getElementById('a-porch' + lv);
                     if (el) el.value = drawnPorch.toFixed(2);
                 }
                 const drawnVoid = window.AreaEngine.getAreaByType(f, 'void', state);
-                if (drawnVoid > 0) {
+                if (drawnVoid !== null) {
                     const el = document.getElementById('a-void' + lv);
                     if (el) el.value = drawnVoid.toFixed(2);
                 }
@@ -107,7 +107,8 @@ window.AppController = {
             foundationBeams: JSON.parse(JSON.stringify(state.foundationBeams || [])),
             foundationSlabs: JSON.parse(JSON.stringify(state.foundationSlabs || [])),
             exteriorWalls: JSON.parse(JSON.stringify(state.exteriorWalls || [])),
-            manholes: JSON.parse(JSON.stringify(state.manholes || []))
+            manholes: JSON.parse(JSON.stringify(state.manholes || [])),
+            config: JSON.parse(JSON.stringify(state.config || {})) // [v2.5.18] 履歴に手入力フォーム値を完全に含めて保存
         };
 
         const last = state.historyStack[state.historyStack.length - 1];
@@ -160,6 +161,50 @@ window.AppController = {
         if (data.foundationSlabs) state.foundationSlabs = JSON.parse(JSON.stringify(data.foundationSlabs));
         if (data.exteriorWalls) state.exteriorWalls = JSON.parse(JSON.stringify(data.exteriorWalls));
         if (data.manholes) state.manholes = JSON.parse(JSON.stringify(data.manholes));
+        
+        if (data.config) {
+            state.config = JSON.parse(JSON.stringify(data.config));
+            // [v2.5.18] 履歴の復元時にDOM入力欄も完全に再同期する
+            this.syncConfigToDOM(state.config);
+        }
+    },
+
+    /**
+     * [v2.5.18] 状態オブジェクトの設定をDOM入力フィールド群に反映
+     */
+    syncConfigToDOM: function(cfg) {
+        if (!cfg) return;
+        const sV = (id, val) => {
+            const el = document.getElementById(id);
+            if (el && val !== undefined && val !== null) el.value = val;
+        };
+        sV('calc-mode-select', cfg.calcMode);
+        sV('attic-height', cfg.atticHeight);
+        sV('global-triangle-mult', cfg.triangleMultiplier);
+        
+        if (cfg.floorAreas) {
+            sV('a-f1', cfg.floorAreas['1F']);
+            sV('a-attic1', cfg.floorAreas['1F_attic']);
+            sV('a-balcony1', cfg.floorAreas['1F_balcony']);
+            sV('a-porch1', cfg.floorAreas['1F_porch']);
+            sV('a-f2', cfg.floorAreas['2F']);
+            sV('a-attic2', cfg.floorAreas['2F_attic']);
+            sV('a-balcony2', cfg.floorAreas['2F_balcony']);
+            sV('a-void2', cfg.floorAreas['2F_void']);
+        }
+        if (cfg.reqWallCoeffs) {
+            if (cfg.reqWallCoeffs['1F']) {
+                sV('c-q1', cfg.reqWallCoeffs['1F'].seismic);
+                sV('c-w', cfg.reqWallCoeffs['1F'].wind);
+            }
+            if (cfg.reqWallCoeffs['2F']) sV('c-q2', cfg.reqWallCoeffs['2F'].seismic);
+        }
+        if (cfg.projectedAreas) {
+            if (cfg.projectedAreas['1F']) { sV('a-wx1', cfg.projectedAreas['1F'].x); sV('a-wy1', cfg.projectedAreas['1F'].y); }
+            if (cfg.projectedAreas['2F']) { sV('a-wx2', cfg.projectedAreas['2F'].x); sV('a-wy2', cfg.projectedAreas['2F'].y); }
+        }
+        sV('n-h1', cfg.floorHeight1F);
+        sV('n-h2', cfg.floorHeight2F);
     },
 
     /**
@@ -215,6 +260,22 @@ window.AppController = {
         if (tf) tf.className = 'tab-btn';
         if (t1) t1.className = floor === '1F' ? 'tab-btn active' : 'tab-btn';
         if (t2) t2.className = floor === '2F' ? 'tab-btn active' : 'tab-btn';
+
+        // [v2.5.18] 基礎モードから復帰した際、すべてのレイヤを自動的に強制ONにする
+        const vis = window.AppState.elementVisibility;
+        if (vis) {
+            Object.keys(vis).forEach(k => vis[k] = true);
+            vis.div4 = true; // 4分割も強制ON
+        }
+        const layerDomIds = [
+            'v-layer-grids', 'v-layer-pillars', 'v-layer-pillarNValues', 'vis-wall',
+            'v-layer-windows', 'vis-diaph', 'v-layer-f_beams', 'v-layer-f_slabs',
+            'v-layer-f_ext_walls', 'v-layer-f_manholes', 'v-layer-div4-sub', 'v-layer-div4'
+        ];
+        layerDomIds.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.checked = true;
+        });
     },
 
     /**
