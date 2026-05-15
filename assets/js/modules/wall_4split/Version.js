@@ -199,6 +199,8 @@ window.APP_VERSION = "v2.5.21";
 window.APP_VERSION = "v2.5.22";
 // Backup of v2.5.22 taken. Now moving to v2.5.23: Fully sanitized saved literal 'undefined'/'null' strings during JSON ingestion, restored active change listeners & delete button during DOM row reconstruction, and established automated sequential circular indexing (⑨ to ⑳) for custom specifications.
 window.APP_VERSION = "v2.5.23";
+// Backup of v2.5.23 taken. Now moving to v2.5.24: Resolved toFixed(2) TypeError crash inside foundation beam reports by explicitly populating missing properties (sQa_L, sQa_R, b, h) in FoundationEngine.js and applying robust optional chaining guards in html generators.
+window.APP_VERSION = "v2.5.24";
 
 
 

@@ -380,7 +380,15 @@ window.FoundationEngine = {
                     ratioQ_S: Math.max(resL.Q/resL.sQa, resR.Q/resR.sQa),
                     leftward: { ...resL, rM_left: Math.abs(resL.M_left)/(resL.sMa_top || 1), rM_right: Math.abs(resL.M_right)/(resL.sMa_bot || 1), rQ: resL.Q/(resL.sQa || 1) },
                     rightward: { ...resR, rM_left: Math.abs(resR.M_left)/(resR.sMa_top || 1), rM_right: Math.abs(resR.M_right)/(resR.sMa_bot || 1), rQ: resR.Q/(resR.sQa || 1) },
-                    cap: { ...resL, alpha_S_L: resL.alpha_S, alpha_S_R: resR.alpha_S },
+                    cap: { 
+                        ...resL, 
+                        alpha_S_L: resL.alpha_S, 
+                        alpha_S_R: resR.alpha_S,
+                        sQa_L: resL.sQa,
+                        sQa_R: resR.sQa,
+                        b: b_val,
+                        h: h_val
+                    },
                     isNG: !resL.ok || !resR.ok,
                     props: sp // 4. 個別スパン設定を永続化するために格納
                 });

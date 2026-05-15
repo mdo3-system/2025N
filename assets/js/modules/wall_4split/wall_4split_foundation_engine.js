@@ -642,13 +642,13 @@ function getFoundationBeamReportHtml(beam) {
         spans.forEach(span => {
             html += `<tr>
                 <td style="border:1px solid #aaa; padding:3px; font-weight:bold;">${span.spanName}</td>
-                <td style="border:1px solid #aaa; padding:3px; text-align:right;">${span.cap.h}</td>
+                <td style="border:1px solid #aaa; padding:3px; text-align:right;">${span.cap?.h ?? 0}</td>
                 <td style="border:1px solid #aaa; padding:3px; font-weight:bold;">${bp.topRebar || '1-D13'}</td>
-                <td style="border:1px solid #aaa; padding:3px; text-align:right;">${(span.cap.lMa_top * 1e6 / 195 / span.cap.j || 0).toFixed(1)}</td>
-                <td style="border:1px solid #aaa; padding:3px; text-align:right; font-weight:bold;">${span.cap.sMa_top.toFixed(2)}</td>
+                <td style="border:1px solid #aaa; padding:3px; text-align:right;">${((span.cap?.lMa_top ?? 0) * 1e6 / 195 / (span.cap?.j || 1) || 0).toFixed(1)}</td>
+                <td style="border:1px solid #aaa; padding:3px; text-align:right; font-weight:bold;">${(span.cap?.sMa_top ?? 0).toFixed(2)}</td>
                 <td style="border:1px solid #aaa; padding:3px; font-weight:bold;">${bp.bottomRebar || '1-D13'}</td>
-                <td style="border:1px solid #aaa; padding:3px; text-align:right;">${(span.cap.lMa_bot * 1e6 / 195 / span.cap.j || 0).toFixed(1)}</td>
-                <td style="border:1px solid #aaa; padding:3px; text-align:right; font-weight:bold;">${span.cap.lMa_bot.toFixed(2)}</td>
+                <td style="border:1px solid #aaa; padding:3px; text-align:right;">${((span.cap?.lMa_bot ?? 0) * 1e6 / 195 / (span.cap?.j || 1) || 0).toFixed(1)}</td>
+                <td style="border:1px solid #aaa; padding:3px; text-align:right; font-weight:bold;">${(span.cap?.lMa_bot ?? 0).toFixed(2)}</td>
             </tr>`;
         });
         html += `</tbody></table>`;
@@ -671,12 +671,12 @@ function getFoundationBeamReportHtml(beam) {
         spans.forEach(span => {
             html += `<tr>
                 <td style="border:1px solid #aaa; padding:3px; font-weight:bold;">${span.spanName}</td>
-                <td style="border:1px solid #aaa; padding:3px; text-align:right;">${span.cap.b}</td>
+                <td style="border:1px solid #aaa; padding:3px; text-align:right;">${span.cap?.b ?? 0}</td>
                 <td style="border:1px solid #aaa; padding:3px; font-weight:bold;">${bp.stirrup || '1-D10@200'}</td>
-                <td style="border:1px solid #aaa; padding:3px; text-align:right;">${span.cap.pw.toFixed(5)}</td>
-                <td style="border:1px solid #aaa; padding:3px; text-align:right; font-weight:bold;">${span.cap.lQa.toFixed(2)}</td>
-                <td style="border:1px solid #aaa; padding:3px; text-align:right; font-weight:bold;">${span.cap.sQa_L.toFixed(2)}</td>
-                <td style="border:1px solid #aaa; padding:3px; text-align:right; font-weight:bold;">${span.cap.sQa_R.toFixed(2)}</td>
+                <td style="border:1px solid #aaa; padding:3px; text-align:right;">${(span.cap?.pw ?? 0).toFixed(5)}</td>
+                <td style="border:1px solid #aaa; padding:3px; text-align:right; font-weight:bold;">${(span.cap?.lQa ?? 0).toFixed(2)}</td>
+                <td style="border:1px solid #aaa; padding:3px; text-align:right; font-weight:bold;">${(span.cap?.sQa_L ?? 0).toFixed(2)}</td>
+                <td style="border:1px solid #aaa; padding:3px; text-align:right; font-weight:bold;">${(span.cap?.sQa_R ?? 0).toFixed(2)}</td>
             </tr>`;
         });
         html += `</tbody></table>`;
@@ -701,12 +701,12 @@ function getFoundationBeamReportHtml(beam) {
             const badge = span.isNG ? `<span style="color:red; font-weight:bold;">NG</span>` : `<span style="color:green; font-weight:bold;">OK</span>`;
             html += `<tr>
                 <td style="border:1px solid #aaa; padding:3px; font-weight:bold;">${span.spanName}</td>
-                <td style="border:1px solid #aaa; padding:3px; text-align:right; font-weight:bold; color:${span.rM_L > 1.0 ? 'red' : 'inherit'}">${span.rM_L.toFixed(2)}</td>
-                <td style="border:1px solid #aaa; padding:3px; text-align:right; font-weight:bold; color:${span.rQ_L > 1.0 ? 'red' : 'inherit'}">${span.rQ_L.toFixed(2)}</td>
-                <td style="border:1px solid #aaa; padding:3px; text-align:right; font-weight:bold; color:${Math.max(span.leftward.rM_left, span.leftward.rM_right) > 1.0 ? 'red' : 'inherit'}">${Math.max(span.leftward.rM_left, span.leftward.rM_right).toFixed(2)}</td>
-                <td style="border:1px solid #aaa; padding:3px; text-align:right; font-weight:bold; color:${span.leftward.rQ > 1.0 ? 'red' : 'inherit'}">${span.leftward.rQ.toFixed(2)}</td>
-                <td style="border:1px solid #aaa; padding:3px; text-align:right; font-weight:bold; color:${Math.max(span.rightward.rM_left, span.rightward.rM_right) > 1.0 ? 'red' : 'inherit'}">${Math.max(span.rightward.rM_left, span.rightward.rM_right).toFixed(2)}</td>
-                <td style="border:1px solid #aaa; padding:3px; text-align:right; font-weight:bold; color:${span.rightward.rQ > 1.0 ? 'red' : 'inherit'}">${span.rightward.rQ.toFixed(2)}</td>
+                <td style="border:1px solid #aaa; padding:3px; text-align:right; font-weight:bold; color:${(span.rM_L ?? 0) > 1.0 ? 'red' : 'inherit'}">${(span.rM_L ?? 0).toFixed(2)}</td>
+                <td style="border:1px solid #aaa; padding:3px; text-align:right; font-weight:bold; color:${(span.rQ_L ?? 0) > 1.0 ? 'red' : 'inherit'}">${(span.rQ_L ?? 0).toFixed(2)}</td>
+                <td style="border:1px solid #aaa; padding:3px; text-align:right; font-weight:bold; color:${Math.max((span.leftward?.rM_left ?? 0), (span.leftward?.rM_right ?? 0)) > 1.0 ? 'red' : 'inherit'}">${Math.max((span.leftward?.rM_left ?? 0), (span.leftward?.rM_right ?? 0)).toFixed(2)}</td>
+                <td style="border:1px solid #aaa; padding:3px; text-align:right; font-weight:bold; color:${(span.leftward?.rQ ?? 0) > 1.0 ? 'red' : 'inherit'}">${(span.leftward?.rQ ?? 0).toFixed(2)}</td>
+                <td style="border:1px solid #aaa; padding:3px; text-align:right; font-weight:bold; color:${Math.max((span.rightward?.rM_left ?? 0), (span.rightward?.rM_right ?? 0)) > 1.0 ? 'red' : 'inherit'}">${Math.max((span.rightward?.rM_left ?? 0), (span.rightward?.rM_right ?? 0)).toFixed(2)}</td>
+                <td style="border:1px solid #aaa; padding:3px; text-align:right; font-weight:bold; color:${(span.rightward?.rQ ?? 0) > 1.0 ? 'red' : 'inherit'}">${(span.rightward?.rQ ?? 0).toFixed(2)}</td>
                 <td style="border:1px solid #aaa; padding:3px; text-align:center;">${badge}</td>
             </tr>`;
         });
