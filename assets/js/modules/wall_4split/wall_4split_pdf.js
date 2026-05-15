@@ -417,7 +417,7 @@ window.buildWallLegendData = function () {
     </tr>`;
         sortedNames.forEach(name => {
             // 例: "① 構造用合板 (大壁) N50@150 2.5倍" または "①構造用面材 大壁・受材共 N50＠150 (2.5倍)" を解体
-            let parts = name.match(/^(①|②|③|④|⑤|⑥|⑦|⑧|⑨|⑩|\[任意\])\s*(.*?)\s*\(?([\d.]+\s*倍)\)?$/);
+            let parts = name.match(/^(①|②|③|④|⑤|⑥|⑦|⑧|⑨|⑩|⑪|⑫|⑬|⑭|⑮|⑯|⑰|⑱|⑲|⑳|\[任意\])\s*(.*?)\s*\(?([\d.]+\s*倍)\)?$/);
             if (parts) {
                 htmlStr += `<tr>
             <td style="border:1px solid #333; padding:4px; text-align:center;">${parts[1]}</td>

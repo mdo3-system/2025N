@@ -116,18 +116,34 @@ window.Parsers = {
         
         // 4. Custom Specs [v2.5.22 構造の正規化]
         // 保存時のキー {n, v} とメモリ上のキー {name, val} の不一致をここで安全に吸収・統一します
+        // [v2.5.23] 過去のバグでJSONに保存された "undefined", "null", "NaN" という文字列ゴミを完全に空文字へクレンジング
+        const sanitizeLegacyStr = (str) => {
+            if (str === undefined || str === null) return "";
+            const sStr = String(str).trim();
+            if (sStr === "undefined" || sStr === "null" || sStr === "NaN") return "";
+            return sStr;
+        };
+
         if (d.customWalls && Array.isArray(d.customWalls)) {
-            s.customWalls = d.customWalls.map(cw => ({
-                name: cw.name || cw.n || "",
-                val: cw.val !== undefined ? cw.val : (cw.v !== undefined ? parseFloat(cw.v) : null)
-            }));
+            s.customWalls = d.customWalls.map(cw => {
+                const rawName = cw.name !== undefined ? cw.name : (cw.n !== undefined ? cw.n : "");
+                const rawVal = cw.val !== undefined ? cw.val : (cw.v !== undefined ? parseFloat(cw.v) : null);
+                return {
+                    name: sanitizeLegacyStr(rawName),
+                    val: isNaN(rawVal) || rawVal === null ? null : rawVal
+                };
+            });
         }
         if (d.customHws && Array.isArray(d.customHws)) {
             // AppState.js 側で利用される customHardware と、互換配列の両方に正規化して格納
-            s.customHardware = d.customHws.map(ch => ({
-                name: ch.name || ch.n || "",
-                val: ch.val !== undefined ? ch.val : (ch.v !== undefined ? parseFloat(ch.v) : null)
-            }));
+            s.customHardware = d.customHws.map(ch => {
+                const rawName = ch.name !== undefined ? ch.name : (ch.n !== undefined ? ch.n : "");
+                const rawVal = ch.val !== undefined ? ch.val : (ch.v !== undefined ? parseFloat(ch.v) : null);
+                return {
+                    name: sanitizeLegacyStr(rawName),
+                    val: isNaN(rawVal) || rawVal === null ? null : rawVal
+                };
+            });
             s.customHws = s.customHardware;
         }
         
@@ -183,13 +199,15 @@ window.Parsers = {
         }
         
         // 8. Recreate Custom Spec DOM rows [v2.5.22 正規化された値によるDOM復元]
+        // [v2.5.23] UIView.js の実装に合わせ、変更リスナー onchange と ❌削除ボタンを完全復元
         if (s.customWalls && Array.isArray(s.customWalls)) {
             const container = document.getElementById('custom-wall-container');
             if (container) {
                 container.innerHTML = s.customWalls.map(cw => `
                     <div class="calc-row cust-wall-row" style="margin-bottom:5px;">
-                        <input type="text" class="cust-w-n" value="${cw.name || ''}" placeholder="名称" style="width:130px; margin:0;">
-                        <input type="number" class="cust-w-v" value="${(cw.val !== undefined && cw.val !== null) ? cw.val : ''}" placeholder="倍率" step="0.1" style="margin:0;">
+                        <input type="text" class="cust-w-n" value="${cw.name || ''}" placeholder="名称" style="width:130px; margin:0;" onchange="window.updateWallSelects()">
+                        <input type="number" class="cust-w-v" value="${(cw.val !== undefined && cw.val !== null) ? cw.val : ''}" placeholder="倍率" step="0.1" style="width:60px; margin:0;" onchange="window.updateWallSelects()">
+                        <button onclick="this.parentElement.remove(); window.updateWallSelects();" style="border:none; background:none; cursor:pointer;">❌</button>
                     </div>
                 `).join('');
             }
@@ -199,8 +217,9 @@ window.Parsers = {
             if (container) {
                 container.innerHTML = s.customHardware.map(ch => `
                     <div class="calc-row cust-hw-row" style="margin-bottom:5px;">
-                        <input type="text" class="cust-h-n" value="${ch.name || ''}" placeholder="記号" style="width:130px; margin:0;">
-                        <input type="number" class="cust-h-v" value="${(ch.val !== undefined && ch.val !== null) ? ch.val : ''}" placeholder="耐力(kN)" step="0.1" style="margin:0;">
+                        <input type="text" class="cust-h-n" value="${ch.name || ''}" placeholder="記号" style="width:130px; margin:0;" onchange="window.updateWallSelects()">
+                        <input type="number" class="cust-h-v" value="${(ch.val !== undefined && ch.val !== null) ? ch.val : ''}" placeholder="耐力(kN)" step="0.1" style="width:60px; margin:0;" onchange="window.updateWallSelects()">
+                        <button onclick="this.parentElement.remove(); window.updateWallSelects();" style="border:none; background:none; cursor:pointer;">❌</button>
                     </div>
                 `).join('');
             }

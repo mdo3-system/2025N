@@ -1291,8 +1291,11 @@ window.updateWallSelects = function(overrideItem = null) {
     document.querySelectorAll('.cust-hw-row').forEach(row => {
         let nEl = row.querySelector('.cust-h-n');
         let vEl = row.querySelector('.cust-h-v');
-        if (nEl && vEl && nEl.value && !isNaN(parseFloat(vEl.value))) {
-            hwList.push({ name: nEl.value, val: parseFloat(vEl.value) });
+        if (nEl && vEl) {
+            const rawN = (nEl.value || "").trim();
+            if (rawN && rawN !== "undefined" && rawN !== "null" && !isNaN(parseFloat(vEl.value))) {
+                hwList.push({ name: rawN, val: parseFloat(vEl.value) });
+            }
         }
     });
     state.customHardware = hwList;

@@ -206,10 +206,19 @@ window.AppState = {
         const custom = this.customWalls.map((cw, idx) => {
             // IDを名前ベースで安定化させる（インデックスだと行の削除・挿入でズレるため）
             const safeName = (cw.name || "").replace(/\s+/g, "_");
+            
+            // [v2.5.23] カスタム仕様に対して自動で丸数字（⑨〜⑳）を採番
+            const circles = ["①", "②", "③", "④", "⑤", "⑥", "⑦", "⑧", "⑨", "⑩", "⑪", "⑫", "⑬", "⑭", "⑮", "⑯", "⑰", "⑱", "⑲", "⑳"];
+            const prefix = circles[8 + idx] || "[任意]"; // ⑨以降を割り当て
+            
+            // ユーザー名自体がすでに丸数字から始まっている場合は二重付与を防ぐ
+            const hasCirclePrefix = cw.name && circles.some(c => cw.name.startsWith(c));
+            const textLabel = hasCirclePrefix ? cw.name : `${prefix} ${cw.name || ''}`;
+            
             return {
                 id: cw.id || `cust-w-${safeName}-${cw.val}`,
                 val: cw.val,
-                text: `[任意] ${cw.name} (${cw.val}倍)`
+                text: `${textLabel.trim()} (${cw.val}倍)`
             };
         });
         return [...base, ...custom];

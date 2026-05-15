@@ -32,8 +32,11 @@ function getCustomWallList() {
     document.querySelectorAll('.cust-wall-row').forEach(row => {
         let nEl = row.querySelector('.cust-w-n');
         let vEl = row.querySelector('.cust-w-v');
-        if (nEl && vEl && nEl.value && !isNaN(parseFloat(vEl.value))) {
-            list.push({ name: nEl.value, val: parseFloat(vEl.value) });
+        if (nEl && vEl) {
+            const rawN = (nEl.value || "").trim();
+            if (rawN && rawN !== "undefined" && rawN !== "null" && !isNaN(parseFloat(vEl.value))) {
+                list.push({ name: rawN, val: parseFloat(vEl.value) });
+            }
         }
     });
     return list;

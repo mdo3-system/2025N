@@ -197,6 +197,8 @@ window.APP_VERSION = "v2.5.20";
 window.APP_VERSION = "v2.5.21";
 // Backup of v2.5.21 taken. Now moving to v2.5.22: Fixed JSON parsing mismatch where custom walls and custom hardware failed to restore their DOM inputs due to {n,v} vs {name,val} key discrepancies. Implemented uniform restoration normalization and established active state-sync for custom hardware in PropertyController.
 window.APP_VERSION = "v2.5.22";
+// Backup of v2.5.22 taken. Now moving to v2.5.23: Fully sanitized saved literal 'undefined'/'null' strings during JSON ingestion, restored active change listeners & delete button during DOM row reconstruction, and established automated sequential circular indexing (⑨ to ⑳) for custom specifications.
+window.APP_VERSION = "v2.5.23";
 
 
 
