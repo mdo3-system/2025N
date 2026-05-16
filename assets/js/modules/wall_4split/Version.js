@@ -203,6 +203,8 @@ window.APP_VERSION = "v2.5.23";
 window.APP_VERSION = "v2.5.24";
 // Backup of v2.5.24 taken. Now moving to v2.5.25: Clarified UI text in WallEngine.js regarding area additions under standard law mode to avoid misinterpreting that attic area was excluded.
 window.APP_VERSION = "v2.5.25";
+// Backup of v2.5.25 taken. Now moving to v2.5.26: Restored 4-division bounds, shaded zones, dashed boundaries, and dimension line render functionality on high-res plan images in DocumentRenderer.js for bulk output report.
+window.APP_VERSION = "v2.5.26";
 
 
 

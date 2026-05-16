@@ -210,6 +210,11 @@ window.DocumentRenderer = {
             }
             this.drawAreaPolygons(ctx, state.areaLines.filter(a => a.floor === floor), toC, { showAreaDims, dimScale });
 
+            // 3.5 Draw 4-Division bounds if divMode is present
+            if (divMode) {
+                this.draw4DivisionOnPlan(ctx, floor, divMode, toC, sfFinal);
+            }
+
             // 4. Draw Structural Elements
             this.drawStructuralElements(ctx, floor, mode, toC, isPrint);
 
@@ -378,6 +383,206 @@ window.DocumentRenderer = {
                 }
             });
         });
+        ctx.restore();
+    },
+
+    draw4DivisionOnPlan: function(ctx, floor, divMode, toC, sfFinal) {
+        const state = window.AppState;
+        const b = window.GridEngine ? window.GridEngine.get4DivisionBounds(floor, state) : null;
+        if (!b) return;
+
+        ctx.save();
+
+        const drawRect = (bb, cc) => {
+            const p1 = toC(bb.minX, bb.minY);
+            const p2 = toC(bb.maxX, bb.maxY);
+            if (p1.cx != null && p2.cx != null) {
+                const w = p2.cx - p1.cx;
+                const h = p1.cy - p2.cy;
+                if (w > 0 && h > 0) {
+                    ctx.fillStyle = cc;
+                    ctx.fillRect(p1.cx, p2.cy, w, h);
+                }
+            }
+        };
+
+        const drawDashedBoundaryLine = (x1, y1, x2, y2, color) => {
+            const p1 = toC(x1, y1);
+            const p2 = toC(x2, y2);
+            ctx.save();
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 3;
+            ctx.setLineDash([8, 8]);
+            ctx.beginPath();
+            ctx.moveTo(p1.cx, p1.cy);
+            ctx.lineTo(p2.cx, p2.cy);
+            ctx.stroke();
+            ctx.restore();
+        };
+
+        const drawTick = (p) => {
+            ctx.beginPath();
+            ctx.moveTo(p.cx - 6, p.cy + 6);
+            ctx.lineTo(p.cx + 6, p.cy - 6);
+            ctx.stroke();
+        };
+
+        const drawDimensionLine = (p1, p2, valueText) => {
+            ctx.save();
+            ctx.strokeStyle = '#2c3e50';
+            ctx.lineWidth = 1.5;
+            ctx.fillStyle = '#2c3e50';
+            ctx.font = 'bold 20px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+
+            ctx.beginPath();
+            ctx.moveTo(p1.cx, p1.cy);
+            ctx.lineTo(p2.cx, p2.cy);
+            ctx.stroke();
+
+            drawTick(p1);
+            drawTick(p2);
+
+            const mx = (p1.cx + p2.cx) / 2;
+            const my = (p1.cy + p2.cy) / 2;
+
+            ctx.save();
+            ctx.fillStyle = '#ffffff';
+            const txtW = ctx.measureText(valueText).width;
+            ctx.fillRect(mx - txtW/2 - 4, my - 12, txtW + 8, 24);
+            ctx.restore();
+
+            ctx.fillText(valueText, mx, my);
+            ctx.restore();
+        };
+
+        const drawExtensionLine = (startP, endP) => {
+            ctx.save();
+            ctx.strokeStyle = '#7f8c8d';
+            ctx.lineWidth = 1.0;
+            ctx.setLineDash([4, 4]);
+            ctx.beginPath();
+            ctx.moveTo(startP.cx, startP.cy);
+            ctx.lineTo(endP.cx, endP.cy);
+            ctx.stroke();
+            ctx.restore();
+        };
+
+        const offset1 = 80;
+        const offset2 = 130;
+
+        if (divMode === 'X') {
+            // X方向4分割: Y方向(高さ)を4分割する (上側と下側の1/4側端部)
+            // 側端部を薄い赤/ピンクで塗りつぶし
+            drawRect({ minX: b.minX, maxX: b.maxX, minY: b.yLineT, maxY: b.maxY }, 'rgba(231,76,60,0.12)'); // 上側側端部
+            drawRect({ minX: b.minX, maxX: b.maxX, minY: b.minY, maxY: b.yLineB }, 'rgba(231,76,60,0.12)'); // 下側側端部
+
+            // 境界線を赤色のダッシュ線で描画
+            drawDashedBoundaryLine(b.minX, b.yLineT, b.maxX, b.yLineT, '#e74c3c');
+            drawDashedBoundaryLine(b.minX, b.yLineB, b.maxX, b.yLineB, '#e74c3c');
+
+            // 寸法線の描画 (左側へオフセット)
+            const cx_d1 = toC(b.minX, b.minY).cx - offset1;
+            const cx_d2 = toC(b.minX, b.minY).cx - offset2;
+
+            const pMinY_d1 = { cx: cx_d1, cy: toC(b.minX, b.minY).cy };
+            const pLineB_d1 = { cx: cx_d1, cy: toC(b.minX, b.yLineB).cy };
+            const pLineT_d1 = { cx: cx_d1, cy: toC(b.minX, b.yLineT).cy };
+            const pMaxY_d1 = { cx: cx_d1, cy: toC(b.minX, b.maxY).cy };
+
+            const pMinY_d2 = { cx: cx_d2, cy: toC(b.minX, b.minY).cy };
+            const pMaxY_d2 = { cx: cx_d2, cy: toC(b.minX, b.maxY).cy };
+
+            // 引出線
+            drawExtensionLine(toC(b.minX, b.minY), pMinY_d2);
+            drawExtensionLine(toC(b.minX, b.yLineB), pLineB_d1);
+            drawExtensionLine(toC(b.minX, b.yLineT), pLineT_d1);
+            drawExtensionLine(toC(b.minX, b.maxY), pMaxY_d2);
+
+            // 寸法線とテキスト
+            const valB = Math.round(b.yLineB - b.minY);
+            const valM = Math.round(b.yLineT - b.yLineB);
+            const valT = Math.round(b.maxY - b.yLineT);
+            const valTotal = Math.round(b.maxY - b.minY);
+
+            drawDimensionLine(pMinY_d1, pLineB_d1, `${valB}`);
+            drawDimensionLine(pLineB_d1, pLineT_d1, `${valM}`);
+            drawDimensionLine(pLineT_d1, pMaxY_d1, `${valT}`);
+            drawDimensionLine(pMinY_d2, pMaxY_d2, `${valTotal}`);
+
+            // ゾーンのテキストラベル
+            ctx.fillStyle = '#c0392b';
+            ctx.font = 'bold 22px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+
+            const pTopText = toC((b.minX + b.maxX)/2, (b.yLineT + b.maxY)/2);
+            ctx.fillText("X方向 1/4 側端部 (上側/北)", pTopText.cx, pTopText.cy);
+
+            const pBotText = toC((b.minX + b.maxX)/2, (b.minY + b.yLineB)/2);
+            ctx.fillText("X方向 1/4 側端部 (下側/南)", pBotText.cx, pBotText.cy);
+
+            ctx.fillStyle = '#7f8c8d';
+            const pMidText = toC((b.minX + b.maxX)/2, (b.yLineB + b.yLineT)/2);
+            ctx.fillText("1/2 中央部", pMidText.cx, pMidText.cy);
+
+        } else if (divMode === 'Y') {
+            // Y方向4分割: X方向(幅)を4分割する (左側と右側の1/4側端部)
+            // 側端部を薄い青で塗りつぶし
+            drawRect({ minX: b.minX, maxX: b.xLineL, minY: b.minY, maxY: b.maxY }, 'rgba(52,152,219,0.12)'); // 左側側端部
+            drawRect({ minX: b.xLineR, maxX: b.maxX, minY: b.minY, maxY: b.maxY }, 'rgba(52,152,219,0.12)'); // 右側側端部
+
+            // 境界線を青色のダッシュ線で描画
+            drawDashedBoundaryLine(b.xLineL, b.minY, b.xLineL, b.maxY, '#2980b9');
+            drawDashedBoundaryLine(b.xLineR, b.minY, b.xLineR, b.maxY, '#2980b9');
+
+            // 寸法線の描画 (上側へオフセット)
+            const cy_d1 = toC(b.minX, b.maxY).cy - offset1;
+            const cy_d2 = toC(b.minX, b.maxY).cy - offset2;
+
+            const pMinX_d1 = { cx: toC(b.minX, b.maxY).cx, cy: cy_d1 };
+            const pLineL_d1 = { cx: toC(b.xLineL, b.maxY).cx, cy: cy_d1 };
+            const pLineR_d1 = { cx: toC(b.xLineR, b.maxY).cx, cy: cy_d1 };
+            const pMaxX_d1 = { cx: toC(b.maxX, b.maxY).cx, cy: cy_d1 };
+
+            const pMinX_d2 = { cx: toC(b.minX, b.maxY).cx, cy: cy_d2 };
+            const pMaxX_d2 = { cx: toC(b.maxX, b.maxY).cx, cy: cy_d2 };
+
+            // 引出線
+            drawExtensionLine(toC(b.minX, b.maxY), pMinX_d2);
+            drawExtensionLine(toC(b.xLineL, b.maxY), pLineL_d1);
+            drawExtensionLine(toC(b.xLineR, b.maxY), pLineR_d1);
+            drawExtensionLine(toC(b.maxX, b.maxY), pMaxX_d2);
+
+            // 寸法線とテキスト
+            const valL = Math.round(b.xLineL - b.minX);
+            const valM = Math.round(b.xLineR - b.xLineL);
+            const valR = Math.round(b.maxX - b.xLineR);
+            const valTotal = Math.round(b.maxX - b.minX);
+
+            drawDimensionLine(pMinX_d1, pLineL_d1, `${valL}`);
+            drawDimensionLine(pLineL_d1, pLineR_d1, `${valM}`);
+            drawDimensionLine(pLineR_d1, pMaxX_d1, `${valR}`);
+            drawDimensionLine(pMinX_d2, pMaxX_d2, `${valTotal}`);
+
+            // ゾーンのテキストラベル
+            ctx.fillStyle = '#2980b9';
+            ctx.font = 'bold 22px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+
+            const pLeftText = toC((b.minX + b.xLineL)/2, (b.minY + b.maxY)/2);
+            ctx.fillText("Y方向 1/4 側端部 (左側/西)", pLeftText.cx, pLeftText.cy);
+
+            const pRightText = toC((b.xLineR + b.maxX)/2, (b.minY + b.maxY)/2);
+            ctx.fillText("Y方向 1/4 側端部 (右側/東)", pRightText.cx, pRightText.cy);
+
+            ctx.fillStyle = '#7f8c8d';
+            const pMidText = toC((b.xLineL + b.xLineR)/2, (b.minY + b.maxY)/2);
+            ctx.fillText("1/2 中央部", pMidText.cx, pMidText.cy);
+        }
+
         ctx.restore();
     }
 };
