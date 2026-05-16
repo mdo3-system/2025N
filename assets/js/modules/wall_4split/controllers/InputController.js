@@ -149,11 +149,11 @@ window.InputController = {
         // 1. Configuration & Area Basis (Standardized in v2.3.24)
         const globalIds = [
             'calc-mode-select', 'attic-height', 'global-fc', 'global-triangle-mult',
-            'prop-ext-wall', 'prop-roof-type', 'prop-solar', 'prop-ceiling-ins', 'prop-wall-ins',
+            'prop-ext-wall', 'prop-roof-type', 'prop-eaves-len', 'prop-solar', 'prop-ceiling-ins', 'prop-wall-ins',
             'n-h1', 'n-h2', 'p-d1', 'p-d2', 'c-w'
         ];
         globalIds.forEach(id => {
-            const event = (id.includes('mult') || id.includes('ins') || id.includes('h') || id.includes('d')) ? 'input' : 'change';
+            const event = (id.includes('mult') || id.includes('ins') || id.includes('h') || id.includes('d') || id.includes('len')) ? 'input' : 'change';
             bindId(id, event);
         });
 

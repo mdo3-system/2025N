@@ -128,6 +128,7 @@ window.MathUtils = {
             if (id === 'prop-solar') return c.weights.solar;
             if (id === 'prop-ceiling-ins') return c.weights.ceilingIns;
             if (id === 'prop-wall-ins') return c.weights.wallIns;
+            if (id === 'prop-eaves-len') return c.eavesLen;
 
             // Area Mappings
             if (id === 'a-f1') return c.floorAreas['1F'];

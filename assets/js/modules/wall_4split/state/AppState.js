@@ -34,6 +34,7 @@ window.AppState = {
         pillarDepth1F: 105,      // mm
         pillarDepth2F: 105,      // mm
         triangleMultiplier: 1.33,
+        eavesLen: 300,           // mm
         weights: {
             roof: 500,           // N/m2
             solar: 0,            // N/m2
@@ -94,6 +95,7 @@ window.AppState = {
         c.triangleMultiplier = getNum('global-triangle-mult', 1.33);
         
         c.weights.roof = getNum('prop-roof-type', 500);
+        c.eavesLen = getNum('prop-eaves-len', 300);
         c.weights.solar = getNum('prop-solar', 0);
         c.weights.ceilingIns = getNum('prop-ceiling-ins', 100);
         c.weights.wallIns = getNum('prop-wall-ins', 70);

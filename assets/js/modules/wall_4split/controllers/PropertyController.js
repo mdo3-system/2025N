@@ -1403,8 +1403,13 @@ window.getFoundationSlabReportHtml = function(slab) {
     html += `<div>・スラブ天端高 dt: <b>${slab.props?.slabTopHeight || 50}</b> mm</div>`;
     html += `<div>・建物荷重(仕様合計): <b>${wTotal.toFixed(2)}</b> kN/㎡</div>`;
     html += `<div>　(屋根:${wR.toFixed(2)} + 外壁:${wW.toFixed(2)} + 骨組:${wF.toFixed(2)})</div>`;
+    html += `<div>・1階床負担面積: <b>${fmt(dl.sArea1F || 0, 3)}</b> ㎡</div>`;
+    html += `<div>・2階床負担面積: <b>${fmt(dl.sArea2F || 0, 3)}</b> ㎡</div>`;
+    html += `<div>・屋根投影負担面積: <b>${fmt(dl.sAreaRoof || 0, 3)}</b> ㎡</div>`;
     html += `<div>・床積載+仕上: <b>1.74</b> kN/㎡</div>`;
     html += `</div>`;
+    const eaves = (window.AppState.config?.eavesLen !== undefined) ? window.AppState.config.eavesLen : 300;
+    html += `<div style="margin-top:4px; border-top:1px dashed #cbd5e1; padding-top:4px; font-size:9px; color:#4b5563;">・軒の出寸法: <b>${eaves}</b> mm (最外周オフセットによる統合屋根投影面積)</div>`;
     html += `<div style="margin-top:4px; color:#666; font-size:9px;">※建物軸力 ΣN = 各階の負担面積合計 × 建物荷重(仕様合計) に基づき、スラブ上の1階・2階面積から算出</div>`;
     html += `<div style="margin-top:2px; color:#666; font-size:9px;">※立上り自重には、スラブ境界にある<b>内部・外周全ての基礎梁</b>の重量が含まれます</div>`;
     html += `</div>`;

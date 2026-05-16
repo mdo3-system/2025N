@@ -36,7 +36,12 @@ window.FoundationEngine = {
         const s = state;
         const a1 = window.AreaEngine ? window.AreaEngine.getFloorArea('1F', s) : 0;
         const a2 = window.AreaEngine ? window.AreaEngine.getFloorArea('2F', s) : 0;
-        const aRoof = Math.max(a1, a2);
+        
+        const roofPoly = this._getCombinedRoofPolygon(s);
+        const M = window.MathUtils;
+        let roofArea_m2 = roofPoly.length >= 3 ? M.polygonArea(roofPoly) / 1000000 : 0;
+        const aRoof = roofArea_m2 > 0 ? roofArea_m2 : Math.max(a1, a2);
+        
         const wR = ((s.config?.weights?.roof || 500) + (s.config?.weights?.solar || 0) + (s.config?.weights?.ceilingIns || 100)) / 1000;
         const wF = 2.4; 
         const wW = ((s.config?.weights?.exteriorWall || 600) + (s.config?.weights?.wallIns || 70)) / 1000;
@@ -124,10 +129,19 @@ window.FoundationEngine = {
             };
             const poly = slab.vertices.map(v => ({ x: v.x, y: v.y }));
             const sArea1F = intersectArea(poly, a1Polys), sArea2F = intersectArea(poly, a2Polys);
+            
+            const roofPoly = this._getCombinedRoofPolygon(s);
+            let sAreaRoof = 0;
+            if (roofPoly && roofPoly.length >= 3) {
+                sAreaRoof = intersectArea(poly, [{ vertices: roofPoly }]);
+            } else {
+                sAreaRoof = Math.max(sArea1F, sArea2F);
+            }
+            
             const wR = ((s.config?.weights?.roof || 500) + (s.config?.weights?.solar || 0) + (s.config?.weights?.ceilingIns || 100)) / 1000;
             const wW = ((s.config?.weights?.exteriorWall || 600) + (s.config?.weights?.wallIns || 70)) / 1000;
             const wF = 2.4;
-            const axial_kN = (sArea1F * (wF + wW)) + (sArea2F * wF) + (Math.max(sArea1F, sArea2F) * wR);
+            const axial_kN = (sArea1F * (wF + wW)) + (sArea2F * wF) + (sAreaRoof * wR);
             let stem_kN = 0; 
             
             beams.forEach(b => {
@@ -193,7 +207,7 @@ window.FoundationEngine = {
                 const Mx_end = c.max * qTotal * (lx ** 2), My_end = c.may * qTotal * (lx ** 2) * Math.min(1.0, 1.5 / (ly/lx || 1));
                 slab.fdStress = { qTotal, axialPressure: axial_kN/area, stemPressure: stem_kN/area, totalAxial_kN: axial_kN, stemWeight_kN: stem_kN, floorLoad: 1.740, deadLoad: qTotal - 1.740, area, supportName: slab.props.support, lx, ly, Mx_center, Mx_end, My_center, My_end, Ma_short, Ma_long, ratioShort: Math.max(Mx_center, Mx_end) / (Ma_short || 1), ratioLong: Math.max(My_center, My_end) / (Ma_long || 1), isNG: Math.max(Mx_center, Mx_end) > Ma_short || Math.max(My_center, My_end) > Ma_long };
             }
-            slab.fdStress.detailedLoads = { wR, wW, wF, sArea1F, sArea2F };
+            slab.fdStress.detailedLoads = { wR, wW, wF, sArea1F, sArea2F, sAreaRoof };
         });
     },
 
@@ -396,6 +410,110 @@ window.FoundationEngine = {
             beam.fdStress = { pillars, seismic, spans, isNG };
             beam.spans = spans;
         });
+    },    _getConvexHull: function(points) {
+        if (!points || points.length <= 1) return points || [];
+        const unique = [];
+        const seen = new Set();
+        points.forEach(p => {
+            const key = `${Math.round(p.x)}_${Math.round(p.y)}`;
+            if (!seen.has(key)) {
+                seen.add(key);
+                unique.push(p);
+            }
+        });
+        if (unique.length <= 1) return unique;
+        unique.sort((a, b) => a.x !== b.x ? a.x - b.x : a.y - b.y);
+        const cross = (o, a, b) => (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x);
+        const lower = [];
+        for (let i = 0; i < unique.length; i++) {
+            while (lower.length >= 2 && cross(lower[lower.length - 2], lower[lower.length - 1], unique[i]) <= 0) {
+                lower.pop();
+            }
+            lower.push(unique[i]);
+        }
+        const upper = [];
+        for (let i = unique.length - 1; i >= 0; i--) {
+            while (upper.length >= 2 && cross(upper[upper.length - 2], upper[upper.length - 1], unique[i]) <= 0) {
+                upper.pop();
+            }
+            upper.push(unique[i]);
+        }
+        lower.pop();
+        upper.pop();
+        return lower.concat(upper);
+    },
+
+    _offsetPolygon: function(poly, d) {
+        if (!poly || poly.length < 3) return [];
+        let pts = poly.map(v => ({ x: v.x, y: v.y }));
+        if (window.MathUtils && window.MathUtils.ensureCCW) {
+            window.MathUtils.ensureCCW(pts);
+        } else {
+            let sum = 0;
+            for (let i = 0; i < pts.length; i++) {
+                const p1 = pts[i], p2 = pts[(i + 1) % pts.length];
+                sum += (p2.x - p1.x) * (p2.y + p1.y);
+            }
+            if (sum > 0) pts.reverse();
+        }
+        const n = pts.length;
+        const normals = [];
+        for (let i = 0; i < n; i++) {
+            const p1 = pts[i];
+            const p2 = pts[(i + 1) % n];
+            const dx = p2.x - p1.x;
+            const dy = p2.y - p1.y;
+            const L = Math.hypot(dx, dy);
+            if (L < 1e-6) {
+                normals.push({ x: 0, y: 0 });
+            } else {
+                normals.push({ x: dy / L, y: -dx / L });
+            }
+        }
+        const offsetPts = [];
+        for (let i = 0; i < n; i++) {
+            const p = pts[i];
+            const n_prev = normals[(i - 1 + n) % n];
+            const n_curr = normals[i];
+            
+            const denom = 1 + (n_prev.x * n_curr.x + n_prev.y * n_curr.y);
+            const factor = denom > 1e-4 ? 1 / denom : 1;
+            const vx = (n_prev.x + n_curr.x) * factor;
+            const vy = (n_prev.y + n_curr.y) * factor;
+            
+            offsetPts.push({
+                x: p.x + d * vx,
+                y: p.y + d * vy
+            });
+        }
+        return offsetPts;
+    },
+
+    _getCombinedRoofPolygon: function(state) {
+        const s = state;
+        const areaLines = s.areaLines || [];
+        const targetPolys = areaLines.filter(a => 
+            !a.isDeleted && a.vertices && a.vertices.length >= 3 && 
+            (!a.areaType || a.areaType === 'floor' || a.areaType === 'porch')
+        );
+        const pts = [];
+        targetPolys.forEach(a => {
+            a.vertices.forEach(v => {
+                pts.push({ x: v.x, y: v.y });
+            });
+        });
+        if (pts.length === 0) {
+            const activePillars = (s.pillars || []).filter(p => !p.isDeleted && !p.isInvalidPos);
+            activePillars.forEach(p => {
+                pts.push({ x: p.x, y: p.y });
+            });
+        }
+        if (pts.length < 3) {
+            return [];
+        }
+        const hull = this._getConvexHull(pts);
+        const eavesLen = s.config?.eavesLen !== undefined ? s.config.eavesLen : 300;
+        return this._offsetPolygon(hull, eavesLen);
     },
 
     _clipByLine: function(poly, a, b, c) {

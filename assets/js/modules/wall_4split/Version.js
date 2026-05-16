@@ -211,6 +211,8 @@ window.APP_VERSION = "v2.5.27";
 window.APP_VERSION = "v2.5.28";
 // Backup of v2.5.28 taken. Now moving to v2.5.29: Resolved ReferenceError for cx/cy by pulling centroid calculation out of the skipLabels block in DocumentRenderer.js's drawAreaPolygons method.
 window.APP_VERSION = "v2.5.29";
+// Backup of v2.5.29 taken. Now moving to v2.5.30: Advanced ground pressure calculations featuring convex-hull based integrated roof horizontal projection with custom eaves dimensions.
+window.APP_VERSION = "v2.5.30";
 
 
 
