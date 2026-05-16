@@ -201,7 +201,8 @@ window.APP_VERSION = "v2.5.22";
 window.APP_VERSION = "v2.5.23";
 // Backup of v2.5.23 taken. Now moving to v2.5.24: Resolved toFixed(2) TypeError crash inside foundation beam reports by explicitly populating missing properties (sQa_L, sQa_R, b, h) in FoundationEngine.js and applying robust optional chaining guards in html generators.
 window.APP_VERSION = "v2.5.24";
-
+// Backup of v2.5.24 taken. Now moving to v2.5.25: Clarified UI text in WallEngine.js regarding area additions under standard law mode to avoid misinterpreting that attic area was excluded.
+window.APP_VERSION = "v2.5.25";
 
 
 

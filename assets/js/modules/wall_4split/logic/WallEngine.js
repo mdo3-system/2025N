@@ -160,7 +160,12 @@ window.WallEngine = {
             if (ap1.val > 0) steps1F.push(makeStepB('1Fポーチ・屋根(性能表示加算)', ap1.val, 1.0));
             if (ab1.val > 0) steps1F.push(makeStepB('1Fバルコニー(性能表示加算)', ab1.val, 0.4, '0.4'));
         } else {
-            steps1F.push('<div style="font-size:9px;color:#888;">※基準法モードのため加算なし</div>');
+            if (av2.val > 0 || ap1.val > 0 || ab1.val > 0) {
+                steps1F.push('<div style="font-size:9px;color:#888;">※基準法モードのため以下の荷重割増しは適用されません:</div>');
+                if (av2.val > 0) steps1F.push('<div style="font-size:9px;color:#888;">・2F吹き抜け</div>');
+                if (ap1.val > 0) steps1F.push('<div style="font-size:9px;color:#888;">・1Fポーチ・屋根</div>');
+                if (ab1.val > 0) steps1F.push('<div style="font-size:9px;color:#888;">・1Fバルコニー</div>');
+            }
         }
 
         let a1_seismic = af1.val + (aa1.val * atticRatio) + (aa2.val * atticRatio);
@@ -179,7 +184,12 @@ window.WallEngine = {
             if (ap1.val > 0) steps2F.push(makeStepB('1Fポーチ・屋根(荷重加算)', ap1.val, 1.0));
             if (ab1.val > 0) steps2F.push(makeStepB('1Fバルコニー(荷重加算)', ab1.val, 0.4, '0.4'));
         } else {
-            steps2F.push('<div style="font-size:9px;color:#888;">※基準法モードのため加算なし</div>');
+            if (av2.val > 0 || ap1.val > 0 || ab1.val > 0) {
+                steps2F.push('<div style="font-size:9px;color:#888;">※基準法モードのため以下の荷重割増しは適用されません:</div>');
+                if (av2.val > 0) steps2F.push('<div style="font-size:9px;color:#888;">・2F吹き抜け</div>');
+                if (ap1.val > 0) steps2F.push('<div style="font-size:9px;color:#888;">・1Fポーチ・屋根</div>');
+                if (ab1.val > 0) steps2F.push('<div style="font-size:9px;color:#888;">・1Fバルコニー</div>');
+            }
         }
 
         let a2_seismic = af2.val + (aa2.val * atticRatio);
