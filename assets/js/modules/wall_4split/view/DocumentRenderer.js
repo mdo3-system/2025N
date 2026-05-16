@@ -93,7 +93,7 @@ window.DocumentRenderer = {
      * Draw Area Polygons and Dimensions
      */
     drawAreaPolygons: function(ctx, areaLines, toC, options) {
-        const { showAreaDims, dimScale } = options;
+        const { showAreaDims, dimScale, skipLabels = false } = options;
         areaLines.forEach((a, index) => {
             ctx.beginPath();
             a.vertices.forEach((v, i) => {
@@ -118,26 +118,28 @@ window.DocumentRenderer = {
             ctx.restore();
 
             // Label
-            let cx = 0, cy = 0;
-            a.vertices.forEach(v => { let p = toC(v.x, v.y); cx += p.cx; cy += p.cy; });
-            cx /= a.vertices.length; cy /= a.vertices.length;
+            if (!skipLabels) {
+                let cx = 0, cy = 0;
+                a.vertices.forEach(v => { let p = toC(v.x, v.y); cx += p.cx; cy += p.cy; });
+                cx /= a.vertices.length; cy /= a.vertices.length;
 
-            let typeName = a.areaType === 'attic' ? '小屋裏' : 
-                          a.areaType === 'balcony' ? 'バルコニー' : 
-                          a.areaType === 'void' ? '吹き抜け' : 
-                          a.areaType === 'porch' ? 'ポーチ・屋根' : '床面積';
+                let typeName = a.areaType === 'attic' ? '小屋裏' : 
+                              a.areaType === 'balcony' ? 'バルコニー' : 
+                              a.areaType === 'void' ? '吹き抜け' : 
+                              a.areaType === 'porch' ? 'ポーチ・屋根' : '床面積';
 
-            let labelText = `${index + 1}. ${typeName}`;
-            ctx.save();
-            ctx.font = `bold ${Math.round(20 * dimScale)}px sans-serif`;
-            ctx.textAlign = "center";
-            ctx.textBaseline = "middle";
-            ctx.lineWidth = 4 * dimScale;
-            ctx.strokeStyle = '#ffffff';
-            ctx.strokeText(labelText, cx, cy);
-            ctx.fillStyle = '#2c3e50';
-            ctx.fillText(labelText, cx, cy);
-            ctx.restore();
+                let labelText = `${index + 1}. ${typeName}`;
+                ctx.save();
+                ctx.font = `bold ${Math.round(20 * dimScale)}px sans-serif`;
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                ctx.lineWidth = 4 * dimScale;
+                ctx.strokeStyle = '#ffffff';
+                ctx.strokeText(labelText, cx, cy);
+                ctx.fillStyle = '#2c3e50';
+                ctx.fillText(labelText, cx, cy);
+                ctx.restore();
+            }
 
             // Dimensions
             if (showAreaDims) {
@@ -210,7 +212,7 @@ window.DocumentRenderer = {
             if (mode === 'area') {
                 this.drawAreaTributaries(ctx, floor, toC, isPrint);
             }
-            this.drawAreaPolygons(ctx, state.areaLines.filter(a => a.floor === floor), toC, { showAreaDims, dimScale });
+            this.drawAreaPolygons(ctx, state.areaLines.filter(a => a.floor === floor), toC, { showAreaDims: mode !== 'area' && showAreaDims, dimScale, skipLabels: mode === 'area' });
 
             // 3.5 Draw 4-Division bounds if divMode is present
             if (divMode) {
@@ -249,19 +251,21 @@ window.DocumentRenderer = {
             }
         });
 
-        state.walls.filter(w => w.floor === floor).forEach(w => {
-            if (!isPrint && (state.layerVisibility || {})[w.layer] === false) return;
-            let p1 = toC(w.p1.x, w.p1.y), p2 = toC(w.p2.x, w.p2.y);
-            const isWallMode = mode === 'wall';
-            ctx.lineWidth = isWallMode ? 10 : 3;
-            ctx.strokeStyle = isWallMode ? (floor === '1F' ? '#27ae60' : '#d35400') : '#000';
-            ctx.beginPath(); ctx.moveTo(p1.cx, p1.cy); ctx.lineTo(p2.cx, p2.cy); ctx.stroke();
+        if (mode !== 'area') {
+            state.walls.filter(w => w.floor === floor).forEach(w => {
+                if (!isPrint && (state.layerVisibility || {})[w.layer] === false) return;
+                let p1 = toC(w.p1.x, w.p1.y), p2 = toC(w.p2.x, w.p2.y);
+                const isWallMode = mode === 'wall';
+                ctx.lineWidth = isWallMode ? 10 : 3;
+                ctx.strokeStyle = isWallMode ? (floor === '1F' ? '#27ae60' : '#d35400') : '#000';
+                ctx.beginPath(); ctx.moveTo(p1.cx, p1.cy); ctx.lineTo(p2.cx, p2.cy); ctx.stroke();
 
-            if (isWallMode) {
-                // 壁記号と番号の描画
-                this.drawWallDetails(ctx, w, p1, p2, isPrint);
-            }
-        });
+                if (isWallMode) {
+                    // 壁記号と番号の描画
+                    this.drawWallDetails(ctx, w, p1, p2, isPrint);
+                }
+            });
+        }
     },
 
     /**

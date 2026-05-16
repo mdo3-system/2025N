@@ -335,18 +335,21 @@ window.MainRenderer = {
             ctx.fill(); ctx.stroke();
 
             // ラベル
-            const cx = a.vertices.reduce((s, v) => s + v.x, 0) / a.vertices.length;
-            const cy = a.vertices.reduce((s, v) => s + v.y, 0) / a.vertices.length;
-            const p = this.toCanvas(cx, cy, state);
-            if (p.cx != null) {
-                const label = `${index + 1}. ${this.getAreaTypeName(a.areaType)}`;
-                ctx.save();
-                ctx.font = 'bold 16px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-                ctx.strokeStyle = '#fff'; ctx.lineWidth = 3;
-                ctx.strokeText(label, p.cx, p.cy);
-                ctx.fillStyle = '#2c3e50';
-                ctx.fillText(label, p.cx, p.cy);
-                ctx.restore();
+            const isAreaMode = (document.querySelector('input[name="mode"]:checked')?.value === 'area');
+            if (!isAreaMode) {
+                const cx = a.vertices.reduce((s, v) => s + v.x, 0) / a.vertices.length;
+                const cy = a.vertices.reduce((s, v) => s + v.y, 0) / a.vertices.length;
+                const p = this.toCanvas(cx, cy, state);
+                if (p.cx != null) {
+                    const label = `${index + 1}. ${this.getAreaTypeName(a.areaType)}`;
+                    ctx.save();
+                    ctx.font = 'bold 16px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                    ctx.strokeStyle = '#fff'; ctx.lineWidth = 3;
+                    ctx.strokeText(label, p.cx, p.cy);
+                    ctx.fillStyle = '#2c3e50';
+                    ctx.fillText(label, p.cx, p.cy);
+                    ctx.restore();
+                }
             }
         });
     },

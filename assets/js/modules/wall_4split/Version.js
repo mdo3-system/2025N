@@ -207,6 +207,8 @@ window.APP_VERSION = "v2.5.25";
 window.APP_VERSION = "v2.5.26";
 // Backup of v2.5.26 taken. Now moving to v2.5.27: Suppressed CAD background underlay drawing (下絵) in pillar tributary area drawings (mode === 'area') for both screen rendering (MainRenderer.js) and high-res report rendering (DocumentRenderer.js).
 window.APP_VERSION = "v2.5.27";
+// Backup of v2.5.27 taken. Now moving to v2.5.28: Suppressed load-bearing walls rendering and floor area text label rendering in pillar tributary area drawings (mode === 'area') for both screen and report rendering while preserving color classification.
+window.APP_VERSION = "v2.5.28";
 
 
 
