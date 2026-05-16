@@ -117,12 +117,13 @@ window.DocumentRenderer = {
             ctx.stroke();
             ctx.restore();
 
+            // Centroid calculation
+            let cx = 0, cy = 0;
+            a.vertices.forEach(v => { let p = toC(v.x, v.y); cx += p.cx; cy += p.cy; });
+            cx /= a.vertices.length; cy /= a.vertices.length;
+
             // Label
             if (!skipLabels) {
-                let cx = 0, cy = 0;
-                a.vertices.forEach(v => { let p = toC(v.x, v.y); cx += p.cx; cy += p.cy; });
-                cx /= a.vertices.length; cy /= a.vertices.length;
-
                 let typeName = a.areaType === 'attic' ? '小屋裏' : 
                               a.areaType === 'balcony' ? 'バルコニー' : 
                               a.areaType === 'void' ? '吹き抜け' : 

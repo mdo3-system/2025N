@@ -209,6 +209,8 @@ window.APP_VERSION = "v2.5.26";
 window.APP_VERSION = "v2.5.27";
 // Backup of v2.5.27 taken. Now moving to v2.5.28: Suppressed load-bearing walls rendering and floor area text label rendering in pillar tributary area drawings (mode === 'area') for both screen and report rendering while preserving color classification.
 window.APP_VERSION = "v2.5.28";
+// Backup of v2.5.28 taken. Now moving to v2.5.29: Resolved ReferenceError for cx/cy by pulling centroid calculation out of the skipLabels block in DocumentRenderer.js's drawAreaPolygons method.
+window.APP_VERSION = "v2.5.29";
 
 
 
