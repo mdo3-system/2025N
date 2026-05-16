@@ -202,7 +202,9 @@ window.DocumentRenderer = {
             const toC = (x, y) => ({ cx: (x - mx) * sfFinal, cy: cH - ((y - my) * sfFinal) });
 
             // 2. Draw Background
-            this.drawBackground(ctx, floor, toC, sfFinal, isPrint);
+            if (mode !== 'area') {
+                this.drawBackground(ctx, floor, toC, sfFinal, isPrint);
+            }
 
             // 3. Draw Areas
             if (mode === 'area') {

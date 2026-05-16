@@ -205,6 +205,8 @@ window.APP_VERSION = "v2.5.24";
 window.APP_VERSION = "v2.5.25";
 // Backup of v2.5.25 taken. Now moving to v2.5.26: Restored 4-division bounds, shaded zones, dashed boundaries, and dimension line render functionality on high-res plan images in DocumentRenderer.js for bulk output report.
 window.APP_VERSION = "v2.5.26";
+// Backup of v2.5.26 taken. Now moving to v2.5.27: Suppressed CAD background underlay drawing (下絵) in pillar tributary area drawings (mode === 'area') for both screen rendering (MainRenderer.js) and high-res report rendering (DocumentRenderer.js).
+window.APP_VERSION = "v2.5.27";
 
 
 

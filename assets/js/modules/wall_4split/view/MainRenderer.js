@@ -37,8 +37,12 @@ window.MainRenderer = {
         // 2. 4分割計算の境界表示
         this.draw4DivisionBounds(state);
 
+        const isAreaMode = (document.querySelector('input[name="mode"]:checked')?.value === 'area');
+
         // 3. 背景図面 (DXF)
-        this.drawBackground(state);
+        if (!isAreaMode) {
+            this.drawBackground(state);
+        }
 
         // 4. グリッドと通り芯
         this.drawGrids(state);
@@ -50,7 +54,6 @@ window.MainRenderer = {
         this.drawAreas(state);
 
         // 7. 構造要素 (透過設定あり)
-        const isAreaMode = (document.querySelector('input[name="mode"]:checked')?.value === 'area');
         ctx.save();
         ctx.globalAlpha = existingAlpha;
         if (!isAreaMode) {
