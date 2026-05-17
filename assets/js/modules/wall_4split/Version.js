@@ -215,6 +215,18 @@ window.APP_VERSION = "v2.5.29";
 window.APP_VERSION = "v2.5.30";
 // Backup of v2.5.31 taken. Now moving to v2.5.32: Complete physical alignment of foundation beam bending and shear checks with upward ground reaction loading model in calculation sheet images.
 window.APP_VERSION = "v2.5.32";
+// Backup of v2.5.32 taken. Now moving to v2.6.0: Fully implemented the pillar-supported continuous beam model (柱直下支点連続梁) with dynamic reaction and stress distributions.
+window.APP_VERSION = "v2.6.0";
+// Backup of v2.6.0 taken. Now moving to v2.6.1: Corrected long-term stress checks in FoundationEngine, and integrated warning dialog alerts for open/close actions in PropertyController when any span is NG.
+window.APP_VERSION = "v2.6.1";
+// Backup of v2.6.2 taken. Now moving to v2.6.3: Auto-triangulation/decomposition of complex floor area polygons into standard shapes (rectangles/triangles) in report tables.
+window.APP_VERSION = "v2.6.3";
+// Backup of v2.6.3 taken. Now moving to v2.6.4: Update MathUtils.getAreaFormula to use triangulation in area modal, and add D13D16, D13D19, D16D19 mixed rebar combinations to foundation beam modal.
+window.APP_VERSION = "v2.6.4";
+// Backup of v2.6.4 taken. Now moving to v2.6.5: Fix cross-sectional area not updating for mixed rebar combinations by updating parseRebar in logic/FoundationEngine.js.
+window.APP_VERSION = "v2.6.5";
+// Backup of v2.6.5 taken. Now moving to v2.6.6: Fix SlabBeamSynchronizer failing to assign slab loads to short beams drawn along a long continuous slab edge due to centroid distance check.
+window.APP_VERSION = "v2.6.6";
 
 
 

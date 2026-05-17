@@ -28,14 +28,29 @@ function fd_getConcreteAllowable(fc) {
 // ============================================================
 function fd_parseRebar(str) {
     if (!str || typeof str !== 'string') return { count: 0, dia: 0, area: 0 };
-    // フォーマット: "本数-D直径" e.g., "2-D16", "1-D13"
-    const m = str.trim().match(/^(\d+)-D(\d+)/i);
+    const m = str.trim().match(/^(\d+)-D([A-Za-z0-9]+)/i);
     if (!m) return { count: 0, dia: 0, area: 0 };
     const count = parseInt(m[1], 10);
-    const dia   = parseInt(m[2], 10);
-    // 標準鉄筋断面積 (mm²)
+    const typeStr = m[2].toUpperCase();
+    
     const diaTbl = { 10: 71.33, 13: 126.7, 16: 198.6, 19: 286.5, 22: 387.1, 25: 506.7, 29: 642.4, 32: 794.2 };
-    const area1 = diaTbl[dia] || (Math.PI * dia * dia / 4);
+    
+    let area1 = 0;
+    let dia = 0;
+    if (typeStr === '13D16') {
+        area1 = diaTbl[13] + diaTbl[16];
+        dia = 16;
+    } else if (typeStr === '13D19') {
+        area1 = diaTbl[13] + diaTbl[19];
+        dia = 19;
+    } else if (typeStr === '16D19') {
+        area1 = diaTbl[16] + diaTbl[19];
+        dia = 19;
+    } else {
+        dia = parseInt(typeStr, 10);
+        area1 = diaTbl[dia] || (Math.PI * dia * dia / 4);
+    }
+    
     return { count, dia, area: count * area1 };
 }
 
@@ -511,6 +526,10 @@ function getFoundationBeamReportHtml(beam) {
         const seismic = beam.fdStress.seismic;
         const spans = beam.fdStress.spans || [];
 
+        const B_val = bp.B_val !== undefined ? parseFloat(bp.B_val) : 0.5;
+        const modelType = bp.modelType || 'both_ends';
+        const dispB = (modelType === 'pillar_supported') ? 1.0 : B_val;
+
         // Table 1: 応力の算定（水平荷重時）
         html += `<div style="font-weight:bold; margin-top:12px; margin-bottom:4px; font-size:11px;">(1) 応力の算定（水平荷重時）</div>
         <table style="width:100%; border-collapse:collapse; font-size:10px; margin-bottom:10px; border:1px solid #aaa;">
@@ -518,8 +537,8 @@ function getFoundationBeamReportHtml(beam) {
                 <tr style="background:#f2f2f2;">
                     <th rowspan="2" style="border:1px solid #aaa; padding:3px;">柱</th>
                     <th rowspan="2" style="border:1px solid #aaa; padding:3px;">x(m)</th>
-                    <th colspan="4" style="border:1px solid #aaa; padding:3px; text-align:center;">左加力 (B=0.5)</th>
-                    <th colspan="4" style="border:1px solid #aaa; padding:3px; text-align:center;">右加力 (B=0.5)</th>
+                    <th colspan="4" style="border:1px solid #aaa; padding:3px; text-align:center;">左加力 (B=${dispB.toFixed(3)})</th>
+                    <th colspan="4" style="border:1px solid #aaa; padding:3px; text-align:center;">右加力 (B=${dispB.toFixed(3)})</th>
                 </tr>
                 <tr style="background:#f2f2f2;">
                     <th style="border:1px solid #aaa; padding:2px;">Td</th>
@@ -535,12 +554,12 @@ function getFoundationBeamReportHtml(beam) {
             <tbody>`;
         pillars.forEach((p, idx) => {
             const l_Td = (seismic.leftward.Td[idx] || 0).toFixed(2);
-            const l_R = (idx === 0 ? seismic.leftward.R_left : (idx === pillars.length - 1 ? seismic.leftward.R_right : 0)).toFixed(2);
+            const l_R = (seismic.leftward.R ? (seismic.leftward.R[idx] ?? 0) : (idx === 0 ? seismic.leftward.R_left : (idx === pillars.length - 1 ? seismic.leftward.R_right : 0))).toFixed(2);
             const l_Qe = (seismic.leftward.Qe[idx] || 0).toFixed(2);
             const l_Mf = (seismic.leftward.Mf[idx] || 0).toFixed(2);
 
             const r_Td = (seismic.rightward.Td[idx] || 0).toFixed(2);
-            const r_R = (idx === 0 ? seismic.rightward.R_left : (idx === pillars.length - 1 ? seismic.rightward.R_right : 0)).toFixed(2);
+            const r_R = (seismic.rightward.R ? (seismic.rightward.R[idx] ?? 0) : (idx === 0 ? seismic.rightward.R_left : (idx === pillars.length - 1 ? seismic.rightward.R_right : 0))).toFixed(2);
             const r_Qe = (seismic.rightward.Qe[idx] || 0).toFixed(2);
             const r_Mf = (seismic.rightward.Mf[idx] || 0).toFixed(2);
 

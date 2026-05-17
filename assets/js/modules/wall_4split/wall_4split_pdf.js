@@ -17,6 +17,141 @@ function createHighResPlanImage(f, mode, d4 = null, showAreaDims = true, dimScal
     return window.DocumentRenderer.renderStructuralPlan(f, mode, d4, { showAreaDims, dimScale, isPrint });
 }
 
+function triangulatePolygon(vertices) {
+    const triangles = [];
+    if (!vertices || vertices.length < 3) return triangles;
+    
+    // Clean up duplicate vertices
+    const pts = [];
+    for (let i = 0; i < vertices.length; i++) {
+        const p = vertices[i];
+        if (pts.length === 0 || Math.hypot(p.x - pts[pts.length - 1].x, p.y - pts[pts.length - 1].y) > 1e-3) {
+            pts.push({ x: p.x, y: p.y });
+        }
+    }
+    if (pts.length > 2 && Math.hypot(pts[0].x - pts[pts.length - 1].x, pts[0].y - pts[pts.length - 1].y) < 1e-3) {
+        pts.pop();
+    }
+    
+    if (pts.length < 3) return triangles;
+
+    // Determine orientation (Ensure CCW)
+    let area = 0;
+    for (let i = 0; i < pts.length; i++) {
+        let j = (i + 1) % pts.length;
+        area += pts[i].x * pts[j].y - pts[j].x * pts[i].y;
+    }
+    if (area < 0) pts.reverse();
+
+    const indices = pts.map((_, idx) => idx);
+    let limit = pts.length * 3;
+    
+    const isEar = (u, v, w, n, pts, indices) => {
+        const pA = pts[indices[u]];
+        const pB = pts[indices[v]];
+        const pC = pts[indices[w]];
+        
+        const cross = (pB.x - pA.x) * (pC.y - pA.y) - (pB.y - pA.y) * (pC.x - pA.x);
+        if (cross <= 1e-6) return false;
+        
+        for (let i = 0; i < n; i++) {
+            if (i === u || i === v || i === w) continue;
+            const p = pts[indices[i]];
+            
+            // Triangle containment check using cross products
+            const c1 = (pB.x - pA.x) * (p.y - pA.y) - (pB.y - pA.y) * (p.x - pA.x);
+            const c2 = (pC.x - pB.x) * (p.y - pB.y) - (pC.y - pB.y) * (p.x - pB.x);
+            const c3 = (pA.x - pC.x) * (p.y - pC.y) - (pA.y - pC.y) * (p.x - pC.x);
+            
+            if (c1 >= -1e-6 && c2 >= -1e-6 && c3 >= -1e-6) return false;
+        }
+        return true;
+    };
+
+    while (indices.length > 2 && limit > 0) {
+        limit--;
+        const n = indices.length;
+        let earFound = false;
+        for (let i = 0; i < n; i++) {
+            const u = (i - 1 + n) % n;
+            const v = i;
+            const w = (i + 1) % n;
+            if (isEar(u, v, w, n, pts, indices)) {
+                triangles.push([pts[indices[u]], pts[indices[v]], pts[indices[w]]]);
+                indices.splice(v, 1);
+                earFound = true;
+                break;
+            }
+        }
+        if (!earFound) {
+            triangles.push([pts[indices[0]], pts[indices[1]], pts[indices[2]]]);
+            indices.splice(1, 1);
+        }
+    }
+    return triangles;
+}
+
+function getAreaRowsHtml(area, i) {
+    const cleanVertices = window.MathUtils && window.MathUtils.dedupPolygon ? window.MathUtils.dedupPolygon(area.vertices) : area.vertices;
+    const vCount = cleanVertices.length;
+    let html = "";
+    let totalA = 0;
+
+    let c = Geometry.polygonCentroid(area.vertices);
+    if (!c) return { html: "", area: 0 };
+    let MathAbsArea = Math.abs(c.area / 1000000);
+    let sign = (c.area / 1000000) > 0 ? 1 : -1;
+    
+    if (vCount === 3 || vCount === 4) {
+        let minX = Math.min(...cleanVertices.map(v => v.x)), maxX = Math.max(...cleanVertices.map(v => v.x));
+        let minY = Math.min(...cleanVertices.map(v => v.y)), maxY = Math.max(...cleanVertices.map(v => v.y));
+        let w = (maxX - minX) / 1000, h_dim = (maxY - minY) / 1000;
+        
+        let formula = "";
+        if (vCount === 3) {
+            formula = `${sign < 0 ? '-' : ''}底辺 × 高さ / 2`;
+            html += `<tr>
+                <td>${i + 1}${sign < 0 ? ' (除外)' : ''}</td>
+                <td>${w.toFixed(3)}</td>
+                <td>${h_dim.toFixed(3)}</td>
+                <td style="text-align:left;">${formula}</td>
+                <td>${(sign * MathAbsArea).toFixed(2)}</td>
+            </tr>`;
+        } else {
+            formula = `${sign < 0 ? '-' : ''}底辺 × 高さ`;
+            html += `<tr>
+                <td>${i + 1}${sign < 0 ? ' (除外)' : ''}</td>
+                <td>${w.toFixed(3)}</td>
+                <td>${h_dim.toFixed(3)}</td>
+                <td style="text-align:left;">${formula}</td>
+                <td>${(sign * MathAbsArea).toFixed(2)}</td>
+            </tr>`;
+        }
+        totalA = sign * MathAbsArea;
+    } else {
+        const triangles = triangulatePolygon(cleanVertices);
+        triangles.forEach((tri, subIdx) => {
+            let tc = Geometry.polygonCentroid(tri);
+            if (!tc) return;
+            let subAreaVal = Math.abs(tc.area / 1000000);
+            let minX = Math.min(...tri.map(v => v.x)), maxX = Math.max(...tri.map(v => v.x));
+            let minY = Math.min(...tri.map(v => v.y)), maxY = Math.max(...tri.map(v => v.y));
+            let w = (maxX - minX) / 1000, h_dim = (maxY - minY) / 1000;
+            
+            let formula = `${sign < 0 ? '-' : ''}底辺 × 高さ / 2 (三角形分割)`;
+            html += `<tr>
+                <td>${i + 1}-${subIdx + 1}${sign < 0 ? ' (除外)' : ''}</td>
+                <td>${w.toFixed(3)}</td>
+                <td>${h_dim.toFixed(3)}</td>
+                <td style="text-align:left;">${formula}</td>
+                <td>${(sign * subAreaVal).toFixed(2)}</td>
+            </tr>`;
+            totalA += sign * subAreaVal;
+        });
+    }
+    return { html, area: totalA };
+}
+
 // Removing legacy implementation below...
 /*
         areaLines.filter(a => a.floor === f).forEach(a => {
@@ -452,6 +587,98 @@ async function generateDoc() {
 
         updateCalculations();
 
+        // --- 全検定エラー（NG）の集計・警告ダイアログ表示 ---
+        {
+            const errors = [];
+
+            // 1. 壁量検定 (Wall Quantity Checks)
+            ['1F', '2F'].forEach(f => {
+                const sd_state = s.reqWall[f];
+                if (sd_state) {
+                    const rX = sd_state.qX || 0;
+                    const rY = sd_state.qY || 0;
+                    let totalKxt = 0, totalKyt = 0;
+                    walls.filter(w => w.floor === f).forEach(w => {
+                        const dx = Math.abs(w.p2.x - w.p1.x) / 1000;
+                        const dy = Math.abs(w.p2.y - w.p1.y) / 1000;
+                        const tv = window.WallEngine.getTotalMultiplier(w);
+                        totalKxt += dx * tv;
+                        totalKyt += dy * tv;
+                    });
+                    if (totalKxt < rX) {
+                        errors.push(`❌ 【壁量計算】${f} X方向：存在壁量 (${totalKxt.toFixed(2)}m) が必要壁量 (${rX.toFixed(2)}m) 未満です。`);
+                    }
+                    if (totalKyt < rY) {
+                        errors.push(`❌ 【壁量計算】${f} Y方向：存在壁量 (${totalKyt.toFixed(2)}m) が必要壁量 (${rY.toFixed(2)}m) 未満です。`);
+                    }
+                }
+            });
+
+            // 2. 4分割検定 (4-Division Wall Balance Checks)
+            ['1F', '2F'].forEach(f => {
+                const sd_state = s.reqWall[f];
+                if (sd_state && sd_state.div4) {
+                    const d4 = sd_state.div4;
+                    if (!d4.isXOk) {
+                        errors.push(`❌ 【4分割法】${f} X方向：側端部の壁比率または充足率がNGです。`);
+                    }
+                    if (!d4.isYOk) {
+                        errors.push(`❌ 【4分割法】${f} Y方向：側端部の壁比率または充足率がNGです。`);
+                    }
+                }
+            });
+
+            // 3. 有効細長比 (Slenderness Ratio Checks)
+            pillars.filter(p => !p.isDeleted && !p.isInvalidPos).forEach(p => {
+                if (p.lambda != null && !p.lambdaOK) {
+                    const pillarName = window.getPillarName ? window.getPillarName(p) || `(${p.gx}-${p.gy})` : `(${p.gx}-${p.gy})`;
+                    errors.push(`❌ 【細長比】${p.floor}の柱 ${pillarName}：有効細長比 (${p.lambda.toFixed(1)}) が150を超えています。`);
+                }
+            });
+
+            // 4. 金物選定・N値検定 (N-Value / Hardware Checks)
+            pillars.filter(p => !p.isDeleted && !p.isInvalidPos).forEach(p => {
+                const hwList = typeof getHardwareList === 'function' ? getHardwareList() : [];
+                const hw = hwList.find(h => h.name === p.nMark);
+                const isNg = (p.manualMark && hw && p.nValue > hw.n) || p.nMark === '別途検討';
+                if (isNg) {
+                    const pillarName = window.getPillarName ? window.getPillarName(p) || `(${p.gx}-${p.gy})` : `(${p.gx}-${p.gy})`;
+                    if (p.nMark === '別途検討') {
+                        errors.push(`❌ 【金物選定】${p.floor}の柱 ${pillarName}：引抜力 (${p.nValue.toFixed(2)}kN) が標準金物の許容耐力を超えているため、別途検討が必要です。`);
+                    } else {
+                        const limitN = hw ? hw.n : 0;
+                        errors.push(`❌ 【金物選定】${p.floor}の柱 ${pillarName}：引抜力 (${p.nValue.toFixed(2)}kN) が指定金物 (${p.nMark}) の許容耐力 (${limitN.toFixed(2)}kN) を超えています。`);
+                    }
+                }
+            });
+
+            // 5. 基礎スラブの断面検定 (Foundation Slab Checks)
+            const checkSlabs = s.foundationSlabs || [];
+            checkSlabs.forEach((slab, idx) => {
+                if (slab.fdStress && slab.fdStress.isNG) {
+                    const slabName = slab.props ? slab.props.name : `FS${idx + 1}`;
+                    errors.push(`❌ 【基礎スラブ】No.${idx + 1} スラブ (${slabName})：断面検定がNGです。`);
+                }
+            });
+
+            // 6. 基礎梁の断面検定 (Foundation Beam Checks)
+            const checkBeams = s.foundationBeams || [];
+            checkBeams.forEach((beam, idx) => {
+                if (beam.fdStress && beam.fdStress.isNG) {
+                    const beamName = beam.props ? beam.props.symbol : `FG${idx + 1}`;
+                    errors.push(`❌ 【基礎梁】No.${idx + 1} 基礎梁 (${beamName})：断面検定がNGのスパンがあります。`);
+                }
+            });
+
+            // エラー（NG）の一覧がある場合、ダイアログを表示する
+            if (errors.length > 0) {
+                const errMsg = "⚠️ 計算書に検定エラー（NG）があります。エラー一覧を確認してください。\n\n" + 
+                               errors.join("\n") + 
+                               "\n\n※このまま「OK」を押すと、計算書が出力されます。";
+                alert(errMsg);
+            }
+        }
+
         // ★ 一括出力・表生成用の凡例用マッピングデータ生成
         let legendData = window.buildWallLegendData ? window.buildWallLegendData() : { panelDic: {}, htmlStr: '' };
         window._currentLegendDic = legendData.panelDic;
@@ -594,20 +821,9 @@ async function generateDoc() {
                 h += `<table class="report-table" style="font-size:11px; width:100%; text-align:center;"><tr><th>No.</th><th>底辺(m)</th><th>高さ(m)</th><th>計算式</th><th>面積(㎡)</th></tr>`;
                 let totalA = 0;
                 fAreas.forEach((area, i) => {
-                    let c = Geometry.polygonCentroid(area.vertices);
-                    if (!c) return;
-                    let MathAbsArea = Math.abs(c.area / 1000000);
-                    let sign = (c.area / 1000000) > 0 ? 1 : -1;
-                    let vCount = area.vertices.length;
-                    let formula = "";
-                    let minX = Math.min(...area.vertices.map(v => v.x)), maxX = Math.max(...area.vertices.map(v => v.x));
-                    let minY = Math.min(...area.vertices.map(v => v.y)), maxY = Math.max(...area.vertices.map(v => v.y));
-                    let w = (maxX - minX) / 1000, h_dim = (maxY - minY) / 1000;
-                    if (vCount === 3) formula = `${sign < 0 ? '-' : ''}${w.toFixed(3)} × ${h_dim.toFixed(3)} / 2`;
-                    else if (vCount === 4) formula = `${sign < 0 ? '-' : ''}${w.toFixed(3)} × ${h_dim.toFixed(3)}`;
-                    else formula = `${sign < 0 ? '-' : ''}多角形求積 (${MathAbsArea.toFixed(2)})`;
-                    h += `<tr><td>${i + 1}${sign < 0 ? ' (除外)' : ''}</td><td colspan="3" style="text-align:left;">${formula}</td><td>${MathAbsArea.toFixed(2)}</td></tr>`;
-                    totalA += (c.area / 1000000);
+                    const rowData = getAreaRowsHtml(area, i);
+                    h += rowData.html;
+                    totalA += rowData.area;
                 });
                 h += `<tr style="font-weight:bold;"><td colspan="4" style="text-align:right;">合計床面積：</td><td style="color:#d35400;">${totalA.toFixed(2)} ㎡</td></tr></table></div>`;
             }
@@ -632,20 +848,9 @@ async function generateDoc() {
                 h += `<table class="report-table" style="font-size:11px; width:100%; text-align:center;"><tr><th>No.</th><th>底辺(m)</th><th>高さ(m)</th><th>計算式</th><th>面積(㎡)</th></tr>`;
                 let totalA = 0;
                 fAreas.forEach((area, i) => {
-                    let c = Geometry.polygonCentroid(area.vertices);
-                    if (!c) return;
-                    let MathAbsArea = Math.abs(c.area / 1000000);
-                    let sign = (c.area / 1000000) > 0 ? 1 : -1;
-                    let vCount = area.vertices.length;
-                    let formula = "";
-                    let minX = Math.min(...area.vertices.map(v => v.x)), maxX = Math.max(...area.vertices.map(v => v.x));
-                    let minY = Math.min(...area.vertices.map(v => v.y)), maxY = Math.max(...area.vertices.map(v => v.y));
-                    let w = (maxX - minX) / 1000, h_dim = (maxY - minY) / 1000;
-                    if (vCount === 3) formula = `${sign < 0 ? '-' : ''}${w.toFixed(3)} × ${h_dim.toFixed(3)} / 2`;
-                    else if (vCount === 4) formula = `${sign < 0 ? '-' : ''}${w.toFixed(3)} × ${h_dim.toFixed(3)}`;
-                    else formula = `${sign < 0 ? '-' : ''}多角形求積 (${MathAbsArea.toFixed(2)})`;
-                    h += `<tr><td>${i + 1}${sign < 0 ? ' (除外)' : ''}</td><td colspan="3" style="text-align:left;">${formula}</td><td>${MathAbsArea.toFixed(2)}</td></tr>`;
-                    totalA += (c.area / 1000000);
+                    const rowData = getAreaRowsHtml(area, i);
+                    h += rowData.html;
+                    totalA += rowData.area;
                 });
                 h += `<tr style="font-weight:bold;"><td colspan="4" style="text-align:right;">合計床面積：</td><td style="color:#d35400;">${totalA.toFixed(2)} ㎡</td></tr></table></div>`;
             }
@@ -662,20 +867,9 @@ async function generateDoc() {
                 h += `<table class="report-table" style="font-size:11px; width:100%; text-align:center;"><tr><th>No.</th><th>底辺(m)</th><th>高さ(m)</th><th>計算式</th><th>面積(㎡)</th></tr>`;
                 let totalA = 0;
                 fAreas.forEach((area, i) => {
-                    let c = Geometry.polygonCentroid(area.vertices);
-                    if (!c) return;
-                    let areaVal = Math.abs(c.area / 1000000);
-                    let absArea = areaVal.toFixed(2);
-                    let vCount = area.vertices.length;
-                    let formula = "";
-                    let minX = Math.min(...area.vertices.map(v => v.x)), maxX = Math.max(...area.vertices.map(v => v.x));
-                    let minY = Math.min(...area.vertices.map(v => v.y)), maxY = Math.max(...area.vertices.map(v => v.y));
-                    let w = (maxX - minX) / 1000, h_dim = (maxY - minY) / 1000;
-                    if (vCount === 3) formula = `${w.toFixed(3)} × ${h_dim.toFixed(3)} / 2`;
-                    else if (vCount === 4) formula = `${w.toFixed(3)} × ${h_dim.toFixed(3)}`;
-                    else formula = `多角形求積 (${absArea})`;
-                    h += `<tr><td>${i + 1}</td><td colspan="3" style="text-align:left;">${formula}</td><td>${absArea}</td></tr>`;
-                    totalA += areaVal;
+                    const rowData = getAreaRowsHtml(area, i);
+                    h += rowData.html;
+                    totalA += rowData.area;
                 });
                 h += `<tr style="font-weight:bold;"><td colspan="4" style="text-align:right;">合計床面積：</td><td style="color:#d35400;">${totalA.toFixed(2)} ㎡</td></tr></table></div>`;
             } else {

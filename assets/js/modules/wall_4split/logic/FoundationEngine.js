@@ -279,18 +279,52 @@ window.FoundationEngine = {
                 }
                 return (isLeft ? val : -val) * (bp.modelType === 'pillar_supported' ? 1.0 : (bp.B_val || 0.5)) / 1000;
             });
-            const L = Math.max(0.001, pillars[pillars.length - 1].x - pillars[0].x);
-            let sumM = 0, sumT = 0;
-            Td.forEach((t, i) => { sumM += t * (pillars[i].x - pillars[0].x); sumT += t; });
-            const R_r = -sumM / L, R_l = -sumT - R_r;
+            const modelType = bp.modelType || 'both_ends';
+            let R = [];
+            let R_l = 0, R_r = 0;
+
+            if (modelType === 'pillar_supported') {
+                const n = pillars.length;
+                const x = pillars.map(p => p.x);
+                const Sx = x.reduce((sum, xi) => sum + xi, 0);
+                const Sxx = x.reduce((sum, xi) => sum + xi * xi, 0);
+                const ST = Td.reduce((sum, ti) => sum + ti, 0);
+                const STx = Td.reduce((sum, ti, idx) => sum + ti * x[idx], 0);
+
+                const det = n * Sxx - Sx * Sx;
+                let A = 0, B = 0;
+                if (Math.abs(det) > 1e-9) {
+                    A = (-ST * Sxx + STx * Sx) / det;
+                    B = (-n * STx + Sx * ST) / det;
+                } else {
+                    A = -ST / Math.max(1, n);
+                    B = 0;
+                }
+
+                R = x.map(xi => A + B * xi);
+                R_l = R[0];
+                R_r = R[n - 1];
+            } else {
+                const L = Math.max(0.001, pillars[pillars.length - 1].x - pillars[0].x);
+                let sumM = 0, sumT = 0;
+                Td.forEach((t, i) => { sumM += t * (pillars[i].x - pillars[0].x); sumT += t; });
+                R_r = -sumM / L;
+                R_l = -sumT - R_r;
+                R = Td.map((_, i) => {
+                    if (i === 0) return R_l;
+                    if (i === pillars.length - 1) return R_r;
+                    return 0;
+                });
+            }
+
             const Qe = [], Mf = []; let currQ = 0, currM = 0;
             Td.forEach((t, i) => {
-                currQ += t + (i === 0 ? R_l : (i === pillars.length - 1 ? R_r : 0));
+                currQ += t + R[i];
                 Qe.push(currQ);
                 if (i > 0) currM += Qe[i - 1] * (pillars[i].x - pillars[i - 1].x);
                 Mf.push(currM);
             });
-            return { Td, Qe, Mf, R_left: R_l, R_right: R_r, supportIdx1: 0, supportIdx2: pillars.length - 1 };
+            return { Td, Qe, Mf, R, R_left: R_l, R_right: R_r, supportIdx1: 0, supportIdx2: pillars.length - 1 };
         };
         return { leftward: calculateDir(true), rightward: calculateDir(false), axisName };
     },
@@ -397,7 +431,6 @@ window.FoundationEngine = {
                 
                 const resL = check(true);
                 const resR = check(false);
-                if (!resL.ok || !resR.ok) isNG = true;
                 
                 const M_end_left = (i === 0 ? 0 : M_end);
                 const M_end_right = (i === pillars.length - 2 ? 0 : M_end);
@@ -408,6 +441,18 @@ window.FoundationEngine = {
                     M_mid / (resL.lMa_top || 1)
                 );
                 const rQ_L = Q_L / (resL.lQa || 1);
+
+                const spanNG = (
+                    rM_L > 1.0 ||
+                    rQ_L > 1.0 ||
+                    resL.rM_left > 1.0 ||
+                    resL.rM_right > 1.0 ||
+                    (resL.Q / (resL.sQa || 1)) > 1.0 ||
+                    resR.rM_left > 1.0 ||
+                    resR.rM_right > 1.0 ||
+                    (resR.Q / (resR.sQa || 1)) > 1.0
+                );
+                if (spanNG) isNG = true;
                 
                 spans.push({
                     spanName: `${p1.name}-${p2.name}`,
@@ -428,7 +473,7 @@ window.FoundationEngine = {
                         b: b_val,
                         h: h_val
                     },
-                    isNG: !resL.ok || !resR.ok,
+                    isNG: spanNG,
                     props: sp // 4. 個別スパン設定を永続化するために格納
                 });
             }
@@ -614,12 +659,22 @@ window.FoundationEngine = {
         return nonCollinear.length === 3;
     },
     parseRebar: function(str) { 
-        const m = (str || '').match(/(\d+)-D(\d+)/); 
+        const m = (str || '').match(/(\d+)-D([A-Za-z0-9]+)/i); 
         if (!m) return { area: 127 };
         const count = parseInt(m[1]) || 1;
-        const dia = m[2];
+        const typeStr = m[2].toUpperCase();
         const table = { '10': 71, '13': 127, '16': 199, '19': 287, '22': 387 };
-        return { area: count * (table[dia] || 127) };
+        let area = 0;
+        if (typeStr === '13D16') {
+            area = table['13'] + table['16'];
+        } else if (typeStr === '13D19') {
+            area = table['13'] + table['19'];
+        } else if (typeStr === '16D19') {
+            area = table['16'] + table['19'];
+        } else {
+            area = table[typeStr] || 127;
+        }
+        return { area: count * area };
     },
     parseStirrups: function(str) { 
         const m = (str || '').match(/(\d+)-D(\d+)@(\d+)/); 

@@ -38,6 +38,9 @@ window.PropertyController = {
 
         // すでに表示されている場合はウィンドウ位置を維持
         if (popup.style.display !== 'block') {
+            if ((type === 'beam' || type === 'beam_span') && item && item.fdStress && item.fdStress.isNG) {
+                alert("🚨 この基礎梁には断面検定がNGのスパンがあります！判定表をご確認ください。");
+            }
             const cp = document.getElementById('center-panel');
             let width = 750; 
             if (cp) {
@@ -91,6 +94,11 @@ window.PropertyController = {
     },
 
     hideFdPopup: function() {
+        const type = window.AppState.fdSelection.type;
+        const item = window.AppState.fdSelection.item;
+        if ((type === 'beam' || type === 'beam_span') && item && item.fdStress && item.fdStress.isNG) {
+            alert("⚠️ 断面検定にNGがある状態です。配筋や断面寸法を再調整してください。");
+        }
         window.AppState.fdSelection = { type: null, item: null };
         const popup = document.getElementById('fd-property-popup');
         if (popup) popup.style.display = 'none';
@@ -360,8 +368,8 @@ window.PropertyController = {
                 <div>
                     <label style="font-weight:bold; color:#7d3c98; display:block; margin-bottom:2px;">モデル選択</label>
                     <select onchange="window.PropertyController.updateFdProp('beam', ${beam.id}, 'modelType', this.value)" style="width:100%; box-sizing:border-box; padding:4px; border:1px solid #ccc; border-radius:4px; background:#fff;">
-                        <option value="both_ends" ${bp.modelType !== 'pillar_supported' ? 'selected' : ''}>両端支点</option>
-                        <option value="pillar_supported" ${bp.modelType === 'pillar_supported' ? 'selected' : ''}>柱支点</option>
+                        <option value="both_ends" ${bp.modelType !== 'pillar_supported' ? 'selected' : ''}>両端支点（連続梁）</option>
+                        <option value="pillar_supported" ${bp.modelType === 'pillar_supported' ? 'selected' : ''}>柱直下支点（連続梁）</option>
                     </select>
                 </div>
             </div>`;
@@ -424,12 +432,12 @@ window.PropertyController = {
 
             pillars.forEach((p, idx) => {
                 const l_Td = (seismic.leftward.Td?.[idx] ?? 0).toFixed(3);
-                const l_R_val = (idx === seismic.leftward.supportIdx1 ? (seismic.leftward.R_left ?? 0) : (idx === seismic.leftward.supportIdx2 ? (seismic.leftward.R_right ?? 0) : 0));
+                const l_R_val = seismic.leftward.R ? (seismic.leftward.R[idx] ?? 0) : (idx === seismic.leftward.supportIdx1 ? (seismic.leftward.R_left ?? 0) : (idx === seismic.leftward.supportIdx2 ? (seismic.leftward.R_right ?? 0) : 0));
                 const l_Qe = (seismic.leftward.Qe?.[idx] ?? 0).toFixed(3);
                 const l_Mf = (seismic.leftward.Mf?.[idx] ?? 0).toFixed(3);
 
                 const r_Td = (seismic.rightward.Td?.[idx] ?? 0).toFixed(3);
-                const r_R_val = (idx === seismic.rightward.supportIdx1 ? (seismic.rightward.R_left ?? 0) : (idx === seismic.rightward.supportIdx2 ? (seismic.rightward.R_right ?? 0) : 0));
+                const r_R_val = seismic.rightward.R ? (seismic.rightward.R[idx] ?? 0) : (idx === seismic.rightward.supportIdx1 ? (seismic.rightward.R_left ?? 0) : (idx === seismic.rightward.supportIdx2 ? (seismic.rightward.R_right ?? 0) : 0));
                 const r_Qe = (seismic.rightward.Qe?.[idx] ?? 0).toFixed(3);
                 const r_Mf = (seismic.rightward.Mf?.[idx] ?? 0).toFixed(3);
 
@@ -566,6 +574,9 @@ window.PropertyController = {
                             <option value="D13" ${currentTop.type === 'D13' ? 'selected' : ''}>D13</option>
                             <option value="D16" ${currentTop.type === 'D16' ? 'selected' : ''}>D16</option>
                             <option value="D19" ${currentTop.type === 'D19' ? 'selected' : ''}>D19</option>
+                            <option value="D13D16" ${currentTop.type === 'D13D16' ? 'selected' : ''}>D13D16</option>
+                            <option value="D13D19" ${currentTop.type === 'D13D19' ? 'selected' : ''}>D13D19</option>
+                            <option value="D16D19" ${currentTop.type === 'D16D19' ? 'selected' : ''}>D16D19</option>
                         </select>
                     </td>
                     <td style="border:1px solid #ddd; padding:3px; text-align:right;">${topArea.toFixed(1)}</td>
@@ -577,6 +588,9 @@ window.PropertyController = {
                             <option value="D13" ${currentBot.type === 'D13' ? 'selected' : ''}>D13</option>
                             <option value="D16" ${currentBot.type === 'D16' ? 'selected' : ''}>D16</option>
                             <option value="D19" ${currentBot.type === 'D19' ? 'selected' : ''}>D19</option>
+                            <option value="D13D16" ${currentBot.type === 'D13D16' ? 'selected' : ''}>D13D16</option>
+                            <option value="D13D19" ${currentBot.type === 'D13D19' ? 'selected' : ''}>D13D19</option>
+                            <option value="D16D19" ${currentBot.type === 'D16D19' ? 'selected' : ''}>D16D19</option>
                         </select>
                     </td>
                     <td style="border:1px solid #ddd; padding:3px; text-align:right;">${botArea.toFixed(1)}</td>

@@ -47,9 +47,16 @@ window.SlabBeamSynchronizer = {
                 const my = tp.my !== undefined ? tp.my : (tp.polygon[0].y + tp.polygon[1].y) / 2;
 
                 if (!isMyBeam) {
-                    // 紐付いておらず、かつ重心が梁軸から遠いものは除外
-                    const dist = window.FoundationEngine._distToSegment(mx, my, { x: x1, y: y1 }, { x: x2, y: y2 });
-                    if (dist >= 150) return;
+                    // 紐付いていない場合、ポリゴンのいずれかの頂点がこの梁の「直線（延長線）」上にあるか（距離150未満か）を判定する
+                    // centroid (mx,my) と span segment の距離判定だと、長いスラブ縁に対して短い梁が複数ある場合に漏れてしまうための修正
+                    const distToLine = (px, py) => {
+                        const l2 = (x2 - x1)**2 + (y2 - y1)**2;
+                        if (l2 === 0) return Math.hypot(px - x1, py - y1);
+                        const t = ((px - x1) * (x2 - x1) + (py - y1) * (y2 - y1)) / l2;
+                        return Math.hypot(px - (x1 + t * (x2 - x1)), py - (y1 + t * (y2 - y1)));
+                    };
+                    const minLineDist = Math.min(...tp.polygon.map(pt => distToLine(pt.x, pt.y)));
+                    if (minLineDist >= 150) return;
                 }
 
                 // [v2.5.0] Project polygon vertices onto the beam vector to calculate true 1D overlap
