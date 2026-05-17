@@ -337,8 +337,12 @@ window.FoundationEngine = {
                 
                 const check = (isLeft) => {
                     const res = isLeft ? seismic.leftward : seismic.rightward;
-                    const M_s_l = (i === 0 ? 0 : M_end) + (res.Mf[i] || 0);
-                    const M_s_r = (i === pillars.length - 2 ? 0 : M_end) + (res.Mf[i + 1] || 0);
+                    const M_end_left = (i === 0 ? 0 : M_end);
+                    const M_end_right = (i === pillars.length - 2 ? 0 : M_end);
+                    
+                    // Combined moment (signed: gravity support moment is negative)
+                    const M_combo_l = -M_end_left + (res.Mf[i] || 0);
+                    const M_combo_r = -M_end_right + (res.Mf[i + 1] || 0);
                     const Q_s = Q_L + Math.abs(res.Qe[i] || 0);
                     
                     // スパン別断面検定 (b_val, h_valを使用)
@@ -369,11 +373,19 @@ window.FoundationEngine = {
                     const alpha_S = Math.max(1.0, Math.min(2.0, 4.0 / ((M_ratio / (Q_s * d / 1000 || 1)) + 1)));
                     const sQa = (alpha_S * fs * b_val * j * 1.5 / 1000) + Qa_steel_L;
                     
+                    // Determine which rebar (top or bottom) is in tension dynamically
+                    const cap_l = M_combo_l < 0 ? sMa_top : sMa_bot;
+                    const cap_r = M_combo_r < 0 ? sMa_top : sMa_bot;
+                    
+                    const rM_left = Math.abs(M_combo_l) / (cap_l || 1);
+                    const rM_right = Math.abs(M_combo_r) / (cap_r || 1);
+                    
                     return {
-                        M_left: M_s_l, M_right: M_s_r, Q: Q_s,
+                        M_left: Math.abs(M_combo_l), M_right: Math.abs(M_combo_r), Q: Q_s,
                         lMa_top, lMa_bot, sMa_top, sMa_bot, lQa, sQa,
                         alpha_L, alpha_S, pw: st.area / (b_val * (st.pitch || 200)),
-                        ok: Math.abs(M_s_l) < sMa_top && Math.abs(M_s_r) < sMa_bot && Q_s < sQa
+                        rM_left, rM_right,
+                        ok: Math.abs(M_combo_l) < cap_l && Math.abs(M_combo_r) < cap_r && Q_s < sQa
                     };
                 };
                 
@@ -381,7 +393,13 @@ window.FoundationEngine = {
                 const resR = check(false);
                 if (!resL.ok || !resR.ok) isNG = true;
                 
-                const rM_L = Math.max(Math.abs(M_mid), Math.abs(M_end)) / (resL.lMa_bot || 1);
+                const M_end_left = (i === 0 ? 0 : M_end);
+                const M_end_right = (i === pillars.length - 2 ? 0 : M_end);
+                const rM_L = Math.max(
+                    M_end_left / (resL.lMa_top || 1),
+                    M_end_right / (resL.lMa_top || 1),
+                    M_mid / (resL.lMa_bot || 1)
+                );
                 const rQ_L = Q_L / (resL.lQa || 1);
                 
                 spans.push({
@@ -390,10 +408,10 @@ window.FoundationEngine = {
                     L, sigma_e: load.sigma, B_trib: load.B, w,
                     M_mid, M_end, Q_L, rM_L, rQ_L,
                     ratioM_L: rM_L, ratioQ_L: rQ_L,
-                    ratioM_S: Math.max(Math.abs(resL.M_left)/resL.sMa_top, Math.abs(resL.M_right)/resL.sMa_bot, Math.abs(resR.M_left)/resR.sMa_top, Math.abs(resR.M_right)/resR.sMa_bot),
+                    ratioM_S: Math.max(resL.rM_left, resL.rM_right, resR.rM_left, resR.rM_right),
                     ratioQ_S: Math.max(resL.Q/resL.sQa, resR.Q/resR.sQa),
-                    leftward: { ...resL, rM_left: Math.abs(resL.M_left)/(resL.sMa_top || 1), rM_right: Math.abs(resL.M_right)/(resL.sMa_bot || 1), rQ: resL.Q/(resL.sQa || 1) },
-                    rightward: { ...resR, rM_left: Math.abs(resR.M_left)/(resR.sMa_top || 1), rM_right: Math.abs(resR.M_right)/(resR.sMa_bot || 1), rQ: resR.Q/(resR.sQa || 1) },
+                    leftward: { ...resL, rQ: resL.Q/(resL.sQa || 1) },
+                    rightward: { ...resR, rQ: resR.Q/(resR.sQa || 1) },
                     cap: { 
                         ...resL, 
                         alpha_S_L: resL.alpha_S, 
