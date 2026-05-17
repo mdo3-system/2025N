@@ -340,9 +340,9 @@ window.FoundationEngine = {
                     const M_end_left = (i === 0 ? 0 : M_end);
                     const M_end_right = (i === pillars.length - 2 ? 0 : M_end);
                     
-                    // Combined moment (signed: gravity support moment is negative)
-                    const M_combo_l = -M_end_left + (res.Mf[i] || 0);
-                    const M_combo_r = -M_end_right + (res.Mf[i + 1] || 0);
+                    // Combined moment (signed: gravity support end moment under upward pressure is positive)
+                    const M_combo_l = M_end_left + (res.Mf[i] || 0);
+                    const M_combo_r = M_end_right + (res.Mf[i + 1] || 0);
                     const Q_s = Q_L + Math.abs(res.Qe[i] || 0);
                     
                     // スパン別断面検定 (b_val, h_valを使用)
@@ -368,12 +368,18 @@ window.FoundationEngine = {
                     const Qa_steel_L = (st.area * 295 * j / (st.pitch || 200)) / 1000;
                     const lQa = Qa_conc_L + Qa_steel_L;
                     
-                    const M_ratio = Math.max(Math.abs(M_end), 1e-6);
-                    const alpha_L = Math.max(1.0, Math.min(2.0, 4.0 / ((M_ratio / (Q_L * d / 1000 || 1)) + 1)));
-                    const alpha_S = Math.max(1.0, Math.min(2.0, 4.0 / ((M_ratio / (Q_s * d / 1000 || 1)) + 1)));
+                    // せん断スパン比αの算定 (画像に基づいて短期・長期のモーメントを適用)
+                    const M_ratio_L = Math.max(Math.abs(M_end), 1e-6);
+                    const alpha_L = Math.max(1.0, Math.min(2.0, 4.0 / ((M_ratio_L / (Q_L * d / 1000 || 1)) + 1)));
+                    
+                    const M_combo_max = Math.max(Math.abs(M_combo_l), Math.abs(M_combo_r));
+                    const M_ratio_S = Math.max(M_combo_max, 1e-6);
+                    const alpha_S = Math.max(1.0, Math.min(2.0, 4.0 / ((M_ratio_S / (Q_s * d / 1000 || 1)) + 1)));
                     const sQa = (alpha_S * fs * b_val * j * 1.5 / 1000) + Qa_steel_L;
                     
                     // Determine which rebar (top or bottom) is in tension dynamically
+                    // M_combo < 0 represents top tension (checked against sMa_top)
+                    // M_combo >= 0 represents bottom tension (checked against sMa_bot)
                     const cap_l = M_combo_l < 0 ? sMa_top : sMa_bot;
                     const cap_r = M_combo_r < 0 ? sMa_top : sMa_bot;
                     
@@ -395,10 +401,11 @@ window.FoundationEngine = {
                 
                 const M_end_left = (i === 0 ? 0 : M_end);
                 const M_end_right = (i === pillars.length - 2 ? 0 : M_end);
+                // Under upward ground reaction: center causes top tension (lMa_top), ends cause bottom tension (lMa_bot)
                 const rM_L = Math.max(
-                    M_end_left / (resL.lMa_top || 1),
-                    M_end_right / (resL.lMa_top || 1),
-                    M_mid / (resL.lMa_bot || 1)
+                    M_end_left / (resL.lMa_bot || 1),
+                    M_end_right / (resL.lMa_bot || 1),
+                    M_mid / (resL.lMa_top || 1)
                 );
                 const rQ_L = Q_L / (resL.lQa || 1);
                 

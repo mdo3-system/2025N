@@ -213,8 +213,8 @@ window.APP_VERSION = "v2.5.28";
 window.APP_VERSION = "v2.5.29";
 // Backup of v2.5.29 taken. Now moving to v2.5.30: Advanced ground pressure calculations featuring convex-hull based integrated roof horizontal projection with custom eaves dimensions.
 window.APP_VERSION = "v2.5.30";
-// Backup of v2.5.30 taken. Now moving to v2.5.31: Fixed continuous foundation beam bending checks to dynamically check rebar capacity based on bending tension fiber (top vs bottom) and optimized long-term checks.
-window.APP_VERSION = "v2.5.31";
+// Backup of v2.5.31 taken. Now moving to v2.5.32: Complete physical alignment of foundation beam bending and shear checks with upward ground reaction loading model in calculation sheet images.
+window.APP_VERSION = "v2.5.32";
 
 
 
