@@ -234,6 +234,8 @@ window.APP_VERSION = "v2.6.8";
 window.APP_VERSION = "v2.6.9";
 // Backup of v2.6.9 taken. Now moving to v2.6.10: Align span coordinate properties using globalX/globalY to avoid coordinate NaN failures and sync pressure.
 window.APP_VERSION = "v2.6.10";
+// Backup of v2.6.10 taken. Now moving to v2.6.11: Deduplicate beam self-weight via load decoupling (qTotal - stemPressure) to break sync loop.
+window.APP_VERSION = "v2.6.11";
 
 
 

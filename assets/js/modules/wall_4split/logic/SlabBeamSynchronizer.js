@@ -191,7 +191,15 @@ window.SlabBeamSynchronizer = {
         let sigma_B_side1 = 0, sigma_B_side2 = 0;
 
         (slabs || []).forEach(slab => {
-            const qSlab = slab.fdStress ? slab.fdStress.qTotal : 12.0;
+            // [荷重二重加算の解消] スラブの全接地圧 qTotal には「基礎梁の自重分（stemPressure）」が含まれています。
+            // 基礎梁の応力計算では、梁自身の自重 w_self_span が直接加算されているため、
+            // スラブから同期する接地圧には、梁自重による影響（stemPressure）を差し引いた「純粋な接地圧」を使用します。
+            // これにより、梁自重のダブルカウントと、連続実行による接地圧の循環増幅ループを完全に根絶します。
+            let qSlab = 12.0;
+            if (slab.fdStress) {
+                const stemP = slab.fdStress.stemPressure || 0;
+                qSlab = Math.max(1.0, slab.fdStress.qTotal - stemP);
+            }
             (slab.tributaryPolygons || []).forEach(tp => {
                 // [超重要改善] すでに分配アルゴリズムにより beamId がこの梁に一致している場合は、
                 // 重心の距離判定をバイパスし、確実に按分同期対象とする。
