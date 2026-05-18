@@ -236,6 +236,8 @@ window.APP_VERSION = "v2.6.9";
 window.APP_VERSION = "v2.6.10";
 // Backup of v2.6.10 taken. Now moving to v2.6.11: Deduplicate beam self-weight via load decoupling (qTotal - stemPressure) to break sync loop.
 window.APP_VERSION = "v2.6.11";
+// Backup of v2.6.11 taken. Now moving to v2.6.12: Clear previous span states in runAnalysis to prevent pressure leaks and restore 100% direct sync.
+window.APP_VERSION = "v2.6.12";
 
 
 

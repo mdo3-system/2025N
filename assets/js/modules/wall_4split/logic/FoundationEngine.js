@@ -17,6 +17,14 @@ window.FoundationEngine = {
 
     runAnalysis: function(state) {
         const s = state || window.AppState;
+        
+        // [本質的解決] 実行開始時に前回のスパン解析結果を完全にクリア・初期化し、
+        // 状態が次回の計算に蓄積・リークして接地圧が不当に変動・増幅するバグを完璧に根絶する。
+        (s.foundationBeams || []).forEach(b => {
+            b.spans = null;
+            b.fdStress = null;
+        });
+
         if (!s.config) s.config = {};
         if (window.AxialEngine) {
             window.AxialEngine.calculateAllAxialForces(s);
