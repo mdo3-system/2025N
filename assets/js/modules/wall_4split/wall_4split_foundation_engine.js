@@ -872,7 +872,7 @@ function OBSOLETE_getFoundationSlabReportHtml(slab) {
         <div style="background:#fef9e7; border:1px solid #f1c40f; border-radius:4px; padding:8px; font-size:11px;">
             <div style="font-weight:bold; color:#7d6608; border-bottom:1px solid #f1c40f; margin-bottom:5px;">📋 片持ちスラブ断面検定</div>
             <table style="width:100%; border-collapse:collapse;">
-                <tr><td>接地圧 q</td><td style="text-align:right; font-weight:bold;">${fmt(s.qTotal, 2)}</td><td>kN/㎡</td></tr>
+                <tr><td>接地圧 q</td><td style="text-align:right; font-weight:bold;">${fmt(s.qTotal, 3)}</td><td>kN/㎡</td></tr>
                 <tr><td>片持ち長さ L</td><td style="text-align:right; font-weight:bold;">${fmt(s.cantileverLength, 2)}</td><td>m</td></tr>
                 <tr style="background:#eee;"><td colspan="3" style="font-weight:bold; height:1px;"></td></tr>
                 <tr style="font-size:10px; color:#666;"><td colspan="3">算定式: M = 1/2 ・ q ・ L²</td></tr>
@@ -889,7 +889,7 @@ function OBSOLETE_getFoundationSlabReportHtml(slab) {
     <div style="background:#f8f9fa; border:1px solid #ddd; border-radius:4px; padding:8px; font-size:11px;">
         <div style="font-weight:bold; color:#2c3e50; border-bottom:1px solid #ccc; margin-bottom:5px;">📋 断面検定結果</div>
         <table style="width:100%; border-collapse:collapse;">
-            <tr><td>総接地圧 q</td><td style="text-align:right; font-weight:bold;">${fmt(s.qTotal, 2)}</td><td>kN/㎡</td></tr>
+            <tr><td>総接地圧 q</td><td style="text-align:right; font-weight:bold;">${fmt(s.qTotal, 3)}</td><td>kN/㎡</td></tr>
             <tr style="font-size:10px; color:#666;">
                 <td colspan="3">(建物:${fmt(s.avgBuildingPressure, 1)} + 自重:${fmt(s.wSelf, 1)} + 積載:${fmt(s.wLive, 1)})</td>
             </tr>

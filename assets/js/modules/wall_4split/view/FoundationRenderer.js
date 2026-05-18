@@ -63,7 +63,7 @@ window.FoundationRenderer = {
                 const qSlab = (slab.fdStress && slab.fdStress.qTotal != null) ? slab.fdStress.qTotal : (slab.props?.groundPressure || state.averageGroundPressure);
                 if (qSlab) {
                     ctx.font = 'bold 12px sans-serif'; ctx.fillStyle = '#e67e22';
-                    ctx.fillText(`${qSlab.toFixed(2)} kN/m2`, lp.cx, lp.cy + 10);
+                    ctx.fillText(`${qSlab.toFixed(3)} kN/m2`, lp.cx, lp.cy + 10);
                 }
             }
             ctx.restore();

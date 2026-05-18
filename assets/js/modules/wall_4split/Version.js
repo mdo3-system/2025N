@@ -242,6 +242,8 @@ window.APP_VERSION = "v2.6.12";
 window.APP_VERSION = "v2.6.13";
 // Backup of v2.6.13 taken. Now moving to v2.6.14: Implement robust 2-pass analysis logic deterministically materializing spans prior to slab analysis.
 window.APP_VERSION = "v2.6.14";
+// Backup of v2.6.14 taken. Now moving to v2.6.15: Standardize canvas slab ground pressure display and obsolete report to 3 decimal places.
+window.APP_VERSION = "v2.6.15";
 
 
 
