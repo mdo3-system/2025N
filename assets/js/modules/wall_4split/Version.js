@@ -228,6 +228,8 @@ window.APP_VERSION = "v2.6.5";
 window.APP_VERSION = "v2.6.6";
 // Backup of v2.6.6 taken. Now moving to v2.6.7: Fix slab-to-beam ground pressure synchronization issues, abolish silent fallback to averageGroundPressure, and show explicit warning when sync fails.
 window.APP_VERSION = "v2.6.7";
+// Backup of v2.6.7 taken. Now moving to v2.6.8: Support orthogonal and penetrating cantilever beams in slab-to-beam ground pressure synchronization via hybrid intersection-inclusion geometry logic.
+window.APP_VERSION = "v2.6.8";
 
 
 

@@ -10,8 +10,107 @@
 
 window.SlabBeamSynchronizer = {
     /**
+     * CCW (Counter Clockwise) 法を用いた線分交差判定
+     * @param {Object} a - 線分1の端点1 {x, y}
+     * @param {Object} b - 線分1の端点2 {x, y}
+     * @param {Object} c - 線分2의 端点1 {x, y}
+     * @param {Object} d - 線分2の端点2 {x, y}
+     * @returns {boolean} 交差していればtrue
+     */
+    isSegmentsIntersect: function(a, b, c, d) {
+        const ccw = (p1, p2, p3) => {
+            return (p3.y - p1.y) * (p2.x - p1.x) > (p2.y - p1.y) * (p3.x - p1.x);
+        };
+        return (ccw(a, c, d) !== ccw(b, c, d)) && (ccw(a, b, c) !== ccw(a, b, d));
+    },
+
+    /**
+     * レイキャスティング法を用いた点の内包判定
+     * @param {Object} p - 判定対象の点 {x, y}
+     * @param {Array} polygon - 多角形の頂点リスト [{x, y}]
+     * @returns {boolean} 内包されていればtrue
+     */
+    isPointInPolygon: function(p, polygon) {
+        let inside = false;
+        for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+            const xi = polygon[i].x, yi = polygon[i].y;
+            const xj = polygon[j].x, yj = polygon[j].y;
+            const intersect = ((yi > p.y) !== (yj > p.y))
+                && (p.x < (xj - xi) * (p.y - yi) / (yj - yi || 1) + xi);
+            if (intersect) inside = !inside;
+        }
+        return inside;
+    },
+
+    /**
+     * 線分が多角形の内部を通過する実際の長さを算出する
+     * @param {number} x1 - 始点X
+     * @param {number} y1 - 始点Y
+     * @param {number} x2 - 終点X
+     * @param {number} y2 - 終点Y
+     * @param {Array} polygon - 多角形の頂点リスト [{x, y}]
+     * @returns {number} 通過長さ (mm)
+     */
+    getOverlapLengthInPolygon: function(x1, y1, x2, y2, polygon) {
+        const p1 = { x: x1, y: y1 };
+        const p2 = { x: x2, y: y2 };
+        const L_span = Math.hypot(x2 - x1, y2 - y1);
+        if (L_span < 0.1) return 0;
+
+        const getIntersectionT = (pa, pb, pc, pd) => {
+            const denom = (pd.y - pc.y) * (pb.x - pa.x) - (pd.x - pc.x) * (pb.y - pa.y);
+            if (denom === 0) return null; // 平行
+            const ua = ((pd.x - pc.x) * (pa.y - pc.y) - (pd.y - pc.y) * (pa.x - pc.x)) / denom;
+            const ub = ((pb.x - pa.x) * (pa.y - pc.y) - (pb.y - pa.y) * (pa.x - pc.x)) / denom;
+            if (ua >= 0 && ua <= 1 && ub >= 0 && ub <= 1) {
+                return ua;
+            }
+            return null;
+        };
+
+        // 1. すべての交点パラメータ t を取得
+        const tList = [0, 1]; // 始点と終点
+        const N = polygon.length;
+        for (let i = 0; i < N; i++) {
+            const p3 = polygon[i];
+            const p4 = polygon[(i + 1) % N];
+            const t = getIntersectionT(p1, p2, p3, p4);
+            if (t !== null && t > 0.0001 && t < 0.9999) {
+                tList.push(t);
+            }
+        }
+
+        // 2. パラメータ t を昇順ソートして重複を排除
+        tList.sort((a, b) => a - b);
+        const uniqueT = [];
+        for (let i = 0; i < tList.length; i++) {
+            if (i === 0 || tList[i] - tList[i - 1] > 0.0001) {
+                uniqueT.push(tList[i]);
+            }
+        }
+
+        // 3. 各区間の中点が多角形内にあるか判定し、内包される区間の長さを合計
+        let intersectLength = 0;
+        for (let i = 0; i < uniqueT.length - 1; i++) {
+            const tStart = uniqueT[i];
+            const tEnd = uniqueT[i + 1];
+            const tMid = (tStart + tEnd) / 2;
+            const midPoint = {
+                x: x1 + tMid * (x2 - x1),
+                y: y1 + tMid * (y2 - y1)
+            };
+
+            if (this.isPointInPolygon(midPoint, polygon)) {
+                intersectLength += (tEnd - tStart) * L_span;
+            }
+        }
+
+        return intersectLength;
+    },
+
+    /**
      * スラブの分配ポリゴン (tributaryPolygons) から、梁の各スパンへの負担幅と接地圧の按分・同期計算を行います
-     * @param {Array} slabs - スラブオブジェクトの配列
+     * @param {Array} slabs - スラブオブジェクト의 配列
      * @param {Object} beam - 解析対象の基礎梁オブジェクト
      * @param {Object} span - 解析対象のスパン (p1 - p2)
      * @param {Object} state - アプリケーション状態
@@ -89,8 +188,39 @@ window.SlabBeamSynchronizer = {
                 let overlap = Math.max(0, Math.min(maxT, L_span) - Math.max(minT, 0));
 
                 // [本質的解決3] 幾何学的に重なっていない梁に対して誤同期させる危険な重心投影フォールバックを完全削除
+                // ただし、直交・貫通する基礎梁（overlap <= 0.1）に対しては、物理的な交差・内包判定により救済を行う
                 if (overlap <= 0.1) {
-                    return; // 重複なし
+                    let hasIntersection = false;
+                    const pPoint1 = { x: x1, y: y1 };
+                    const pPoint2 = { x: x2, y: y2 };
+                    const N = roundedPolygon.length;
+
+                    // 1. 端点の内包判定
+                    if (this.isPointInPolygon(pPoint1, roundedPolygon) || this.isPointInPolygon(pPoint2, roundedPolygon)) {
+                        hasIntersection = true;
+                    }
+
+                    // 2. 梁線分と分配ポリゴン辺の交差判定
+                    if (!hasIntersection) {
+                        for (let i = 0; i < N; i++) {
+                            const p3 = roundedPolygon[i];
+                            const p4 = roundedPolygon[(i + 1) % N];
+                            if (this.isSegmentsIntersect(pPoint1, pPoint2, p3, p4)) {
+                                hasIntersection = true;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (hasIntersection) {
+                        // 3. 多角形内の通過長さを計算
+                        const intersectLength = this.getOverlapLengthInPolygon(x1, y1, x2, y2, roundedPolygon);
+                        // 境界線上のわずかな交差判定ズレを防ぐため、10.0mm未満の極小通過長さの場合は
+                        // 安全側にスパン全体が載っているとみなす（セーフガード）
+                        overlap = Math.max(intersectLength, 10.0);
+                    } else {
+                        return; // 重複なし
+                    }
                 }
 
                 // 按分比率
