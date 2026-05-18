@@ -32,12 +32,18 @@ window.FoundationEngine = {
         }
         if (typeof reconstructContinuousBeams === 'function') reconstructContinuousBeams();
         this.updateGroundPressure(s);
+
+        // [v2.6.14] ２パス解析（幾何スパン先行生成）の導入
+        // 1. スラブ解析の前に、まずスパン分割（geometry）を先行して確定させる
+        this.runFoundationBeamAnalysis(s.foundationBeams, s.foundationSlabs, s);
+
+        // 2. 完璧に spans が生成された状態の beams を用いて、スラブ解析を一発で正確に実行する（divisorも完璧に効く！）
         this.calculateSlabAnalysis(s.foundationSlabs, s.averageBuildingPressure);
+
+        // 3. 正確に分配されたスラブ接地圧を用いて、基礎梁の荷重と応力を最終確定させる
         this.calculateSlabTributary(s.foundationSlabs, s.foundationBeams, s);
         this.runFoundationBeamAnalysis(s.foundationBeams, s.foundationSlabs, s);
         this.updateGroundPressure(s);
-        // [v2.5.7] Re-run Slab Analysis AFTER Beam Analysis to capture freshly materialized overrides perfectly.
-        this.calculateSlabAnalysis(s.foundationSlabs, s.averageBuildingPressure);
     },
 
     updateGroundPressure: function(state) {
@@ -163,15 +169,6 @@ window.FoundationEngine = {
             });
         });
 
-        // [v2.6.13] スパン未生成時（初期化後1回目）の梁自重分配用として、梁全体の隣接スラブ数を静的に集計
-        const beamAdjacency = {};
-        beams.forEach(b => {
-            beamAdjacency[b.id] = 0;
-            slabs.forEach(slab => {
-                if (this._isBeamOnSlabBoundary(b, slab.vertices)) beamAdjacency[b.id]++;
-            });
-        });
-
         slabs.forEach(slab => {
             const area = M.polygonArea(slab.vertices) / 1000000;
             const a1Polys = (s.areaLines || []).filter(al => al.floor === '1F' && !['attic','balcony'].includes(al.areaType));
@@ -231,11 +228,7 @@ window.FoundationEngine = {
                         const def_b = b.props?.width || 150, def_h = b.props?.height || 640, def_emb = b.props?.embedDepth ?? 250;
                         const geomLen = Math.hypot(b.p2.x - b.p1.x, b.p2.y - b.p1.y) / 1000;
                         const rawWeight = (def_b / 1000) * (Math.max(0, def_h - def_emb) / 1000 + 0.01) * geomLen * 24.0;
-                        
-                        // [v2.6.13] スパン未生成時であっても、梁全体の隣接数で除算を行うことで、
-                        // 1回目と2回目で自重計算結果が100%完全に一致・収束するようにする。
-                        const divisor = (involve === 1) ? (beamAdjacency[b.id] || 1) : 1;
-                        stem_kN += rawWeight / divisor;
+                        stem_kN += rawWeight;
                     }
                 }
             });

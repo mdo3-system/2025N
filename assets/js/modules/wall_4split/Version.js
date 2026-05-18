@@ -240,6 +240,8 @@ window.APP_VERSION = "v2.6.11";
 window.APP_VERSION = "v2.6.12";
 // Backup of v2.6.12 taken. Now moving to v2.6.13: Harmonize raw beam self-weight calculation by adding beamAdjacency divisor to initial fallback.
 window.APP_VERSION = "v2.6.13";
+// Backup of v2.6.13 taken. Now moving to v2.6.14: Implement robust 2-pass analysis logic deterministically materializing spans prior to slab analysis.
+window.APP_VERSION = "v2.6.14";
 
 
 
