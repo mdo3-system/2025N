@@ -232,6 +232,8 @@ window.APP_VERSION = "v2.6.7";
 window.APP_VERSION = "v2.6.8";
 // Backup of v2.6.8 taken. Now moving to v2.6.9: Establish robust collinear-overlap synchronizer bypassing arbitrary distance thresholds for slabs on the same grid axis.
 window.APP_VERSION = "v2.6.9";
+// Backup of v2.6.9 taken. Now moving to v2.6.10: Align span coordinate properties using globalX/globalY to avoid coordinate NaN failures and sync pressure.
+window.APP_VERSION = "v2.6.10";
 
 
 

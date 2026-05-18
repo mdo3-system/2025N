@@ -170,10 +170,12 @@ window.SlabBeamSynchronizer = {
         const p2 = span.p2; // 終点柱 (globalX, globalY)
 
         // [本質的解決1] 座標をミリメートル単位（整数値）に四捨五入して丸めることで浮動小数点の「微妙なズレ」を完全排除
-        const x1 = Math.round(p1.globalX);
-        const y1 = Math.round(p1.globalY);
-        const x2 = Math.round(p2.globalX);
-        const y2 = Math.round(p2.globalY);
+        // [超重要堅牢化] span.p1/p2 に大文字の globalX/globalY がある場合は最優先でミリメートル座標として取得し、
+        // そうでなければ小文字の x/y をワールド座標(mm)として読み込む（データ構造の不一致による NaN 化を完全根絶）。
+        const x1 = Math.round(p1.globalX !== undefined ? p1.globalX : p1.x);
+        const y1 = Math.round(p1.globalY !== undefined ? p1.globalY : p1.y);
+        const x2 = Math.round(p2.globalX !== undefined ? p2.globalX : p2.x);
+        const y2 = Math.round(p2.globalY !== undefined ? p2.globalY : p2.y);
 
         const L_span = Math.hypot(x2 - x1, y2 - y1);
         if (L_span < 0.1) {
