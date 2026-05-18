@@ -163,6 +163,15 @@ window.FoundationEngine = {
             });
         });
 
+        // [v2.6.13] スパン未生成時（初期化後1回目）の梁自重分配用として、梁全体の隣接スラブ数を静的に集計
+        const beamAdjacency = {};
+        beams.forEach(b => {
+            beamAdjacency[b.id] = 0;
+            slabs.forEach(slab => {
+                if (this._isBeamOnSlabBoundary(b, slab.vertices)) beamAdjacency[b.id]++;
+            });
+        });
+
         slabs.forEach(slab => {
             const area = M.polygonArea(slab.vertices) / 1000000;
             const a1Polys = (s.areaLines || []).filter(al => al.floor === '1F' && !['attic','balcony'].includes(al.areaType));
@@ -222,7 +231,11 @@ window.FoundationEngine = {
                         const def_b = b.props?.width || 150, def_h = b.props?.height || 640, def_emb = b.props?.embedDepth ?? 250;
                         const geomLen = Math.hypot(b.p2.x - b.p1.x, b.p2.y - b.p1.y) / 1000;
                         const rawWeight = (def_b / 1000) * (Math.max(0, def_h - def_emb) / 1000 + 0.01) * geomLen * 24.0;
-                        stem_kN += rawWeight;
+                        
+                        // [v2.6.13] スパン未生成時であっても、梁全体の隣接数で除算を行うことで、
+                        // 1回目と2回目で自重計算結果が100%完全に一致・収束するようにする。
+                        const divisor = (involve === 1) ? (beamAdjacency[b.id] || 1) : 1;
+                        stem_kN += rawWeight / divisor;
                     }
                 }
             });

@@ -238,6 +238,8 @@ window.APP_VERSION = "v2.6.10";
 window.APP_VERSION = "v2.6.11";
 // Backup of v2.6.11 taken. Now moving to v2.6.12: Clear previous span states in runAnalysis to prevent pressure leaks and restore 100% direct sync.
 window.APP_VERSION = "v2.6.12";
+// Backup of v2.6.12 taken. Now moving to v2.6.13: Harmonize raw beam self-weight calculation by adding beamAdjacency divisor to initial fallback.
+window.APP_VERSION = "v2.6.13";
 
 
 
