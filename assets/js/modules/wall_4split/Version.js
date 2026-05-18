@@ -230,6 +230,8 @@ window.APP_VERSION = "v2.6.6";
 window.APP_VERSION = "v2.6.7";
 // Backup of v2.6.7 taken. Now moving to v2.6.8: Support orthogonal and penetrating cantilever beams in slab-to-beam ground pressure synchronization via hybrid intersection-inclusion geometry logic.
 window.APP_VERSION = "v2.6.8";
+// Backup of v2.6.8 taken. Now moving to v2.6.9: Establish robust collinear-overlap synchronizer bypassing arbitrary distance thresholds for slabs on the same grid axis.
+window.APP_VERSION = "v2.6.9";
 
 
 

@@ -10,6 +10,54 @@
 
 window.SlabBeamSynchronizer = {
     /**
+     * 線分1（梁）と線分2（分配ポリゴンの辺）が同一の直線上（共線）にあり、かつ1次元的に重なっているかを判定する
+     * @param {number} ax1 - 線分1の始点X
+     * @param {number} ay1 - 線分1の始点Y
+     * @param {number} ax2 - 線分1の終点X
+     * @param {number} ay2 - 線分1の終点Y
+     * @param {number} bx1 - 線分2の始点X
+     * @param {number} by1 - 線分2の始点Y
+     * @param {number} bx2 - 線分2の終点X
+     * @param {number} by2 - 線分2の終点Y
+     * @returns {Object} { isCollinear: boolean, overlap: number }
+     */
+    isSegmentsCollinearAndOverlapping: function(ax1, ay1, ax2, ay2, bx1, by1, bx2, by2) {
+        const dLine = (px, py, x1, y1, x2, y2) => {
+            const l2 = (x2 - x1)**2 + (y2 - y1)**2;
+            if (l2 === 0) return Math.hypot(px - x1, py - y1);
+            const t = ((px - x1) * (x2 - x1) + (py - y1) * (y2 - y1)) / l2;
+            return Math.hypot(px - (x1 + t * (x2 - x1)), py - (y1 + t * (y2 - y1)));
+        };
+
+        // 1. 共線判定：線分2の端点から線分1の無限延長線への垂直距離が 15mm 以下であること
+        const dist1 = dLine(bx1, by1, ax1, ay1, ax2, ay2);
+        const dist2 = dLine(bx2, by2, ax1, ay1, ax2, ay2);
+        
+        if (dist1 > 15 || dist2 > 15) {
+            return { isCollinear: false, overlap: 0 };
+        }
+
+        // 2. 重なり判定：線分1の方向ベクトルへ線分2の端点を投影
+        const L1 = Math.hypot(ax2 - ax1, ay2 - ay1);
+        if (L1 < 0.1) return { isCollinear: false, overlap: 0 };
+        
+        const uX = (ax2 - ax1) / L1;
+        const uY = (ay2 - ay1) / L1;
+
+        const t1 = (bx1 - ax1) * uX + (by1 - ay1) * uY;
+        const t2 = (bx2 - ax1) * uX + (by2 - ay1) * uY;
+
+        const minT = Math.min(t1, t2);
+        const maxT = Math.max(t1, t2);
+
+        const overlap = Math.max(0, Math.min(maxT, L1) - Math.max(minT, 0));
+        return {
+            isCollinear: true,
+            overlap: overlap
+        };
+    },
+
+    /**
      * CCW (Counter Clockwise) 法を用いた線分交差判定
      * @param {Object} a - 線分1の端点1 {x, y}
      * @param {Object} b - 線分1の端点2 {x, y}
@@ -158,26 +206,44 @@ window.SlabBeamSynchronizer = {
                 const mx = tp.mx !== undefined ? Math.round(tp.mx) : roundedPolygon.reduce((sum, pt) => sum + pt.x, 0) / roundedPolygon.length;
                 const my = tp.my !== undefined ? Math.round(tp.my) : roundedPolygon.reduce((sum, pt) => sum + pt.y, 0) / roundedPolygon.length;
 
+                let isCollinearSync = false;
                 if (!isMyBeam) {
-                    // 紐付いていない場合、ポリゴンのいずれかの頂点がこの梁の「直線（延長線）」上にあるか（距離150未満か）を判定する
-                    const distToLine = (px, py) => {
-                        const l2 = (x2 - x1)**2 + (y2 - y1)**2;
-                        if (l2 === 0) return Math.hypot(px - x1, py - y1);
-                        const t = ((px - x1) * (x2 - x1) + (py - y1) * (y2 - y1)) / l2;
-                        return Math.hypot(px - (x1 + t * (x2 - x1)), py - (y1 + t * (y2 - y1)));
-                    };
-                    const minLineDist = Math.min(...roundedPolygon.map(pt => distToLine(pt.x, pt.y)));
-                    
-                    // [v2.6.7] 片持ち梁等での幾何判定漏れを防ぐため、スラブ重心から梁スパン（線分）への距離もチェックする
-                    const distCentroidToSpan = () => {
-                        const l2 = (x2 - x1)**2 + (y2 - y1)**2;
-                        if (l2 === 0) return Math.hypot(mx - x1, my - y1);
-                        let t = ((mx - x1) * (x2 - x1) + (my - y1) * (y2 - y1)) / l2;
-                        t = Math.max(0, Math.min(1, t)); // 線分内にクランプ
-                        return Math.hypot(mx - (x1 + t * (x2 - x1)), my - (y1 + t * (y2 - y1)));
-                    };
+                    // [グリッド大原則] 分配ポリゴンのいずれかの辺が、この梁と共線かつ重なっているかを判定
+                    const N = roundedPolygon.length;
+                    for (let i = 0; i < N; i++) {
+                        const p3 = roundedPolygon[i];
+                        const p4 = roundedPolygon[(i + 1) % N];
+                        const colCheck = this.isSegmentsCollinearAndOverlapping(
+                            x1, y1, x2, y2,
+                            p3.x, p3.y, p4.x, p4.y
+                        );
+                        if (colCheck.isCollinear && colCheck.overlap > 10) {
+                            isCollinearSync = true;
+                            break;
+                        }
+                    }
 
-                    if (minLineDist >= 150 && distCentroidToSpan() >= 250) return;
+                    if (!isCollinearSync) {
+                        // 紐付いておらず、かつ同一グリッド共線でもない場合のみ、しきい値による距離チェックを実行
+                        const distToLine = (px, py) => {
+                            const l2 = (x2 - x1)**2 + (y2 - y1)**2;
+                            if (l2 === 0) return Math.hypot(px - x1, py - y1);
+                            const t = ((px - x1) * (x2 - x1) + (py - y1) * (y2 - y1)) / l2;
+                            return Math.hypot(px - (x1 + t * (x2 - x1)), py - (y1 + t * (y2 - y1)));
+                        };
+                        const minLineDist = Math.min(...roundedPolygon.map(pt => distToLine(pt.x, pt.y)));
+                        
+                        // [v2.6.7] 片持ち梁等での幾何判定漏れを防ぐため、スラブ重心から梁スパン（線分）への距離もチェックする
+                        const distCentroidToSpan = () => {
+                            const l2 = (x2 - x1)**2 + (y2 - y1)**2;
+                            if (l2 === 0) return Math.hypot(mx - x1, my - y1);
+                            let t = ((mx - x1) * (x2 - x1) + (my - y1) * (y2 - y1)) / l2;
+                            t = Math.max(0, Math.min(1, t)); // 線分内にクランプ
+                            return Math.hypot(mx - (x1 + t * (x2 - x1)), my - (y1 + t * (y2 - y1)));
+                        };
+
+                        if (minLineDist >= 150 && distCentroidToSpan() >= 250) return;
+                    }
                 }
 
                 // [v2.5.0] Project polygon vertices onto the beam vector to calculate true 1D overlap

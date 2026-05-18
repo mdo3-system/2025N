@@ -86,8 +86,50 @@ window.FoundationEngine = {
                     let width = area / Ei.L / 1000; if (this._isTriangle(poly)) width = (area * triMult) / Ei.L / 1000;
                     const mx = (Ei.p1.x + Ei.p2.x) / 2, my = (Ei.p1.y + Ei.p2.y) / 2;
                     const trib = { beamId: null, polygon: poly, area, width, mx, my }; slab.tributaryPolygons.push(trib);
-                    let bestBeam = null, minDist = 300;
-                    (beams || []).forEach(b => { const d = this._distToSegment(mx, my, b.p1, b.p2); if (d < minDist) { minDist = d; bestBeam = b; } });
+                    let bestBeam = null;
+                    let bestOverlap = 0;
+                    
+                    // 1. 共線・重なり優先チェック（第1優先: グリッド大原則の保証）
+                    (beams || []).forEach(b => {
+                        const dLine = (px, py, x1, y1, x2, y2) => {
+                            const l2 = (x2 - x1)**2 + (y2 - y1)**2;
+                            if (l2 === 0) return Math.hypot(px - x1, py - y1);
+                            const t = ((px - x1) * (x2 - x1) + (py - y1) * (y2 - y1)) / l2;
+                            return Math.hypot(px - (x1 + t * (x2 - x1)), py - (y1 + t * (y2 - y1)));
+                        };
+                        const dist1 = dLine(Ei.p1.x, Ei.p1.y, b.p1.x, b.p1.y, b.p2.x, b.p2.y);
+                        const dist2 = dLine(Ei.p2.x, Ei.p2.y, b.p1.x, b.p1.y, b.p2.x, b.p2.y);
+                        
+                        if (dist1 <= 15 && dist2 <= 15) {
+                            const L_beam = Math.hypot(b.p2.x - b.p1.x, b.p2.y - b.p1.y);
+                            if (L_beam > 0.1) {
+                                const uX = (b.p2.x - b.p1.x) / L_beam;
+                                const uY = (b.p2.y - b.p1.y) / L_beam;
+                                const t1 = (Ei.p1.x - b.p1.x) * uX + (Ei.p1.y - b.p1.y) * uY;
+                                const t2 = (Ei.p2.x - b.p1.x) * uX + (Ei.p2.y - b.p1.y) * uY;
+                                const minT = Math.min(t1, t2);
+                                const maxT = Math.max(t1, t2);
+                                const overlap = Math.max(0, Math.min(maxT, L_beam) - Math.max(minT, 0));
+                                if (overlap > 10 && overlap > bestOverlap) {
+                                    bestOverlap = overlap;
+                                    bestBeam = b;
+                                }
+                            }
+                        }
+                    });
+
+                    // 2. 従来通り重心距離チェック（第2優先フォールバック）
+                    if (!bestBeam) {
+                        let minDist = 300;
+                        (beams || []).forEach(b => {
+                            const d = this._distToSegment(mx, my, b.p1, b.p2);
+                            if (d < minDist) {
+                                minDist = d;
+                                bestBeam = b;
+                            }
+                        });
+                    }
+
                     if (bestBeam) { trib.beamId = bestBeam.id; bestBeam.tributaryArea += area; bestBeam.tributaryWidth += width; bestBeam.slabLoad += (area / 1000000) * ((slab.fdStress && slab.fdStress.qTotal != null) ? slab.fdStress.qTotal : state.averageGroundPressure); }
                 }
             }
