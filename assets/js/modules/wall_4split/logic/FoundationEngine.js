@@ -340,7 +340,57 @@ window.FoundationEngine = {
             let isNG = false;
             
             if (pillars.length < 2) {
-                beam.fdStress = { pillars, seismic, spans: [], isNG: false };
+                // [根本修正] 支点不足（片持ち等）の場合であってもスラブ接地圧の同期計算は仮想スパンに対して実行する
+                const p1_node = {
+                    id: 's1',
+                    name: '始点',
+                    x: 0,
+                    globalX: beam.p1.x,
+                    globalY: beam.p1.y,
+                    seismicAxial: 0
+                };
+                const p2_node = {
+                    id: 's2',
+                    name: '終点',
+                    x: Math.hypot(beam.p2.x - beam.p1.x, beam.p2.y - beam.p1.y) / 1000,
+                    globalX: beam.p2.x,
+                    globalY: beam.p2.y,
+                    seismicAxial: 0
+                };
+                const L = Math.max(0.1, p2_node.x - p1_node.x);
+
+                const b_val = beam.props?.width || 150;
+                const h_val = beam.props?.height || 640;
+                const embed_val = beam.props?.embedDepth ?? 250;
+                const w_self_span = (b_val * (Math.max(0, h_val - embed_val) + 10.0) / 1e6) * 24.0;
+
+                const load = (window.SlabBeamSynchronizer && typeof window.SlabBeamSynchronizer.calculateSpanSlabLoad === 'function')
+                    ? window.SlabBeamSynchronizer.calculateSpanSlabLoad(slabs, beam, { p1: p1_node, p2: p2_node }, s)
+                    : { sigma: 12.0, B: 1.0, isSyncFailed: true };
+
+                const w = (load.sigma * load.B) + w_self_span;
+
+                spans.push({
+                    startNode: p1_node,
+                    endNode: p2_node,
+                    L,
+                    sigma_e: load.sigma,
+                    B_trib: load.B,
+                    w,
+                    isSyncFailed: !!load.isSyncFailed,
+                    M_mid: 0,
+                    M_end_left: 0,
+                    M_end_right: 0,
+                    Q_left: 0,
+                    Q_right: 0,
+                    props: {
+                        width: b_val,
+                        height: h_val,
+                        embedDepth: embed_val
+                    }
+                });
+
+                beam.fdStress = { pillars: [p1_node, p2_node], seismic, spans, isNG: !!load.isSyncFailed };
                 return;
             }
 
@@ -443,6 +493,7 @@ window.FoundationEngine = {
                 const rQ_L = Q_L / (resL.lQa || 1);
 
                 const spanNG = (
+                    load.isSyncFailed || // [v2.6.7] スラブ接地圧同期失敗時はエラーとする
                     rM_L > 1.0 ||
                     rQ_L > 1.0 ||
                     resL.rM_left > 1.0 ||
@@ -458,6 +509,7 @@ window.FoundationEngine = {
                     spanName: `${p1.name}-${p2.name}`,
                     startNode: p1, endNode: p2,
                     L, sigma_e: load.sigma, B_trib: load.B, w,
+                    isSyncFailed: load.isSyncFailed,
                     M_mid, M_end, Q_L, rM_L, rQ_L,
                     ratioM_L: rM_L, ratioQ_L: rQ_L,
                     ratioM_S: Math.max(resL.rM_left, resL.rM_right, resR.rM_left, resR.rM_right),

@@ -475,10 +475,14 @@ window.PropertyController = {
             
             const spans = beam.fdStress.spans || [];
             spans.forEach(span => {
+                const sigmaDisplay = span.isSyncFailed 
+                    ? `<div style="color:#c0392b; font-size:8px; font-weight:bold; line-height:1.2;">⚠️スラブ未同期<br>（スラブ要配置）</div>`
+                    : `${(span.sigma_e ?? 0).toFixed(3)}`;
+
                 table2 += `<tr>
                     <td style="border:1px solid #ddd; padding:3px; font-weight:bold;">${getFreshSpanName(span)}</td>
                     <td style="border:1px solid #ddd; padding:3px; text-align:right;">${(span.L ?? 0).toFixed(3)}</td>
-                    <td style="border:1px solid #ddd; padding:3px; text-align:right;">${(span.sigma_e ?? 0).toFixed(3)}</td>
+                    <td style="border:1px solid #ddd; padding:3px; text-align:center;">${sigmaDisplay}</td>
                     <td style="border:1px solid #ddd; padding:3px; text-align:right;">${(span.B_trib ?? 0).toFixed(3)}</td>
                     <td style="border:1px solid #ddd; padding:3px; text-align:right; font-weight:bold; color:#27ae60;">${(span.M_mid ?? 0).toFixed(3)}</td>
                     <td style="border:1px solid #ddd; padding:3px; text-align:right; font-weight:bold; color:#2980b9;">${(span.M_end ?? 0).toFixed(3)}</td>

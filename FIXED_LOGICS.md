@@ -49,7 +49,7 @@
      $$B_{\text{total}} = B_{\text{side1}} + B_{\text{side2}}$$
    - **最終接地圧 $\sigma_{\text{final}}$ (負担幅を重みとする加重平均)**:
      $$\sigma_{\text{final}} = \frac{\sigma_{\text{side1}} \cdot B_{\text{side1}} + \sigma_{\text{side2}} \cdot B_{\text{side2}}}{B_{\text{total}}}$$
-     *(※ $B_{\text{total}} = 0$ の場合は、設計条件の地耐力 $f_e$ またはシステム基準の接地圧を適用)*
+     *(※ $B_{\text{total}} = 0$ の場合（片持ち梁等による幾何判定漏れやスラブ未配置など）、旧仕様のような「平均接地圧」へのサイレントな初期値フォールバックは絶対に行わず、**同期失敗フラグ（isSyncFailed = true）** を立てて明示的な警告「⚠️スラブ未同期（スラブ要配置）」をUI・計算書に出力し、直ちに断面検定をNG扱いとする。)*
 
 ### ③ 長期応力計算ロジック
 同期された等分布荷重 $w$ (kN/m) に基づき、スパンごとの長期モーメント $M$ および長期せん断力 $Q$ を求める。

@@ -1,6 +1,6 @@
 /**
  * logic/SlabBeamSynchronizer.js - 基礎スラブ・基礎梁 荷重同期・按分モジュール
- * v3.0.1 Modular Refactoring
+ * v3.0.2 Modular Refactoring
  * 
  * [最重要構造大原則]:
  * 1. 通り芯は設計意図に基づき配置される。
@@ -15,18 +15,23 @@ window.SlabBeamSynchronizer = {
      * @param {Object} beam - 解析対象の基礎梁オブジェクト
      * @param {Object} span - 解析対象のスパン (p1 - p2)
      * @param {Object} state - アプリケーション状態
-     * @returns {Object} { B: totalB, sigma: finalSigma } - 按分後の全負担幅と加重平均接地圧
+     * @returns {Object} { B: totalB, sigma: finalSigma, isSyncFailed: boolean } - 按分後の全負担幅と加重平均接地圧、および同期失敗フラグ
      */
     calculateSpanSlabLoad: function(slabs, beam, span, state) {
         const s = state || window.AppState;
         const p1 = span.p1; // 始点柱 (globalX, globalY)
         const p2 = span.p2; // 終点柱 (globalX, globalY)
 
-        const x1 = p1.globalX, y1 = p1.globalY;
-        const x2 = p2.globalX, y2 = p2.globalY;
+        // [本質的解決1] 座標をミリメートル単位（整数値）に四捨五入して丸めることで浮動小数点の「微妙なズレ」を完全排除
+        const x1 = Math.round(p1.globalX);
+        const y1 = Math.round(p1.globalY);
+        const x2 = Math.round(p2.globalX);
+        const y2 = Math.round(p2.globalY);
+
         const L_span = Math.hypot(x2 - x1, y2 - y1);
-        if (L_span < 1.0) {
-            return { B: 0, sigma: s.averageGroundPressure || 12.0 };
+        if (L_span < 0.1) {
+            // [本質的解決2] ゼロ除算を避ける極小値チェックに変更し、平均接地圧へのサイレントフォールバックを完全廃止
+            return { B: 0, sigma: 0, isSyncFailed: true };
         }
 
         // [v2.5.0] Calculate normalized directional vector for the beam
@@ -43,37 +48,49 @@ window.SlabBeamSynchronizer = {
                 // 重心の距離判定をバイパスし、確実に按分同期対象とする。
                 const isMyBeam = (tp.beamId === beam.id);
 
-                const mx = tp.mx !== undefined ? tp.mx : (tp.polygon[0].x + tp.polygon[1].x) / 2;
-                const my = tp.my !== undefined ? tp.my : (tp.polygon[0].y + tp.polygon[1].y) / 2;
+                // [本質的解決1] スラブ分配ポリゴンの頂点座標も四捨五入して丸める
+                const roundedPolygon = (tp.polygon || []).map(pt => ({
+                    x: Math.round(pt.x),
+                    y: Math.round(pt.y)
+                }));
+
+                if (roundedPolygon.length === 0) return;
+
+                const mx = tp.mx !== undefined ? Math.round(tp.mx) : roundedPolygon.reduce((sum, pt) => sum + pt.x, 0) / roundedPolygon.length;
+                const my = tp.my !== undefined ? Math.round(tp.my) : roundedPolygon.reduce((sum, pt) => sum + pt.y, 0) / roundedPolygon.length;
 
                 if (!isMyBeam) {
                     // 紐付いていない場合、ポリゴンのいずれかの頂点がこの梁の「直線（延長線）」上にあるか（距離150未満か）を判定する
-                    // centroid (mx,my) と span segment の距離判定だと、長いスラブ縁に対して短い梁が複数ある場合に漏れてしまうための修正
                     const distToLine = (px, py) => {
                         const l2 = (x2 - x1)**2 + (y2 - y1)**2;
                         if (l2 === 0) return Math.hypot(px - x1, py - y1);
                         const t = ((px - x1) * (x2 - x1) + (py - y1) * (y2 - y1)) / l2;
                         return Math.hypot(px - (x1 + t * (x2 - x1)), py - (y1 + t * (y2 - y1)));
                     };
-                    const minLineDist = Math.min(...tp.polygon.map(pt => distToLine(pt.x, pt.y)));
-                    if (minLineDist >= 150) return;
+                    const minLineDist = Math.min(...roundedPolygon.map(pt => distToLine(pt.x, pt.y)));
+                    
+                    // [v2.6.7] 片持ち梁等での幾何判定漏れを防ぐため、スラブ重心から梁スパン（線分）への距離もチェックする
+                    const distCentroidToSpan = () => {
+                        const l2 = (x2 - x1)**2 + (y2 - y1)**2;
+                        if (l2 === 0) return Math.hypot(mx - x1, my - y1);
+                        let t = ((mx - x1) * (x2 - x1) + (my - y1) * (y2 - y1)) / l2;
+                        t = Math.max(0, Math.min(1, t)); // 線分内にクランプ
+                        return Math.hypot(mx - (x1 + t * (x2 - x1)), my - (y1 + t * (y2 - y1)));
+                    };
+
+                    if (minLineDist >= 150 && distCentroidToSpan() >= 250) return;
                 }
 
                 // [v2.5.0] Project polygon vertices onto the beam vector to calculate true 1D overlap
-                const polyT = tp.polygon.map(pt => (pt.x - x1) * uX + (pt.y - y1) * uY);
+                const polyT = roundedPolygon.map(pt => (pt.x - x1) * uX + (pt.y - y1) * uY);
                 const minT = Math.min(...polyT);
                 const maxT = Math.max(...polyT);
                 
                 let overlap = Math.max(0, Math.min(maxT, L_span) - Math.max(minT, 0));
 
-                // 重複が検出されない場合、重心（代表点）がスパン内にあるかをチェックするフォールバック
+                // [本質的解決3] 幾何学的に重なっていない梁に対して誤同期させる危険な重心投影フォールバックを完全削除
                 if (overlap <= 0.1) {
-                    const mT = (mx - x1) * uX + (my - y1) * uY;
-                    if (mT >= 0 && mT <= L_span) {
-                        overlap = L_span; // 簡略的にスパン全体に載っているとみなす
-                    } else {
-                        return; // 重複なし
-                    }
+                    return; // 重複なし
                 }
 
                 // 按分比率
@@ -98,11 +115,15 @@ window.SlabBeamSynchronizer = {
         });
 
         const totalB = B_side1 + B_side2;
-        let finalSigma = s.averageGroundPressure || 12.0;
+        let finalSigma = 0; // [v2.6.7] サイレントな初期値フォールバックを完全廃止
+        let isSyncFailed = false;
+
         if (totalB > 0.001) {
             finalSigma = (sigma_B_side1 + sigma_B_side2) / totalB;
+        } else {
+            isSyncFailed = true; // スラブ接地圧が取得できなかったことを明示
         }
 
-        return { B: totalB, sigma: finalSigma };
+        return { B: totalB, sigma: finalSigma, isSyncFailed };
     }
 };

@@ -225,12 +225,9 @@ window.APP_VERSION = "v2.6.3";
 window.APP_VERSION = "v2.6.4";
 // Backup of v2.6.4 taken. Now moving to v2.6.5: Fix cross-sectional area not updating for mixed rebar combinations by updating parseRebar in logic/FoundationEngine.js.
 window.APP_VERSION = "v2.6.5";
-// Backup of v2.6.5 taken. Now moving to v2.6.6: Fix SlabBeamSynchronizer failing to assign slab loads to short beams drawn along a long continuous slab edge due to centroid distance check.
 window.APP_VERSION = "v2.6.6";
-
-
-
-
+// Backup of v2.6.6 taken. Now moving to v2.6.7: Fix slab-to-beam ground pressure synchronization issues, abolish silent fallback to averageGroundPressure, and show explicit warning when sync fails.
+window.APP_VERSION = "v2.6.7";
 
 
 

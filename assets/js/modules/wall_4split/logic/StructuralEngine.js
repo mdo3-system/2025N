@@ -46,8 +46,8 @@ window.StructuralEngine = {
         // 3.1. 4分割 存在壁量の集計と判定
         this.calculate4DivisionPresence(state);
 
-        // 4. Foundation Logic (if applicable)
-        if (state.currentAppMode === 'foundation') {
+        // 4. Foundation Logic (Always run to keep stresses in sync regardless of current mode)
+        if (state.currentAppMode === 'foundation' || (state.foundationBeams && state.foundationBeams.length > 0) || (state.foundationSlabs && state.foundationSlabs.length > 0)) {
             this.runFoundationAnalysis();
         }
 
