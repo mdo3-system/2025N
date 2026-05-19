@@ -764,10 +764,8 @@ async function generateDoc() {
         const oFloor1F = createLayerFilteredImage('floor', ['AREA_D_1F', 'AREA_1F'], ['BG_1F'], '1F', true, 2.0, true); checkScale('1F 床面積', oFloor1F);
         const oFloor2F = createLayerFilteredImage('floor', ['AREA_D_2F', 'AREA_2F'], ['BG_2F'], '2F', true, 2.0, true); checkScale('2F 床面積', oFloor2F);
         const oFloorRF = createLayerFilteredImage('floor', ['AREA_D_RF', 'AREA_RF'], ['BG_RF'], 'RF', true, 2.0, true); if (oFloorRF) checkScale('RF 床面積', oFloorRF);
-        const oElevX = createLayerFilteredImage('elev', ['AREA_X'], ['BG_X'], 'X', true, 2.0, true);
-        const oElevY = createLayerFilteredImage('elev', ['AREA_Y'], ['BG_Y'], 'Y', true, 2.0, true);
-        if (oElevX && oElevY) checkScale('見付面積 X/Y (統合)', oElevX, true, oElevY);
-        else { checkScale('見付面積 X', oElevX); checkScale('見付面積 Y', oElevY); }
+        const oElevX = null;
+        const oElevY = null;
 
         const oDiv41F = createNativeCanvasImage('1F', 'wall', 'X', true, 1.0, true); checkScale('1F 4分割', oDiv41F);
         const oDiv42F = createNativeCanvasImage('2F', 'wall', 'X', true, 1.0, true); checkScale('2F 4分割', oDiv42F);
@@ -881,10 +879,80 @@ async function generateDoc() {
             h += `</div></div><div class="page-break"></div>`;
         }
 
-        if (iElevX || iElevY) {
-            h += addAreaSecHeader('立面 / 見付面積図');
-            if (iElevX) h += `<div style="text-align:center;width:100%; margin-bottom:15px;"><div style="font-weight:bold;margin-bottom:5px;">【X 見付面積】</div><img src="${iElevX}" style="width:95%;max-width:800px;border:1px solid #ccc;padding:5px;"></div>`;
-            if (iElevY) h += `<div style="text-align:center;width:100%; margin-bottom:15px;"><div style="font-weight:bold;margin-bottom:5px;">【Y 見付面積】</div><img src="${iElevY}" style="width:95%;max-width:800px;border:1px solid #ccc;padding:5px;"></div>`;
+        // [v2.7.0] 自動屋根伏図・実積（実面積）求積表の出力
+        const roofFaces = state.roofFaces || [];
+        if (roofFaces.length > 0) {
+            h += addAreaSecHeader('屋根伏図・屋根実積（実面積）の算定');
+
+            const c1R = window.RoofRenderer ? window.RoofRenderer.generateReportCanvas(state, '1F') : null;
+            const c2R = window.RoofRenderer ? window.RoofRenderer.generateReportCanvas(state, '2F') : null;
+            const i1R = c1R ? c1R.toDataURL() : null;
+            const i2R = c2R ? c2R.toDataURL() : null;
+
+            if (i2R && roofFaces.some(f => f.floor === '2F')) {
+                h += `<div style="text-align:center;width:100%; margin-bottom:20px;">
+                        <div style="font-weight:bold;margin-bottom:5px;font-size:12px;color:#2c3e50;">【2階 屋根伏図】</div>
+                        <img src="${i2R}" style="width:90%;max-width:720px;border:1px solid #ddd;padding:5px;">
+                      </div>`;
+            }
+            if (i1R && roofFaces.some(f => f.floor === '1F')) {
+                h += `<div style="text-align:center;width:100%; margin-bottom:20px;">
+                        <div style="font-weight:bold;margin-bottom:5px;font-size:12px;color:#2c3e50;">【1階 屋根伏図】</div>
+                        <img src="${i1R}" style="width:90%;max-width:720px;border:1px solid #ddd;padding:5px;">
+                      </div>`;
+            }
+
+            h += `<div style="width:100%; margin-top:10px;">
+                    <div style="background:#2980b9;color:#fff;padding:4px 8px;font-weight:bold;font-size:12px;border-radius:3px;margin-bottom:5px;">🏠 屋根面 実積（実面積）求積一覧表</div>
+                    <table class="report-table" style="font-size:11px; width:100%; text-align:center;">
+                        <tr style="background:#f2f2f2; font-weight:bold;">
+                            <th>名称</th>
+                            <th>所在階</th>
+                            <th>勾配 (寸)</th>
+                            <th>厚さ (mm)</th>
+                            <th>基準高増減</th>
+                            <th>水平投影面積 (㎡)</th>
+                            <th>勾配補正係数 (secθ)</th>
+                            <th>屋根実面積 (㎡)</th>
+                        </tr>`;
+            
+            let totalProj = 0;
+            let totalReal = 0;
+
+            roofFaces.forEach(face => {
+                const proj = window.RoofEngine.calculatePolygonArea2D(face.vertices.map(v => ({ u: v.x/1000, v: v.y/1000 })));
+                const slopeVal = face.slope / 10;
+                const factor = Math.sqrt(1 + slopeVal * slopeVal);
+                const real = proj * factor;
+
+                totalProj += proj;
+                totalReal += real;
+
+                h += `<tr>
+                        <td style="font-weight:bold;">${face.label || '屋根'}</td>
+                        <td>${face.floor === '2F' ? '2階屋根' : '1階屋根'}</td>
+                        <td>${face.slope.toFixed(1)}寸</td>
+                        <td>${face.roofThickness} mm</td>
+                        <td>${face.baseHeightDelta >= 0 ? '+' : ''}${face.baseHeightDelta} mm</td>
+                        <td>${proj.toFixed(2)} ㎡</td>
+                        <td>${factor.toFixed(4)}</td>
+                        <td style="font-weight:bold; color:#2980b9;">${real.toFixed(2)} ㎡</td>
+                      </tr>`;
+            });
+
+            h += `<tr style="font-weight:bold; background:#e8f4f8;">
+                    <td colspan="5" style="text-align:right;">合計：</td>
+                    <td>${totalProj.toFixed(2)} ㎡</td>
+                    <td>-</td>
+                    <td style="color:#2980b9; font-size:13px;">${totalReal.toFixed(2)} ㎡</td>
+                  </tr>
+                  </table>
+                  <div style="font-size:10px; color:#7f8c8d; margin-top:5px; text-align:left; line-height:1.4;">
+                    ※ 屋根実面積 ＝ 水平投影面積 × 勾配補正係数（secθ ＝ √[1 ＋ (勾配/10)²]）<br>
+                    ※ 屋根厚みおよび基準高増減は、見付面積算定時の傾斜立体投影における厚み効果計算に使用されます。
+                  </div>
+                  </div>`;
+            
             h += `</div></div><div class="page-break"></div>`;
         }
 

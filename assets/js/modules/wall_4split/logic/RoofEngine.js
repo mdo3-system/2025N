@@ -151,6 +151,35 @@ window.RoofEngine = {
     },
 
     /**
+     * Calculate 3D height at coordinates in mm
+     */
+    calculate3DHeightAtCoordinate: function(v, face) {
+        const floor = face.floor || '2F';
+        const slope = face.slope || 0; // 寸
+        const baseDelta = face.baseHeightDelta || 0; // mm
+
+        // Ceiling baseline height (桁高) in mm
+        let zBase = 3000;
+        if (floor === '2F') {
+            zBase = 6000;
+        }
+        zBase += baseDelta;
+
+        const p1 = face.slopeLine ? face.slopeLine[0] : { x: 0, y: 0 };
+        const p2 = face.slopeLine ? face.slopeLine[1] : { x: 0, y: 1000 };
+        
+        const dx = p2.x - p1.x;
+        const dy = p2.y - p1.y;
+        const len = Math.hypot(dx, dy);
+        const ux = len > 0 ? dx / len : 0;
+        const uy = len > 0 ? dy / len : 1;
+
+        const slopeVal = slope / 10;
+        const dist = (v.x - p1.x) * ux + (v.y - p1.y) * uy;
+        return zBase + dist * slopeVal;
+    },
+
+    /**
      * Calculate 2D polygon area using Shoelace formula
      */
     calculatePolygonArea2D: function(vertices) {

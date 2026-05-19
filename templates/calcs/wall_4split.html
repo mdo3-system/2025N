@@ -1181,6 +1181,7 @@
                 <button class="tab-btn" id="tab-2f">2階 作図</button>
                 <button class="tab-btn" id="tab-1r">1階 屋根</button>
                 <button class="tab-btn" id="tab-2r">2階 屋根</button>
+                <button class="tab-btn" id="btn-open-3d" style="background:#8e44ad; color:#fff; border-color:#8e44ad;" onclick="window.ThreeDPreviewController.open()">🔮 3Dプレビュー</button>
                 <div style="width: 1px; height: 20px; background: #ccc; margin: 0 5px;"></div>
                 <button class="action-btn save" id="btn-save">💾 保存</button>
                 <input type="file" id="json-upload" accept=".json" style="display: none;">
@@ -1562,46 +1563,47 @@
         </div>
     </div>
 
-    <script src="../../assets/js/modules/wall_4split/Version.js?v=2.6.19"></script>
-    <script src="../../assets/js/modules/wall_4split/state/Specs.js?v=2.6.19"></script>
-    <script src="../../assets/js/modules/wall_4split/state/AppState.js?v=2.6.19"></script>
-    <script src="../../assets/js/modules/wall_4split/wall_4split_bridge.js?v=2.6.19"></script>
-    <script src="../../assets/js/modules/wall_4split/logic/ServiceContainer.js?v=2.6.19"></script>
-    <script src="../../assets/js/modules/wall_4split/logic/MathUtils.js?v=2.6.19"></script>
-    <script src="../../assets/js/modules/wall_4split/logic/Parsers.js?v=2.6.19"></script>
-    <script src="../../assets/js/modules/wall_4split/logic/WallEngine.js?v=2.6.19"></script>
-    <script src="../../assets/js/modules/wall_4split/logic/CadEngine.js?v=2.6.19"></script>
-    <script src="../../assets/js/modules/wall_4split/logic/GridEngine.js?v=2.6.19"></script>
-    <script src="../../assets/js/modules/wall_4split/logic/StructuralEngine.js?v=2.6.19"></script>
-    <script src="../../assets/js/modules/wall_4split/logic/DocumentEngine.js?v=2.6.19"></script>
-    <script src="../../assets/js/modules/wall_4split/logic/NValueEngine.js?v=2.6.19"></script>
-    <script src="../../assets/js/modules/wall_4split/logic/AreaEngine.js?v=2.6.19"></script>
-    <script src="../../assets/js/modules/wall_4split/logic/AxialEngine.js?v=2.6.19"></script>
-    <script src="../../assets/js/modules/wall_4split/logic/SlabBeamSynchronizer.js?v=2.6.19"></script>
-    <script src="../../assets/js/modules/wall_4split/logic/FoundationEngine.js?v=2.6.19"></script>
-    <script src="../../assets/js/modules/wall_4split/logic/ReportEngine.js?v=2.6.19"></script>
-    <script src="../../assets/js/modules/wall_4split/logic/RoofEngine.js?v=2.6.19"></script>
-    <script src="../../assets/js/modules/wall_4split/controllers/PropertyController.js?v=2.6.19"></script>
-    <script src="../../assets/js/modules/wall_4split/controllers/InputController.js?v=2.6.19"></script>
-    <script src="../../assets/js/modules/wall_4split/controllers/ModalController.js?v=2.6.19"></script>
-    <script src="../../assets/js/modules/wall_4split/controllers/AppController.js?v=2.6.19"></script>
-    <script src="../../assets/js/modules/wall_4split/controllers/FoundationInputController.js?v=2.6.19"></script>
-    <script src="../../assets/js/modules/wall_4split/controllers/RoofInputController.js?v=2.6.19"></script>
-    <script src="../../assets/js/modules/wall_4split/view/UIView.js?v=2.6.19"></script>
-    <script src="../../assets/js/modules/wall_4split/view/MainRenderer.js?v=2.6.19"></script>
-    <script src="../../assets/js/modules/wall_4split/view/FoundationRenderer.js?v=2.6.19"></script>
-    <script src="../../assets/js/modules/wall_4split/view/DocumentRenderer.js?v=2.6.19"></script>
-    <script src="../../assets/js/modules/wall_4split/view/ElevationRenderer.js?v=2.6.19"></script>
-    <script src="../../assets/js/modules/wall_4split/view/RoofRenderer.js?v=2.6.19"></script>
-    <script src="../../assets/js/modules/wall_4split/wall_4split_export.js?v=2.6.19"></script>
-    <script src="../../assets/js/modules/wall_4split/wall_4split_cad.js?v=2.6.19"></script>
-    <script src="../../assets/js/modules/wall_4split/wall_4split_render.js?v=2.6.19"></script>
-    <script src="../../assets/js/modules/wall_4split/wall_4split_pdf.js?v=2.6.19"></script>
-    <script src="../../assets/js/modules/wall_4split/wall_4split_calc.js?v=2.6.19"></script>
-    <script src="../../assets/js/modules/wall_4split/wall_4split_foundation_engine.js?v=2.6.19"></script>
-    <script src="../../assets/js/modules/wall_4split/wall_4split_report.js?v=2.6.19"></script>
-    <script src="../../assets/js/modules/wall_4split/wall_4split_input.js?v=2.6.19"></script>
-    <script src="../../assets/js/modules/wall_4split/wall_4split_main.js?v=2.6.19"></script>
+    <script src="../../assets/js/modules/wall_4split/Version.js?v=2.7.0"></script>
+    <script src="../../assets/js/modules/wall_4split/state/Specs.js?v=2.7.0"></script>
+    <script src="../../assets/js/modules/wall_4split/state/AppState.js?v=2.7.0"></script>
+    <script src="../../assets/js/modules/wall_4split/wall_4split_bridge.js?v=2.7.0"></script>
+    <script src="../../assets/js/modules/wall_4split/logic/ServiceContainer.js?v=2.7.0"></script>
+    <script src="../../assets/js/modules/wall_4split/logic/MathUtils.js?v=2.7.0"></script>
+    <script src="../../assets/js/modules/wall_4split/logic/Parsers.js?v=2.7.0"></script>
+    <script src="../../assets/js/modules/wall_4split/logic/WallEngine.js?v=2.7.0"></script>
+    <script src="../../assets/js/modules/wall_4split/logic/CadEngine.js?v=2.7.0"></script>
+    <script src="../../assets/js/modules/wall_4split/logic/GridEngine.js?v=2.7.0"></script>
+    <script src="../../assets/js/modules/wall_4split/logic/StructuralEngine.js?v=2.7.0"></script>
+    <script src="../../assets/js/modules/wall_4split/logic/DocumentEngine.js?v=2.7.0"></script>
+    <script src="../../assets/js/modules/wall_4split/logic/NValueEngine.js?v=2.7.0"></script>
+    <script src="../../assets/js/modules/wall_4split/logic/AreaEngine.js?v=2.7.0"></script>
+    <script src="../../assets/js/modules/wall_4split/logic/AxialEngine.js?v=2.7.0"></script>
+    <script src="../../assets/js/modules/wall_4split/logic/SlabBeamSynchronizer.js?v=2.7.0"></script>
+    <script src="../../assets/js/modules/wall_4split/logic/FoundationEngine.js?v=2.7.0"></script>
+    <script src="../../assets/js/modules/wall_4split/logic/ReportEngine.js?v=2.7.0"></script>
+    <script src="../../assets/js/modules/wall_4split/logic/RoofEngine.js?v=2.7.0"></script>
+    <script src="../../assets/js/modules/wall_4split/controllers/PropertyController.js?v=2.7.0"></script>
+    <script src="../../assets/js/modules/wall_4split/controllers/InputController.js?v=2.7.0"></script>
+    <script src="../../assets/js/modules/wall_4split/controllers/ModalController.js?v=2.7.0"></script>
+    <script src="../../assets/js/modules/wall_4split/controllers/AppController.js?v=2.7.0"></script>
+    <script src="../../assets/js/modules/wall_4split/controllers/FoundationInputController.js?v=2.7.0"></script>
+    <script src="../../assets/js/modules/wall_4split/controllers/RoofInputController.js?v=2.7.0"></script>
+    <script src="../../assets/js/modules/wall_4split/view/UIView.js?v=2.7.0"></script>
+    <script src="../../assets/js/modules/wall_4split/view/MainRenderer.js?v=2.7.0"></script>
+    <script src="../../assets/js/modules/wall_4split/view/FoundationRenderer.js?v=2.7.0"></script>
+    <script src="../../assets/js/modules/wall_4split/view/DocumentRenderer.js?v=2.7.0"></script>
+    <script src="../../assets/js/modules/wall_4split/view/ElevationRenderer.js?v=2.7.0"></script>
+    <script src="../../assets/js/modules/wall_4split/view/RoofRenderer.js?v=2.7.0"></script>
+    <script src="../../assets/js/modules/wall_4split/view/ThreeDPreviewController.js?v=2.7.0"></script>
+    <script src="../../assets/js/modules/wall_4split/wall_4split_export.js?v=2.7.0"></script>
+    <script src="../../assets/js/modules/wall_4split/wall_4split_cad.js?v=2.7.0"></script>
+    <script src="../../assets/js/modules/wall_4split/wall_4split_render.js?v=2.7.0"></script>
+    <script src="../../assets/js/modules/wall_4split/wall_4split_pdf.js?v=2.7.0"></script>
+    <script src="../../assets/js/modules/wall_4split/wall_4split_calc.js?v=2.7.0"></script>
+    <script src="../../assets/js/modules/wall_4split/wall_4split_foundation_engine.js?v=2.7.0"></script>
+    <script src="../../assets/js/modules/wall_4split/wall_4split_report.js?v=2.7.0"></script>
+    <script src="../../assets/js/modules/wall_4split/wall_4split_input.js?v=2.7.0"></script>
+    <script src="../../assets/js/modules/wall_4split/wall_4split_main.js?v=2.7.0"></script>
     <!-- ========================================== -->
     <!-- [UI整理] モーダル定義エリア -->
     <!-- ========================================== -->

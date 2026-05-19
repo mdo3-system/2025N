@@ -93,6 +93,11 @@ window.AppController = {
         if (window.MainRenderer) {
             window.MainRenderer.render(state);
         }
+
+        // [v2.7.0] 3Dプレビューがアクティブな場合は、シーンの同期描画もリアルタイム実行
+        if (window.ThreeDPreviewController && document.getElementById(window.ThreeDPreviewController.modalId)?.style.display === 'flex') {
+            window.ThreeDPreviewController.updateScene();
+        }
     },
 
     /**
