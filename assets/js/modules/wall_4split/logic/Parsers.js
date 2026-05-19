@@ -92,6 +92,9 @@ window.Parsers = {
         s.bgLinesOriginal = d.bgLines || [];
         s.bgTextsOriginal = d.texts || [];
         s.gridBubbles = d.gridBubbles || [];
+        s.roofFaces = d.roofFaces || []; // [v2.7.0]
+        s.roofGridManualX = d.roofGridManualX || []; // [v2.7.0]
+        s.roofGridManualY = d.roofGridManualY || []; // [v2.7.0]
 
         // 2. Grid & Coordinates
         if (d.gx) s.gridXNames = d.gx;

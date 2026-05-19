@@ -148,6 +148,9 @@ window.AppExport = {
             texts: state.bgTextsOriginal, gridBubbles: state.gridBubbles, pIdCounter: state.pIdCounter,
             gx: state.gridXNames, gy: state.gridYNames, gxc: state.gridXCoords, gyc: state.gridYCoords,
             bgLines: minimalBgLines, areaLines: state.areaLines, mgX: state.manualGridX, mgY: state.manualGridY, mgAngle: state.manualGridAngle || [],
+            roofFaces: state.roofFaces || [], // [v2.7.0]
+            roofGridManualX: state.roofGridManualX || [], // [v2.7.0]
+            roofGridManualY: state.roofGridManualY || [], // [v2.7.0]
             scale: state.scale, offsetX: state.offsetX, offsetY: state.offsetY, customWalls, customHws,
             layerVisibility: typeof appLayerVisibility !== 'undefined' ? appLayerVisibility : {},
             ueGX: state.userEditedGridX, ueGY: state.userEditedGridY,

@@ -99,8 +99,11 @@ window.AppController = {
             walls: JSON.parse(JSON.stringify(state.walls)),
             windowsArr: JSON.parse(JSON.stringify(state.windowsArr)),
             areaLines: JSON.parse(JSON.stringify(state.areaLines)),
+            roofFaces: JSON.parse(JSON.stringify(state.roofFaces || [])), // [v2.7.0]
             manualGridX: JSON.parse(JSON.stringify(state.manualGridX || [])),
             manualGridY: JSON.parse(JSON.stringify(state.manualGridY || [])),
+            roofGridManualX: JSON.parse(JSON.stringify(state.roofGridManualX || [])), // [v2.7.0]
+            roofGridManualY: JSON.parse(JSON.stringify(state.roofGridManualY || [])), // [v2.7.0]
             manualGridAngle: JSON.parse(JSON.stringify(state.manualGridAngle || [])),
             deletedGridX: [...(state.deletedGridX || [])],
             deletedGridY: [...(state.deletedGridY || [])],
@@ -148,12 +151,15 @@ window.AppController = {
         state.walls = JSON.parse(JSON.stringify(data.walls));
         state.windowsArr = JSON.parse(JSON.stringify(data.windowsArr));
         state.areaLines = JSON.parse(JSON.stringify(data.areaLines));
+        state.roofFaces = JSON.parse(JSON.stringify(data.roofFaces || [])); // [v2.7.0]
         state.gridXCoords = [...(data.gridXCoords || [])];
         state.gridYCoords = [...(data.gridYCoords || [])];
         state.gridXNames = [...(data.gridXNames || [])];
         state.gridYNames = [...(data.gridYNames || [])];
         state.manualGridX = JSON.parse(JSON.stringify(data.manualGridX || []));
         state.manualGridY = JSON.parse(JSON.stringify(data.manualGridY || []));
+        state.roofGridManualX = JSON.parse(JSON.stringify(data.roofGridManualX || [])); // [v2.7.0]
+        state.roofGridManualY = JSON.parse(JSON.stringify(data.roofGridManualY || [])); // [v2.7.0]
         state.manualGridAngle = JSON.parse(JSON.stringify(data.manualGridAngle || []));
         state.deletedGridX = [...(data.deletedGridX || [])];
         state.deletedGridY = [...(data.deletedGridY || [])];

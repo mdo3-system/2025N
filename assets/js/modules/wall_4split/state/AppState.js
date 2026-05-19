@@ -62,8 +62,15 @@ window.AppState = {
         reqWallCoeffs: {
             '1F': { seismic: 0.29, wind: 0.50 },
             '2F': { seismic: 0.15, wind: 0.50 }
+        },
+        roofGridConfig: {
+            eaveOffset: 450,
+            rakaOffset: 300,
+            showRoofGrid: true,
+            showBaseGrid: true
         }
     },
+
 
     /**
      * Initialize state from DOM (Standardization Bridge)
@@ -147,6 +154,7 @@ window.AppState = {
     walls: [],         // Array of wall objects (bearing & opening)
     windowsArr: [],    // Array of window objects
     areaLines: [],     // Array of area polygon objects
+    roofFaces: [],     // Array of roof face objects [v2.7.0]
     bgLinesOriginal: [], // Background DXF lines
     bgTextsOriginal: [], // Background DXF texts
     gridBubbles: [],     // Grid bubble markers
@@ -170,7 +178,12 @@ window.AppState = {
     gridYCoords: [],
     manualGridX: [],
     manualGridY: [],
+    roofGridXCoords: [], // [v2.7.0]
+    roofGridYCoords: [], // [v2.7.0]
+    roofGridManualX: [], // [v2.7.0]
+    roofGridManualY: [], // [v2.7.0]
     manualGridAngle: [], // Array of { id, name, p1: {x,y}, p2: {x,y} } 既存交点スナップ強制
+
     deletedGridX: [],
     deletedGridY: [],
     userEditedGridX: {},
@@ -258,7 +271,9 @@ window.AppState = {
         f_slabs: true,
         f_ext_walls: true,
         f_manholes: true,
-        div4: true
+        div4: true,
+        roofGrids: true,
+        roofFaces: true
     }
 };
 
