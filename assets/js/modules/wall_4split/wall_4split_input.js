@@ -32,7 +32,8 @@ function initCanvasInput(canvas) {
                 (typeof selectedPillar !== 'undefined' && selectedPillar !== null) ||
                 (typeof areaDrawPoints !== 'undefined' && areaDrawPoints.length > 0) ||
                 (state && state.fdSelectedPillarLike) ||
-                (state && state.fdDrawPoints && state.fdDrawPoints.length > 0);
+                (state && state.fdDrawPoints && state.fdDrawPoints.length > 0) ||
+                (state && state.roofDrawPoints && state.roofDrawPoints.length > 0);
 
             if (hasActiveInput) {
                 e.preventDefault();
@@ -45,6 +46,12 @@ function initCanvasInput(canvas) {
         // 基礎モードへの委譲 (通り芯追加・通り芯削除・通り芯文字編集といった共通操作は委譲から除外して通常実行)
         if (state.currentAppMode === 'foundation' && e.button === 0 && !['add-grid', 'del-grid', 'edit-text', 'add-diag-grid'].includes(mode)) {
             if (window.FoundationInputController) window.FoundationInputController.handleMouseDown(e, state);
+            return;
+        }
+
+        // 屋根モードへの委譲
+        if (state.currentAppMode === 'roof' && e.button === 0 && !['add-grid', 'del-grid', 'edit-text', 'add-diag-grid'].includes(mode)) {
+            if (window.RoofInputController) window.RoofInputController.handleMouseDown(e, state);
             return;
         }
 
@@ -718,6 +725,9 @@ function cancelDrawing() {
         state.diagGridPoints = [];
         state.fdDrawPoints = [];
         state.fdSelectedPillarLike = null;
+        state.roofDrawPoints = [];
+        state.roofTempSlopeLine = [];
+        state.roofDrawingStep = 'polygon';
     }
     window.AppController.refreshAll();
 }

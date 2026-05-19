@@ -1123,6 +1123,54 @@
             </div>
 
         </div>
+
+        <!-- [v2.7.0] 屋根伏図・見付面積計算モード専用パネル（初期は非表示） -->
+        <div id="roof-mode-panel" style="display:none;">
+            <h2 style="color:#2980b9;">🏠 屋根伏図・見付面積 プロパティ</h2>
+
+            <div class="calc-box" style="background:#e8f4f8; border-color:#d4e6f1; margin-bottom:12px;">
+                <div style="font-size:11px; font-weight:bold; margin-bottom:5px; color:#2980b9;">⚙ 屋根共通設定</div>
+                <div class="calc-row">
+                    <label style="width:140px;">ケラバの出 (X方向) (mm)</label>
+                    <input type="number" id="roof-overhang-x-sync" value="600" step="50" style="width:70px; text-align:right;" onchange="AppState.roofOverhangX = parseFloat(this.value) || 0; GridEngine.getRoofGrids(); AppController.refreshAll();">
+                </div>
+                <div class="calc-row">
+                    <label style="width:140px;">軒の出 (Y方向) (mm)</label>
+                    <input type="number" id="roof-overhang-y-sync" value="600" step="50" style="width:70px; text-align:right;" onchange="AppState.roofOverhangY = parseFloat(this.value) || 0; GridEngine.getRoofGrids(); AppController.refreshAll();">
+                </div>
+            </div>
+
+            <div style="padding:10px; background:#1b4f72; border-radius:6px; margin-bottom:12px;">
+                <div style="font-size:11px; font-weight:bold; color:#a9cddc; margin-bottom:8px;">🖊 作図サブモード</div>
+                <div style="display:flex; flex-direction:column; gap:5px;" id="roof-mode-selector">
+                    <label class="roof-mode-label" style="display:flex; align-items:center; gap:7px; cursor:pointer; font-size:12px; color:#ecf0f1; background:#2980b9; padding:6px 8px; border-radius:4px; font-weight:bold;">
+                        <input type="radio" name="roof_mode" value="roof_select" checked onchange="updateRoofModeUI('roof_select')">
+                        👆 選択・編集
+                    </label>
+                    <label class="roof-mode-label" style="display:flex; align-items:center; gap:7px; cursor:pointer; font-size:12px; color:#ecf0f1; background:#1b4f72; padding:6px 8px; border-radius:4px;">
+                        <input type="radio" name="roof_mode" value="draw-roof" onchange="updateRoofModeUI('draw-roof')">
+                        📐 屋根面を引く（多角形）
+                    </label>
+                    <label class="roof-mode-label" style="display:flex; align-items:center; gap:7px; cursor:pointer; font-size:12px; color:#f1948a; background:#1b4f72; padding:6px 8px; border-radius:4px; border:1px solid #e74c3c;">
+                        <input type="radio" name="roof_mode" value="delete-roof" onchange="updateRoofModeUI('delete-roof')">
+                        ❌ 削除（クリックした要素）
+                    </label>
+                </div>
+                <div style="font-size:10px; color:#a9cddc; margin-top:8px; line-height:1.5;">
+                    💡 ヒント：<b>右クリック</b> or <b>Escキー</b>で作図中の操作をキャンセルできます。<br>
+                    屋根面はグリッド交点を選んで外形をなぞり、<b>始点に戻ってクリック</b>で閉じます。その後、勾配基準線の2点をクリックしてください。
+                </div>
+            </div>
+
+            <!-- [v2.7.0] 屋根要素のプロパティポップアップ -->
+            <div id="roof-property-popup" 
+                 style="display:none; position:fixed; z-index:5000; background:#fff; border:1px solid #2980b9; border-radius:8px; box-shadow:0 4px 20px rgba(0,0,0,0.3); width:400px; max-height:80vh; overflow-y:auto; font-family:sans-serif;">
+                <div id="roof-popup-header" style="background:#2980b9; color:#fff; padding:8px 12px; display:flex; justify-content:space-between; align-items:center; border-radius:7px 7px 0 0;">
+                    <span style="font-weight:bold; font-size:13px;">🏠 屋根面のプロパティ</span>
+                </div>
+                <div id="roof-popup-content" style="padding:12px;"></div>
+            </div>
+        </div>
     </div>
 
     <div id="center-panel">
@@ -1538,6 +1586,7 @@
     <script src="../../assets/js/modules/wall_4split/controllers/ModalController.js?v=2.6.19"></script>
     <script src="../../assets/js/modules/wall_4split/controllers/AppController.js?v=2.6.19"></script>
     <script src="../../assets/js/modules/wall_4split/controllers/FoundationInputController.js?v=2.6.19"></script>
+    <script src="../../assets/js/modules/wall_4split/controllers/RoofInputController.js?v=2.6.19"></script>
     <script src="../../assets/js/modules/wall_4split/view/UIView.js?v=2.6.19"></script>
     <script src="../../assets/js/modules/wall_4split/view/MainRenderer.js?v=2.6.19"></script>
     <script src="../../assets/js/modules/wall_4split/view/FoundationRenderer.js?v=2.6.19"></script>

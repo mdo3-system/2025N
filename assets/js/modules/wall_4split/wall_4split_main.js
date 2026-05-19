@@ -111,9 +111,35 @@ window.getFdMode = function() { return window.AppState.foundationMode || 'f_beam
 function setFloor(floor) { window.AppController.setFloor(floor); }
 function getAppMode() { return window.AppState.currentAppMode || 'wall'; }
 function getMode() {
+    const state = window.AppState;
+    if (state && state.currentAppMode === 'roof') {
+        const el = document.querySelector('input[name="roof_mode"]:checked');
+        return el ? el.value : 'roof_select';
+    }
     const el = document.querySelector('input[name="mode"]:checked');
     return el ? el.value : 'select';
 }
+
+window.updateRoofModeUI = function(mode) {
+    const selector = document.getElementById('roof-mode-selector');
+    if (selector) {
+        const labels = selector.querySelectorAll('.roof-mode-label');
+        labels.forEach(l => {
+            const input = l.querySelector('input');
+            if (input) {
+                if (input.value === mode) {
+                    l.style.background = '#2980b9';
+                    l.style.fontWeight = 'bold';
+                } else {
+                    l.style.background = '#1b4f72';
+                    l.style.fontWeight = 'normal';
+                }
+            }
+        });
+    }
+    if (window.RoofInputController) window.RoofInputController.cancelDrawing(window.AppState);
+};
+
 
 /**
  * 繧｢繝九Γ繝ｼ繧ｷ繝ｧ繝ｳ繝ｫ繝ｼ繝�

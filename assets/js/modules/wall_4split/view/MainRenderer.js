@@ -731,6 +731,69 @@ window.MainRenderer = {
             ctx.beginPath(); ctx.moveTo(p1.cx, p1.cy); ctx.lineTo(p2.cx, p2.cy); ctx.stroke();
             ctx.setLineDash([]);
         }
+
+        // [v2.7.0] 屋根作図中のプレビュー
+        if (mode === 'draw-roof') {
+            const pts = state.roofDrawPoints || [];
+            const step = state.roofDrawingStep || 'polygon';
+
+            // Draw polygon vertices in progress
+            if (pts.length > 0) {
+                ctx.lineWidth = 2;
+                ctx.strokeStyle = '#00cec9'; // beautiful teal
+                ctx.setLineDash([5, 5]);
+                ctx.beginPath();
+                pts.forEach((pt, i) => {
+                    const p = this.toCanvas(pt, null, state);
+                    i === 0 ? ctx.moveTo(p.cx, p.cy) : ctx.lineTo(p.cx, p.cy);
+                });
+
+                if (step === 'polygon') {
+                    const last = state.snapPoint ? state.snapPoint : { x: (state.mouseX - state.offsetX)/state.scale, y: (state.canvas.height - state.mouseY - state.offsetY)/state.scale };
+                    const lp = this.toCanvas(last, null, state);
+                    ctx.lineTo(lp.cx, lp.cy);
+                } else {
+                    const pStart = this.toCanvas(pts[0], null, state);
+                    ctx.lineTo(pStart.cx, pStart.cy);
+                }
+                ctx.stroke();
+                ctx.setLineDash([]);
+
+                if (step === 'slope-line') {
+                    ctx.fillStyle = 'rgba(9, 132, 227, 0.15)';
+                    ctx.fill();
+                }
+            }
+
+            // Draw slope reference line in progress
+            const line = state.roofTempSlopeLine || [];
+            if (step === 'slope-line' && line.length > 0) {
+                ctx.lineWidth = 3;
+                ctx.strokeStyle = '#e67e22'; // bright orange
+                const p1 = this.toCanvas(line[0], null, state);
+                const curr = state.snapPoint ? state.snapPoint : { x: (state.mouseX - state.offsetX)/state.scale, y: (state.canvas.height - state.mouseY - state.offsetY)/state.scale };
+                const p2 = this.toCanvas(curr, null, state);
+
+                ctx.beginPath();
+                ctx.moveTo(p1.cx, p1.cy);
+                ctx.lineTo(p2.cx, p2.cy);
+                ctx.stroke();
+
+                ctx.fillStyle = '#e67e22';
+                ctx.beginPath(); ctx.arc(p1.cx, p1.cy, 5, 0, Math.PI*2); ctx.fill();
+                ctx.beginPath(); ctx.arc(p2.cx, p2.cy, 5, 0, Math.PI*2); ctx.fill();
+
+                ctx.font = '10px sans-serif';
+                ctx.fillStyle = '#d35400';
+                ctx.fillText("1点目 (基準高)", p1.cx + 8, p1.cy - 8);
+                if (line.length === 2) {
+                    const p2_fixed = this.toCanvas(line[1], null, state);
+                    ctx.fillText("2点目 (上り方向)", p2_fixed.cx + 8, p2_fixed.cy - 8);
+                } else {
+                    ctx.fillText("2点目 (上り方向)", p2.cx + 8, p2.cy - 8);
+                }
+            }
+        }
     },
 
     /**

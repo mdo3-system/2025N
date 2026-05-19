@@ -229,11 +229,11 @@ window.AppController = {
         // UIパネルの表示制御
         const wallPanel = document.getElementById('wall-mode-panel');
         const foundPanel = document.getElementById('foundation-mode-panel');
-        if (wallPanel) {
-            // foundation モード以外は常に表示する
-            wallPanel.style.display = (mode === 'foundation') ? 'none' : 'block';
-        }
+        const roofPanel = document.getElementById('roof-mode-panel');
+        
+        if (wallPanel) wallPanel.style.display = (mode === 'wall') ? 'block' : 'none';
         if (foundPanel) foundPanel.style.display = (mode === 'foundation') ? '' : 'none';
+        if (roofPanel) roofPanel.style.display = (mode === 'roof') ? 'block' : 'none';
 
         if (mode === 'foundation') {
             this.updateFoundationUI();
