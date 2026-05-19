@@ -45,7 +45,7 @@ window.TestRunner.describe("SlabBeamSynchronizer (v3.0.1)", () => {
         window.TestRunner.expect(result.sigma).toBeCloseTo(20.0, 2);
     });
 
-    window.TestRunner.it("should return default fallback ground pressure when B is 0", () => {
+    window.TestRunner.it("should return 0 ground pressure and isSyncFailed when B is 0", () => {
         const mockSlabs = [];
         const mockBeam = { id: "FG2" };
         const mockSpan = {
@@ -57,6 +57,52 @@ window.TestRunner.describe("SlabBeamSynchronizer (v3.0.1)", () => {
         const result = window.SlabBeamSynchronizer.calculateSpanSlabLoad(mockSlabs, mockBeam, mockSpan, state);
 
         window.TestRunner.expect(result.B).toBe(0);
-        window.TestRunner.expect(result.sigma).toBe(15.0);
+        window.TestRunner.expect(result.sigma).toBe(0);
+        window.TestRunner.expect(result.isSyncFailed).toBeTruthy();
+    });
+
+    window.TestRunner.it("should work seamlessly when AppState is dynamically injected", () => {
+        const mockState = {
+            pillars: [],
+            walls: [],
+            gridXCoords: [0, 4000],
+            gridYCoords: [0]
+        };
+
+        const sync = window.SlabBeamSynchronizer;
+        sync.inject({ appState: mockState });
+
+        const mockSlabs = [
+            {
+                fdStress: { qTotal: 25.0 },
+                tributaryPolygons: [
+                    {
+                        beamId: "FG3",
+                        width: 2.0,
+                        mx: 2000,
+                        my: 50,
+                        polygon: [
+                            { x: 0, y: 0 },
+                            { x: 4000, y: 0 },
+                            { x: 4000, y: 100 },
+                            { x: 0, y: 100 }
+                        ]
+                    }
+                ]
+            }
+        ];
+
+        const mockBeam = { id: "FG3" };
+        const mockSpan = {
+            p1: { globalX: 0, globalY: 0 },
+            p2: { globalX: 4000, globalY: 0 }
+        };
+
+        const result = sync.calculateSpanSlabLoad(mockSlabs, mockBeam, mockSpan, null);
+
+        window.TestRunner.expect(result.B).toBeCloseTo(2.0, 2);
+        window.TestRunner.expect(result.sigma).toBeCloseTo(25.0, 2);
+
+        sync.inject({ appState: null });
     });
 });

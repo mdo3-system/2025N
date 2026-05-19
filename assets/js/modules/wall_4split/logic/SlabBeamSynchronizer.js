@@ -9,6 +9,12 @@
  */
 
 window.SlabBeamSynchronizer = {
+    appState: null,
+    
+    inject: function(dependencies) {
+        this.appState = dependencies.appState;
+    },
+
     /**
      * 線分1（梁）と線分2（分配ポリゴンの辺）が同一の直線上（共線）にあり、かつ1次元的に重なっているかを判定する
      * @param {number} ax1 - 線分1の始点X
@@ -165,7 +171,7 @@ window.SlabBeamSynchronizer = {
      * @returns {Object} { B: totalB, sigma: finalSigma, isSyncFailed: boolean } - 按分後の全負担幅と加重平均接地圧、および同期失敗フラグ
      */
     calculateSpanSlabLoad: function(slabs, beam, span, state) {
-        const s = state || window.AppState;
+        const s = state || this.appState || window.AppState;
         const p1 = span.p1; // 始点柱 (globalX, globalY)
         const p2 = span.p2; // 終点柱 (globalX, globalY)
 
@@ -325,3 +331,7 @@ window.SlabBeamSynchronizer = {
         return { B: totalB, sigma: finalSigma, isSyncFailed };
     }
 };
+
+if (window.ServiceContainer) {
+    window.ServiceContainer.register('SlabBeamSynchronizer', window.SlabBeamSynchronizer);
+}

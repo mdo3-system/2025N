@@ -4,15 +4,16 @@
 
 window.TestRunner = {
     tests: [],
+    currentSuite: '',
     
     describe: function(name, fn) {
-        this.currentSuite = name;
+        window.TestRunner.currentSuite = name;
         fn();
     },
     
     it: function(name, fn) {
-        this.tests.push({
-            suite: this.currentSuite,
+        window.TestRunner.tests.push({
+            suite: window.TestRunner.currentSuite,
             name: name,
             fn: fn
         });

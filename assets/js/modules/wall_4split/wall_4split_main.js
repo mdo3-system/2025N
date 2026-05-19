@@ -1,18 +1,40 @@
 /**
  * wall_4split_main.js - 繧ｨ繝ｳ繝医Μ繝ｼ繝昴う繝ｳ繝� & 繧ｰ繝ｭ繝ｼ繝舌Ν繝悶Μ繝�ず
+ * wall_4split_main.js - 繧ｨ繝ｳ繝医Μ繝ｼ繝昴う繝ｳ繝 & 繧ｰ繝ｭ繝ｼ繝舌Ν繝悶Μ繝ず
  * v2.3.25 Refactoring
  */
 
-// --- 髫主ｱ､蛹悶い繝ｼ繧ｭ繝�け繝√Ε縺ｮ蛻晄悄蛹� ---
+// --- 髫主ｱ､蛹悶い繝ｼ繧ｭ繝け繝√Ε縺ｮ蛻晄悄蛹 ---
 document.addEventListener('DOMContentLoaded', () => {
     try {
-        console.log(`�噫 [${window.APP_VERSION || 'v2.x'}] Initializing Wall 4-Split Application...`);
+        console.log(`🚀 [${window.APP_VERSION || 'v2.x'}] Initializing Wall 4-Split Application...`);
 
-        // 0. 繝舌�繧ｸ繝ｧ繝ｳ陦ｨ遉ｺ縺ｮ譖ｴ譁ｰ
+        // Register and wire up core engine dependencies via DI
+        if (window.ServiceContainer) {
+            const sync = window.ServiceContainer.get('SlabBeamSynchronizer');
+            if (sync && typeof sync.inject === 'function') {
+                sync.inject({
+                    appState: window.AppState
+                });
+            }
+
+            const fdEngine = window.ServiceContainer.get('FoundationEngine');
+            if (fdEngine && typeof fdEngine.inject === 'function') {
+                fdEngine.inject({
+                    appState: window.AppState,
+                    mathUtils: window.MathUtils,
+                    axialEngine: window.AxialEngine,
+                    areaEngine: window.AreaEngine,
+                    synchronizer: sync
+                });
+            }
+        }
+
+        // 0. 繝舌繧ｸ繝ｧ繝ｳ陦ｨ遉ｺ縺ｮ譖ｴ譁ｰ
         const verEl = document.getElementById('app-version-title');
         if (verEl) verEl.innerText = window.APP_VERSION || 'v2.x';
 
-        // 1. 迥ｶ諷九�蛻晄悄蛹�
+        // 1. 迥ｶ諷九蛻晄悄蛹
         if (window.AppState && typeof window.AppState.init === 'function') {
             window.AppState.init();
         }

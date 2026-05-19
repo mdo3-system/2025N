@@ -4,6 +4,36 @@
  */
 
 window.FoundationEngine = {
+    _mathUtils: null,
+    _slabBeamSynchronizer: null,
+    _axialEngine: null,
+    _areaEngine: null,
+    _appState: null,
+
+    inject: function(dependencies) {
+        if (dependencies.mathUtils) this._mathUtils = dependencies.mathUtils;
+        if (dependencies.slabBeamSynchronizer) this._slabBeamSynchronizer = dependencies.slabBeamSynchronizer;
+        if (dependencies.axialEngine) this._axialEngine = dependencies.axialEngine;
+        if (dependencies.areaEngine) this._areaEngine = dependencies.areaEngine;
+        if (dependencies.appState) this._appState = dependencies.appState;
+    },
+
+    get M() {
+        return this._mathUtils || window.MathUtils;
+    },
+
+    get synchronizer() {
+        return this._slabBeamSynchronizer || window.SlabBeamSynchronizer;
+    },
+
+    get axial() {
+        return this._axialEngine || window.AxialEngine;
+    },
+
+    get area() {
+        return this._areaEngine || window.AreaEngine;
+    },
+
     COEFFS: {
         '4辺固定':                     { mcx: 0.024, max: 0.052, mcy: 0.048, may: 0.082 },
         '4辺ピン':                     { mcx: 0.080, max: 0.000, mcy: 0.050, may: 0.000 },
@@ -16,7 +46,7 @@ window.FoundationEngine = {
     },
 
     runAnalysis: function(state) {
-        const s = state || window.AppState;
+        const s = state || this._appState || window.AppState;
         
         // [本質的解決] 実行開始時に前回のスパン解析結果を完全にクリア・初期化し、
         // 状態が次回の計算に蓄積・リークして接地圧が不当に変動・増幅するバグを完璧に根絶する。
@@ -26,9 +56,10 @@ window.FoundationEngine = {
         });
 
         if (!s.config) s.config = {};
-        if (window.AxialEngine) {
-            window.AxialEngine.calculateAllAxialForces(s);
-            window.AxialEngine.calculateLongTermAxialForces(s);
+        const axial = this.axial;
+        if (axial) {
+            axial.calculateAllAxialForces(s);
+            axial.calculateLongTermAxialForces(s);
         }
         if (typeof reconstructContinuousBeams === 'function') reconstructContinuousBeams();
         this.updateGroundPressure(s);
@@ -48,11 +79,12 @@ window.FoundationEngine = {
 
     updateGroundPressure: function(state) {
         const s = state;
-        const a1 = window.AreaEngine ? window.AreaEngine.getFloorArea('1F', s) : 0;
-        const a2 = window.AreaEngine ? window.AreaEngine.getFloorArea('2F', s) : 0;
+        const area = this.area;
+        const a1 = area ? area.getFloorArea('1F', s) : 0;
+        const a2 = area ? area.getFloorArea('2F', s) : 0;
         
         const roofPoly = this._getCombinedRoofPolygon(s);
-        const M = window.MathUtils;
+        const M = this.M;
         let roofArea_m2 = roofPoly.length >= 3 ? M.polygonArea(roofPoly) / 1000000 : 0;
         const aRoof = roofArea_m2 > 0 ? roofArea_m2 : Math.max(a1, a2);
         
@@ -71,7 +103,7 @@ window.FoundationEngine = {
         let aWallEst = (len1F * h1) + (len2F * h2);
         if (aWallEst === 0) aWallEst = (a1 + a2) * 1.0;
         const buildingW = (a1 * wF) + (a2 * wF) + (aRoof * wR) + (aWallEst * wW);
-        const totalSlabArea = (s.foundationSlabs || []).reduce((sum, sl) => sum + (window.MathUtils.Geometry.polygonArea(sl.vertices) / 1000000), 0);
+        const totalSlabArea = (s.foundationSlabs || []).reduce((sum, sl) => sum + (this.M.Geometry.polygonArea(sl.vertices) / 1000000), 0);
         if (totalSlabArea > 0) { s.averageBuildingPressure = buildingW / totalSlabArea; s.averageGroundPressure = (buildingW + totalSlabArea * 5.0) / totalSlabArea; }
     },
 
@@ -79,7 +111,7 @@ window.FoundationEngine = {
         const triMult = state.config?.triangleMultiplier || 1.33;
         (beams || []).forEach(b => { b.slabLoad = 0; b.tributaryArea = 0; b.tributaryWidth = 0; });
         (slabs || []).forEach(slab => {
-            let pts = slab.vertices.map(v => ({ x: v.x, y: v.y })); if (pts.length < 3) return; window.MathUtils.ensureCCW(pts);
+            let pts = slab.vertices.map(v => ({ x: v.x, y: v.y })); if (pts.length < 3) return; this.M.ensureCCW(pts);
             const edges = [];
             for (let i = 0; i < pts.length; i++) {
                 const p1 = pts[i], p2 = pts[(i + 1) % pts.length];
@@ -95,7 +127,7 @@ window.FoundationEngine = {
                     const cA = Ei.nx - Ej.nx, cB = Ei.ny - Ej.ny, cC = Ej.d - Ei.d;
                     if (Math.abs(cA) > 1e-7 || Math.abs(cB) > 1e-7) poly = this._clipByLine(poly, cA, cB, cC);
                 }
-                const area = window.MathUtils.Geometry.polygonArea(poly);
+                const area = this.M.Geometry.polygonArea(poly);
                 if (area > 100) {
                     let width = area / Ei.L / 1000; if (this._isTriangle(poly)) width = (area * triMult) / Ei.L / 1000;
                     const mx = (Ei.p1.x + Ei.p2.x) / 2, my = (Ei.p1.y + Ei.p2.y) / 2;
@@ -152,7 +184,7 @@ window.FoundationEngine = {
 
     calculateSlabAnalysis: function(slabs, avgBuildingPressure) {
         if (!slabs) return;
-        const s = window.AppState, M = window.MathUtils;
+        const s = this._appState || window.AppState, M = this.M;
         const beams = (s.foundationBeams || []).filter(b => !b.isDeleted);
         // Step 1: Highly granular pre-aggregation determining exactly how many slabs share each DISCRETE span boundary.
         const spanAdjacency = {};
@@ -348,7 +380,7 @@ window.FoundationEngine = {
     },
 
     getBeamPillars: function(beam, state) {
-        const s = state || window.AppState;
+        const s = state || this._appState || window.AppState;
         const p1 = beam.p1, p2 = beam.p2;
         const dx = p2.x - p1.x, dy = p2.y - p1.y, L = Math.hypot(dx, dy);
         if (L < 1) return [];
@@ -357,7 +389,7 @@ window.FoundationEngine = {
         // 1F と 2F が同じXY座標に存在する場合、両方を拾うと spans が2倍になり選択ロジックが破綻する
         const targetFloorPillars = (s.pillars || []).filter(p =>
             !p.isDeleted && (p.floor === '1F' || p.floor === 'ALL') &&
-            window.MathUtils.distToBeamLine(p.x, p.y, p1.x, p1.y, p2.x, p2.y) < 50
+            this.M.distToBeamLine(p.x, p.y, p1.x, p1.y, p2.x, p2.y) < 50
         );
 
         const mapped = targetFloorPillars.map(p => {
@@ -704,8 +736,8 @@ window.FoundationEngine = {
     _offsetPolygon: function(poly, d) {
         if (!poly || poly.length < 3) return [];
         let pts = poly.map(v => ({ x: v.x, y: v.y }));
-        if (window.MathUtils && window.MathUtils.ensureCCW) {
-            window.MathUtils.ensureCCW(pts);
+        if (this.M && this.M.ensureCCW) {
+            this.M.ensureCCW(pts);
         } else {
             let sum = 0;
             for (let i = 0; i < pts.length; i++) {
@@ -787,11 +819,11 @@ window.FoundationEngine = {
     _isBeamInvolvedInSlab: function(b, poly) {
         if (this._isBeamOnSlabBoundary(b, poly)) return 1; // Boundary
         const mid = { x: (b.p1.x + b.p2.x)/2, y: (b.p1.y + b.p2.y)/2 };
-        if (window.MathUtils && window.MathUtils.isPointInPolygon && window.MathUtils.isPointInPolygon(mid, poly)) return 2; // Internal
+        if (this.M && this.M.isPointInPolygon && this.M.isPointInPolygon(mid, poly)) return 2; // Internal
         return 0; // None
     },
     _isBeamOnSlabBoundary: function(b, poly) {
-        const onBound = (p) => { for (let i = 0; i < poly.length; i++) { if (window.MathUtils.distToBeamLine(p.x, p.y, poly[i].x, poly[i].y, poly[(i+1)%poly.length].x, poly[(i+1)%poly.length].y) < 10) return true; } return false; };
+        const onBound = (p) => { for (let i = 0; i < poly.length; i++) { if (this.M.distToBeamLine(p.x, p.y, poly[i].x, poly[i].y, poly[(i+1)%poly.length].x, poly[(i+1)%poly.length].y) < 10) return true; } return false; };
         return onBound(b.p1) && onBound(b.p2) && onBound({ x: (b.p1.x + b.p2.x)/2, y: (b.p1.y + b.p2.y)/2 });
     },
     _isTriangle: function(poly) {
@@ -870,4 +902,8 @@ window.FoundationEngine = {
         return { area: (parseInt(m[1]) || 1) * 71, pitch: parseInt(m[3]) || 200 };
     }
 };
+
+if (window.ServiceContainer) {
+    window.ServiceContainer.register('FoundationEngine', window.FoundationEngine);
+}
 

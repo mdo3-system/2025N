@@ -128,7 +128,7 @@ window.NValueEngine = {
         // 2. Final N-Value Logic for all floors
         ['2F', '1F'].forEach(f => {
             s.pillars.filter(p => !p.isDeleted && !p.isInvalidPos && p.floor === f).forEach(p => {
-                const isC = p.isManualCorner !== null ? p.isManualCorner : p.isCornerAuto;
+                const isC = p.isManualCorner != null ? p.isManualCorner : p.isCornerAuto;
                 p.isC = isC;
                 const b = isC ? 0.8 : 0.5;
                 const baseH = f === '1F' ? h1 : h2;
@@ -136,7 +136,7 @@ window.NValueEngine = {
                 const p_d = p.manualD || (f === '1F' ? config.pillarDepth1F : config.pillarDepth2F);
                 
                 const k_p = (p_h <= 3.2 ? 2.7 : p_h) / 2.7;
-                let usedArea = p.manualArea !== null ? p.manualArea : (p.autoArea || 0);
+                let usedArea = p.manualArea != null ? p.manualArea : (p.autoArea || 0);
                 let isDetail = p.lCalcMode === 'detail';
 
                 if (f === '1F') {
@@ -155,7 +155,7 @@ window.NValueEngine = {
                     };
 
                     if (underUpper && upper) {
-                        const b2 = (upper.isManualCorner !== null ? upper.isManualCorner : upper.isCornerAuto) ? 0.8 : 0.5;
+                        const b2 = (upper.isManualCorner != null ? upper.isManualCorner : upper.isCornerAuto) ? 0.8 : 0.5;
                         const k2 = ((upper.manualH || h2) <= 3.2 ? 2.7 : (upper.manualH || h2)) / 2.7;
                         const upX = (upper.Ax * b2 * k2).toFixed(2);
                         const upY = (upper.Ay * b2 * k2).toFixed(2);

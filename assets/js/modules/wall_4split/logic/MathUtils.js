@@ -249,6 +249,55 @@ window.MathUtils = {
     },
 
     /**
+     * Triangulate a polygon using Ear Clipping algorithm
+     */
+    triangulate: function(verts) {
+        const pts = [];
+        for (let i = 0; i < verts.length; i++) {
+            const p = verts[i];
+            if (pts.length === 0 || Math.hypot(p.x - pts[pts.length - 1].x, p.y - pts[pts.length - 1].y) > 1e-3) pts.push({ x: p.x, y: p.y });
+        }
+        if (pts.length > 2 && Math.hypot(pts[0].x - pts[pts.length - 1].x, pts[0].y - pts[pts.length - 1].y) < 1e-3) pts.pop();
+        if (pts.length < 3) return [];
+        let a = 0;
+        for (let i = 0; i < pts.length; i++) { let j = (i + 1) % pts.length; a += pts[i].x * pts[j].y - pts[j].x * pts[i].y; }
+        if (a < 0) pts.reverse();
+        const indices = pts.map((_, idx) => idx);
+        let limit = pts.length * 3;
+        const isEar = (u, v, w, n, pts, indices) => {
+            const pA = pts[indices[u]], pB = pts[indices[v]], pC = pts[indices[w]];
+            if ((pB.x - pA.x) * (pC.y - pA.y) - (pB.y - pA.y) * (pC.x - pA.x) <= 1e-6) return false;
+            for (let i = 0; i < n; i++) {
+                if (i === u || i === v || i === w) continue;
+                const p = pts[indices[i]];
+                const c1 = (pB.x - pA.x) * (p.y - pA.y) - (pB.y - pA.y) * (p.x - pA.x);
+                const c2 = (pC.x - pB.x) * (p.y - pB.y) - (pC.y - pB.y) * (p.x - pB.x);
+                const c3 = (pA.x - pC.x) * (p.y - pC.y) - (pA.y - pC.y) * (p.x - pC.x);
+                if (c1 >= -1e-6 && c2 >= -1e-6 && c3 >= -1e-6) return false;
+            }
+            return true;
+        };
+        const triangles = [];
+        while (indices.length > 2 && limit > 0) {
+            limit--;
+            let earFound = false;
+            for (let i = 0; i < indices.length; i++) {
+                const u = (i - 1 + indices.length) % indices.length;
+                const v = i;
+                const w = (i + 1) % indices.length;
+                if (isEar(u, v, w, indices.length, pts, indices)) {
+                    triangles.push([pts[indices[u]], pts[indices[v]], pts[indices[w]]]);
+                    indices.splice(v, 1);
+                    earFound = true;
+                    break;
+                }
+            }
+            if (!earFound) { triangles.push([pts[indices[0]], pts[indices[1]], pts[indices[2]]]); indices.splice(1, 1); }
+        }
+        return triangles;
+    },
+
+    /**
      * Get a human-readable area calculation formula (Requested by user)
      */
     getAreaFormula: function(vertices) {
@@ -285,54 +334,7 @@ window.MathUtils = {
         }
 
         // Generic fallback (coordinates) -> Use Triangulation!
-        // We will define a local triangulate function to not depend on global scope here.
-        const triangulate = (verts) => {
-            const pts = [];
-            for (let i = 0; i < verts.length; i++) {
-                const p = verts[i];
-                if (pts.length === 0 || Math.hypot(p.x - pts[pts.length - 1].x, p.y - pts[pts.length - 1].y) > 1e-3) pts.push({ x: p.x, y: p.y });
-            }
-            if (pts.length > 2 && Math.hypot(pts[0].x - pts[pts.length - 1].x, pts[0].y - pts[pts.length - 1].y) < 1e-3) pts.pop();
-            if (pts.length < 3) return [];
-            let a = 0;
-            for (let i = 0; i < pts.length; i++) { let j = (i + 1) % pts.length; a += pts[i].x * pts[j].y - pts[j].x * pts[i].y; }
-            if (a < 0) pts.reverse();
-            const indices = pts.map((_, idx) => idx);
-            let limit = pts.length * 3;
-            const isEar = (u, v, w, n, pts, indices) => {
-                const pA = pts[indices[u]], pB = pts[indices[v]], pC = pts[indices[w]];
-                if ((pB.x - pA.x) * (pC.y - pA.y) - (pB.y - pA.y) * (pC.x - pA.x) <= 1e-6) return false;
-                for (let i = 0; i < n; i++) {
-                    if (i === u || i === v || i === w) continue;
-                    const p = pts[indices[i]];
-                    const c1 = (pB.x - pA.x) * (p.y - pA.y) - (pB.y - pA.y) * (p.x - pA.x);
-                    const c2 = (pC.x - pB.x) * (p.y - pB.y) - (pC.y - pB.y) * (p.x - pB.x);
-                    const c3 = (pA.x - pC.x) * (p.y - pC.y) - (pA.y - pC.y) * (p.x - pC.x);
-                    if (c1 >= -1e-6 && c2 >= -1e-6 && c3 >= -1e-6) return false;
-                }
-                return true;
-            };
-            const triangles = [];
-            while (indices.length > 2 && limit > 0) {
-                limit--;
-                let earFound = false;
-                for (let i = 0; i < indices.length; i++) {
-                    const u = (i - 1 + indices.length) % indices.length;
-                    const v = i;
-                    const w = (i + 1) % indices.length;
-                    if (isEar(u, v, w, indices.length, pts, indices)) {
-                        triangles.push([pts[indices[u]], pts[indices[v]], pts[indices[w]]]);
-                        indices.splice(v, 1);
-                        earFound = true;
-                        break;
-                    }
-                }
-                if (!earFound) { triangles.push([pts[indices[0]], pts[indices[1]], pts[indices[2]]]); indices.splice(1, 1); }
-            }
-            return triangles;
-        };
-
-        const triangles = triangulate(vertices);
+        const triangles = this.triangulate(vertices);
         if (triangles.length === 0) return `面積 = ${area.toFixed(3)}㎡`;
         let formulaStr = [];
         let total = 0;
@@ -513,7 +515,8 @@ window.MathUtils = {
 window.MathUtils.Geometry = {
     polygonArea: (v) => window.MathUtils.polygonArea(v),
     polygonCentroid: (v) => window.MathUtils.polygonCentroid(v),
-    getAreaFormula: (v) => window.MathUtils.getAreaFormula(v)
+    getAreaFormula: (v) => window.MathUtils.getAreaFormula(v),
+    triangulate: (v) => window.MathUtils.triangulate(v)
 };
 window.Geometry = window.MathUtils.Geometry;
 
