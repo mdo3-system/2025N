@@ -74,6 +74,11 @@ window.MainRenderer = {
             this.drawFoundationLayer(state);
         }
 
+        // 9.5. 屋根レイヤー (屋根モード時、または屋根面表示フラグON時)
+        if (appMode === 'roof' || (state.elementVisibility && state.elementVisibility.roofFaces)) {
+            if (window.RoofRenderer) window.RoofRenderer.drawRoofLayer(state, ctx);
+        }
+
         // 10. 凡例の描画 (非印刷時のみ)
         if (!isPrintMode) {
             this.drawLegend(state);
