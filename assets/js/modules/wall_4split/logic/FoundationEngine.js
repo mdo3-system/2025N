@@ -173,18 +173,93 @@ window.FoundationEngine = {
             const area = M.polygonArea(slab.vertices) / 1000000;
             const a1Polys = (s.areaLines || []).filter(al => al.floor === '1F' && !['attic','balcony'].includes(al.areaType));
             const a2Polys = (s.areaLines || []).filter(al => al.floor === '2F' && !['attic','balcony'].includes(al.areaType));
-            const intersectArea = (p, areaPolys) => {
-                let total = 0; areaPolys.forEach(ap => {
-                    let clipped = [...p]; const apVts = ap.vertices;
-                    for (let i = 0; i < apVts.length; i++) {
-                        const p1 = apVts[i], p2 = apVts[(i + 1) % apVts.length], dx = p2.x - p1.x, dy = p2.y - p1.y, L = Math.hypot(dx, dy);
-                        if (L < 1) continue; clipped = this._clipByLine(clipped, dy/L, -dx/L, -((dy/L)*p1.x + (-dx/L)*p1.y));
+            // 凹多角形を凸な三角形要素に安全に分割する耳刈り法（Ear Clipping）
+            const triangulate = (verts) => {
+                const pts = [];
+                for (let i = 0; i < verts.length; i++) {
+                    const p = verts[i];
+                    if (pts.length === 0 || Math.hypot(p.x - pts[pts.length - 1].x, p.y - pts[pts.length - 1].y) > 1e-3) {
+                        pts.push({ x: p.x, y: p.y });
                     }
-                    total += M.polygonArea(clipped) / 1000000;
-                }); return total;
+                }
+                if (pts.length > 2 && Math.hypot(pts[0].x - pts[pts.length - 1].x, pts[0].y - pts[pts.length - 1].y) < 1e-3) {
+                    pts.pop();
+                }
+                if (pts.length < 3) return [];
+                
+                let a = 0;
+                for (let i = 0; i < pts.length; i++) {
+                    let j = (i + 1) % pts.length;
+                    a += pts[i].x * pts[j].y - pts[j].x * pts[i].y;
+                }
+                if (a < 0) pts.reverse();
+                
+                const indices = pts.map((_, idx) => idx);
+                let limit = pts.length * 3;
+                const triangles = [];
+                
+                const isEar = (u, v, w, n, pts, indices) => {
+                    const pA = pts[indices[u]], pB = pts[indices[v]], pC = pts[indices[w]];
+                    if ((pB.x - pA.x) * (pC.y - pA.y) - (pB.y - pA.y) * (pC.x - pA.x) <= 1e-6) return false;
+                    for (let i = 0; i < n; i++) {
+                        if (i === u || i === v || i === w) continue;
+                        const p = pts[indices[i]];
+                        const c1 = (pB.x - pA.x) * (p.y - pA.y) - (pB.y - pA.y) * (p.x - pA.x);
+                        const c2 = (pC.x - pB.x) * (p.y - pB.y) - (pC.y - pB.y) * (p.x - pB.x);
+                        const c3 = (pA.x - pC.x) * (p.y - pC.y) - (pA.y - pC.y) * (p.x - pC.x);
+                        if (c1 >= -1e-6 && c2 >= -1e-6 && c3 >= -1e-6) return false;
+                    }
+                    return true;
+                };
+                
+                while (indices.length > 2 && limit > 0) {
+                    limit--;
+                    let earFound = false;
+                    for (let i = 0; i < indices.length; i++) {
+                        const u = (i - 1 + indices.length) % indices.length;
+                        const v = i;
+                        const w = (i + 1) % indices.length;
+                        if (isEar(u, v, w, indices.length, pts, indices)) {
+                            triangles.push([pts[indices[u]], pts[indices[v]], pts[indices[w]]]);
+                            indices.splice(v, 1);
+                            earFound = true;
+                            break;
+                        }
+                    }
+                    if (!earFound) {
+                        triangles.push([pts[indices[0]], pts[indices[1]], pts[indices[2]]]);
+                        indices.splice(1, 1);
+                    }
+                }
+                return triangles;
             };
-            let sArea1F = intersectArea(poly, a1Polys);
-            const sArea2F = intersectArea(poly, a2Polys);
+
+            const intersectArea = (p, areaPolys) => {
+                let total = 0;
+                // スラブ多角形をディープコピーして CCW 正規化
+                const pCCW = p.map(v => ({ x: v.x, y: v.y }));
+                M.ensureCCW(pCCW);
+
+                areaPolys.forEach(ap => {
+                    if (!ap.vertices || ap.vertices.length < 3) return;
+
+                    // 床面積多角形を三角形に分割（凹多角形対策・winding order自動正規化を含む）
+                    const tris = triangulate(ap.vertices);
+
+                    tris.forEach(tri => {
+                        let clipped = [...pCCW];
+                        for (let i = 0; i < tri.length; i++) {
+                            const p1 = tri[i], p2 = tri[(i + 1) % tri.length], dx = p2.x - p1.x, dy = p2.y - p1.y, L = Math.hypot(dx, dy);
+                            if (L < 1) continue;
+                            clipped = this._clipByLine(clipped, dy/L, -dx/L, -((dy/L)*p1.x + (-dx/L)*p1.y));
+                        }
+                        total += M.polygonArea(clipped) / 1000000;
+                    });
+                });
+                return total;
+            };
+            let sArea1F = intersectArea(slab.vertices, a1Polys);
+            const sArea2F = intersectArea(slab.vertices, a2Polys);
             
             // [v2.6.16] 1階床負担面積が未定義または0の場合、スラブ全面積を自動フォールバック適用
             if (sArea1F <= 0.0001) {
@@ -194,7 +269,7 @@ window.FoundationEngine = {
             const roofPoly = this._getCombinedRoofPolygon(s);
             let sAreaRoof = 0;
             if (roofPoly && roofPoly.length >= 3) {
-                sAreaRoof = intersectArea(poly, [{ vertices: roofPoly }]);
+                sAreaRoof = intersectArea(slab.vertices, [{ vertices: roofPoly }]);
             } else {
                 sAreaRoof = Math.max(sArea1F, sArea2F);
             }

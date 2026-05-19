@@ -246,6 +246,10 @@ window.APP_VERSION = "v2.6.14";
 window.APP_VERSION = "v2.6.15";
 // Backup of v2.6.15 taken. Now moving to v2.6.16: Fallback 1F slab tributary floor area to slab area when undefined or zero.
 window.APP_VERSION = "v2.6.16";
+// Backup of v2.6.16 taken. Now moving to v2.6.17: Fix 1F floor area load = 0 typo bug by passing slab.vertices to intersectArea instead of undefined poly.
+window.APP_VERSION = "v2.6.17";
+// Backup of v2.6.17 taken. Now moving to v2.6.18: Implement Ear Clipping Triangulation and Winding Order normalization for mathematically accurate polygonal floor area integration in intersectArea.
+window.APP_VERSION = "v2.6.18";
 
 
 
