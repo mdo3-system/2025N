@@ -318,6 +318,55 @@ window.GridEngine = {
             });
         }
         return (minD < 250) ? best : '';
+    },
+
+    /**
+     * [v2.7.0] Analyze and return the roof grid coordinates (combining standard grids + overhang offsets + manual roof grids)
+     */
+    getRoofGrids: function(state) {
+        const s = state || window.AppState;
+
+        const overhangX = s.roofOverhangX !== undefined ? s.roofOverhangX : 600; // mm
+        const overhangY = s.roofOverhangY !== undefined ? s.roofOverhangY : 600; // mm
+
+        let xs = [...(s.gridXCoords || [])];
+        let ys = [...(s.gridYCoords || [])];
+
+        // Add overhangs at outermost boundaries
+        if (xs.length > 0) {
+            const minX = Math.min(...xs);
+            const maxX = Math.max(...xs);
+            xs.push(minX - overhangX);
+            xs.push(maxX + overhangX);
+        }
+        if (ys.length > 0) {
+            const minY = Math.min(...ys);
+            const maxY = Math.max(...ys);
+            ys.push(minY - overhangY);
+            ys.push(maxY + overhangY);
+        }
+
+        // Add manual roof grids
+        const manualX = s.roofGridManualX || [];
+        const manualY = s.roofGridManualY || [];
+        xs = xs.concat(manualX.map(m => m.coord));
+        ys = ys.concat(manualY.map(m => m.coord));
+
+        // Deduplicate and sort
+        const TOL = 5;
+        const uniqX = [];
+        xs.forEach(x => {
+            if (!uniqX.some(ux => Math.abs(ux - x) < TOL)) uniqX.push(x);
+        });
+        const uniqY = [];
+        ys.forEach(y => {
+            if (!uniqY.some(uy => Math.abs(uy - y) < TOL)) uniqY.push(y);
+        });
+
+        uniqX.sort((a, b) => a - b);
+        uniqY.sort((a, b) => a - b);
+
+        return { x: uniqX, y: uniqY };
     }
 };
 

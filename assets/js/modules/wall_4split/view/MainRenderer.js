@@ -145,6 +145,22 @@ window.MainRenderer = {
 
     drawGrids: function(state) {
         if (!state.elementVisibility.grids || (state.gridXCoords.length === 0 && state.gridYCoords.length === 0)) return;
+        
+        if (state.currentAppMode === 'roof') {
+            const ctx = state.ctx;
+            ctx.save();
+            ctx.globalAlpha = 0.25; // Standard grids are semi-transparent in roof mode
+            this.drawStandardGrids(state);
+            ctx.restore();
+            
+            this.drawRoofGrids(state);
+            return;
+        }
+
+        this.drawStandardGrids(state);
+    },
+
+    drawStandardGrids: function(state) {
         const ctx = state.ctx;
         ctx.save();
         ctx.strokeStyle = state.isPrintMode ? '#555' : '#8e44ad';
@@ -294,6 +310,133 @@ window.MainRenderer = {
                 ctx.restore();
             });
         }
+        ctx.restore();
+    },
+
+    drawRoofGrids: function(state) {
+        if (!state.elementVisibility.grids || !window.GridEngine) return;
+        const roofGrids = window.GridEngine.getRoofGrids(state);
+        const ctx = state.ctx;
+        ctx.save();
+        ctx.strokeStyle = state.isPrintMode ? '#555' : '#2980b9'; // Elegant blue for roof grids
+        ctx.lineWidth = 1;
+        ctx.setLineDash([4, 4]);
+
+        const xs = roofGrids.x;
+        const ys = roofGrids.y;
+
+        const hasY = ys.length > 0;
+        const hasX = xs.length > 0;
+
+        const gMinY = hasY ? Math.min(...ys) : 0;
+        const gMaxY = hasY ? Math.max(...ys) : 0;
+        const gMinX = hasX ? Math.min(...xs) : 0;
+        const gMaxX = hasX ? Math.max(...xs) : 0;
+
+        const pTop = hasY ? this.toCanvas(0, gMaxY, state) : { cy: 0 };
+        const pBot = hasY ? this.toCanvas(0, gMinY, state) : { cy: state.canvas.height };
+        const pLeft = hasX ? this.toCanvas(gMinX, 0, state) : { cx: 0 };
+        const pRight = hasX ? this.toCanvas(gMaxX, 0, state) : { cx: state.canvas.width };
+
+        const botY = hasY ? pBot.cy + 30 : state.canvas.height;
+        const rightX = hasX ? pRight.cx + 30 : state.canvas.width;
+
+        const visibleLeft = -state.offsetX / state.scale;
+        const visibleTop = (state.canvas.height - state.offsetY) / state.scale;
+        const labelFontSize = Math.max(10, Math.min(20, 13 / state.scale));
+        const labelPad = 10 / state.scale;
+
+        // Draw X direction roof grids
+        let lastCx = -Infinity;
+        let staggerLevelX = 0;
+        xs.forEach(x => {
+            const cx = this.toCanvas(x, 0, state).cx;
+            if (cx != null) {
+                let name = '';
+                const idx = state.gridXCoords.findIndex(gx => Math.abs(gx - x) < 5);
+                if (idx !== -1) {
+                    name = state.gridXNames[idx];
+                } else {
+                    const manualMatch = (state.roofGridManualX || []).find(m => Math.abs(m.coord - x) < 5);
+                    if (manualMatch) {
+                        name = manualMatch.name;
+                    } else {
+                        name = `RX(${Math.round(x)})`;
+                    }
+                }
+
+                const baseLabelY = Math.max(this.toCanvas(0, visibleTop - labelPad, state).cy, 15);
+                const textEstWidth = labelFontSize * 2.2;
+                if (cx - lastCx < textEstWidth) {
+                    staggerLevelX = (staggerLevelX + 1) % 3;
+                } else {
+                    staggerLevelX = 0;
+                }
+                lastCx = cx;
+                
+                const labelY = baseLabelY + staggerLevelX * (labelFontSize + 4);
+
+                ctx.save();
+                ctx.font = `bold ${labelFontSize}px sans-serif`;
+                const lineTopY = labelY + 6; 
+                ctx.beginPath(); ctx.moveTo(cx, lineTopY); ctx.lineTo(cx, botY); ctx.stroke();
+
+                ctx.textAlign = "center";
+                ctx.strokeStyle = state.isPrintMode ? '#fff' : 'rgba(255,255,255,0.8)'; ctx.lineWidth = 3;
+                ctx.strokeText(name, cx, labelY);
+                ctx.fillStyle = '#2980b9';
+                ctx.fillText(name, cx, labelY);
+                ctx.restore();
+            }
+        });
+
+        // Draw Y direction roof grids
+        let lastCy = -Infinity;
+        let staggerLevelY = 0;
+        ys.forEach(y => {
+            const cy = this.toCanvas(0, y, state).cy;
+            if (cy != null) {
+                let name = '';
+                const idx = state.gridYCoords.findIndex(gy => Math.abs(gy - y) < 5);
+                if (idx !== -1) {
+                    name = state.gridYNames[idx];
+                } else {
+                    const manualMatch = (state.roofGridManualY || []).find(m => Math.abs(m.coord - y) < 5);
+                    if (manualMatch) {
+                        name = manualMatch.name;
+                    } else {
+                        name = `RY(${Math.round(y)})`;
+                    }
+                }
+
+                const baseLabelX = Math.max(this.toCanvas(visibleLeft + labelPad, 0, state).cx, 5);
+                const textEstWidth = labelFontSize * 1.2;
+                if (cy - lastCy < textEstWidth) {
+                    staggerLevelY = (staggerLevelY + 1) % 3;
+                } else {
+                    staggerLevelY = 0;
+                }
+                lastCy = cy;
+
+                const labelX = baseLabelX + staggerLevelY * (labelFontSize * 2.2);
+
+                ctx.save();
+                ctx.font = `bold ${labelFontSize}px sans-serif`;
+                
+                const tw = ctx.measureText(name).width;
+                const lineStartX = labelX + tw + 6;
+
+                ctx.beginPath(); ctx.moveTo(lineStartX, cy); ctx.lineTo(rightX, cy); ctx.stroke();
+
+                ctx.textAlign = "left";
+                ctx.strokeStyle = state.isPrintMode ? '#fff' : 'rgba(255,255,255,0.8)'; ctx.lineWidth = 3;
+                ctx.strokeText(name, labelX, cy + 5);
+                ctx.fillStyle = '#2980b9';
+                ctx.fillText(name, labelX, cy + 5);
+                ctx.restore();
+            }
+        });
+
         ctx.restore();
     },
 

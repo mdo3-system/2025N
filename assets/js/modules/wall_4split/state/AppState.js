@@ -182,6 +182,8 @@ window.AppState = {
     roofGridYCoords: [], // [v2.7.0]
     roofGridManualX: [], // [v2.7.0]
     roofGridManualY: [], // [v2.7.0]
+    roofOverhangX: 600,  // [v2.7.0] mm
+    roofOverhangY: 600,  // [v2.7.0] mm
     manualGridAngle: [], // Array of { id, name, p1: {x,y}, p2: {x,y} } 既存交点スナップ強制
 
     deletedGridX: [],

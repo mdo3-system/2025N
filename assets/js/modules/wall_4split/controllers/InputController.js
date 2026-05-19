@@ -101,6 +101,8 @@ window.InputController = {
         bC('tab-foundation', () => window.AppController.switchAppMode('foundation'));
         bC('tab-1f', () => window.AppController.setFloor('1F'));
         bC('tab-2f', () => window.AppController.setFloor('2F'));
+        bC('tab-1r', () => window.AppController.setRoofFloor('1F'));
+        bC('tab-2r', () => window.AppController.setRoofFloor('2F'));
 
         bC('btn-open-area-settings', () => {
             const m = document.getElementById('modal-area-settings');

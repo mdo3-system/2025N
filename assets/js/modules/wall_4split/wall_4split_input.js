@@ -308,7 +308,103 @@ function handleUnifiedDeletion(e, state) {
     window.AppController.refreshAll();
 }
 
+function handleRoofGridInput(mode, state, clickX, clickY) {
+    const snapToModule = (val) => {
+        const module = 455;
+        const nearest = Math.round(val / module) * module;
+        if (Math.abs(val - nearest) < 5) return nearest;
+        return Math.round(val);
+    };
+
+    if (!window.GridEngine) return;
+    const roofGrids = window.GridEngine.getRoofGrids(state);
+
+    if (mode === 'add-grid') {
+        const axis = prompt("追加する屋根通り芯の方向を入力してください (X または Y)", "X");
+        if (!axis) return;
+        const upAxis = axis.toUpperCase().trim();
+        if (upAxis !== 'X' && upAxis !== 'Y') return;
+
+        if (upAxis === 'X') {
+            let bestGX = 0;
+            let minDX = Infinity;
+            if (roofGrids.x.length > 0) {
+                roofGrids.x.forEach(gx => {
+                    let d = Math.abs(clickX - (gx * state.scale + state.offsetX));
+                    if (d < minDX) { minDX = d; bestGX = gx; }
+                });
+            }
+            if (minDX > 100 || minDX === Infinity) {
+                bestGX = snapToModule((clickX - state.offsetX) / state.scale);
+            }
+
+            const offsetStr = prompt(`屋根基準位置 (座標: ${bestGX}) からのオフセット距離を入力してください (mm)\n右方向はプラス、左方向はマイナス`, "910");
+            if (offsetStr === null) return;
+            const offset = parseFloat(offsetStr);
+            if (isNaN(offset)) return;
+
+            const newGX = bestGX + offset;
+            const name = prompt("追加する屋根X通りの名称を入力してください", `RX_${(state.roofGridManualX || []).length + 1}`);
+            if (!name) return;
+
+            if (!state.roofGridManualX) state.roofGridManualX = [];
+            state.roofGridManualX.push({ coord: newGX, name: name.trim() });
+        } else {
+            let bestGY = 0;
+            let minDY = Infinity;
+            if (roofGrids.y.length > 0) {
+                roofGrids.y.forEach(gy => {
+                    let d = Math.abs(clickY - (state.canvas.height - (gy * state.scale + state.offsetY)));
+                    if (d < minDY) { minDY = d; bestGY = gy; }
+                });
+            }
+            if (minDY > 100 || minDY === Infinity) {
+                bestGY = snapToModule((state.canvas.height - clickY - state.offsetY) / state.scale);
+            }
+
+            const offsetStr = prompt(`屋根基準位置 (座標: ${bestGY}) からのオフセット距離を入力してください (mm)\n上方向はプラス、下方向はマイナス`, "910");
+            if (offsetStr === null) return;
+            const offset = parseFloat(offsetStr);
+            if (isNaN(offset)) return;
+
+            const newGY = bestGY + offset;
+            const name = prompt("追加する屋根Y通りの名称を入力してください", `RY_${(state.roofGridManualY || []).length + 1}`);
+            if (!name) return;
+
+            if (!state.roofGridManualY) state.roofGridManualY = [];
+            state.roofGridManualY.push({ coord: newGY, name: name.trim() });
+        }
+    } else if (mode === 'del-grid') {
+        let bestIX = -1, bestIY = -1, minD = 20;
+        let targetVal = null, targetAxis = null;
+
+        roofGrids.x.forEach((gx, i) => {
+            let d = Math.abs(clickX - (gx * state.scale + state.offsetX));
+            if (d < minD) { minD = d; bestIX = i; targetVal = gx; targetAxis = 'X'; }
+        });
+        roofGrids.y.forEach((gy, i) => {
+            let d = Math.abs(clickY - (state.canvas.height - (gy * state.scale + state.offsetY)));
+            if (d < minD) { minD = d; bestIY = i; targetVal = gy; targetAxis = 'Y'; }
+        });
+
+        if (targetAxis) {
+            if (!confirm(`屋根通り芯 (${targetAxis}軸: ${Math.round(targetVal)}mm) を削除しますか？`)) return;
+
+            if (targetAxis === 'X') {
+                state.roofGridManualX = (state.roofGridManualX || []).filter(m => Math.abs(m.coord - targetVal) > 5);
+            } else {
+                state.roofGridManualY = (state.roofGridManualY || []).filter(m => Math.abs(m.coord - targetVal) > 5);
+            }
+        }
+    }
+    window.AppController.refreshAll();
+}
+
 function handleGridInput(mode, state, clickX, clickY) {
+    if (state.currentAppMode === 'roof') {
+        handleRoofGridInput(mode, state, clickX, clickY);
+        return;
+    }
     if (mode === 'add-grid') {
         const snapToModule = (val) => {
             const module = 455;
@@ -528,7 +624,7 @@ function handleGeneralMouseMove(mx, my, state) {
     }
     // スナップ点計算
     const mode = getMode();
-    if (['add-pillar', 'draw-area', 'add-diag-grid'].includes(mode)) {
+    if (['add-pillar', 'draw-area', 'add-diag-grid', 'draw-roof', 'set-slope-line'].includes(mode)) {
         let bestD = 30;
         // 1. 柱からのスナップ
         for (const p of state.pillars.filter(p => !p.isDeleted && p.floor === state.currentFloor)) {
@@ -537,7 +633,15 @@ function handleGeneralMouseMove(mx, my, state) {
             if (d < bestD) { bestD = d; snapPoint = { x: p.x, y: p.y }; }
         }
         // 2. 通り芯交点からのスナップ
-        state.gridXCoords.forEach(gx => state.gridYCoords.forEach(gy => {
+        let xs = state.gridXCoords || [];
+        let ys = state.gridYCoords || [];
+        if (state.currentAppMode === 'roof' && window.GridEngine) {
+            const roofGrids = window.GridEngine.getRoofGrids(state);
+            xs = roofGrids.x;
+            ys = roofGrids.y;
+        }
+
+        xs.forEach(gx => ys.forEach(gy => {
             const pt = toC(gx, gy);
             const d = Math.hypot(mx - pt.cx, my - pt.cy);
             if (d < bestD) { bestD = d; snapPoint = { x: gx, y: gy }; }

@@ -251,9 +251,13 @@ window.AppController = {
         const tf = document.getElementById('tab-foundation');
         const t1 = document.getElementById('tab-1f');
         const t2 = document.getElementById('tab-2f');
+        const t1r = document.getElementById('tab-1r');
+        const t2r = document.getElementById('tab-2r');
         if (tf) tf.className = 'tab-btn active';
         if (t1) t1.className = 'tab-btn';
         if (t2) t2.className = 'tab-btn';
+        if (t1r) t1r.className = 'tab-btn';
+        if (t2r) t2r.className = 'tab-btn';
 
         window.AppState.elementVisibility.walls = false;
         window.AppState.elementVisibility.areas = false;
@@ -266,12 +270,17 @@ window.AppController = {
 
     updateWallUI: function() {
         const floor = window.AppState.currentFloor;
+        const mode = window.AppState.currentAppMode;
         const tf = document.getElementById('tab-foundation');
         const t1 = document.getElementById('tab-1f');
         const t2 = document.getElementById('tab-2f');
+        const t1r = document.getElementById('tab-1r');
+        const t2r = document.getElementById('tab-2r');
         if (tf) tf.className = 'tab-btn';
-        if (t1) t1.className = floor === '1F' ? 'tab-btn active' : 'tab-btn';
-        if (t2) t2.className = floor === '2F' ? 'tab-btn active' : 'tab-btn';
+        if (t1) t1.className = (floor === '1F' && mode === 'wall') ? 'tab-btn active' : 'tab-btn';
+        if (t2) t2.className = (floor === '2F' && mode === 'wall') ? 'tab-btn active' : 'tab-btn';
+        if (t1r) t1r.className = (floor === '1F' && mode === 'roof') ? 'tab-btn active' : 'tab-btn';
+        if (t2r) t2r.className = (floor === '2F' && mode === 'roof') ? 'tab-btn active' : 'tab-btn';
 
         // [v2.5.18] 基礎モードから復帰した際、すべてのレイヤを自動的に強制ONにする
         const vis = window.AppState.elementVisibility;
@@ -296,6 +305,14 @@ window.AppController = {
     setFloor: function(floor) {
         window.AppState.currentFloor = floor;
         this.switchAppMode('wall');
+    },
+
+    /**
+     * [v2.7.0] 屋根作図階の切替
+     */
+    setRoofFloor: function(floor) {
+        window.AppState.currentFloor = floor;
+        this.switchAppMode('roof');
     }
 };
 
