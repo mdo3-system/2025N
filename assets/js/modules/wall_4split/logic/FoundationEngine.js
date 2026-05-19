@@ -183,8 +183,13 @@ window.FoundationEngine = {
                     total += M.polygonArea(clipped) / 1000000;
                 }); return total;
             };
-            const poly = slab.vertices.map(v => ({ x: v.x, y: v.y }));
-            const sArea1F = intersectArea(poly, a1Polys), sArea2F = intersectArea(poly, a2Polys);
+            let sArea1F = intersectArea(poly, a1Polys);
+            const sArea2F = intersectArea(poly, a2Polys);
+            
+            // [v2.6.16] 1階床負担面積が未定義または0の場合、スラブ全面積を自動フォールバック適用
+            if (sArea1F <= 0.0001) {
+                sArea1F = area;
+            }
             
             const roofPoly = this._getCombinedRoofPolygon(s);
             let sAreaRoof = 0;

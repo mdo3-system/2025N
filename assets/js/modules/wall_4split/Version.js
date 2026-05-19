@@ -244,6 +244,8 @@ window.APP_VERSION = "v2.6.13";
 window.APP_VERSION = "v2.6.14";
 // Backup of v2.6.14 taken. Now moving to v2.6.15: Standardize canvas slab ground pressure display and obsolete report to 3 decimal places.
 window.APP_VERSION = "v2.6.15";
+// Backup of v2.6.15 taken. Now moving to v2.6.16: Fallback 1F slab tributary floor area to slab area when undefined or zero.
+window.APP_VERSION = "v2.6.16";
 
 
 
