@@ -64,6 +64,12 @@ window.AppController = {
             state.init();
         }
 
+        // 0.2. Auto-calculate projected areas from roofFaces (if present)
+        if (window.RoofEngine) {
+            window.RoofEngine.updateProjectedAreas(state);
+            state.init();
+        }
+
         // 1. 解析の実行 (Logic)
         if (window.StructuralEngine) {
             window.StructuralEngine.runAnalysis();
