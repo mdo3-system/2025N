@@ -49,10 +49,6 @@ window.InputController = {
         bF('dxf-upload', (e) => {
             if (typeof loadDxf === 'function') loadDxf(e);
         });
-
-        bF('upload-doc-sub', (e) => {
-            if (typeof loadSubDxf === 'function') loadSubDxf(e);
-        });
     },
 
     bindButtonHandlers: function() {

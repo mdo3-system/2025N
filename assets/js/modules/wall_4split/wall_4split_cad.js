@@ -73,47 +73,10 @@ function processDxfData(dxf, isIncremental, rawDxf) {
     const docData = { entities: [...bgLinesOriginal, ...bgTextsOriginal], loaded: true, rawDxf: rawDxf };
     docDrawings.floor = docData;
     docDrawings.div4 = docData;
-    if (!docDrawings.elev || !docDrawings.elev.loaded) {
-        docDrawings.elev = docData;
-    }
 
     if (typeof analyzeGrids === 'function') analyzeGrids();
     if (typeof initViewForce === 'function') initViewForce();
-    
-    AppController.refreshAll();
-}
-
-/**
- * 挿絵用 DXF 読込専用関数（メインデータを破壊しない）
- */
-function loadSubDxf(event) {
-    const file = event.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = function(ev) {
-        try {
-            const rawTxt = new TextDecoder('UTF-8').decode(ev.target.result);
-            const dxfRaw = rawTxt.includes('\uFFFD') ? new TextDecoder('Shift_JIS').decode(ev.target.result) : rawTxt;
-
-            const dxf = window.CadEngine.processDxf(dxfRaw);
-            if (!dxf) { alert('❌ 挿絵DXFの解析に失敗しました。'); return; }
-
-            const result = window.CadEngine.mapEntitiesToBackground(dxf.entities, dxf.blocks, window.AppState);
-            const extractedEnts = [...result.newBgLines, ...result.newBgTexts, ...result.newBubbles];
-            
-            docDrawings.elev = { entities: extractedEnts, loaded: true, rawDxf: dxfRaw };
-
-            let msgEl = document.getElementById('action-msg');
-            if (msgEl) msgEl.innerText = "✅ 挿絵用DXFを読み込みました。";
-
-            // If the projected area modal is open, refresh preview
-            if (typeof showAreaPreview === 'function') {
-                showAreaPreview();
-            }
-
-        } catch (err) { alert("❌ 挿絵DXF解析エラー: " + err.message); }
-    };
-    reader.readAsArrayBuffer(file);
+    if (window.AppController) window.AppController.refreshAll();
 }
 
 function showAreaInputModal() {
@@ -169,9 +132,6 @@ function applyAreaInputModal() {
 document.addEventListener('DOMContentLoaded', () => {
     const dxfUp = document.getElementById('dxf-upload');
     if (dxfUp) dxfUp.addEventListener('change', loadDxf);
-
-    const subUp = document.getElementById('upload-doc-sub');
-    if (subUp) subUp.addEventListener('change', loadSubDxf);
 
     const btnApplyArea = document.getElementById('btn-apply-area-input');
     if (btnApplyArea) btnApplyArea.addEventListener('click', applyAreaInputModal);

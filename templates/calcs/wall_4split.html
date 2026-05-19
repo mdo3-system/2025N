@@ -1170,26 +1170,14 @@
                     style="width:100%; box-sizing:border-box; padding:8px; font-size:12px; margin-top:5px;">📂
                     平面図を選択</label>
 
-                <div style="margin-top: 15px; border-top: 1px dashed #ccc; padding-top: 10px;">
-                    <b style="color:#0056b3;">② 立面図・挿絵用 DXF読込 (マスト)</b>
-                    <input type="file" id="upload-doc-sub" accept=".dxf" style="display:none;">
-                    <label for="upload-doc-sub" class="action-btn"
-                        style="width:100%; box-sizing:border-box; padding:8px; font-size:12px; background:#3498db; margin-top:5px;">📂
-                        立面・挿絵用DXFを選択</label>
-                    <div style="font-size:10px; color:#555; margin-top:3px;">※見付面積や立面の4分割図などを1つのDXFから自動抽出します。</div>
-                </div>
-
+                <input type="hidden" id="scale-sub" value="100">
                 <div style="margin-top:10px; display:flex; flex-direction:column; gap:5px;">
                     <div style="display:flex; gap:5px; align-items:center;">
                         <label style="margin:0;">平面図スケール: S=1/</label>
                         <input type="number" id="scale-plan" value="100" style="margin:0; width:50px; padding:2px;">
                     </div>
-                    <div style="display:flex; gap:5px; align-items:center;">
-                        <label style="margin:0;">立面・挿絵スケール: S=1/</label>
-                        <input type="number" id="scale-sub" value="100" style="margin:0; width:50px; padding:2px;">
-                    </div>
                     <div style="font-size:10px; color:#555; margin-top:3px; line-height:1.3;">
-                        ※下絵図面などがA4縦に納まらないときは、右パネルのスケール設定で調整してください。
+                        ※下絵図面などがA4縦に納まらないときは、スケール設定で調整してください。
                     </div>
                 </div>
                 <div id="action-msg" style="margin-top: 5px; font-size: 10px; color: #d35400; font-weight:bold;"></div>
