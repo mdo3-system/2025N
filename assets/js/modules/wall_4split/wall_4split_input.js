@@ -43,21 +43,24 @@ function initCanvasInput(canvas) {
             }
         }
 
-        // 基礎モードへの委譲 (通り芯追加・通り芯削除・通り芯文字編集といった共通操作は委譲から除外して通常実行)
-        if (state.currentAppMode === 'foundation' && e.button === 0 && !['add-grid', 'del-grid', 'edit-text', 'add-diag-grid'].includes(mode)) {
+        // 基礎モードへの委譲、または共通操作の「外壁線を引く」モードの場合
+        if ((state.currentAppMode === 'foundation' || mode === 'draw-ext-wall') && e.button === 0 && !['add-grid', 'del-grid', 'edit-text', 'add-diag-grid', 'roof-add-grid', 'roof-del-grid'].includes(mode)) {
+            const prevFdMode = state.foundationMode;
+            if (mode === 'draw-ext-wall') state.foundationMode = 'f_ext_wall';
             if (window.FoundationInputController) window.FoundationInputController.handleMouseDown(e, state);
+            if (mode === 'draw-ext-wall') state.foundationMode = prevFdMode;
             return;
         }
 
         // 屋根モードへの委譲
-        if (state.currentAppMode === 'roof' && e.button === 0 && !['add-grid', 'del-grid', 'edit-text', 'add-diag-grid'].includes(mode)) {
+        if (state.currentAppMode === 'roof' && e.button === 0 && !['add-grid', 'del-grid', 'edit-text', 'add-diag-grid', 'roof-add-grid', 'roof-del-grid'].includes(mode)) {
             if (window.RoofInputController) window.RoofInputController.handleMouseDown(e, state);
             return;
         }
 
         // ドラッグ（パン）開始
         // 左クリック時は、作図・選択・削除のいずれのモードでもない場合にのみドラッグを開始する
-        const interactionModes = ['add-pillar', 'draw-area', 'select', 'delete-unified', 'wall', 'window', 'add-grid', 'del-grid', 'add-diag-grid', 'edit-text'];
+        const interactionModes = ['add-pillar', 'draw-area', 'select', 'delete-unified', 'wall', 'window', 'add-grid', 'del-grid', 'add-diag-grid', 'edit-text', 'roof-add-grid', 'roof-del-grid'];
         if (e.button === 1 || e.button === 2 || (e.button === 0 && !hoveredPillar && !interactionModes.includes(mode))) {
             isDragging = true; lastMouseX = e.clientX; lastMouseY = e.clientY;
             return;
@@ -94,6 +97,11 @@ function initCanvasInput(canvas) {
             else if (mode === 'add-grid' || mode === 'del-grid') {
                 handleGridInput(mode, state, mx, my);
             }
+            // 屋根用通り芯追加・削除 [v2.7.3]
+            else if (mode === 'roof-add-grid' || mode === 'roof-del-grid') {
+                const roofModeConverted = mode === 'roof-add-grid' ? 'add-grid' : 'del-grid';
+                handleRoofGridInput(roofModeConverted, state, mx, my);
+            }
             // 通り芯文字の編集
             else if (mode === 'edit-text') {
                 handleEditText(e, state);
@@ -108,6 +116,7 @@ function initCanvasInput(canvas) {
     // --- マウスムーブ ---
     canvas.addEventListener('mousemove', (e) => {
         const state = window.AppState;
+        const mode = getMode();
         state.mouseX = e.offsetX; state.mouseY = e.offsetY;
 
         if (isDragging) {
@@ -118,8 +127,11 @@ function initCanvasInput(canvas) {
             return;
         }
 
-        if (state.currentAppMode === 'foundation') {
+        if (state.currentAppMode === 'foundation' || mode === 'draw-ext-wall') {
+            const prevFdMode = state.foundationMode;
+            if (mode === 'draw-ext-wall') state.foundationMode = 'f_ext_wall';
             if (window.FoundationInputController) window.FoundationInputController.handleMouseMove(e.offsetX, e.offsetY, state);
+            if (mode === 'draw-ext-wall') state.foundationMode = prevFdMode;
         } else {
             handleGeneralMouseMove(e.offsetX, e.offsetY, state);
         }
@@ -311,6 +323,10 @@ function handleUnifiedDeletion(e, state) {
         if (!confirm(`斜め通り芯 (${hit.item.name || 'DA'}) を削除しますか？`)) return;
         state.manualGridAngle = state.manualGridAngle.filter(g => g.id !== hit.item.id);
         console.log(`✅ Diagonal Grid deleted via unified tool.`);
+    } else if (hit.type === 'ext_wall') {
+        if (!confirm("外壁線を削除しますか？")) return;
+        state.exteriorWalls = state.exteriorWalls.filter(ew => ew.id !== hit.item.id);
+        console.log(`✅ Exterior Wall ${hit.item.id} deleted via unified tool.`);
     }
     window.AppController.refreshAll();
 }
@@ -350,12 +366,18 @@ function handleRoofGridInput(mode, state, clickX, clickY) {
             const offset = parseFloat(offsetStr);
             if (isNaN(offset)) return;
 
+            const typeStr = prompt("追加する屋根用グリッドのタイプを入力してください\n1: 軒の出\n2: ケラバの出\n3: その他", "1");
+            let type = 'other';
+            if (typeStr === '1') type = 'eaves';
+            else if (typeStr === '2') type = 'keraba';
+
             const newGX = bestGX + offset;
-            const name = prompt("追加する屋根X通りの名称を入力してください", `RX_${(state.roofGridManualX || []).length + 1}`);
+            const defaultName = type === 'eaves' ? `RX_eaves_${(state.roofGridManualX || []).length + 1}` : (type === 'keraba' ? `RX_keraba_${(state.roofGridManualX || []).length + 1}` : `RX_${(state.roofGridManualX || []).length + 1}`);
+            const name = prompt("追加する屋根X通りの名称を入力してください", defaultName);
             if (!name) return;
 
             if (!state.roofGridManualX) state.roofGridManualX = [];
-            state.roofGridManualX.push({ coord: newGX, name: name.trim() });
+            state.roofGridManualX.push({ coord: newGX, name: name.trim(), type: type, val: offset });
         } else {
             let bestGY = 0;
             let minDY = Infinity;
@@ -374,12 +396,18 @@ function handleRoofGridInput(mode, state, clickX, clickY) {
             const offset = parseFloat(offsetStr);
             if (isNaN(offset)) return;
 
+            const typeStr = prompt("追加する屋根用グリッドのタイプを入力してください\n1: 軒の出\n2: ケラバの出\n3: その他", "1");
+            let type = 'other';
+            if (typeStr === '1') type = 'eaves';
+            else if (typeStr === '2') type = 'keraba';
+
             const newGY = bestGY + offset;
-            const name = prompt("追加する屋根Y通りの名称を入力してください", `RY_${(state.roofGridManualY || []).length + 1}`);
+            const defaultName = type === 'eaves' ? `RY_eaves_${(state.roofGridManualY || []).length + 1}` : (type === 'keraba' ? `RY_keraba_${(state.roofGridManualY || []).length + 1}` : `RY_${(state.roofGridManualY || []).length + 1}`);
+            const name = prompt("追加する屋根Y通りの名称を入力してください", defaultName);
             if (!name) return;
 
             if (!state.roofGridManualY) state.roofGridManualY = [];
-            state.roofGridManualY.push({ coord: newGY, name: name.trim() });
+            state.roofGridManualY.push({ coord: newGY, name: name.trim(), type: type, val: offset });
         }
     } else if (mode === 'del-grid') {
         let bestIX = -1, bestIY = -1, minD = 20;
@@ -697,6 +725,18 @@ function findHitElement(mx, my, state) {
             if (!p1 || !p2) continue;
             const dist = window.MathUtils.distToBeamLine(wp.x, wp.y, p1.x, p1.y, p2.x, p2.y);
             if (dist < edgeTolerance) return { type: 'area', item: a };
+        }
+    }
+
+    // 3.5. 外壁線
+    const extWallHitRadius = 25 / state.scale;
+    const activeFloor = state.currentFloor;
+    for (const ew of (state.exteriorWalls || []).filter(ew => ew.floor === activeFloor)) {
+        if (!ew.vertices || ew.vertices.length < 2) continue;
+        const vts = ew.closed ? [...ew.vertices, ew.vertices[0]] : ew.vertices;
+        for (let i = 0; i < vts.length - 1; i++) {
+            const dist = window.MathUtils.distToBeamLine(wp.x, wp.y, vts[i].x, vts[i].y, vts[i+1].x, vts[i+1].y);
+            if (dist < extWallHitRadius) return { type: 'ext_wall', item: ew };
         }
     }
 

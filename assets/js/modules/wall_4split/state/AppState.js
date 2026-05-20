@@ -35,6 +35,15 @@ window.AppState = {
         pillarDepth2F: 105,      // mm
         triangleMultiplier: 1.33,
         eavesLen: 300,           // mm
+        wallThickness: 150,      // mm
+        maxHeight: 9000,         // mm
+        maxEavesHeight: 6000,    // mm
+        baseHeight: 400,         // mm (auto-calculated GL height: beam height - embedDepth)
+        basePack: 20,            // mm
+        baseSill: 105,           // mm
+        floorThick1F: 36,        // mm
+        floorThick2F: 36,        // mm
+        roofThickness: 150,      // mm
         weights: {
             roof: 500,           // N/m2
             solar: 0,            // N/m2
@@ -107,6 +116,25 @@ window.AppState = {
         c.weights.ceilingIns = getNum('prop-ceiling-ins', 100);
         c.weights.wallIns = getNum('prop-wall-ins', 70);
         c.weights.exteriorWall = getNum('prop-ext-wall', 600);
+        c.wallThickness = getNum('prop-wall-thickness', 150);
+        c.maxHeight = getNum('prop-max-height', 9000);
+        c.maxEavesHeight = getNum('prop-max-eaves-height', 6000);
+
+        let defaultBaseH = 400;
+        if (this.foundationBeams && this.foundationBeams.length > 0) {
+            const firstB = this.foundationBeams[0];
+            if (firstB && firstB.props) {
+                const bH = parseFloat(firstB.props.height) || 640;
+                const bD = parseFloat(firstB.props.embedDepth !== undefined ? firstB.props.embedDepth : (firstB.props.embed !== undefined ? firstB.props.embed : 240));
+                defaultBaseH = bH - bD;
+            }
+        }
+        c.baseHeight = getNum('prop-base-height', defaultBaseH);
+        c.basePack = getNum('prop-base-pack', 20);
+        c.baseSill = getNum('prop-base-sill', 105);
+        c.floorThick1F = getNum('prop-floor-thick-1f', 36);
+        c.floorThick2F = getNum('prop-floor-thick-2f', 36);
+        c.roofThickness = getNum('prop-roof-thickness', 150);
 
         // Areas
         ['1', '2'].forEach(lv => {
@@ -275,7 +303,8 @@ window.AppState = {
         f_manholes: true,
         div4: true,
         roofGrids: true,
-        roofFaces: true
+        roofFaces: true,
+        roofs: true
     }
 };
 

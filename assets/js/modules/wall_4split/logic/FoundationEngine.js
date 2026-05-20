@@ -92,13 +92,29 @@ window.FoundationEngine = {
         const wF = 2.4; 
         const wW = ((s.config?.weights?.exteriorWall || 600) + (s.config?.weights?.wallIns || 70)) / 1000;
         let len1F = 0, len2F = 0;
-        (s.exteriorWalls || []).forEach(ew => {
-            if (!ew.vertices || ew.vertices.length < 2) return;
-            let len = 0; const vts = ew.closed ? [...ew.vertices, ew.vertices[0]] : ew.vertices;
-            for (let i = 0; i < vts.length - 1; i++) len += Math.hypot(vts[i + 1].x - vts[i].x, vts[i + 1].y - vts[i].y);
-            if (ew.floor === '1F') len1F += len / 1000;
-            if (ew.floor === '2F') len2F += len / 1000;
-        });
+        const activeExtWalls = (s.exteriorWalls || []).filter(ew => ew.vertices && ew.vertices.length >= 2);
+        if (activeExtWalls.length > 0) {
+            activeExtWalls.forEach(ew => {
+                let len = 0; const vts = ew.closed ? [...ew.vertices, ew.vertices[0]] : ew.vertices;
+                for (let i = 0; i < vts.length - 1; i++) len += Math.hypot(vts[i + 1].x - vts[i].x, vts[i + 1].y - vts[i].y);
+                if (ew.floor === '1F') len1F += len / 1000;
+                if (ew.floor === '2F') len2F += len / 1000;
+            });
+        } else {
+            // 壁データから自動抽出するフォールバック
+            ['1F', '2F'].forEach(f => {
+                const boundary = window.WallEngine ? window.WallEngine.extractOuterBoundary(f, s) : null;
+                if (boundary && boundary.length >= 2) {
+                    let len = 0;
+                    const vts = [...boundary, boundary[0]];
+                    for (let i = 0; i < vts.length - 1; i++) {
+                        len += Math.hypot(vts[i + 1].x - vts[i].x, vts[i + 1].y - vts[i].y);
+                    }
+                    if (f === '1F') len1F = len / 1000;
+                    if (f === '2F') len2F = len / 1000;
+                }
+            });
+        }
         const h1 = s.config.floorHeight1F || 2.7, h2 = s.config.floorHeight2F || 2.7;
         let aWallEst = (len1F * h1) + (len2F * h2);
         if (aWallEst === 0) aWallEst = (a1 + a2) * 1.0;

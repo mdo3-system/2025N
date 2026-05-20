@@ -72,10 +72,24 @@ window.MainRenderer = {
         // 9. 基礎レイヤー (基礎モード時)
         if (appMode === 'foundation') {
             this.drawFoundationLayer(state);
+        } else {
+            const isDrawingExtWall = (document.querySelector('input[name="mode"]:checked')?.value === 'draw-ext-wall');
+            if (isDrawingExtWall || (state.elementVisibility && state.elementVisibility.f_ext_walls !== false)) {
+                if (window.FoundationRenderer) {
+                    const fdSel = state.fdSelection || { type: null, item: null };
+                    window.FoundationRenderer.drawExteriorWalls(state, (x, y) => this.toCanvas(x, y, state), fdSel);
+                    if (isDrawingExtWall) {
+                        const prevFdMode = state.foundationMode;
+                        state.foundationMode = 'f_ext_wall';
+                        window.FoundationRenderer.drawPreviews(state, (x, y) => this.toCanvas(x, y, state));
+                        state.foundationMode = prevFdMode;
+                    }
+                }
+            }
         }
 
-        // 9.5. 屋根レイヤー (屋根モード時、または屋根面表示フラグON時)
-        if (appMode === 'roof' || (state.elementVisibility && state.elementVisibility.roofFaces)) {
+        // 9.5. 屋根レイヤー (屋根表示フラグON時)
+        if (state.elementVisibility && state.elementVisibility.roofs) {
             if (window.RoofRenderer) window.RoofRenderer.drawRoofLayer(state, ctx);
         }
 
@@ -319,7 +333,7 @@ window.MainRenderer = {
     },
 
     drawRoofGrids: function(state) {
-        if (!state.elementVisibility.grids || !window.GridEngine) return;
+        if (!state.elementVisibility.roofGrids || !window.GridEngine) return;
         const roofGrids = window.GridEngine.getRoofGrids(state);
         const ctx = state.ctx;
         ctx.save();
@@ -358,15 +372,19 @@ window.MainRenderer = {
             const cx = this.toCanvas(x, 0, state).cx;
             if (cx != null) {
                 let name = '';
+                let isManual = false;
                 const idx = state.gridXCoords.findIndex(gx => Math.abs(gx - x) < 5);
                 if (idx !== -1) {
-                    name = state.gridXNames[idx];
+                    name = '';
                 } else {
                     const manualMatch = (state.roofGridManualX || []).find(m => Math.abs(m.coord - x) < 5);
                     if (manualMatch) {
-                        name = manualMatch.name;
+                        const typeLabel = manualMatch.type === 'eaves' ? ' [軒の出]' : (manualMatch.type === 'keraba' ? ' [ケラバ]' : '');
+                        name = manualMatch.name + typeLabel;
+                        isManual = true;
                     } else {
                         name = `RX(${Math.round(x)})`;
+                        isManual = true;
                     }
                 }
 
@@ -384,13 +402,21 @@ window.MainRenderer = {
                 ctx.save();
                 ctx.font = `bold ${labelFontSize}px sans-serif`;
                 const lineTopY = labelY + 6; 
+                
+                // Color Separation: Manual roof grids in magenta pink, others in normal blue
+                ctx.strokeStyle = isManual ? '#e91e63' : '#2980b9';
+                ctx.lineWidth = isManual ? 1.5 : 1.0;
+                
                 ctx.beginPath(); ctx.moveTo(cx, lineTopY); ctx.lineTo(cx, botY); ctx.stroke();
 
-                ctx.textAlign = "center";
-                ctx.strokeStyle = state.isPrintMode ? '#fff' : 'rgba(255,255,255,0.8)'; ctx.lineWidth = 3;
-                ctx.strokeText(name, cx, labelY);
-                ctx.fillStyle = '#2980b9';
-                ctx.fillText(name, cx, labelY);
+                if (name) {
+                    ctx.textAlign = "center";
+                    ctx.strokeStyle = '#ffffff'; 
+                    ctx.lineWidth = 5;
+                    ctx.strokeText(name, cx, labelY);
+                    ctx.fillStyle = '#c62828'; // Crimson Red
+                    ctx.fillText(name, cx, labelY);
+                }
                 ctx.restore();
             }
         });
@@ -402,15 +428,19 @@ window.MainRenderer = {
             const cy = this.toCanvas(0, y, state).cy;
             if (cy != null) {
                 let name = '';
+                let isManual = false;
                 const idx = state.gridYCoords.findIndex(gy => Math.abs(gy - y) < 5);
                 if (idx !== -1) {
-                    name = state.gridYNames[idx];
+                    name = '';
                 } else {
                     const manualMatch = (state.roofGridManualY || []).find(m => Math.abs(m.coord - y) < 5);
                     if (manualMatch) {
-                        name = manualMatch.name;
+                        const typeLabel = manualMatch.type === 'eaves' ? ' [軒の出]' : (manualMatch.type === 'keraba' ? ' [ケラバ]' : '');
+                        name = manualMatch.name + typeLabel;
+                        isManual = true;
                     } else {
                         name = `RY(${Math.round(y)})`;
+                        isManual = true;
                     }
                 }
 
@@ -428,16 +458,23 @@ window.MainRenderer = {
                 ctx.save();
                 ctx.font = `bold ${labelFontSize}px sans-serif`;
                 
-                const tw = ctx.measureText(name).width;
+                // Color Separation: Manual roof grids in magenta pink, others in normal blue
+                ctx.strokeStyle = isManual ? '#e91e63' : '#2980b9';
+                ctx.lineWidth = isManual ? 1.5 : 1.0;
+                
+                const tw = name ? ctx.measureText(name).width : 0;
                 const lineStartX = labelX + tw + 6;
 
                 ctx.beginPath(); ctx.moveTo(lineStartX, cy); ctx.lineTo(rightX, cy); ctx.stroke();
 
-                ctx.textAlign = "left";
-                ctx.strokeStyle = state.isPrintMode ? '#fff' : 'rgba(255,255,255,0.8)'; ctx.lineWidth = 3;
-                ctx.strokeText(name, labelX, cy + 5);
-                ctx.fillStyle = '#2980b9';
-                ctx.fillText(name, labelX, cy + 5);
+                if (name) {
+                    ctx.textAlign = "left";
+                    ctx.strokeStyle = '#ffffff'; 
+                    ctx.lineWidth = 5;
+                    ctx.strokeText(name, labelX, cy + 5);
+                    ctx.fillStyle = '#c62828'; // Crimson Red
+                    ctx.fillText(name, labelX, cy + 5);
+                }
                 ctx.restore();
             }
         });
@@ -770,32 +807,72 @@ window.MainRenderer = {
                 }
             }
 
-            // Draw slope reference line in progress
+            // Draw slope reference line in progress (3-step: line[0]=Start, line[1]=End, mouse=HighDir)
             const line = state.roofTempSlopeLine || [];
             if (step === 'slope-line' && line.length > 0) {
-                ctx.lineWidth = 3;
-                ctx.strokeStyle = '#e67e22'; // bright orange
-                const p1 = this.toCanvas(line[0], null, state);
                 const curr = state.snapPoint ? state.snapPoint : { x: (state.mouseX - state.offsetX)/state.scale, y: (state.canvas.height - state.mouseY - state.offsetY)/state.scale };
-                const p2 = this.toCanvas(curr, null, state);
+                const pCurr = this.toCanvas(curr, null, state);
 
-                ctx.beginPath();
-                ctx.moveTo(p1.cx, p1.cy);
-                ctx.lineTo(p2.cx, p2.cy);
-                ctx.stroke();
+                if (line.length === 1) {
+                    // 桁の2点目を指定中 (1点目からマウス位置まで)
+                    ctx.lineWidth = 3;
+                    ctx.strokeStyle = '#e67e22'; // 桁線は明るいオレンジ
+                    const p1 = this.toCanvas(line[0], null, state);
+                    ctx.beginPath();
+                    ctx.moveTo(p1.cx, p1.cy);
+                    ctx.lineTo(pCurr.cx, pCurr.cy);
+                    ctx.stroke();
 
-                ctx.fillStyle = '#e67e22';
-                ctx.beginPath(); ctx.arc(p1.cx, p1.cy, 5, 0, Math.PI*2); ctx.fill();
-                ctx.beginPath(); ctx.arc(p2.cx, p2.cy, 5, 0, Math.PI*2); ctx.fill();
+                    ctx.fillStyle = '#e67e22';
+                    ctx.beginPath(); ctx.arc(p1.cx, p1.cy, 5, 0, Math.PI*2); ctx.fill();
+                    ctx.beginPath(); ctx.arc(pCurr.cx, pCurr.cy, 5, 0, Math.PI*2); ctx.fill();
 
-                ctx.font = '10px sans-serif';
-                ctx.fillStyle = '#d35400';
-                ctx.fillText("1点目 (基準高)", p1.cx + 8, p1.cy - 8);
-                if (line.length === 2) {
-                    const p2_fixed = this.toCanvas(line[1], null, state);
-                    ctx.fillText("2点目 (上り方向)", p2_fixed.cx + 8, p2_fixed.cy - 8);
-                } else {
-                    ctx.fillText("2点目 (上り方向)", p2.cx + 8, p2.cy - 8);
+                    ctx.font = '10px sans-serif';
+                    ctx.fillStyle = '#d35400';
+                    ctx.fillText("桁線の1点目 (始点)", p1.cx + 8, p1.cy - 8);
+                    ctx.fillText("桁線の2点目 (終点)", pCurr.cx + 8, pCurr.cy - 8);
+                } else if (line.length === 2) {
+                    // 桁線は決定済み、勾配の高い側（3点目）を指定中
+                    const p1 = this.toCanvas(line[0], null, state);
+                    const p2 = this.toCanvas(line[1], null, state);
+
+                    // 1. 桁線を描画
+                    ctx.lineWidth = 4;
+                    ctx.strokeStyle = '#27ae60'; // 確定した桁線は緑
+                    ctx.beginPath();
+                    ctx.moveTo(p1.cx, p1.cy);
+                    ctx.lineTo(p2.cx, p2.cy);
+                    ctx.stroke();
+
+                    // 2. 桁線からマウス位置（高位点）までの矢印/破線を描画
+                    const midX = (line[0].x + line[1].x) / 2;
+                    const midY = (line[0].y + line[1].y) / 2;
+                    const pMid = this.toCanvas({ x: midX, y: midY }, null, state);
+
+                    ctx.lineWidth = 2;
+                    ctx.strokeStyle = '#e67e22';
+                    ctx.setLineDash([4, 4]);
+                    ctx.beginPath();
+                    ctx.moveTo(pMid.cx, pMid.cy);
+                    ctx.lineTo(pCurr.cx, pCurr.cy);
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+
+                    // 点を描画
+                    ctx.fillStyle = '#27ae60';
+                    ctx.beginPath(); ctx.arc(p1.cx, p1.cy, 5, 0, Math.PI*2); ctx.fill();
+                    ctx.beginPath(); ctx.arc(p2.cx, p2.cy, 5, 0, Math.PI*2); ctx.fill();
+
+                    ctx.fillStyle = '#e67e22';
+                    ctx.beginPath(); ctx.arc(pCurr.cx, pCurr.cy, 6, 0, Math.PI*2); ctx.fill();
+
+                    ctx.font = '10px sans-serif';
+                    ctx.fillStyle = '#27ae60';
+                    ctx.fillText("桁線 始点", p1.cx + 8, p1.cy - 8);
+                    ctx.fillText("桁線 終点", p2.cx + 8, p2.cy - 8);
+
+                    ctx.fillStyle = '#d35400';
+                    ctx.fillText("勾配 上り方向 (高い側)", pCurr.cx + 10, pCurr.cy - 5);
                 }
             }
         }

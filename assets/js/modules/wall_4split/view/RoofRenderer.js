@@ -36,7 +36,7 @@ window.RoofRenderer = {
             ctx.restore();
 
             // 2. Draw Slope Line (Dashed low-opacity guide inside the face)
-            if (face.slopeLine && face.slopeLine.length === 2) {
+            if (face.slopeLine && face.slopeLine.length >= 2) {
                 ctx.save();
                 ctx.lineWidth = 1.2;
                 ctx.strokeStyle = isPrintMode ? 'rgba(230, 126, 34, 0.6)' : 'rgba(230, 126, 34, 0.8)';
@@ -68,21 +68,38 @@ window.RoofRenderer = {
 
         const cpCenter = this.toCanvas(cx, cy, state);
 
-        // Get slope direction vector (p1 -> p2)
-        const p1 = face.slopeLine ? face.slopeLine[0] : { x: cx, y: cy };
-        const p2 = face.slopeLine ? face.slopeLine[1] : { x: cx, y: cy + 1000 };
-
-        const dx = p2.x - p1.x;
-        const dy = p2.y - p1.y;
-        const len = Math.hypot(dx, dy);
-
-        const ux = len > 0 ? dx / len : 0;
-        const uy = len > 0 ? dy / len : 1;
-
+        // Get slope direction vector (3-point definition support: [0]=rafter start, [1]=rafter end, [2]=slope high point)
+        let ux = 0, uy = 1;
+        const pA = face.slopeLine ? face.slopeLine[0] : { x: cx, y: cy };
+        if (face.slopeLine && face.slopeLine.length >= 3) {
+            const pB = face.slopeLine[1];
+            const pC = face.slopeLine[2];
+            const dx = pB.x - pA.x;
+            const dy = pB.y - pA.y;
+            let nx = -dy;
+            let ny = dx;
+            const vx = pC.x - pA.x;
+            const vy = pC.y - pA.y;
+            const dot = nx * vx + ny * vy;
+            if (dot < 0) {
+                nx = -nx;
+                ny = -ny;
+            }
+            const len = Math.hypot(nx, ny);
+            ux = len > 0 ? nx / len : 0;
+            uy = len > 0 ? ny / len : 1;
+        } else if (face.slopeLine && face.slopeLine.length === 2) {
+            const p2 = face.slopeLine[1];
+            const dx = p2.x - pA.x;
+            const dy = p2.y - pA.y;
+            const len = Math.hypot(dx, dy);
+            ux = len > 0 ? dx / len : 0;
+            uy = len > 0 ? dy / len : 1;
+        }
+        
         // Since canvas coordinates are Y-flipped relative to logical coordinates:
-        // We calculate screen orientation using canvas offsets
-        const cpP1 = this.toCanvas(p1.x, p1.y, state);
-        const cpP2 = this.toCanvas(p2.x, p2.y, state);
+        const cpP1 = this.toCanvas(cx, cy, state);
+        const cpP2 = this.toCanvas(cx + ux * 1000, cy + uy * 1000, state);
         const sdx = cpP2.cx - cpP1.cx;
         const sdy = cpP2.cy - cpP1.cy;
         const slen = Math.hypot(sdx, sdy);

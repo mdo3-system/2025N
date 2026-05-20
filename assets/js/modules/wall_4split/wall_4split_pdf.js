@@ -488,6 +488,261 @@ function getAreaRowsHtml(area, i) {
     */
 
 
+function generateAutoMitsukeCanvas(direction) {
+    const s = window.AppState;
+    if (!s || !s.config) return null;
+
+    const config = s.config;
+    const wallThick = config.wallThickness !== undefined ? parseFloat(config.wallThickness) : 150;
+    const maxH = config.maxHeight !== undefined ? parseFloat(config.maxHeight) : 8000;
+    const maxEavesH = config.maxEavesHeight !== undefined ? parseFloat(config.maxEavesHeight) : 6000;
+
+    // Get floor bounding boxes with wall thickness offset
+    const bbox1F = window.RoofEngine ? window.RoofEngine.getFloorBoundingBox('1F', s) : { minX: 0, maxX: 10000, minY: 0, maxY: 10000 };
+    const bbox2F = window.RoofEngine ? window.RoofEngine.getFloorBoundingBox('2F', s) : { minX: 0, maxX: 10000, minY: 0, maxY: 10000 };
+
+    const minX = Math.min(bbox1F.minX, bbox2F.minX);
+    const maxX = Math.max(bbox1F.maxX, bbox2F.maxX);
+    const minY = Math.min(bbox1F.minY, bbox2F.minY);
+    const maxY = Math.max(bbox1F.maxY, bbox2F.maxY);
+
+    // Wind-receiving width W
+    const W = (direction === 'X') ? (maxY - minY) : (maxX - minX);
+    if (W <= 0) return null;
+
+    // Create 2D high-res Canvas
+    const canvas = document.createElement('canvas');
+    canvas.width = 900;
+    canvas.height = 550;
+    const ctx = canvas.getContext('2d');
+
+    // Solid white background
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Draw stylish CAD-grid background
+    ctx.strokeStyle = '#f1f2f6';
+    ctx.lineWidth = 1;
+    for (let x = 0; x < canvas.width; x += 30) {
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
+    }
+    for (let y = 0; y < canvas.height; y += 30) {
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
+    }
+
+    // Margins and padding
+    const padL = 100;
+    const padR = 420; // Room on the right for elegant formulas
+    const padT = 80;
+    const padB = 80;
+    const drawW = canvas.width - padL - padR;
+    const drawH = canvas.height - padT - padB;
+
+    // Scale calculations
+    const scaleX = drawW / W;
+    const scaleY = drawH / maxH;
+    const scale = Math.min(scaleX, scaleY) * 0.9;
+
+    const toCanvasX = (val) => padL + (val * scale);
+    const toCanvasY = (val) => canvas.height - padB - (val * scale);
+
+    // Polygon Vertices
+    const pts = [
+        { u: 0, v: 0 },
+        { u: W, v: 0 },
+        { u: W, v: maxEavesH },
+        { u: W / 2, v: maxH },
+        { u: 0, v: maxEavesH }
+    ];
+
+    const primaryColor = (direction === 'X') ? '#e67e22' : '#2980b9';
+    const fillColor = (direction === 'X') ? 'rgba(230, 126, 34, 0.10)' : 'rgba(41, 128, 185, 0.10)';
+
+    // Fill silhouette
+    ctx.fillStyle = fillColor;
+    ctx.beginPath();
+    ctx.moveTo(toCanvasX(pts[0].u), toCanvasY(pts[0].v));
+    for (let i = 1; i < pts.length; i++) {
+        ctx.lineTo(toCanvasX(pts[i].u), toCanvasY(pts[i].v));
+    }
+    ctx.closePath();
+    ctx.fill();
+
+    // Architectural diagonal hatching
+    ctx.strokeStyle = (direction === 'X') ? 'rgba(230, 126, 34, 0.15)' : 'rgba(41, 128, 185, 0.15)';
+    ctx.lineWidth = 1;
+    ctx.save();
+    ctx.clip();
+    for (let offset = -canvas.width; offset < canvas.width; offset += 15) {
+        ctx.beginPath();
+        ctx.moveTo(offset, 0);
+        ctx.lineTo(offset + canvas.height, canvas.height);
+        ctx.stroke();
+    }
+    ctx.restore();
+
+    // Outline silhouette
+    ctx.strokeStyle = primaryColor;
+    ctx.lineWidth = 3.5;
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    ctx.moveTo(toCanvasX(pts[0].u), toCanvasY(pts[0].v));
+    for (let i = 1; i < pts.length; i++) {
+        ctx.lineTo(toCanvasX(pts[i].u), toCanvasY(pts[i].v));
+    }
+    ctx.closePath();
+    ctx.stroke();
+
+    // Ground Line (GL)
+    ctx.strokeStyle = '#2c3e50';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(padL - 30, toCanvasY(0));
+    ctx.lineTo(padL + drawW + 30, toCanvasY(0));
+    ctx.stroke();
+
+    ctx.font = 'bold 12px sans-serif';
+    ctx.fillStyle = '#2c3e50';
+    ctx.textAlign = 'right';
+    ctx.fillText('▼ GL', padL - 35, toCanvasY(0) + 4);
+
+    // Dimension helper
+    const drawDimLine = (x1, y1, x2, y2, offset, labelText) => {
+        ctx.strokeStyle = '#7f8c8d';
+        ctx.lineWidth = 1;
+        ctx.fillStyle = '#c62828'; // Crimson red for high legibility
+        ctx.font = 'bold 11px sans-serif';
+
+        const dx = x2 - x1;
+        const dy = y2 - y1;
+        const len = Math.hypot(dx, dy) || 1;
+        const nx = -dy / len;
+        const ny = dx / len;
+
+        const px1 = x1 + nx * offset;
+        const py1 = y1 + ny * offset;
+        const px2 = x2 + nx * offset;
+        const py2 = y2 + ny * offset;
+
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(px1, py1);
+        ctx.moveTo(x2, y2);
+        ctx.lineTo(px2, py2);
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(px1, py1);
+        ctx.lineTo(px2, py2);
+        ctx.stroke();
+
+        const slashSize = 5;
+        const drawSlash = (px, py) => {
+            ctx.beginPath();
+            ctx.moveTo(px - slashSize, py + slashSize);
+            ctx.lineTo(px + slashSize, py - slashSize);
+            ctx.stroke();
+        };
+        drawSlash(px1, py1);
+        drawSlash(px2, py2);
+
+        const mx = (px1 + px2) / 2;
+        const my = (py1 + py2) / 2;
+        ctx.save();
+        ctx.translate(mx, my);
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 4;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.strokeText(labelText, 0, -8);
+        ctx.fillText(labelText, 0, -8);
+        ctx.restore();
+    };
+
+    const cx0 = toCanvasX(0), cy0 = toCanvasY(0);
+    const cxW = toCanvasX(W), cyW = toCanvasY(0);
+    const cxEh = toCanvasX(W), cyEh = toCanvasY(maxEavesH);
+    const cxMh = toCanvasX(W/2), cyMh = toCanvasY(maxH);
+    const cxEhL = toCanvasX(0), cyEhL = toCanvasY(maxEavesH);
+
+    // Render dimensions
+    drawDimLine(cx0, cy0, cxW, cyW, -30, `W = ${(W/1000).toFixed(3)} m (${W.toFixed(0)} mm)`);
+    drawDimLine(cxEhL, cyEhL, cx0, cy0, -35, `軒高 H_e = ${(maxEavesH/1000).toFixed(3)} m`);
+    drawDimLine(cxMh, cyMh, cxMh, cy0, -toCanvasX(W/2) + padL - 50, `最高高 H_max = ${(maxH/1000).toFixed(3)} m`);
+
+    // Formulas and texts on the right
+    const textL = canvas.width - padR + 50;
+    let textY = padT;
+
+    ctx.fillStyle = '#2c3e50';
+    ctx.font = 'bold 16px sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText(`${direction}方向 見付立面シルエット図`, textL, textY);
+    textY += 28;
+
+    ctx.fillStyle = '#7f8c8d';
+    ctx.font = '11px sans-serif';
+    ctx.fillText(`※外周壁から壁厚オフセット (${wallThick.toFixed(0)}mm) を含めた安全側モデル`, textL, textY);
+    textY += 35;
+
+    const sBody = (W / 1000) * (maxEavesH / 1000);
+    const sRoof = ((W / 1000) * ((maxH - maxEavesH) / 1000)) / 2;
+    const sTotal = sBody + sRoof;
+
+    // Body area
+    ctx.fillStyle = '#2c3e50';
+    ctx.font = 'bold 13px sans-serif';
+    ctx.fillText('■ 矩形部 (土台から軒高まで)', textL, textY);
+    textY += 20;
+    ctx.font = '12px monospace';
+    ctx.fillStyle = '#555';
+    ctx.fillText(`公式 : 幅 × 軒高`, textL + 15, textY);
+    textY += 18;
+    ctx.fillText(`算式 : ${(W/1000).toFixed(3)}m × ${(maxEavesH/1000).toFixed(3)}m`, textL + 15, textY);
+    textY += 18;
+    ctx.font = 'bold 12px monospace';
+    ctx.fillStyle = primaryColor;
+    ctx.fillText(`面積 : ${sBody.toFixed(3)} ㎡`, textL + 15, textY);
+    textY += 32;
+
+    // Roof area
+    ctx.fillStyle = '#2c3e50';
+    ctx.font = 'bold 13px sans-serif';
+    ctx.fillText('■ 三角部 (軒高から最高棟高まで)', textL, textY);
+    textY += 20;
+    ctx.font = '12px monospace';
+    ctx.fillStyle = '#555';
+    ctx.fillText(`公式 : (幅 × (最高高 - 軒高)) ÷ 2`, textL + 15, textY);
+    textY += 18;
+    ctx.fillText(`算式 : (${(W/1000).toFixed(3)}m × ${((maxH - maxEavesH)/1000).toFixed(3)}m) ÷ 2`, textL + 15, textY);
+    textY += 18;
+    ctx.font = 'bold 12px monospace';
+    ctx.fillStyle = primaryColor;
+    ctx.fillText(`面積 : ${sRoof.toFixed(3)} ㎡`, textL + 15, textY);
+    textY += 38;
+
+    // Divider
+    ctx.strokeStyle = '#bdc3c7';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(textL, textY - 12); ctx.lineTo(canvas.width - 40, textY - 12); ctx.stroke();
+
+    // Total area
+    ctx.fillStyle = '#2c3e50';
+    ctx.font = 'bold 14px sans-serif';
+    ctx.fillText('📐 合計投影見付面積', textL, textY);
+    textY += 25;
+    ctx.font = 'bold 24px monospace';
+    ctx.fillStyle = '#c62828';
+    ctx.fillText(`${sTotal.toFixed(3)} ㎡`, textL + 15, textY);
+
+    // Frame border
+    ctx.strokeStyle = '#bdc3c7';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(10, 10, canvas.width - 20, canvas.height - 20);
+
+    return { img: canvas.toDataURL('image/png'), area: sTotal };
+}
+
 function showAreaPreview() {
     const pc = document.getElementById('area-preview-container');
     if (!pc) return;
@@ -503,13 +758,24 @@ function showAreaPreview() {
     const iPA1 = createHighResPlanImage('1F', 'area', null, true, 1.0, true);
     const iPA2 = createHighResPlanImage('2F', 'area', null, true, 1.0, true);
 
+    // Generate high-fidelity analytical silhouette elevation plans
+    const iAutoEX = generateAutoMitsukeCanvas('X');
+    const iAutoEY = generateAutoMitsukeCanvas('Y');
+
     const appendBox = (imgObj, title) => {
         if (!imgObj || !imgObj.img) return;
-        pc.insertAdjacentHTML('beforeend', `<div class="img-preview-box"><div style="font-weight:bold;color:#0056b3;margin-bottom:5px;">${title}</div><img src="${imgObj.img}"></div>`);
+        pc.insertAdjacentHTML('beforeend', `<div class="img-preview-box"><div style="font-weight:bold;color:#0056b3;margin-bottom:5px;">${title}</div><img src="${imgObj.img}" style="max-width:100%; border:1px solid #ddd; padding:5px; border-radius:4px; box-shadow:0 2px 8px rgba(0,0,0,0.08);"></div>`);
     };
 
     appendBox(iF1, '1F 床面積図・表'); appendBox(iF2, '2F 床面積図・表'); appendBox(iFR, 'R階 床面積図・表');
-    appendBox(iEX, 'X方向 見付面積図・表'); appendBox(iEY, 'Y方向 見付面積図・表');
+    
+    // Prioritize automatic projection models, display DXF as secondary backup
+    if (iAutoEX) appendBox(iAutoEX, 'X方向 見付面積図 (自動計算モデル)');
+    appendBox(iEX, 'X方向 見付面積図・表 (DXF読込)');
+    
+    if (iAutoEY) appendBox(iAutoEY, 'Y方向 見付面積図 (自動計算モデル)');
+    appendBox(iEY, 'Y方向 見付面積図・表 (DXF読込)');
+    
     appendBox(iD1, '1F 4分割図・表'); appendBox(iD2, '2F 4分割図・表');
     appendBox(iPA1, '1F 柱負担面積図'); appendBox(iPA2, '2F 柱負担面積図');
 

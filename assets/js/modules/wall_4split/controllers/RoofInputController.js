@@ -33,7 +33,7 @@ window.RoofInputController = {
             if (pts.length > 2 && Math.hypot(pts[0].x - pt.x, pts[0].y - pt.y) < 5) {
                 // Closed the polygon! Now switch to selecting the slope line
                 state.roofDrawingStep = 'slope-line';
-                alert("屋根面が閉じられました。\n次に、勾配基準線（グリッド交点2箇所）を指定してください。\n1点目: 基準高（低い側）の点\n2点目: 勾配の上り方向（高い側）の点");
+                alert("屋根面が閉じられました。\n次に、基準となる桁線を指定してください。\n1点目: 桁線の始点\n2点目: 桁線の終点\n3点目: 勾配の上り方向（高い側）の点");
             } else {
                 pts.push(pt);
             }
@@ -41,11 +41,19 @@ window.RoofInputController = {
             const line = state.roofTempSlopeLine;
             if (line.length === 0) {
                 line.push(pt);
-                alert("1点目を設定しました。次に、勾配の上り方向（高い側）の点をクリックしてください。");
+                alert("桁線の1点目（始点）を設定しました。次に、桁線の2点目（終点）をクリックしてください。");
             } else if (line.length === 1) {
                 // Ensure same point is not clicked
                 if (Math.hypot(line[0].x - pt.x, line[0].y - pt.y) < 5) {
                     alert("同じ点は選択できません。別の点を選択してください。");
+                    return;
+                }
+                line.push(pt);
+                alert("桁線を設定しました。次に、勾配の上り方向（高い側）の点をクリックしてください。");
+            } else if (line.length === 2) {
+                // Same point validation
+                if (Math.hypot(line[0].x - pt.x, line[0].y - pt.y) < 5 || Math.hypot(line[1].x - pt.x, line[1].y - pt.y) < 5) {
+                    alert("桁線と同じ点は選択できません。勾配の高い方向にある点を選択してください。");
                     return;
                 }
                 line.push(pt);

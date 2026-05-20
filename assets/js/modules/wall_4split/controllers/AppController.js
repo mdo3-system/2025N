@@ -198,6 +198,15 @@ window.AppController = {
         sV('calc-mode-select', cfg.calcMode);
         sV('attic-height', cfg.atticHeight);
         sV('global-triangle-mult', cfg.triangleMultiplier);
+        sV('prop-wall-thickness', cfg.wallThickness);
+        sV('prop-max-height', cfg.maxHeight);
+        sV('prop-max-eaves-height', cfg.maxEavesHeight);
+        sV('prop-base-height', cfg.baseHeight);
+        sV('prop-base-pack', cfg.basePack);
+        sV('prop-base-sill', cfg.baseSill);
+        sV('prop-floor-thick-1f', cfg.floorThick1F);
+        sV('prop-floor-thick-2f', cfg.floorThick2F);
+        sV('prop-roof-thickness', cfg.roofThickness);
         
         if (cfg.floorAreas) {
             sV('a-f1', cfg.floorAreas['1F']);
@@ -264,13 +273,48 @@ window.AppController = {
         if (t1r) t1r.className = 'tab-btn';
         if (t2r) t2r.className = 'tab-btn';
 
-        window.AppState.elementVisibility.walls = false;
-        window.AppState.elementVisibility.areas = false;
-        
-        const visWall = document.getElementById('vis-wall');
-        const visDiaph = document.getElementById('vis-diaph');
-        if (visWall) visWall.checked = false;
-        if (visDiaph) visDiaph.checked = false;
+        const vis = window.AppState.elementVisibility;
+        if (vis) {
+            // 基礎モード時の初期状態レイヤー制御：
+            // 「基礎モード用」の全レイヤはON
+            vis.f_slabs = true;
+            vis.f_beams = true;
+            vis.f_manholes = true;
+
+            // 「作図・屋根モード用」のレイヤは柱とグリッドだけON、他はOFF
+            vis.grids = true;
+            vis.pillars = true;
+            vis.pillarNValues = false;
+            vis.walls = false;
+            vis.windows = false;
+            vis.areas = false;
+            vis.div4 = false;
+            vis.f_ext_walls = false;
+            vis.roofGrids = false;
+            vis.roofs = false;
+        }
+
+        // チェックボックスDOMへの同期反映
+        const domMappings = {
+            'v-layer-grids': true,
+            'v-layer-pillars': true,
+            'v-layer-pillarNValues': false,
+            'vis-wall': false,
+            'v-layer-windows': false,
+            'vis-diaph': false,
+            'v-layer-f_slabs': true,
+            'v-layer-f_beams': true,
+            'v-layer-f_manholes': true,
+            'v-layer-f_ext_walls': false,
+            'v-layer-div4': false,
+            'v-layer-div4-sub': false,
+            'v-layer-roofGrids': false,
+            'v-layer-roofs': false
+        };
+        Object.keys(domMappings).forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.checked = domMappings[id];
+        });
     },
 
     updateWallUI: function() {
@@ -287,20 +331,47 @@ window.AppController = {
         if (t1r) t1r.className = (floor === '1F' && mode === 'roof') ? 'tab-btn active' : 'tab-btn';
         if (t2r) t2r.className = (floor === '2F' && mode === 'roof') ? 'tab-btn active' : 'tab-btn';
 
-        // [v2.5.18] 基礎モードから復帰した際、すべてのレイヤを自動的に強制ONにする
         const vis = window.AppState.elementVisibility;
         if (vis) {
-            Object.keys(vis).forEach(k => vis[k] = true);
-            vis.div4 = true; // 4分割も強制ON
+            // 作図、屋根モード時の初期状態レイヤー制御：
+            // 「基礎モード用」の全レイヤは全OFF
+            vis.f_slabs = false;
+            vis.f_beams = false;
+            vis.f_manholes = false;
+
+            // 「作図・屋根モード用」のレイヤは全ON
+            vis.grids = true;
+            vis.pillars = true;
+            vis.pillarNValues = true;
+            vis.walls = true;
+            vis.windows = true;
+            vis.areas = true;
+            vis.div4 = true;
+            vis.f_ext_walls = true;
+            vis.roofGrids = true;
+            vis.roofs = true;
         }
-        const layerDomIds = [
-            'v-layer-grids', 'v-layer-pillars', 'v-layer-pillarNValues', 'vis-wall',
-            'v-layer-windows', 'vis-diaph', 'v-layer-f_beams', 'v-layer-f_slabs',
-            'v-layer-f_ext_walls', 'v-layer-f_manholes', 'v-layer-div4-sub', 'v-layer-div4'
-        ];
-        layerDomIds.forEach(id => {
+
+        // チェックボックスDOMへの同期反映
+        const domMappings = {
+            'v-layer-grids': true,
+            'v-layer-pillars': true,
+            'v-layer-pillarNValues': true,
+            'vis-wall': true,
+            'v-layer-windows': true,
+            'vis-diaph': true,
+            'v-layer-f_slabs': false,
+            'v-layer-f_beams': false,
+            'v-layer-f_manholes': false,
+            'v-layer-f_ext_walls': true,
+            'v-layer-div4': true,
+            'v-layer-div4-sub': true,
+            'v-layer-roofGrids': true,
+            'v-layer-roofs': true
+        };
+        Object.keys(domMappings).forEach(id => {
             const el = document.getElementById(id);
-            if (el) el.checked = true;
+            if (el) el.checked = domMappings[id];
         });
     },
 

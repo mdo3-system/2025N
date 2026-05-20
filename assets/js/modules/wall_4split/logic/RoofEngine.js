@@ -57,15 +57,35 @@ window.RoofEngine = {
             }
             zBase += baseDelta;
 
-            // Slope math
-            const p1 = face.slopeLine ? face.slopeLine[0] : { x: 0, y: 0 };
-            const p2 = face.slopeLine ? face.slopeLine[1] : { x: 0, y: 1000 };
-            
-            const dx = p2.x - p1.x;
-            const dy = p2.y - p1.y;
-            const len = Math.hypot(dx, dy);
-            const ux = len > 0 ? dx / len : 0;
-            const uy = len > 0 ? dy / len : 1;
+            // Slope math (3-point definition support: [0]=rafter start, [1]=rafter end, [2]=slope high point)
+            let ux = 0, uy = 1;
+            const pA = (face.slopeLine && face.slopeLine.length > 0) ? face.slopeLine[0] : face.vertices[0];
+            if (!pA) return;
+            if (face.slopeLine && face.slopeLine.length >= 3) {
+                const pB = face.slopeLine[1];
+                const pC = face.slopeLine[2];
+                const dx = pB.x - pA.x;
+                const dy = pB.y - pA.y;
+                let nx = -dy;
+                let ny = dx;
+                const vx = pC.x - pA.x;
+                const vy = pC.y - pA.y;
+                const dot = nx * vx + ny * vy;
+                if (dot < 0) {
+                    nx = -nx;
+                    ny = -ny;
+                }
+                const len = Math.hypot(nx, ny);
+                ux = len > 0 ? nx / len : 0;
+                uy = len > 0 ? ny / len : 1;
+            } else if (face.slopeLine && face.slopeLine.length === 2) {
+                const p2 = face.slopeLine[1];
+                const dx = p2.x - pA.x;
+                const dy = p2.y - pA.y;
+                const len = Math.hypot(dx, dy);
+                ux = len > 0 ? dx / len : 0;
+                uy = len > 0 ? dy / len : 1;
+            }
 
             const slopeVal = slope / 10;
             const cosTheta = 1 / Math.sqrt(1 + slopeVal * slopeVal);
@@ -73,7 +93,7 @@ window.RoofEngine = {
 
             // Calculate 3D vertices
             const pts3D = face.vertices.map(v => {
-                const dist = (v.x - p1.x) * ux + (v.y - p1.y) * uy;
+                const dist = (v.x - pA.x) * ux + (v.y - pA.y) * uy;
                 const z = zBase + (dist / 1000) * slopeVal;
                 return { x: v.x / 1000, y: v.y / 1000, z: z }; // in meters
             });
@@ -113,41 +133,118 @@ window.RoofEngine = {
     },
 
     /**
-     * Get floor bounding box in mm
+     * Get floor bounding box including wall thickness offset in mm
      */
     getFloorBoundingBox: function(floor, state) {
-        let minX = Infinity, maxX = -Infinity;
-        let minY = Infinity, maxY = -Infinity;
+        const s = state || window.AppState;
+        const c = s.config || {};
+        const wallThick = c.wallThickness !== undefined ? parseFloat(c.wallThickness) : 150; // mm
 
-        const areas = (state.areaLines || []).filter(a => a.floor === floor);
-        areas.forEach(a => {
-            if (a.vertices) {
-                a.vertices.forEach(v => {
-                    if (v.x < minX) minX = v.x;
-                    if (v.x > maxX) maxX = v.x;
-                    if (v.y < minY) minY = v.y;
-                    if (v.y > maxY) maxY = v.y;
-                });
-            }
-        });
-
-        if (minX === Infinity) {
-            const coordsX = state.gridXCoords || [];
-            const coordsY = state.gridYCoords || [];
-            if (coordsX.length > 0) {
-                minX = Math.min(...coordsX);
-                maxX = Math.max(...coordsX);
-            }
-            if (coordsY.length > 0) {
-                minY = Math.min(...coordsY);
-                maxY = Math.max(...coordsY);
+        let points = [];
+        
+        // 1. 手動外壁線を取得
+        const activeExtWalls = (s.exteriorWalls || []).filter(ew => ew.floor === floor && ew.vertices && ew.vertices.length >= 3);
+        if (activeExtWalls.length > 0) {
+            activeExtWalls.forEach(ew => {
+                const offsetPts = this.offsetPolygon(ew.vertices, wallThick);
+                points = points.concat(offsetPts);
+            });
+        } else {
+            // 2. 自動抽出外壁を取得
+            const boundary = window.WallEngine ? window.WallEngine.extractOuterBoundary(floor, s) : null;
+            if (boundary && boundary.length >= 3) {
+                const offsetPts = this.offsetPolygon(boundary, wallThick);
+                points = points.concat(offsetPts);
             }
         }
 
-        if (minX === Infinity) {
+        // フォールバック（部屋領域や通り芯から bounding box を得る）
+        if (points.length === 0) {
+            const areas = (s.areaLines || []).filter(a => a.floor === floor);
+            areas.forEach(a => {
+                if (a.vertices) {
+                    a.vertices.forEach(v => {
+                        points.push({ x: v.x, y: v.y });
+                    });
+                }
+            });
+        }
+
+        if (points.length === 0) {
+            const coordsX = s.gridXCoords || [];
+            const coordsY = s.gridYCoords || [];
+            if (coordsX.length > 0) {
+                const minX = Math.min(...coordsX);
+                const maxX = Math.max(...coordsX);
+                const minY = Math.min(...coordsY);
+                const maxY = Math.max(...coordsY);
+                return { 
+                    minX: minX - wallThick, 
+                    maxX: maxX + wallThick, 
+                    minY: minY - wallThick, 
+                    maxY: maxY + wallThick 
+                };
+            }
             return { minX: 0, maxX: 10000, minY: 0, maxY: 10000 };
         }
+
+        let minX = Infinity, maxX = -Infinity;
+        let minY = Infinity, maxY = -Infinity;
+        points.forEach(v => {
+            if (v.x < minX) minX = v.x;
+            if (v.x > maxX) maxX = v.x;
+            if (v.y < minY) minY = v.y;
+            if (v.y > maxY) maxY = v.y;
+        });
+
         return { minX, maxX, minY, maxY };
+    },
+
+    /**
+     * 多角形を外側に指定距離だけオフセットして膨らませる幾何学メソッド
+     */
+    offsetPolygon: function(poly, d) {
+        if (!poly || poly.length < 3) return [];
+        let pts = poly.map(v => ({ x: v.x, y: v.y }));
+        
+        let sum = 0;
+        for (let i = 0; i < pts.length; i++) {
+            const p1 = pts[i], p2 = pts[(i + 1) % pts.length];
+            sum += (p2.x - p1.x) * (p2.y + p1.y);
+        }
+        if (sum > 0) pts.reverse();
+
+        const n = pts.length;
+        const normals = [];
+        for (let i = 0; i < n; i++) {
+            const p1 = pts[i];
+            const p2 = pts[(i + 1) % n];
+            const dx = p2.x - p1.x;
+            const dy = p2.y - p1.y;
+            const L = Math.hypot(dx, dy);
+            if (L < 1e-6) {
+                normals.push({ x: 0, y: 0 });
+            } else {
+                normals.push({ x: dy / L, y: -dx / L });
+            }
+        }
+        const offsetPts = [];
+        for (let i = 0; i < n; i++) {
+            const p = pts[i];
+            const n_prev = normals[(i - 1 + n) % n];
+            const n_curr = normals[i];
+            
+            const denom = 1 + (n_prev.x * n_curr.x + n_prev.y * n_curr.y);
+            const factor = denom > 1e-4 ? 1 / denom : 1;
+            const vx = (n_prev.x + n_curr.x) * factor;
+            const vy = (n_prev.y + n_curr.y) * factor;
+            
+            offsetPts.push({
+                x: p.x + d * vx,
+                y: p.y + d * vy
+            });
+        }
+        return offsetPts;
     },
 
     /**
@@ -165,17 +262,36 @@ window.RoofEngine = {
         }
         zBase += baseDelta;
 
-        const p1 = face.slopeLine ? face.slopeLine[0] : { x: 0, y: 0 };
-        const p2 = face.slopeLine ? face.slopeLine[1] : { x: 0, y: 1000 };
-        
-        const dx = p2.x - p1.x;
-        const dy = p2.y - p1.y;
-        const len = Math.hypot(dx, dy);
-        const ux = len > 0 ? dx / len : 0;
-        const uy = len > 0 ? dy / len : 1;
+        let ux = 0, uy = 1;
+        const pA = face.slopeLine ? face.slopeLine[0] : { x: 0, y: 0 };
+        if (face.slopeLine && face.slopeLine.length >= 3) {
+            const pB = face.slopeLine[1];
+            const pC = face.slopeLine[2];
+            const dx = pB.x - pA.x;
+            const dy = pB.y - pA.y;
+            let nx = -dy;
+            let ny = dx;
+            const vx = pC.x - pA.x;
+            const vy = pC.y - pA.y;
+            const dot = nx * vx + ny * vy;
+            if (dot < 0) {
+                nx = -nx;
+                ny = -ny;
+            }
+            const len = Math.hypot(nx, ny);
+            ux = len > 0 ? nx / len : 0;
+            uy = len > 0 ? ny / len : 1;
+        } else if (face.slopeLine && face.slopeLine.length === 2) {
+            const p2 = face.slopeLine[1];
+            const dx = p2.x - pA.x;
+            const dy = p2.y - pA.y;
+            const len = Math.hypot(dx, dy);
+            ux = len > 0 ? dx / len : 0;
+            uy = len > 0 ? dy / len : 1;
+        }
 
         const slopeVal = slope / 10;
-        const dist = (v.x - p1.x) * ux + (v.y - p1.y) * uy;
+        const dist = (v.x - pA.x) * ux + (v.y - pA.y) * uy;
         return zBase + dist * slopeVal;
     },
 

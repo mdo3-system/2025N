@@ -250,5 +250,102 @@ window.WallEngine = {
         
         if (!pitch || pitch <= 0) return 0;
         return area * (1000 / pitch);
+    },
+
+    /**
+     * 壁データから最も外側の外周壁を自動的に抽出して多角形の頂点リストとして返却します
+     */
+    extractOuterBoundary: function(floor, state) {
+        const s = state || window.AppState;
+        const walls = (s.walls || []).filter(w => w.floor === floor && !w.isDeleted && w.p1 && w.p2);
+        if (walls.length < 3) return null;
+
+        const TOL = 5;
+        const nodes = [];
+        const getNodeIndex = (pt) => {
+            const idx = nodes.findIndex(n => Math.hypot(n.x - pt.x, n.y - pt.y) < TOL);
+            if (idx !== -1) return idx;
+            nodes.push({ x: pt.x, y: pt.y, edges: [] });
+            return nodes.length - 1;
+        };
+
+        walls.forEach(w => {
+            const idx1 = getNodeIndex(w.p1);
+            const idx2 = getNodeIndex(w.p2);
+            if (idx1 === idx2) return;
+            if (!nodes[idx1].edges.includes(idx2)) nodes[idx1].edges.push(idx2);
+            if (!nodes[idx2].edges.includes(idx1)) nodes[idx2].edges.push(idx1);
+        });
+
+        if (nodes.length < 3) return null;
+
+        let startIdx = 0;
+        for (let i = 1; i < nodes.length; i++) {
+            if (nodes[i].x < nodes[startIdx].x || 
+                (Math.abs(nodes[i].x - nodes[startIdx].x) < TOL && nodes[i].y < nodes[startIdx].y)) {
+                startIdx = i;
+            }
+        }
+
+        const path = [];
+        let currIdx = startIdx;
+        let prevDir = { x: 0, y: -1 }; 
+
+        const MAX_STEPS = 200;
+        let step = 0;
+
+        while (step < MAX_STEPS) {
+            path.push(nodes[currIdx]);
+            const currNode = nodes[currIdx];
+
+            let bestNextIdx = -1;
+            let maxAngle = -Infinity;
+
+            currNode.edges.forEach(nextIdx => {
+                if (path.length > 1 && nextIdx === path[path.length - 2].id) {
+                    if (currNode.edges.length > 1) return;
+                }
+
+                const nextNode = nodes[nextIdx];
+                const dx = nextNode.x - currNode.x;
+                const dy = nextNode.y - currNode.y;
+                const len = Math.hypot(dx, dy);
+                if (len < 1) return;
+
+                const dirX = dx / len;
+                const dirY = dy / len;
+
+                const sin = prevDir.x * dirY - prevDir.y * dirX;
+                const cos = prevDir.x * dirX + prevDir.y * dirY;
+                let angle = Math.atan2(sin, cos);
+
+                if (angle < 0) angle += Math.PI * 2;
+
+                if (angle > maxAngle) {
+                    maxAngle = angle;
+                    bestNextIdx = nextIdx;
+                }
+            });
+
+            if (bestNextIdx === -1 || bestNextIdx === startIdx) {
+                break;
+            }
+
+            const nextNode = nodes[bestNextIdx];
+            const dx = nextNode.x - currNode.x;
+            const dy = nextNode.y - currNode.y;
+            const len = Math.hypot(dx, dy);
+            prevDir = { x: dx / len, y: dy / len };
+
+            currIdx = bestNextIdx;
+            step++;
+
+            if (currIdx === startIdx) {
+                break;
+            }
+        }
+
+        if (path.length < 3) return null;
+        return path.map(p => ({ x: p.x, y: p.y }));
     }
 };

@@ -148,10 +148,12 @@ window.InputController = {
         const globalIds = [
             'calc-mode-select', 'attic-height', 'global-fc', 'global-triangle-mult',
             'prop-ext-wall', 'prop-roof-type', 'prop-eaves-len', 'prop-solar', 'prop-ceiling-ins', 'prop-wall-ins',
+            'prop-wall-thickness', 'prop-max-height', 'prop-max-eaves-height',
+            'prop-base-height', 'prop-base-pack', 'prop-base-sill', 'prop-floor-thick-1f', 'prop-floor-thick-2f', 'prop-roof-thickness',
             'n-h1', 'n-h2', 'p-d1', 'p-d2', 'c-w'
         ];
         globalIds.forEach(id => {
-            const event = (id.includes('mult') || id.includes('ins') || id.includes('h') || id.includes('d') || id.includes('len')) ? 'input' : 'change';
+            const event = (id.includes('mult') || id.includes('ins') || id.includes('h') || id.includes('d') || id.includes('len') || id.includes('thickness') || id.includes('height')) ? 'input' : 'change';
             bindId(id, event);
         });
 
@@ -185,6 +187,8 @@ window.InputController = {
         bindLayerToggle('vis-wall', 'walls');
         bindLayerToggle('v-layer-windows', 'windows');
         bindLayerToggle('vis-diaph', 'areas');
+        bindLayerToggle('v-layer-roofGrids', 'roofGrids');
+        bindLayerToggle('v-layer-roofs', 'roofs');
         
         // Foundation specific
         bindLayerToggle('v-layer-f_beams', 'f_beams');

@@ -758,7 +758,7 @@
     <div id="modal-area" class="modal-overlay">
         <div class="modal-content"><button class="btn-close-modal"
                 style="position:absolute;top:10px;right:10px;font-size:20px;background:none;border:none;cursor:pointer;color:#333;z-index:100;">✕</button>
-            <h2 style="margin-top:0; color:#0056b3;">🖼️ 見付面積プレビュー (DXF読込結果)</h2>
+            <h2 style="margin-top:0; color:#0056b3;">🖼️ 求積図・見付面積プレビュー (自動計算 ＆ DXF読込)</h2>
             <div id="scroll-area-prev" style="padding:0; overflow-y:auto; max-height:80vh;">
                 <div id="area-preview-container" style="display:flex; flex-wrap:wrap; gap:15px;"></div>
             </div>
@@ -853,7 +853,7 @@
                 </div>
 
                 <div class="calc-box" style="background:#fff; border:1px solid #ddd; padding:10px; border-radius:6px; margin-top:10px;">
-                    <div style="font-size:11px; font-weight:bold; margin-bottom:8px; color:#555; border-bottom:1px solid #eee;">📐 床面積 ＆ 4分割面積</div>
+                    <div style="font-size:11px; font-weight:bold; margin-bottom:8px; color:#555; border-bottom:1px solid #eee;">📐 床面積 ＆ 4分割面積 ＆ 見附面積</div>
                     
                     <div style="background:#2ecc71; color:#fff; text-align:center; font-size:10px; font-weight:bold; padding:2px; border-radius:3px; margin-bottom:5px;">1階 データ</div>
                     <div class="calc-row"><label style="width:110px;">床面積(㎡)</label><input type="number" id="a-f1" value="0.00" step="0.01" style="width:60px;"></div>
@@ -865,6 +865,10 @@
                         <div class="calc-row"><label style="font-size:9px; width:45px;">Y左</label><input type="number" id="e-y-l1" value="0.00" step="0.001" style="width:45px; font-size:10px;"></div>
                         <div class="calc-row"><label style="font-size:9px; width:45px;">X下(前)</label><input type="number" id="e-x-b1" value="0.00" step="0.001" style="width:45px; font-size:10px;"></div>
                         <div class="calc-row"><label style="font-size:9px; width:45px;">Y右</label><input type="number" id="e-y-r1" value="0.00" step="0.001" style="width:45px; font-size:10px;"></div>
+                    </div>
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:2px 5px; margin-top:3px; padding:5px; background:#e8f4f8; border-radius:4px; border:1px solid #bdf;">
+                        <div class="calc-row"><label style="font-size:9px; width:45px; color:#2980b9; font-weight:bold;">X見附(㎡)</label><input type="number" id="a-wx1" value="0.00" step="0.01" style="width:45px; font-size:10px; border:1px solid #2980b9; border-radius:3px;"></div>
+                        <div class="calc-row"><label style="font-size:9px; width:45px; color:#2980b9; font-weight:bold;">Y見附(㎡)</label><input type="number" id="a-wy1" value="0.00" step="0.01" style="width:45px; font-size:10px; border:1px solid #2980b9; border-radius:3px;"></div>
                     </div>
 
                     <hr style="border:0; border-top:1px dashed #ccc; margin:10px 0;">
@@ -879,6 +883,10 @@
                         <div class="calc-row"><label style="font-size:9px; width:45px;">Y左</label><input type="number" id="e-y-l2" value="0.00" step="0.001" style="width:45px; font-size:10px;"></div>
                         <div class="calc-row"><label style="font-size:9px; width:45px;">X下(前)</label><input type="number" id="e-x-b2" value="0.00" step="0.001" style="width:45px; font-size:10px;"></div>
                         <div class="calc-row"><label style="font-size:9px; width:45px;">Y右</label><input type="number" id="e-y-r2" value="0.00" step="0.001" style="width:45px; font-size:10px;"></div>
+                    </div>
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:2px 5px; margin-top:3px; padding:5px; background:#e8f4f8; border-radius:4px; border:1px solid #bdf;">
+                        <div class="calc-row"><label style="font-size:9px; width:45px; color:#2980b9; font-weight:bold;">X見附(㎡)</label><input type="number" id="a-wx2" value="0.00" step="0.01" style="width:45px; font-size:10px; border:1px solid #2980b9; border-radius:3px;"></div>
+                        <div class="calc-row"><label style="font-size:9px; width:45px; color:#2980b9; font-weight:bold;">Y見附(㎡)</label><input type="number" id="a-wy2" value="0.00" step="0.01" style="width:45px; font-size:10px; border:1px solid #2980b9; border-radius:3px;"></div>
                     </div>
                 </div>
             </div>
@@ -920,10 +928,7 @@
                         <input type="radio" name="f_mode" value="f_beam" onchange="updateFdModeUI('f_beam')">
                         🏗 基礎梁を引く
                     </label>
-                     <label class="fd-mode-label" style="display:flex; align-items:center; gap:7px; cursor:pointer; font-size:12px; color:#ecf0f1; background:#4a235a; padding:6px 8px; border-radius:4px;">
-                        <input type="radio" name="f_mode" value="f_ext_wall" onchange="updateFdModeUI('f_ext_wall')">
-                        🧱 外壁線を引く（多角形）
-                    </label>
+
                     <label class="fd-mode-label" style="display:flex; align-items:center; gap:7px; cursor:pointer; font-size:12px; color:#ecf0f1; background:#4a235a; padding:6px 8px; border-radius:4px;">
                         <input type="radio" name="f_mode" value="f_manhole" onchange="updateFdModeUI('f_manhole')">
                         ⭕ 人通口を配置
@@ -1128,17 +1133,7 @@
         <div id="roof-mode-panel" style="display:none;">
             <h2 style="color:#2980b9;">🏠 屋根伏図・見付面積 プロパティ</h2>
 
-            <div class="calc-box" style="background:#e8f4f8; border-color:#d4e6f1; margin-bottom:12px;">
-                <div style="font-size:11px; font-weight:bold; margin-bottom:5px; color:#2980b9;">⚙ 屋根共通設定</div>
-                <div class="calc-row">
-                    <label style="width:140px;">ケラバの出 (X方向) (mm)</label>
-                    <input type="number" id="roof-overhang-x-sync" value="600" step="50" style="width:70px; text-align:right;" onchange="AppState.roofOverhangX = parseFloat(this.value) || 0; GridEngine.getRoofGrids(); AppController.refreshAll();">
-                </div>
-                <div class="calc-row">
-                    <label style="width:140px;">軒の出 (Y方向) (mm)</label>
-                    <input type="number" id="roof-overhang-y-sync" value="600" step="50" style="width:70px; text-align:right;" onchange="AppState.roofOverhangY = parseFloat(this.value) || 0; GridEngine.getRoofGrids(); AppController.refreshAll();">
-                </div>
-            </div>
+
 
             <div style="padding:10px; background:#1b4f72; border-radius:6px; margin-bottom:12px;">
                 <div style="font-size:11px; font-weight:bold; color:#a9cddc; margin-bottom:8px;">🖊 作図サブモード</div>
@@ -1148,12 +1143,20 @@
                         👆 選択・編集
                     </label>
                     <label class="roof-mode-label" style="display:flex; align-items:center; gap:7px; cursor:pointer; font-size:12px; color:#ecf0f1; background:#1b4f72; padding:6px 8px; border-radius:4px;">
+                        <input type="radio" name="roof_mode" value="roof-add-grid" onchange="updateRoofModeUI('roof-add-grid')">
+                        📏 屋根グリッド追加(オフセット)
+                    </label>
+                    <label class="roof-mode-label" style="display:flex; align-items:center; gap:7px; cursor:pointer; font-size:12px; color:#ecf0f1; background:#1b4f72; padding:6px 8px; border-radius:4px;">
                         <input type="radio" name="roof_mode" value="draw-roof" onchange="updateRoofModeUI('draw-roof')">
                         📐 屋根面を引く（多角形）
                     </label>
+                    <label class="roof-mode-label" style="display:flex; align-items:center; gap:7px; cursor:pointer; font-size:12px; color:#ecf0f1; background:#1b4f72; padding:6px 8px; border-radius:4px;">
+                        <input type="radio" name="roof_mode" value="roof-del-grid" onchange="updateRoofModeUI('roof-del-grid')">
+                        ❌ 屋根グリッド削除
+                    </label>
                     <label class="roof-mode-label" style="display:flex; align-items:center; gap:7px; cursor:pointer; font-size:12px; color:#f1948a; background:#1b4f72; padding:6px 8px; border-radius:4px; border:1px solid #e74c3c;">
                         <input type="radio" name="roof_mode" value="delete-roof" onchange="updateRoofModeUI('delete-roof')">
-                        ❌ 削除（クリックした要素）
+                        ❌ 屋根要素の削除（クリック）
                     </label>
                 </div>
                 <div style="font-size:10px; color:#a9cddc; margin-top:8px; line-height:1.5;">
@@ -1278,6 +1281,46 @@
                         <label>外壁断熱(mm)</label>
                         <input type="number" id="prop-wall-ins" value="70" style="width:60px; text-align:right; padding:2px;">
                     </div>
+                    <div class="calc-row" style="margin-bottom:5px;">
+                        <label>壁厚(mm)</label>
+                        <input type="number" id="prop-wall-thickness" value="150" style="width:60px; text-align:right; padding:2px;" onchange="AppState.config.wallThickness = parseFloat(this.value) || 150; AppController.refreshAll();">
+                    </div>
+                    <div class="calc-row" style="margin-bottom:5px;">
+                        <label>最高の高さ(mm)</label>
+                        <input type="number" id="prop-max-height" value="9000" style="width:60px; text-align:right; padding:2px;" onchange="AppState.config.maxHeight = parseFloat(this.value) || 9000; AppController.refreshAll();">
+                    </div>
+                    <div class="calc-row" style="margin-bottom:5px;">
+                        <label>最高の軒高(mm)</label>
+                        <input type="number" id="prop-max-eaves-height" value="6000" style="width:60px; text-align:right; padding:2px;" onchange="AppState.config.maxEavesHeight = parseFloat(this.value) || 6000; AppController.refreshAll();">
+                    </div>
+                    <!-- 基礎・土台・床仕様 -->
+                    <div style="margin-bottom:10px; background: #eaf2f8; padding: 6px; border-radius: 6px; border: 1px solid #a9cce3;">
+                        <div style="font-size:10px; font-weight:bold; color:#1f618d; margin-bottom:5px; text-align:center; border-bottom:1px solid #a9cce3; padding-bottom:3px;">🏠 基礎・土台・床仕様</div>
+                        <div class="calc-row" style="margin-bottom:4px; display:flex; justify-content:space-between; align-items:center;">
+                            <label style="font-size:10px; width:110px; margin:0; text-align:left;">基礎高(GL上)(mm)</label>
+                            <input type="number" id="prop-base-height" value="400" style="width:55px; text-align:right; padding:2px; font-size:10px;" onchange="AppState.config.baseHeight = parseFloat(this.value) || 400; AppController.refreshAll();">
+                        </div>
+                        <div class="calc-row" style="margin-bottom:4px; display:flex; justify-content:space-between; align-items:center;">
+                            <label style="font-size:10px; width:110px; margin:0; text-align:left;">基礎パッキン(mm)</label>
+                            <input type="number" id="prop-base-pack" value="20" style="width:55px; text-align:right; padding:2px; font-size:10px;" onchange="AppState.config.basePack = parseFloat(this.value) || 20; AppController.refreshAll();">
+                        </div>
+                        <div class="calc-row" style="margin-bottom:4px; display:flex; justify-content:space-between; align-items:center;">
+                            <label style="font-size:10px; width:110px; margin:0; text-align:left;">土台(mm)</label>
+                            <input type="number" id="prop-base-sill" value="105" style="width:55px; text-align:right; padding:2px; font-size:10px;" onchange="AppState.config.baseSill = parseFloat(this.value) || 105; AppController.refreshAll();">
+                        </div>
+                        <div class="calc-row" style="margin-bottom:4px; display:flex; justify-content:space-between; align-items:center;">
+                            <label style="font-size:10px; width:110px; margin:0; text-align:left;">1F床厚(mm)</label>
+                            <input type="number" id="prop-floor-thick-1f" value="36" style="width:55px; text-align:right; padding:2px; font-size:10px;" onchange="AppState.config.floorThick1F = parseFloat(this.value) || 36; AppController.refreshAll();">
+                        </div>
+                        <div class="calc-row" style="margin-bottom:4px; display:flex; justify-content:space-between; align-items:center;">
+                            <label style="font-size:10px; width:110px; margin:0; text-align:left;">2F床厚(mm)</label>
+                            <input type="number" id="prop-floor-thick-2f" value="36" style="width:55px; text-align:right; padding:2px; font-size:10px;" onchange="AppState.config.floorThick2F = parseFloat(this.value) || 36; AppController.refreshAll();">
+                        </div>
+                        <div class="calc-row" style="margin-bottom:0px; display:flex; justify-content:space-between; align-items:center;">
+                            <label style="font-size:10px; width:110px; margin:0; text-align:left;">屋根鉛直厚(mm)</label>
+                            <input type="number" id="prop-roof-thickness" value="150" style="width:55px; text-align:right; padding:2px; font-size:10px;" onchange="AppState.config.roofThickness = parseFloat(this.value) || 150; AppController.refreshAll();">
+                        </div>
+                    </div>
                     <div style="margin-top:10px; padding-top:10px; border-top:1px solid #bce8f1;">
                         <div style="font-size:10px; font-weight:bold; color:#2980b9; margin-bottom:5px;">📈 必要壁量設定 (m/㎡)</div>
                         <div class="calc-row" style="margin-bottom:3px;">
@@ -1294,15 +1337,7 @@
                         </div>
                     </div>
 
-                    <div style="margin-top:10px; padding-top:10px; border-top:1px solid #bce8f1;">
-                        <div style="font-size:10px; font-weight:bold; color:#2c3e50; margin-bottom:5px;">🏠 見付面積の設定 (手動入力)</div>
-                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:5px;">
-                            <div class="calc-row"><label style="font-size:9px; width:45px;">1F X見付</label><input type="number" id="a-wx1" value="0.00" step="0.01" style="width:45px; font-size:10px;"></div>
-                            <div class="calc-row"><label style="font-size:9px; width:45px;">1F Y見付</label><input type="number" id="a-wy1" value="0.00" step="0.01" style="width:45px; font-size:10px;"></div>
-                            <div class="calc-row"><label style="font-size:9px; width:45px;">2F X見付</label><input type="number" id="a-wx2" value="0.00" step="0.01" style="width:45px; font-size:10px;"></div>
-                            <div class="calc-row"><label style="font-size:9px; width:45px;">2F Y見付</label><input type="number" id="a-wy2" value="0.00" step="0.01" style="width:45px; font-size:10px;"></div>
-                        </div>
-                    </div>
+                    <!-- [4分割 側端部面積] は左パネルへ移動しました -->
                 </div>
 
                 <!-- [4分割 側端部面積] は左パネルへ移動しました -->
@@ -1363,25 +1398,29 @@
             <div style="padding:10px; font-size:11px; background:#fff; display:flex; flex-direction:column; gap:8px;">
                 <div>
                     <div style="font-weight:bold; color:#2980b9; margin-bottom:3px; border-bottom:1px dashed #ccc;">共通</div>
-                    <label><input type="checkbox" id="v-layer-grids" checked> 通り芯・グリッド</label>
+                    <div style="display:flex; gap:12px; flex-wrap:wrap;">
+                        <label><input type="checkbox" id="v-layer-grids" checked> 通り芯・グリッド</label>
+                        <label><input type="checkbox" id="v-layer-roofGrids" checked> 屋根グリッド</label>
+                    </div>
                 </div>
                 <div>
-                    <div style="font-weight:bold; color:#27ae60; margin-bottom:3px; border-bottom:1px dashed #ccc;">壁量モード用</div>
+                    <div style="font-weight:bold; color:#27ae60; margin-bottom:3px; border-bottom:1px dashed #ccc;">作図・屋根モード用</div>
                     <div style="display:grid; grid-template-columns: 1fr 1fr; gap:3px;">
+                        <label><input type="checkbox" id="v-layer-roofs" checked> 🏠 屋根</label>
                         <label><input type="checkbox" id="v-layer-pillars" checked> 柱</label>
                         <label><input type="checkbox" id="v-layer-pillarNValues" checked> N値・金物名</label>
                         <label><input type="checkbox" id="vis-wall" checked> 耐力壁</label>
                         <label><input type="checkbox" id="v-layer-windows" checked> 開口部</label>
                         <label><input type="checkbox" id="vis-diaph" checked> 面積（エリア）</label>
                         <label><input type="checkbox" id="v-layer-div4-sub" checked> 4分割枠</label>
+                        <label><input type="checkbox" id="v-layer-f_ext_walls" checked> 外壁線</label>
                     </div>
                 </div>
                 <div>
                     <div style="font-weight:bold; color:#8e44ad; margin-bottom:3px; border-bottom:1px dashed #ccc;">基礎モード用</div>
                     <div style="display:grid; grid-template-columns: 1fr 1fr; gap:3px;">
-                        <label><input type="checkbox" id="v-layer-f_beams" checked> 基礎梁</label>
                         <label><input type="checkbox" id="v-layer-f_slabs" checked> スラブ</label>
-                         <label><input type="checkbox" id="v-layer-f_ext_walls" checked> 外壁線(荷重用)</label>
+                        <label><input type="checkbox" id="v-layer-f_beams" checked> 基礎梁</label>
                         <label><input type="checkbox" id="v-layer-f_manholes" checked> 人通口</label>
                     </div>
                 </div>
@@ -1408,6 +1447,7 @@
 
             <label><input type="radio" name="mode" value="delete-unified"> ❌ 5. 削除(柱/壁/窓/面積)</label>
             <hr style="border:0; border-top:1px dashed #ccc; margin:5px 0;">
+            <label><input type="radio" name="mode" value="draw-ext-wall"> 🧱 外壁線を引く（多角形）</label><br>
             <label><input type="radio" name="mode" value="add-grid"> 📏 グリッド追加(オフセット)</label><br>
             <label><input type="radio" name="mode" value="del-grid"> ❌ グリッド削除</label><br>
             <label><input type="radio" name="mode" value="add-diag-grid"> 📐 斜め通り芯追加</label><br>
@@ -1563,47 +1603,47 @@
         </div>
     </div>
 
-    <script src="../../assets/js/modules/wall_4split/Version.js?v=2.7.0"></script>
-    <script src="../../assets/js/modules/wall_4split/state/Specs.js?v=2.7.0"></script>
-    <script src="../../assets/js/modules/wall_4split/state/AppState.js?v=2.7.0"></script>
-    <script src="../../assets/js/modules/wall_4split/wall_4split_bridge.js?v=2.7.0"></script>
-    <script src="../../assets/js/modules/wall_4split/logic/ServiceContainer.js?v=2.7.0"></script>
-    <script src="../../assets/js/modules/wall_4split/logic/MathUtils.js?v=2.7.0"></script>
-    <script src="../../assets/js/modules/wall_4split/logic/Parsers.js?v=2.7.0"></script>
-    <script src="../../assets/js/modules/wall_4split/logic/WallEngine.js?v=2.7.0"></script>
-    <script src="../../assets/js/modules/wall_4split/logic/CadEngine.js?v=2.7.0"></script>
-    <script src="../../assets/js/modules/wall_4split/logic/GridEngine.js?v=2.7.0"></script>
-    <script src="../../assets/js/modules/wall_4split/logic/StructuralEngine.js?v=2.7.0"></script>
-    <script src="../../assets/js/modules/wall_4split/logic/DocumentEngine.js?v=2.7.0"></script>
-    <script src="../../assets/js/modules/wall_4split/logic/NValueEngine.js?v=2.7.0"></script>
-    <script src="../../assets/js/modules/wall_4split/logic/AreaEngine.js?v=2.7.0"></script>
-    <script src="../../assets/js/modules/wall_4split/logic/AxialEngine.js?v=2.7.0"></script>
-    <script src="../../assets/js/modules/wall_4split/logic/SlabBeamSynchronizer.js?v=2.7.0"></script>
-    <script src="../../assets/js/modules/wall_4split/logic/FoundationEngine.js?v=2.7.0"></script>
-    <script src="../../assets/js/modules/wall_4split/logic/ReportEngine.js?v=2.7.0"></script>
-    <script src="../../assets/js/modules/wall_4split/logic/RoofEngine.js?v=2.7.0"></script>
-    <script src="../../assets/js/modules/wall_4split/controllers/PropertyController.js?v=2.7.0"></script>
-    <script src="../../assets/js/modules/wall_4split/controllers/InputController.js?v=2.7.0"></script>
-    <script src="../../assets/js/modules/wall_4split/controllers/ModalController.js?v=2.7.0"></script>
-    <script src="../../assets/js/modules/wall_4split/controllers/AppController.js?v=2.7.0"></script>
-    <script src="../../assets/js/modules/wall_4split/controllers/FoundationInputController.js?v=2.7.0"></script>
-    <script src="../../assets/js/modules/wall_4split/controllers/RoofInputController.js?v=2.7.0"></script>
-    <script src="../../assets/js/modules/wall_4split/view/UIView.js?v=2.7.0"></script>
-    <script src="../../assets/js/modules/wall_4split/view/MainRenderer.js?v=2.7.0"></script>
-    <script src="../../assets/js/modules/wall_4split/view/FoundationRenderer.js?v=2.7.0"></script>
-    <script src="../../assets/js/modules/wall_4split/view/DocumentRenderer.js?v=2.7.0"></script>
-    <script src="../../assets/js/modules/wall_4split/view/ElevationRenderer.js?v=2.7.0"></script>
-    <script src="../../assets/js/modules/wall_4split/view/RoofRenderer.js?v=2.7.0"></script>
-    <script src="../../assets/js/modules/wall_4split/view/ThreeDPreviewController.js?v=2.7.0"></script>
-    <script src="../../assets/js/modules/wall_4split/wall_4split_export.js?v=2.7.0"></script>
-    <script src="../../assets/js/modules/wall_4split/wall_4split_cad.js?v=2.7.0"></script>
-    <script src="../../assets/js/modules/wall_4split/wall_4split_render.js?v=2.7.0"></script>
-    <script src="../../assets/js/modules/wall_4split/wall_4split_pdf.js?v=2.7.0"></script>
-    <script src="../../assets/js/modules/wall_4split/wall_4split_calc.js?v=2.7.0"></script>
-    <script src="../../assets/js/modules/wall_4split/wall_4split_foundation_engine.js?v=2.7.0"></script>
-    <script src="../../assets/js/modules/wall_4split/wall_4split_report.js?v=2.7.0"></script>
-    <script src="../../assets/js/modules/wall_4split/wall_4split_input.js?v=2.7.0"></script>
-    <script src="../../assets/js/modules/wall_4split/wall_4split_main.js?v=2.7.0"></script>
+    <script src="../../assets/js/modules/wall_4split/Version.js?v=2.7.8"></script>
+    <script src="../../assets/js/modules/wall_4split/state/Specs.js?v=2.7.8"></script>
+    <script src="../../assets/js/modules/wall_4split/state/AppState.js?v=2.7.8"></script>
+    <script src="../../assets/js/modules/wall_4split/wall_4split_bridge.js?v=2.7.8"></script>
+    <script src="../../assets/js/modules/wall_4split/logic/ServiceContainer.js?v=2.7.8"></script>
+    <script src="../../assets/js/modules/wall_4split/logic/MathUtils.js?v=2.7.8"></script>
+    <script src="../../assets/js/modules/wall_4split/logic/Parsers.js?v=2.7.8"></script>
+    <script src="../../assets/js/modules/wall_4split/logic/WallEngine.js?v=2.7.8"></script>
+    <script src="../../assets/js/modules/wall_4split/logic/CadEngine.js?v=2.7.8"></script>
+    <script src="../../assets/js/modules/wall_4split/logic/GridEngine.js?v=2.7.8"></script>
+    <script src="../../assets/js/modules/wall_4split/logic/StructuralEngine.js?v=2.7.8"></script>
+    <script src="../../assets/js/modules/wall_4split/logic/DocumentEngine.js?v=2.7.8"></script>
+    <script src="../../assets/js/modules/wall_4split/logic/NValueEngine.js?v=2.7.8"></script>
+    <script src="../../assets/js/modules/wall_4split/logic/AreaEngine.js?v=2.7.8"></script>
+    <script src="../../assets/js/modules/wall_4split/logic/AxialEngine.js?v=2.7.8"></script>
+    <script src="../../assets/js/modules/wall_4split/logic/SlabBeamSynchronizer.js?v=2.7.8"></script>
+    <script src="../../assets/js/modules/wall_4split/logic/FoundationEngine.js?v=2.7.8"></script>
+    <script src="../../assets/js/modules/wall_4split/logic/ReportEngine.js?v=2.7.8"></script>
+    <script src="../../assets/js/modules/wall_4split/logic/RoofEngine.js?v=2.7.8"></script>
+    <script src="../../assets/js/modules/wall_4split/controllers/PropertyController.js?v=2.7.8"></script>
+    <script src="../../assets/js/modules/wall_4split/controllers/InputController.js?v=2.7.8"></script>
+    <script src="../../assets/js/modules/wall_4split/controllers/ModalController.js?v=2.7.8"></script>
+    <script src="../../assets/js/modules/wall_4split/controllers/AppController.js?v=2.7.8"></script>
+    <script src="../../assets/js/modules/wall_4split/controllers/FoundationInputController.js?v=2.7.8"></script>
+    <script src="../../assets/js/modules/wall_4split/controllers/RoofInputController.js?v=2.7.8"></script>
+    <script src="../../assets/js/modules/wall_4split/view/UIView.js?v=2.7.8"></script>
+    <script src="../../assets/js/modules/wall_4split/view/MainRenderer.js?v=2.7.8"></script>
+    <script src="../../assets/js/modules/wall_4split/view/FoundationRenderer.js?v=2.7.8"></script>
+    <script src="../../assets/js/modules/wall_4split/view/DocumentRenderer.js?v=2.7.8"></script>
+    <script src="../../assets/js/modules/wall_4split/view/ElevationRenderer.js?v=2.7.8"></script>
+    <script src="../../assets/js/modules/wall_4split/view/RoofRenderer.js?v=2.7.8"></script>
+    <script src="../../assets/js/modules/wall_4split/view/ThreeDPreviewController.js?v=2.7.8"></script>
+    <script src="../../assets/js/modules/wall_4split/wall_4split_export.js?v=2.7.8"></script>
+    <script src="../../assets/js/modules/wall_4split/wall_4split_cad.js?v=2.7.8"></script>
+    <script src="../../assets/js/modules/wall_4split/wall_4split_render.js?v=2.7.8"></script>
+    <script src="../../assets/js/modules/wall_4split/wall_4split_pdf.js?v=2.7.8"></script>
+    <script src="../../assets/js/modules/wall_4split/wall_4split_calc.js?v=2.7.8"></script>
+    <script src="../../assets/js/modules/wall_4split/wall_4split_foundation_engine.js?v=2.7.8"></script>
+    <script src="../../assets/js/modules/wall_4split/wall_4split_report.js?v=2.7.8"></script>
+    <script src="../../assets/js/modules/wall_4split/wall_4split_input.js?v=2.7.8"></script>
+    <script src="../../assets/js/modules/wall_4split/wall_4split_main.js?v=2.7.8"></script>
     <!-- ========================================== -->
     <!-- [UI整理] モーダル定義エリア -->
     <!-- ========================================== -->
