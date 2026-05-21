@@ -1,4 +1,4 @@
-// ==========================================
+﻿// ==========================================
 // wall_4split_pdf.js - 帳票画像・PDF生成エンジン (Phase 3.9)
 // v2.2.0 Refactoring
 // ==========================================
@@ -493,254 +493,234 @@ function generateAutoMitsukeCanvas(direction) {
     if (!s || !s.config) return null;
 
     const config = s.config;
-    const wallThick = config.wallThickness !== undefined ? parseFloat(config.wallThickness) : 150;
-    const maxH = config.maxHeight !== undefined ? parseFloat(config.maxHeight) : 8000;
-    const maxEavesH = config.maxEavesHeight !== undefined ? parseFloat(config.maxEavesHeight) : 6000;
+    const wallThick = parseFloat(config.wallThickness ?? 150);
 
-    // Get floor bounding boxes with wall thickness offset
-    const bbox1F = window.RoofEngine ? window.RoofEngine.getFloorBoundingBox('1F', s) : { minX: 0, maxX: 10000, minY: 0, maxY: 10000 };
-    const bbox2F = window.RoofEngine ? window.RoofEngine.getFloorBoundingBox('2F', s) : { minX: 0, maxX: 10000, minY: 0, maxY: 10000 };
+    // --- GL基準高さ取得 ---
+    const lvl = window.RoofEngine ? window.RoofEngine.getFloorLevels(s) : { fl1: 561, fl2: 3297, cut1: 1911, cut2: 4647 };
 
-    const minX = Math.min(bbox1F.minX, bbox2F.minX);
-    const maxX = Math.max(bbox1F.maxX, bbox2F.maxX);
-    const minY = Math.min(bbox1F.minY, bbox2F.minY);
-    const maxY = Math.max(bbox1F.maxY, bbox2F.maxY);
+    // --- 外壁バウンディングボックス (壁厚オフセット込み) ---
+    const bbox1F = window.RoofEngine ? window.RoofEngine.getFloorBoundingBox('1F', s) : { minX:0, maxX:10000, minY:0, maxY:10000 };
+    const bbox2F = window.RoofEngine ? window.RoofEngine.getFloorBoundingBox('2F', s) : { minX:0, maxX:10000, minY:0, maxY:10000 };
+    const bboxAll = {
+        minX: Math.min(bbox1F.minX, bbox2F.minX),
+        maxX: Math.max(bbox1F.maxX, bbox2F.maxX),
+        minY: Math.min(bbox1F.minY, bbox2F.minY),
+        maxY: Math.max(bbox1F.maxY, bbox2F.maxY)
+    };
 
-    // Wind-receiving width W
-    const W = (direction === 'X') ? (maxY - minY) : (maxX - minX);
+    // 建物幅 W [mm] (方向に応じてY幅 or X幅)
+    const W = (direction === 'X') ? (bboxAll.maxY - bboxAll.minY) : (bboxAll.maxX - bboxAll.minX);
     if (W <= 0) return null;
 
-    // Create 2D high-res Canvas
+    // 2F軒高・屋根最高部をスキャンラインで求める
+    const eavesZ2F = lvl.fl2 + (parseFloat(config.floorHeight2F ?? 2.7)) * 1000; // mm
+    const eavesZ1F = lvl.fl2; // 1F軒高 = 2FL
+    const roofFaces = s.roofFaces || [];
+
+    // スキャンライン: 方向に応じたU座標でプロファイルを生成
+    const uMin = (direction === 'X') ? bboxAll.minY : bboxAll.minX;
+    const uMax = (direction === 'X') ? bboxAll.maxY : bboxAll.maxX;
+    const STEPS = 200;
+    const profile = []; // [{u, z}] — u:mm, z:mm
+    for (let i = 0; i <= STEPS; i++) {
+        const u = uMin + (i / STEPS) * (uMax - uMin);
+        let maxZ = eavesZ2F; // 最低でも軒高
+
+        roofFaces.forEach(face => {
+            if (!face.vertices) return;
+            const floor = face.floor || '2F';
+            const baseDelta = parseFloat(face.baseHeightDelta ?? 0);
+            const zBase = (floor === '2F' ? eavesZ2F : eavesZ1F) + baseDelta;
+            const slope = parseFloat(face.slope ?? 0);
+            const slopeVal = slope / 10;
+
+            let ux = 0, uy = 1;
+            const pA = (face.slopeLine && face.slopeLine.length > 0) ? face.slopeLine[0] : face.vertices[0];
+            if (!pA) return;
+            if (face.slopeLine && face.slopeLine.length >= 3) {
+                const pB = face.slopeLine[1], pC = face.slopeLine[2];
+                if (pB && pC) {
+                    const dx = pB.x - pA.x, dy = pB.y - pA.y;
+                    let nx = -dy, ny = dx;
+                    if ((nx*(pC.x-pA.x) + ny*(pC.y-pA.y)) < 0) { nx=-nx; ny=-ny; }
+                    const len = Math.hypot(nx, ny);
+                    ux = len > 0 ? nx/len : 0;
+                    uy = len > 0 ? ny/len : 1;
+                }
+            } else if (face.slopeLine && face.slopeLine.length === 2) {
+                const p2 = face.slopeLine[1];
+                if (p2) { const dx=p2.x-pA.x, dy=p2.y-pA.y, len=Math.hypot(dx,dy); ux=len>0?dx/len:0; uy=len>0?dy/len:1; }
+            }
+
+            const numV = face.vertices.length;
+            for (let j = 0; j < numV; j++) {
+                const v1 = face.vertices[j], v2 = face.vertices[(j+1)%numV];
+                const val1 = (direction === 'X') ? v1.y : v1.x;
+                const val2 = (direction === 'X') ? v2.y : v2.x;
+                if ((val1 <= u && val2 >= u) || (val2 <= u && val1 >= u)) {
+                    if (Math.abs(val2-val1) < 0.01) continue;
+                    const t = (u-val1)/(val2-val1);
+                    const ix = v1.x + t*(v2.x-v1.x), iy = v1.y + t*(v2.y-v1.y);
+                    const dist = (ix-pA.x)*ux + (iy-pA.y)*uy;
+                    const z = zBase + dist*slopeVal;
+                    if (z > maxZ) maxZ = z;
+                }
+            }
+        });
+        profile.push({ u, z: maxZ });
+    }
+
+    const maxZ_total = Math.max(...profile.map(p => p.z));
+    const totalH = Math.max(maxZ_total, eavesZ2F + 1000); // キャンバス高さ基準
+
+    // --- Canvas生成 ---
     const canvas = document.createElement('canvas');
     canvas.width = 900;
-    canvas.height = 550;
+    canvas.height = 600;
     const ctx = canvas.getContext('2d');
 
-    // Solid white background
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // Draw stylish CAD-grid background
-    ctx.strokeStyle = '#f1f2f6';
-    ctx.lineWidth = 1;
-    for (let x = 0; x < canvas.width; x += 30) {
-        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
-    }
-    for (let y = 0; y < canvas.height; y += 30) {
-        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
-    }
+    // CADグリッド
+    ctx.strokeStyle = '#f1f2f6'; ctx.lineWidth = 1;
+    for (let x = 0; x < canvas.width; x += 30) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,canvas.height); ctx.stroke(); }
+    for (let y = 0; y < canvas.height; y += 30) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(canvas.width,y); ctx.stroke(); }
 
-    // Margins and padding
-    const padL = 100;
-    const padR = 420; // Room on the right for elegant formulas
-    const padT = 80;
-    const padB = 80;
+    const padL = 90, padR = 400, padT = 70, padB = 60;
     const drawW = canvas.width - padL - padR;
     const drawH = canvas.height - padT - padB;
 
-    // Scale calculations
-    const scaleX = drawW / W;
-    const scaleY = drawH / maxH;
-    const scale = Math.min(scaleX, scaleY) * 0.9;
+    const scaleU = drawW / W;
+    const scaleZ = drawH / totalH;
+    const scale = Math.min(scaleU, scaleZ) * 0.90;
 
-    const toCanvasX = (val) => padL + (val * scale);
-    const toCanvasY = (val) => canvas.height - padB - (val * scale);
-
-    // Polygon Vertices
-    const pts = [
-        { u: 0, v: 0 },
-        { u: W, v: 0 },
-        { u: W, v: maxEavesH },
-        { u: W / 2, v: maxH },
-        { u: 0, v: maxEavesH }
-    ];
+    const toX = (u) => padL + (u - uMin) * scale;
+    const toY = (z) => canvas.height - padB - z * scale;
 
     const primaryColor = (direction === 'X') ? '#e67e22' : '#2980b9';
-    const fillColor = (direction === 'X') ? 'rgba(230, 126, 34, 0.10)' : 'rgba(41, 128, 185, 0.10)';
+    const fill2F = (direction === 'X') ? 'rgba(230,126,34,0.18)' : 'rgba(41,128,185,0.18)';
+    const fill1F = (direction === 'X') ? 'rgba(230,126,34,0.08)' : 'rgba(41,128,185,0.08)';
 
-    // Fill silhouette
-    ctx.fillStyle = fillColor;
-    ctx.beginPath();
-    ctx.moveTo(toCanvasX(pts[0].u), toCanvasY(pts[0].v));
-    for (let i = 1; i < pts.length; i++) {
-        ctx.lineTo(toCanvasX(pts[i].u), toCanvasY(pts[i].v));
-    }
-    ctx.closePath();
-    ctx.fill();
+    const cutY2 = toY(lvl.cut2);  // 2F下端カットライン
+    const cutY1 = toY(lvl.cut1);  // 1F下端カットライン
+    const glY   = toY(0);         // GL
 
-    // Architectural diagonal hatching
-    ctx.strokeStyle = (direction === 'X') ? 'rgba(230, 126, 34, 0.15)' : 'rgba(41, 128, 185, 0.15)';
-    ctx.lineWidth = 1;
+    // --- シルエット多角形を構築 ---
+    const silPts = [];
+    silPts.push({ x: toX(uMin), y: toY(0) }); // GL左
+    profile.forEach(p => silPts.push({ x: toX(p.u), y: toY(p.z) }));
+    silPts.push({ x: toX(uMax), y: toY(0) }); // GL右
+
+    // 2F見附エリア (cut2以上) を塗りつぶし
     ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(toX(uMin), cutY2);
+    profile.forEach(p => ctx.lineTo(toX(p.u), Math.min(toY(p.z), cutY2)));
+    ctx.lineTo(toX(uMax), cutY2);
+    ctx.closePath();
+    ctx.fillStyle = fill2F;
+    ctx.fill();
+    ctx.restore();
+
+    // 1F追加見附エリア (cut1〜cut2) を塗りつぶし
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(toX(uMin), cutY1);
+    ctx.lineTo(toX(uMin), Math.max(cutY2, toY(eavesZ1F)));
+    ctx.lineTo(toX(uMax), Math.max(cutY2, toY(eavesZ1F)));
+    ctx.lineTo(toX(uMax), cutY1);
+    ctx.closePath();
+    ctx.fillStyle = fill1F;
+    ctx.fill();
+    ctx.restore();
+
+    // 外壁シルエット輪郭 (clip して斜線ハッチング)
+    ctx.save();
+    ctx.beginPath();
+    silPts.forEach((p, i) => i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y));
+    ctx.closePath();
     ctx.clip();
-    for (let offset = -canvas.width; offset < canvas.width; offset += 15) {
-        ctx.beginPath();
-        ctx.moveTo(offset, 0);
-        ctx.lineTo(offset + canvas.height, canvas.height);
-        ctx.stroke();
+    ctx.strokeStyle = direction === 'X' ? 'rgba(230,126,34,0.12)' : 'rgba(41,128,185,0.12)';
+    ctx.lineWidth = 1;
+    for (let off = -canvas.width; off < canvas.width; off += 12) {
+        ctx.beginPath(); ctx.moveTo(off, 0); ctx.lineTo(off + canvas.height, canvas.height); ctx.stroke();
     }
     ctx.restore();
 
-    // Outline silhouette
-    ctx.strokeStyle = primaryColor;
-    ctx.lineWidth = 3.5;
-    ctx.lineJoin = 'round';
+    // シルエット輪郭線
+    ctx.strokeStyle = primaryColor; ctx.lineWidth = 3; ctx.lineJoin = 'round';
     ctx.beginPath();
-    ctx.moveTo(toCanvasX(pts[0].u), toCanvasY(pts[0].v));
-    for (let i = 1; i < pts.length; i++) {
-        ctx.lineTo(toCanvasX(pts[i].u), toCanvasY(pts[i].v));
-    }
+    silPts.forEach((p, i) => i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y));
     ctx.closePath();
     ctx.stroke();
 
-    // Ground Line (GL)
-    ctx.strokeStyle = '#2c3e50';
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.moveTo(padL - 30, toCanvasY(0));
-    ctx.lineTo(padL + drawW + 30, toCanvasY(0));
-    ctx.stroke();
+    // GL線
+    ctx.strokeStyle = '#2c3e50'; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(padL-20, glY); ctx.lineTo(padL+drawW+20, glY); ctx.stroke();
+    ctx.font = 'bold 11px sans-serif'; ctx.fillStyle = '#2c3e50'; ctx.textAlign = 'right';
+    ctx.fillText('▼ GL', padL - 25, glY + 4);
 
-    ctx.font = 'bold 12px sans-serif';
-    ctx.fillStyle = '#2c3e50';
-    ctx.textAlign = 'right';
-    ctx.fillText('▼ GL', padL - 35, toCanvasY(0) + 4);
+    // 1Fカットライン (破線)
+    ctx.setLineDash([8, 5]); ctx.strokeStyle = '#27ae60'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(padL-10, cutY1); ctx.lineTo(padL+drawW+10, cutY1); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.font = 'bold 10px sans-serif'; ctx.fillStyle = '#27ae60'; ctx.textAlign = 'right';
+    ctx.fillText(`▶ 1FL+1350 (${(lvl.cut1/1000).toFixed(3)}m)`, padL-14, cutY1 - 3);
 
-    // Dimension helper
-    const drawDimLine = (x1, y1, x2, y2, offset, labelText) => {
-        ctx.strokeStyle = '#7f8c8d';
-        ctx.lineWidth = 1;
-        ctx.fillStyle = '#c62828'; // Crimson red for high legibility
-        ctx.font = 'bold 11px sans-serif';
+    // 2Fカットライン (破線)
+    ctx.setLineDash([8, 5]); ctx.strokeStyle = '#e74c3c'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(padL-10, cutY2); ctx.lineTo(padL+drawW+10, cutY2); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.font = 'bold 10px sans-serif'; ctx.fillStyle = '#e74c3c'; ctx.textAlign = 'right';
+    ctx.fillText(`▶ 2FL+1350 (${(lvl.cut2/1000).toFixed(3)}m)`, padL-14, cutY2 - 3);
 
-        const dx = x2 - x1;
-        const dy = y2 - y1;
-        const len = Math.hypot(dx, dy) || 1;
-        const nx = -dy / len;
-        const ny = dx / len;
+    // 1FL・2FL線 (薄い)
+    [{ z: lvl.fl1, label: `1FL (${(lvl.fl1/1000).toFixed(3)}m)`, color: '#27ae60' },
+     { z: lvl.fl2, label: `2FL (${(lvl.fl2/1000).toFixed(3)}m)`, color: '#e74c3c' }
+    ].forEach(({ z, label, color }) => {
+        const cy = toY(z);
+        ctx.setLineDash([4,4]); ctx.strokeStyle = color + '88'; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(padL-10, cy); ctx.lineTo(padL+drawW+10, cy); ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.font = '9px sans-serif'; ctx.fillStyle = color; ctx.textAlign = 'right';
+        ctx.fillText(label, padL-14, cy + 3);
+    });
 
-        const px1 = x1 + nx * offset;
-        const py1 = y1 + ny * offset;
-        const px2 = x2 + nx * offset;
-        const py2 = y2 + ny * offset;
-
-        ctx.beginPath();
-        ctx.moveTo(x1, y1);
-        ctx.lineTo(px1, py1);
-        ctx.moveTo(x2, y2);
-        ctx.lineTo(px2, py2);
-        ctx.stroke();
-
-        ctx.beginPath();
-        ctx.moveTo(px1, py1);
-        ctx.lineTo(px2, py2);
-        ctx.stroke();
-
-        const slashSize = 5;
-        const drawSlash = (px, py) => {
-            ctx.beginPath();
-            ctx.moveTo(px - slashSize, py + slashSize);
-            ctx.lineTo(px + slashSize, py - slashSize);
-            ctx.stroke();
-        };
-        drawSlash(px1, py1);
-        drawSlash(px2, py2);
-
-        const mx = (px1 + px2) / 2;
-        const my = (py1 + py2) / 2;
-        ctx.save();
-        ctx.translate(mx, my);
-        ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = 4;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.strokeText(labelText, 0, -8);
-        ctx.fillText(labelText, 0, -8);
-        ctx.restore();
-    };
-
-    const cx0 = toCanvasX(0), cy0 = toCanvasY(0);
-    const cxW = toCanvasX(W), cyW = toCanvasY(0);
-    const cxEh = toCanvasX(W), cyEh = toCanvasY(maxEavesH);
-    const cxMh = toCanvasX(W/2), cyMh = toCanvasY(maxH);
-    const cxEhL = toCanvasX(0), cyEhL = toCanvasY(maxEavesH);
-
-    // Render dimensions
-    drawDimLine(cx0, cy0, cxW, cyW, -30, `W = ${(W/1000).toFixed(3)} m (${W.toFixed(0)} mm)`);
-    drawDimLine(cxEhL, cyEhL, cx0, cy0, -35, `軒高 H_e = ${(maxEavesH/1000).toFixed(3)} m`);
-    drawDimLine(cxMh, cyMh, cxMh, cy0, -toCanvasX(W/2) + padL - 50, `最高高 H_max = ${(maxH/1000).toFixed(3)} m`);
-
-    // Formulas and texts on the right
-    const textL = canvas.width - padR + 50;
+    // --- 右側テキスト (計算式) ---
+    const textL = canvas.width - padR + 40;
     let textY = padT;
+    const area2F_x = window.AppState.config.projectedAreas?.['2F']?.x ?? 0;
+    const area2F_y = window.AppState.config.projectedAreas?.['2F']?.y ?? 0;
+    const area1F_x = window.AppState.config.projectedAreas?.['1F']?.x ?? 0;
+    const area1F_y = window.AppState.config.projectedAreas?.['1F']?.y ?? 0;
+    const areaShown2F = direction === 'X' ? area2F_x : area2F_y;
+    const areaShown1F_add = direction === 'X' ? area1F_x : area1F_y;
+    const areaTotal = areaShown2F + areaShown1F_add;
 
-    ctx.fillStyle = '#2c3e50';
-    ctx.font = 'bold 16px sans-serif';
-    ctx.textAlign = 'left';
-    ctx.fillText(`${direction}方向 見付立面シルエット図`, textL, textY);
-    textY += 28;
+    ctx.fillStyle = '#2c3e50'; ctx.font = 'bold 15px sans-serif'; ctx.textAlign = 'left';
+    ctx.fillText(`${direction}方向 見付面積図 (GL基準・スキャンライン法)`, textL, textY); textY += 24;
+    ctx.fillStyle = '#7f8c8d'; ctx.font = '10px sans-serif';
+    ctx.fillText(`外壁: 柱芯±壁厚${wallThick}mm オフセット済`, textL, textY); textY += 30;
 
-    ctx.fillStyle = '#7f8c8d';
-    ctx.font = '11px sans-serif';
-    ctx.fillText(`※外周壁から壁厚オフセット (${wallThick.toFixed(0)}mm) を含めた安全側モデル`, textL, textY);
-    textY += 35;
+    const box = (title, val, color) => {
+        ctx.fillStyle = '#2c3e50'; ctx.font = 'bold 12px sans-serif'; ctx.fillText(title, textL, textY); textY += 18;
+        ctx.fillStyle = '#555'; ctx.font = '11px monospace'; ctx.fillText(`カットライン以上 = ${val.toFixed(3)} ㎡`, textL+10, textY); textY += 28;
+    };
+    box('■ 2F見附 (2FL+1350以上)', areaShown2F, primaryColor);
+    box('■ 1F追加見附 (1FL+1350〜2FL+1350)', areaShown1F_add, '#27ae60');
 
-    const sBody = (W / 1000) * (maxEavesH / 1000);
-    const sRoof = ((W / 1000) * ((maxH - maxEavesH) / 1000)) / 2;
-    const sTotal = sBody + sRoof;
+    ctx.strokeStyle = '#bdc3c7'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(textL, textY-8); ctx.lineTo(canvas.width-30, textY-8); ctx.stroke();
+    textY += 4;
 
-    // Body area
-    ctx.fillStyle = '#2c3e50';
-    ctx.font = 'bold 13px sans-serif';
-    ctx.fillText('■ 矩形部 (土台から軒高まで)', textL, textY);
-    textY += 20;
-    ctx.font = '12px monospace';
-    ctx.fillStyle = '#555';
-    ctx.fillText(`公式 : 幅 × 軒高`, textL + 15, textY);
-    textY += 18;
-    ctx.fillText(`算式 : ${(W/1000).toFixed(3)}m × ${(maxEavesH/1000).toFixed(3)}m`, textL + 15, textY);
-    textY += 18;
-    ctx.font = 'bold 12px monospace';
-    ctx.fillStyle = primaryColor;
-    ctx.fillText(`面積 : ${sBody.toFixed(3)} ㎡`, textL + 15, textY);
-    textY += 32;
+    ctx.fillStyle = '#2c3e50'; ctx.font = 'bold 14px sans-serif'; ctx.fillText('📐 合計 投影見付面積', textL, textY); textY += 22;
+    ctx.font = 'bold 22px monospace'; ctx.fillStyle = '#c62828';
+    ctx.fillText(`${areaTotal.toFixed(3)} ㎡`, textL+10, textY); textY += 30;
 
-    // Roof area
-    ctx.fillStyle = '#2c3e50';
-    ctx.font = 'bold 13px sans-serif';
-    ctx.fillText('■ 三角部 (軒高から最高棟高まで)', textL, textY);
-    textY += 20;
-    ctx.font = '12px monospace';
-    ctx.fillStyle = '#555';
-    ctx.fillText(`公式 : (幅 × (最高高 - 軒高)) ÷ 2`, textL + 15, textY);
-    textY += 18;
-    ctx.fillText(`算式 : (${(W/1000).toFixed(3)}m × ${((maxH - maxEavesH)/1000).toFixed(3)}m) ÷ 2`, textL + 15, textY);
-    textY += 18;
-    ctx.font = 'bold 12px monospace';
-    ctx.fillStyle = primaryColor;
-    ctx.fillText(`面積 : ${sRoof.toFixed(3)} ㎡`, textL + 15, textY);
-    textY += 38;
+    ctx.strokeStyle = '#bdc3c7'; ctx.lineWidth = 1; ctx.strokeRect(8, 8, canvas.width-16, canvas.height-16);
 
-    // Divider
-    ctx.strokeStyle = '#bdc3c7';
-    ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.moveTo(textL, textY - 12); ctx.lineTo(canvas.width - 40, textY - 12); ctx.stroke();
-
-    // Total area
-    ctx.fillStyle = '#2c3e50';
-    ctx.font = 'bold 14px sans-serif';
-    ctx.fillText('📐 合計投影見付面積', textL, textY);
-    textY += 25;
-    ctx.font = 'bold 24px monospace';
-    ctx.fillStyle = '#c62828';
-    ctx.fillText(`${sTotal.toFixed(3)} ㎡`, textL + 15, textY);
-
-    // Frame border
-    ctx.strokeStyle = '#bdc3c7';
-    ctx.lineWidth = 1;
-    ctx.strokeRect(10, 10, canvas.width - 20, canvas.height - 20);
-
-    return { img: canvas.toDataURL('image/png'), area: sTotal };
+    return { img: canvas.toDataURL('image/png'), area: areaTotal };
 }
 
 function showAreaPreview() {

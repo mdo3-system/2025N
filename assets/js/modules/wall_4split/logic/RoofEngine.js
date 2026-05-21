@@ -1,129 +1,144 @@
-/**
- * logic/RoofEngine.js - Roof Geometry and Projected Area Calculation Engine
- * v2.7.0 New Implementation
- */
-
 window.RoofEngine = {
+
     /**
-     * Update the projected areas in AppState.config.projectedAreas based on roofFaces
+     * [v2.7.9] GL基準の絶対床高さを計算して返す
+     * @returns {object} { fl1, fl2, cut1, cut2 } (すべてmm)
+     *   fl1  = 1FL (GL + 基礎高 + パッキン + 土台 + 1F床厚)
+     *   fl2  = 2FL (GL + 基礎高 + パッキン + 土台 + 1F軸組高 + 2F床厚)
+     *   cut1 = 1F見附 下端カットライン (fl1 + 1350)
+     *   cut2 = 2F見附 下端カットライン (fl2 + 1350)
+     */
+    getFloorLevels: function(state) {
+        const s = state || window.AppState;
+        const c = (s && s.config) ? s.config : {};
+        const baseH       = parseFloat(c.baseHeight    ?? 400);
+        const basePack    = parseFloat(c.basePack       ?? 20);
+        const baseSill    = parseFloat(c.baseSill       ?? 105);
+        const flTk1       = parseFloat(c.floorThick1F   ?? 36);
+        const flTk2       = parseFloat(c.floorThick2F   ?? 36);
+        const axH1        = (parseFloat(c.floorHeight1F ?? 2.7)) * 1000; // mm
+        const axH2        = (parseFloat(c.floorHeight2F ?? 2.7)) * 1000; // mm
+
+        const fl1 = baseH + basePack + baseSill + flTk1;          // 1FL (mm)
+        const fl2 = baseH + basePack + baseSill + axH1 + flTk2;   // 2FL (mm)
+        return {
+            fl1,
+            fl2,
+            cut1: fl1 + 1350,   // 1F見附 下端
+            cut2: fl2 + 1350,   // 2F見附 下端
+        };
+    },
+
+    /**
+     * [v2.7.9] GL基準・スキャンライン法による見附面積計算
+     * 壁部: 外壁多角形(壁厚オフセット)のX/Y方向幅 × (軒高 - カットライン)
+     * 屋根部: 各面のスキャンライン投影から1.35mカット以上の面積を積分
      */
     updateProjectedAreas: function(state) {
         const s = state || window.AppState;
         const c = s.config;
+        const lvl = this.getFloorLevels(s);
+        const wallThick = parseFloat(c.wallThickness ?? 150); // mm
 
-        // 1. Initialize projected areas to wall-only projected areas
-        const areas = {
-            '1F': { x: 0, y: 0 },
-            '2F': { x: 0, y: 0 }
-        };
-
-        // Get floor heights in meters
-        const h1 = c.floorHeight1F || 2.7;
-        const h2 = c.floorHeight2F || 2.7;
-
-        // Bounding boxes in mm
+        // --- 外壁バウンディング ---
         const bbox1F = this.getFloorBoundingBox('1F', s);
         const bbox2F = this.getFloorBoundingBox('2F', s);
 
-        // Height ranges in meters for walls
-        const wallH1 = Math.max(0, h1 - 1.35); // 1F wall height above 1.35m
-        const wallH2 = h2;                     // 2F wall height
+        // 2F軒高 (GL絶対値mm)
+        const eavesZ2F = lvl.fl2 + (parseFloat(c.floorHeight2F ?? 2.7)) * 1000;
+        // 1F軒高 (= 2FL, GL絶対値mm)
+        const eavesZ1F = lvl.fl2;
 
-        // Wall projected areas (in m2)
-        const wall_ax1 = ((bbox1F.maxY - bbox1F.minY) / 1000) * wallH1;
-        const wall_ay1 = ((bbox1F.maxX - bbox1F.minX) / 1000) * wallH1;
-        const wall_ax2 = ((bbox2F.maxY - bbox2F.minY) / 1000) * wallH2;
-        const wall_ay2 = ((bbox2F.maxX - bbox2F.minX) / 1000) * wallH2;
+        // 壁面の有効高さ (カットライン以上)
+        const wallH2 = Math.max(0, eavesZ2F - lvl.cut2); // m換算前
+        const wallH1add = Math.max(0, eavesZ1F - lvl.cut1) - Math.max(0, eavesZ1F - lvl.cut2);
+        // 1F追加分 = (cut1〜cut2間の2FL未満の高さ)
+        const add1F = Math.max(0, Math.min(eavesZ1F, lvl.cut2) - lvl.cut1);
 
-        areas['1F'].x = wall_ax1;
-        areas['1F'].y = wall_ay1;
-        areas['2F'].x = wall_ax2;
-        areas['2F'].y = wall_ay2;
+        // 2F壁面見附 (m²)
+        const wall2F_widthY = (bbox2F.maxY - bbox2F.minY) / 1000; // X方向受圧面の幅 (m)
+        const wall2F_widthX = (bbox2F.maxX - bbox2F.minX) / 1000; // Y方向受圧面の幅 (m)
+        const wall_ax2 = wall2F_widthY * (wallH2 / 1000);
+        const wall_ay2 = wall2F_widthX * (wallH2 / 1000);
 
-        // 2. Add roof projected areas
+        // 1F追加壁面見附 (2FL以下、cut1以上の部分)
+        const wall1F_widthY = (bbox1F.maxY - bbox1F.minY) / 1000;
+        const wall1F_widthX = (bbox1F.maxX - bbox1F.minX) / 1000;
+        const wall_ax1add = wall1F_widthY * (add1F / 1000);
+        const wall_ay1add = wall1F_widthX * (add1F / 1000);
+
+        const areas = {
+            '1F': { x: wall_ax1add, y: wall_ay1add },
+            '2F': { x: wall_ax2,   y: wall_ay2   }
+        };
+
+        // --- 屋根面の投影面積 (スキャンライン法) ---
         const roofFaces = s.roofFaces || [];
         roofFaces.forEach(face => {
             if (!face.vertices || face.vertices.length < 3) return;
 
             const floor = face.floor || '2F';
-            const slope = face.slope || 0; // 寸
-            const thickness = (face.roofThickness || 150) / 1000; // m
-            const baseDelta = (face.baseHeightDelta || 0) / 1000; // m
+            const slope = parseFloat(face.slope ?? 0);
+            const slopeVal = slope / 10;
+            const thickness = parseFloat(face.roofThickness ?? c.roofThickness ?? 150) / 1000; // m
+            const baseDelta = parseFloat(face.baseHeightDelta ?? 0); // mm
 
-            // Ceiling baseline height (桁高) in meters
-            let zBase = h1;
-            if (floor === '2F') {
-                zBase = h1 + h2;
-            }
-            zBase += baseDelta;
+            // このフェースの軒高 (mm)
+            const zBase = (floor === '2F' ? eavesZ2F : eavesZ1F) + baseDelta;
+            // カットライン (mm)
+            const cutZ = floor === '2F' ? lvl.cut2 : lvl.cut1;
 
-            // Slope math (3-point definition support: [0]=rafter start, [1]=rafter end, [2]=slope high point)
+            // 勾配方向ベクトルの計算
             let ux = 0, uy = 1;
             const pA = (face.slopeLine && face.slopeLine.length > 0) ? face.slopeLine[0] : face.vertices[0];
             if (!pA) return;
             if (face.slopeLine && face.slopeLine.length >= 3) {
-                const pB = face.slopeLine[1];
-                const pC = face.slopeLine[2];
-                const dx = pB.x - pA.x;
-                const dy = pB.y - pA.y;
-                let nx = -dy;
-                let ny = dx;
-                const vx = pC.x - pA.x;
-                const vy = pC.y - pA.y;
-                const dot = nx * vx + ny * vy;
-                if (dot < 0) {
-                    nx = -nx;
-                    ny = -ny;
+                const pB = face.slopeLine[1], pC = face.slopeLine[2];
+                if (pB && pC) {
+                    const dx = pB.x - pA.x, dy = pB.y - pA.y;
+                    let nx = -dy, ny = dx;
+                    if ((nx*(pC.x-pA.x) + ny*(pC.y-pA.y)) < 0) { nx = -nx; ny = -ny; }
+                    const len = Math.hypot(nx, ny);
+                    ux = len > 0 ? nx/len : 0;
+                    uy = len > 0 ? ny/len : 1;
                 }
-                const len = Math.hypot(nx, ny);
-                ux = len > 0 ? nx / len : 0;
-                uy = len > 0 ? ny / len : 1;
             } else if (face.slopeLine && face.slopeLine.length === 2) {
                 const p2 = face.slopeLine[1];
-                const dx = p2.x - pA.x;
-                const dy = p2.y - pA.y;
-                const len = Math.hypot(dx, dy);
-                ux = len > 0 ? dx / len : 0;
-                uy = len > 0 ? dy / len : 1;
+                if (p2) {
+                    const dx = p2.x - pA.x, dy = p2.y - pA.y;
+                    const len = Math.hypot(dx, dy);
+                    ux = len > 0 ? dx/len : 0;
+                    uy = len > 0 ? dy/len : 1;
+                }
             }
 
-            const slopeVal = slope / 10;
-            const cosTheta = 1 / Math.sqrt(1 + slopeVal * slopeVal);
-            const verticalThickness = thickness / cosTheta;
-
-            // Calculate 3D vertices
+            // 各頂点の3D高さ (mm)
             const pts3D = face.vertices.map(v => {
-                const dist = (v.x - pA.x) * ux + (v.y - pA.y) * uy;
-                const z = zBase + (dist / 1000) * slopeVal;
-                return { x: v.x / 1000, y: v.y / 1000, z: z }; // in meters
+                const dist = (v.x - pA.x)*ux + (v.y - pA.y)*uy;
+                return { x: v.x/1000, y: v.y/1000, z: zBase + dist*slopeVal }; // z: mm
             });
 
-            // Projection YZ (X direction force receiving area)
+            // スキャンライン法 (X/Y各方向へ投影した有効面積)
+            // Y方向投影 (X方向力を受ける面積): uはy座標
             const ptsYZ = pts3D.map(p => ({ u: p.y, v: p.z }));
-            let roof_ax = this.calculatePolygonArea2D(ptsYZ);
-            
-            // Add thickness projection
-            const ys = pts3D.map(p => p.y);
-            const minY = Math.min(...ys);
-            const maxY = Math.max(...ys);
-            roof_ax += (maxY - minY) * verticalThickness;
-
-            // Projection XZ (Y direction force receiving area)
+            const roof_ax = this.calcCutPolygonArea2D(ptsYZ, cutZ/1000, null);
+            // X方向投影 (Y方向力を受ける面積): uはx座標
             const ptsXZ = pts3D.map(p => ({ u: p.x, v: p.z }));
-            let roof_ay = this.calculatePolygonArea2D(ptsXZ);
+            const roof_ay = this.calcCutPolygonArea2D(ptsXZ, cutZ/1000, null);
 
-            // Add thickness projection
+            // 屋根厚さ補正 (垂直投影)
+            const cosTheta = 1 / Math.sqrt(1 + slopeVal*slopeVal);
+            const vThick = (thickness / cosTheta) / 1000; // m
+            const ys = pts3D.map(p => p.y);
             const xs = pts3D.map(p => p.x);
-            const minX = Math.min(...xs);
-            const maxX = Math.max(...xs);
-            roof_ay += (maxX - minX) * verticalThickness;
+            const thickCorr_ax = (Math.max(...ys) - Math.min(...ys)) * vThick;
+            const thickCorr_ay = (Math.max(...xs) - Math.min(...xs)) * vThick;
 
-            // Assign to corresponding floor
-            areas[floor].x += roof_ax;
-            areas[floor].y += roof_ay;
+            areas[floor].x += roof_ax + thickCorr_ax;
+            areas[floor].y += roof_ay + thickCorr_ay;
         });
 
-        // 3. Write back to state and sync with DOM inputs (hidden or otherwise)
+        // State反映
         c.projectedAreas['1F'].x = areas['1F'].x;
         c.projectedAreas['1F'].y = areas['1F'].y;
         c.projectedAreas['2F'].x = areas['2F'].x;
@@ -131,6 +146,46 @@ window.RoofEngine = {
 
         this.syncToDOM(areas);
     },
+
+    /**
+     * [v2.7.9] カットライン以上の部分だけを積分する2D面積計算
+     * vertices: [{u, v}] の多角形  vMin: m単位カット下限  vMax: m単位カット上限(nullで上限なし)
+     */
+    calcCutPolygonArea2D: function(vertices, vMin, vMax) {
+        if (!vertices || vertices.length < 2) return 0;
+        // スキャンライン: uの範囲をN分割して各スライスで上下端を求めて積分
+        const us = vertices.map(p => p.u);
+        const uMin = Math.min(...us);
+        const uMax = Math.max(...us);
+        if (uMax <= uMin) return 0;
+
+        const STEPS = 200;
+        const du = (uMax - uMin) / STEPS;
+        let area = 0;
+        const n = vertices.length;
+
+        for (let i = 0; i < STEPS; i++) {
+            const u = uMin + (i + 0.5) * du;
+            let vLow = Infinity, vHigh = -Infinity;
+            for (let j = 0; j < n; j++) {
+                const v1 = vertices[j], v2 = vertices[(j+1)%n];
+                if ((v1.u <= u && v2.u > u) || (v2.u <= u && v1.u > u)) {
+                    const t = (u - v1.u) / (v2.u - v1.u);
+                    const v = v1.v + t*(v2.v - v1.v);
+                    if (v < vLow)  vLow  = v;
+                    if (v > vHigh) vHigh = v;
+                }
+            }
+            if (vHigh > vLow) {
+                const bottom = Math.max(vLow,  vMin ?? -Infinity);
+                const top    = Math.min(vHigh, vMax ?? Infinity);
+                if (top > bottom) area += (top - bottom) * du;
+            }
+        }
+        return area;
+    },
+
+
 
     /**
      * Get floor bounding box including wall thickness offset in mm
