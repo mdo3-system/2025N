@@ -1,0 +1,737 @@
+﻿diff --git a/assets/js/modules/wall_4split/Version.js b/assets/js/modules/wall_4split/Version.js
+index ec79f7a..e27bcf1 100644
+--- a/assets/js/modules/wall_4split/Version.js
++++ b/assets/js/modules/wall_4split/Version.js
+@@ -1,4 +1,4 @@
+ /**
+  * Version.js - Centralized Version Management
+  */
+-window.APP_VERSION = "v2.7.8";
++window.APP_VERSION = "v2.7.9"; // 隕矩刋霈ｪ驛ｭ蝗ｳ繝ｻ髱｢遨・GL蝓ｺ貅悶せ繧ｭ繝｣繝ｳ繝ｩ繧､繝ｳ豕・蛻ｷ譁ｰ
+diff --git a/assets/js/modules/wall_4split/logic/RoofEngine.js b/assets/js/modules/wall_4split/logic/RoofEngine.js
+index ab272a9..1fffbd1 100644
+--- a/assets/js/modules/wall_4split/logic/RoofEngine.js
++++ b/assets/js/modules/wall_4split/logic/RoofEngine.js
+@@ -1,129 +1,144 @@
+-/**
+- * logic/RoofEngine.js - Roof Geometry and Projected Area Calculation Engine
+- * v2.7.0 New Implementation
+- */
+-
+ window.RoofEngine = {
++
+     /**
+-     * Update the projected areas in AppState.config.projectedAreas based on roofFaces
++     * [v2.7.9] GL蝓ｺ貅悶・邨ｶ蟇ｾ蠎企ｫ倥＆繧定ｨ育ｮ励＠縺ｦ霑斐☆
++     * @returns {object} { fl1, fl2, cut1, cut2 } (縺吶∋縺ｦmm)
++     *   fl1  = 1FL (GL + 蝓ｺ遉朱ｫ・+ 繝代ャ繧ｭ繝ｳ + 蝨溷床 + 1F蠎雁字)
++     *   fl2  = 2FL (GL + 蝓ｺ遉朱ｫ・+ 繝代ャ繧ｭ繝ｳ + 蝨溷床 + 1F霆ｸ邨・ｫ・+ 2F蠎雁字)
++     *   cut1 = 1F隕矩刋 荳狗ｫｯ繧ｫ繝・ヨ繝ｩ繧､繝ｳ (fl1 + 1350)
++     *   cut2 = 2F隕矩刋 荳狗ｫｯ繧ｫ繝・ヨ繝ｩ繧､繝ｳ (fl2 + 1350)
+      */
+-    updateProjectedAreas: function(state) {
++    getFloorLevels: function(state) {
+         const s = state || window.AppState;
+-        const c = s.config;
+-
+-        // 1. Initialize projected areas to wall-only projected areas
+-        const areas = {
+-            '1F': { x: 0, y: 0 },
+-            '2F': { x: 0, y: 0 }
++        const c = (s && s.config) ? s.config : {};
++        const baseH       = parseFloat(c.baseHeight    ?? 400);
++        const basePack    = parseFloat(c.basePack       ?? 20);
++        const baseSill    = parseFloat(c.baseSill       ?? 105);
++        const flTk1       = parseFloat(c.floorThick1F   ?? 36);
++        const flTk2       = parseFloat(c.floorThick2F   ?? 36);
++        const axH1        = (parseFloat(c.floorHeight1F ?? 2.7)) * 1000; // mm
++        const axH2        = (parseFloat(c.floorHeight2F ?? 2.7)) * 1000; // mm
++
++        const fl1 = baseH + basePack + baseSill + flTk1;          // 1FL (mm)
++        const fl2 = baseH + basePack + baseSill + axH1 + flTk2;   // 2FL (mm)
++        return {
++            fl1,
++            fl2,
++            cut1: fl1 + 1350,   // 1F隕矩刋 荳狗ｫｯ
++            cut2: fl2 + 1350,   // 2F隕矩刋 荳狗ｫｯ
+         };
++    },
+ 
+-        // Get floor heights in meters
+-        const h1 = c.floorHeight1F || 2.7;
+-        const h2 = c.floorHeight2F || 2.7;
++    /**
++     * [v2.7.9] GL蝓ｺ貅悶・繧ｹ繧ｭ繝｣繝ｳ繝ｩ繧､繝ｳ豕輔↓繧医ｋ隕矩刋髱｢遨崎ｨ育ｮ・+     * 螢・Κ: 螟門｣∝､夊ｧ貞ｽ｢(螢∝字繧ｪ繝輔そ繝・ヨ)縺ｮX/Y譁ｹ蜷大ｹ・ﾃ・(霆帝ｫ・- 繧ｫ繝・ヨ繝ｩ繧､繝ｳ)
++     * 螻区ｹ驛ｨ: 蜷・擇縺ｮ繧ｹ繧ｭ繝｣繝ｳ繝ｩ繧､繝ｳ謚募ｽｱ縺九ｉ1.35m繧ｫ繝・ヨ莉･荳翫・髱｢遨阪ｒ遨榊・
++     */
++    updateProjectedAreas: function(state) {
++        const s = state || window.AppState;
++        const c = s.config;
++        const lvl = this.getFloorLevels(s);
++        const wallThick = parseFloat(c.wallThickness ?? 150); // mm
+ 
+-        // Bounding boxes in mm
++        // --- 螟門｣√ヰ繧ｦ繝ｳ繝・ぅ繝ｳ繧ｰ ---
+         const bbox1F = this.getFloorBoundingBox('1F', s);
+         const bbox2F = this.getFloorBoundingBox('2F', s);
+ 
+-        // Height ranges in meters for walls
+-        const wallH1 = Math.max(0, h1 - 1.35); // 1F wall height above 1.35m
+-        const wallH2 = h2;                     // 2F wall height
+-
+-        // Wall projected areas (in m2)
+-        const wall_ax1 = ((bbox1F.maxY - bbox1F.minY) / 1000) * wallH1;
+-        const wall_ay1 = ((bbox1F.maxX - bbox1F.minX) / 1000) * wallH1;
+-        const wall_ax2 = ((bbox2F.maxY - bbox2F.minY) / 1000) * wallH2;
+-        const wall_ay2 = ((bbox2F.maxX - bbox2F.minX) / 1000) * wallH2;
++        // 2F霆帝ｫ・(GL邨ｶ蟇ｾ蛟､mm)
++        const eavesZ2F = lvl.fl2 + (parseFloat(c.floorHeight2F ?? 2.7)) * 1000;
++        // 1F霆帝ｫ・(= 2FL, GL邨ｶ蟇ｾ蛟､mm)
++        const eavesZ1F = lvl.fl2;
++
++        // 螢・擇縺ｮ譛牙柑鬮倥＆ (繧ｫ繝・ヨ繝ｩ繧､繝ｳ莉･荳・
++        const wallH2 = Math.max(0, eavesZ2F - lvl.cut2); // m謠帷ｮ怜燕
++        const wallH1add = Math.max(0, eavesZ1F - lvl.cut1) - Math.max(0, eavesZ1F - lvl.cut2);
++        // 1F霑ｽ蜉蛻・= (cut1縲彡ut2髢薙・2FL譛ｪ貅縺ｮ鬮倥＆)
++        const add1F = Math.max(0, Math.min(eavesZ1F, lvl.cut2) - lvl.cut1);
++
++        // 2F螢・擇隕矩刋 (mﾂｲ)
++        const wall2F_widthY = (bbox2F.maxY - bbox2F.minY) / 1000; // X譁ｹ蜷大女蝨ｧ髱｢縺ｮ蟷・(m)
++        const wall2F_widthX = (bbox2F.maxX - bbox2F.minX) / 1000; // Y譁ｹ蜷大女蝨ｧ髱｢縺ｮ蟷・(m)
++        const wall_ax2 = wall2F_widthY * (wallH2 / 1000);
++        const wall_ay2 = wall2F_widthX * (wallH2 / 1000);
++
++        // 1F霑ｽ蜉螢・擇隕矩刋 (2FL莉･荳九…ut1莉･荳翫・驛ｨ蛻・
++        const wall1F_widthY = (bbox1F.maxY - bbox1F.minY) / 1000;
++        const wall1F_widthX = (bbox1F.maxX - bbox1F.minX) / 1000;
++        const wall_ax1add = wall1F_widthY * (add1F / 1000);
++        const wall_ay1add = wall1F_widthX * (add1F / 1000);
+ 
+-        areas['1F'].x = wall_ax1;
+-        areas['1F'].y = wall_ay1;
+-        areas['2F'].x = wall_ax2;
+-        areas['2F'].y = wall_ay2;
++        const areas = {
++            '1F': { x: wall_ax1add, y: wall_ay1add },
++            '2F': { x: wall_ax2,   y: wall_ay2   }
++        };
+ 
+-        // 2. Add roof projected areas
++        // --- 螻区ｹ髱｢縺ｮ謚募ｽｱ髱｢遨・(繧ｹ繧ｭ繝｣繝ｳ繝ｩ繧､繝ｳ豕・ ---
+         const roofFaces = s.roofFaces || [];
+         roofFaces.forEach(face => {
+             if (!face.vertices || face.vertices.length < 3) return;
+ 
+             const floor = face.floor || '2F';
+-            const slope = face.slope || 0; // 蟇ｸ
+-            const thickness = (face.roofThickness || 150) / 1000; // m
+-            const baseDelta = (face.baseHeightDelta || 0) / 1000; // m
+-
+-            // Ceiling baseline height (譯・ｫ・ in meters
+-            let zBase = h1;
+-            if (floor === '2F') {
+-                zBase = h1 + h2;
+-            }
+-            zBase += baseDelta;
++            const slope = parseFloat(face.slope ?? 0);
++            const slopeVal = slope / 10;
++            const thickness = parseFloat(face.roofThickness ?? c.roofThickness ?? 150) / 1000; // m
++            const baseDelta = parseFloat(face.baseHeightDelta ?? 0); // mm
+ 
+-            // Slope math (3-point definition support: [0]=rafter start, [1]=rafter end, [2]=slope high point)
++            // 縺薙・繝輔ぉ繝ｼ繧ｹ縺ｮ霆帝ｫ・(mm)
++            const zBase = (floor === '2F' ? eavesZ2F : eavesZ1F) + baseDelta;
++            // 繧ｫ繝・ヨ繝ｩ繧､繝ｳ (mm)
++            const cutZ = floor === '2F' ? lvl.cut2 : lvl.cut1;
++
++            // 蜍ｾ驟肴婿蜷代・繧ｯ繝医Ν縺ｮ險育ｮ・             let ux = 0, uy = 1;
+             const pA = (face.slopeLine && face.slopeLine.length > 0) ? face.slopeLine[0] : face.vertices[0];
+             if (!pA) return;
+             if (face.slopeLine && face.slopeLine.length >= 3) {
+-                const pB = face.slopeLine[1];
+-                const pC = face.slopeLine[2];
+-                const dx = pB.x - pA.x;
+-                const dy = pB.y - pA.y;
+-                let nx = -dy;
+-                let ny = dx;
+-                const vx = pC.x - pA.x;
+-                const vy = pC.y - pA.y;
+-                const dot = nx * vx + ny * vy;
+-                if (dot < 0) {
+-                    nx = -nx;
+-                    ny = -ny;
++                const pB = face.slopeLine[1], pC = face.slopeLine[2];
++                if (pB && pC) {
++                    const dx = pB.x - pA.x, dy = pB.y - pA.y;
++                    let nx = -dy, ny = dx;
++                    if ((nx*(pC.x-pA.x) + ny*(pC.y-pA.y)) < 0) { nx = -nx; ny = -ny; }
++                    const len = Math.hypot(nx, ny);
++                    ux = len > 0 ? nx/len : 0;
++                    uy = len > 0 ? ny/len : 1;
+                 }
+-                const len = Math.hypot(nx, ny);
+-                ux = len > 0 ? nx / len : 0;
+-                uy = len > 0 ? ny / len : 1;
+             } else if (face.slopeLine && face.slopeLine.length === 2) {
+                 const p2 = face.slopeLine[1];
+-                const dx = p2.x - pA.x;
+-                const dy = p2.y - pA.y;
+-                const len = Math.hypot(dx, dy);
+-                ux = len > 0 ? dx / len : 0;
+-                uy = len > 0 ? dy / len : 1;
++                if (p2) {
++                    const dx = p2.x - pA.x, dy = p2.y - pA.y;
++                    const len = Math.hypot(dx, dy);
++                    ux = len > 0 ? dx/len : 0;
++                    uy = len > 0 ? dy/len : 1;
++                }
+             }
+ 
+-            const slopeVal = slope / 10;
+-            const cosTheta = 1 / Math.sqrt(1 + slopeVal * slopeVal);
+-            const verticalThickness = thickness / cosTheta;
+-
+-            // Calculate 3D vertices
++            // 蜷・らせ縺ｮ3D鬮倥＆ (mm)
+             const pts3D = face.vertices.map(v => {
+-                const dist = (v.x - pA.x) * ux + (v.y - pA.y) * uy;
+-                const z = zBase + (dist / 1000) * slopeVal;
+-                return { x: v.x / 1000, y: v.y / 1000, z: z }; // in meters
++                const dist = (v.x - pA.x)*ux + (v.y - pA.y)*uy;
++                return { x: v.x/1000, y: v.y/1000, z: zBase + dist*slopeVal }; // z: mm
+             });
+ 
+-            // Projection YZ (X direction force receiving area)
++            // 繧ｹ繧ｭ繝｣繝ｳ繝ｩ繧､繝ｳ豕・(X/Y蜷・婿蜷代∈謚募ｽｱ縺励◆譛牙柑髱｢遨・
++            // Y譁ｹ蜷第兜蠖ｱ (X譁ｹ蜷大鴨繧貞女縺代ｋ髱｢遨・: u縺ｯy蠎ｧ讓・             const ptsYZ = pts3D.map(p => ({ u: p.y, v: p.z }));
+-            let roof_ax = this.calculatePolygonArea2D(ptsYZ);
+-            
+-            // Add thickness projection
+-            const ys = pts3D.map(p => p.y);
+-            const minY = Math.min(...ys);
+-            const maxY = Math.max(...ys);
+-            roof_ax += (maxY - minY) * verticalThickness;
+-
+-            // Projection XZ (Y direction force receiving area)
++            const roof_ax = this.calcCutPolygonArea2D(ptsYZ, cutZ/1000, null);
++            // X譁ｹ蜷第兜蠖ｱ (Y譁ｹ蜷大鴨繧貞女縺代ｋ髱｢遨・: u縺ｯx蠎ｧ讓・             const ptsXZ = pts3D.map(p => ({ u: p.x, v: p.z }));
+-            let roof_ay = this.calculatePolygonArea2D(ptsXZ);
++            const roof_ay = this.calcCutPolygonArea2D(ptsXZ, cutZ/1000, null);
+ 
+-            // Add thickness projection
++            // 螻区ｹ蜴壹＆陬懈ｭ｣ (蝙ら峩謚募ｽｱ)
++            const cosTheta = 1 / Math.sqrt(1 + slopeVal*slopeVal);
++            const vThick = (thickness / cosTheta) / 1000; // m
++            const ys = pts3D.map(p => p.y);
+             const xs = pts3D.map(p => p.x);
+-            const minX = Math.min(...xs);
+-            const maxX = Math.max(...xs);
+-            roof_ay += (maxX - minX) * verticalThickness;
++            const thickCorr_ax = (Math.max(...ys) - Math.min(...ys)) * vThick;
++            const thickCorr_ay = (Math.max(...xs) - Math.min(...xs)) * vThick;
+ 
+-            // Assign to corresponding floor
+-            areas[floor].x += roof_ax;
+-            areas[floor].y += roof_ay;
++            areas[floor].x += roof_ax + thickCorr_ax;
++            areas[floor].y += roof_ay + thickCorr_ay;
+         });
+ 
+-        // 3. Write back to state and sync with DOM inputs (hidden or otherwise)
++        // State蜿肴丐
+         c.projectedAreas['1F'].x = areas['1F'].x;
+         c.projectedAreas['1F'].y = areas['1F'].y;
+         c.projectedAreas['2F'].x = areas['2F'].x;
+@@ -132,6 +147,46 @@ window.RoofEngine = {
+         this.syncToDOM(areas);
+     },
+ 
++    /**
++     * [v2.7.9] 繧ｫ繝・ヨ繝ｩ繧､繝ｳ莉･荳翫・驛ｨ蛻・□縺代ｒ遨榊・縺吶ｋ2D髱｢遨崎ｨ育ｮ・+     * vertices: [{u, v}] 縺ｮ螟夊ｧ貞ｽ｢  vMin: m蜊倅ｽ阪き繝・ヨ荳矩剞  vMax: m蜊倅ｽ阪き繝・ヨ荳企剞(null縺ｧ荳企剞縺ｪ縺・
++     */
++    calcCutPolygonArea2D: function(vertices, vMin, vMax) {
++        if (!vertices || vertices.length < 2) return 0;
++        // 繧ｹ繧ｭ繝｣繝ｳ繝ｩ繧､繝ｳ: u縺ｮ遽・峇繧誰蛻・牡縺励※蜷・せ繝ｩ繧､繧ｹ縺ｧ荳贋ｸ狗ｫｯ繧呈ｱゅａ縺ｦ遨榊・
++        const us = vertices.map(p => p.u);
++        const uMin = Math.min(...us);
++        const uMax = Math.max(...us);
++        if (uMax <= uMin) return 0;
++
++        const STEPS = 200;
++        const du = (uMax - uMin) / STEPS;
++        let area = 0;
++        const n = vertices.length;
++
++        for (let i = 0; i < STEPS; i++) {
++            const u = uMin + (i + 0.5) * du;
++            let vLow = Infinity, vHigh = -Infinity;
++            for (let j = 0; j < n; j++) {
++                const v1 = vertices[j], v2 = vertices[(j+1)%n];
++                if ((v1.u <= u && v2.u > u) || (v2.u <= u && v1.u > u)) {
++                    const t = (u - v1.u) / (v2.u - v1.u);
++                    const v = v1.v + t*(v2.v - v1.v);
++                    if (v < vLow)  vLow  = v;
++                    if (v > vHigh) vHigh = v;
++                }
++            }
++            if (vHigh > vLow) {
++                const bottom = Math.max(vLow,  vMin ?? -Infinity);
++                const top    = Math.min(vHigh, vMax ?? Infinity);
++                if (top > bottom) area += (top - bottom) * du;
++            }
++        }
++        return area;
++    },
++
++
++
+     /**
+      * Get floor bounding box including wall thickness offset in mm
+      */
+diff --git a/assets/js/modules/wall_4split/wall_4split_pdf.js b/assets/js/modules/wall_4split/wall_4split_pdf.js
+index 522ca10..5e09605 100644
+--- a/assets/js/modules/wall_4split/wall_4split_pdf.js
++++ b/assets/js/modules/wall_4split/wall_4split_pdf.js
+@@ -1,4 +1,4 @@
+-// ==========================================
++・ｿ// ==========================================
+ // wall_4split_pdf.js - 蟶ｳ逾ｨ逕ｻ蜒上・PDF逕滓・繧ｨ繝ｳ繧ｸ繝ｳ (Phase 3.9)
+ // v2.2.0 Refactoring
+ // ==========================================
+@@ -493,254 +493,234 @@ function generateAutoMitsukeCanvas(direction) {
+     if (!s || !s.config) return null;
+ 
+     const config = s.config;
+-    const wallThick = config.wallThickness !== undefined ? parseFloat(config.wallThickness) : 150;
+-    const maxH = config.maxHeight !== undefined ? parseFloat(config.maxHeight) : 8000;
+-    const maxEavesH = config.maxEavesHeight !== undefined ? parseFloat(config.maxEavesHeight) : 6000;
++    const wallThick = parseFloat(config.wallThickness ?? 150);
++
++    // --- GL蝓ｺ貅夜ｫ倥＆蜿門ｾ・---
++    const lvl = window.RoofEngine ? window.RoofEngine.getFloorLevels(s) : { fl1: 561, fl2: 3297, cut1: 1911, cut2: 4647 };
++
++    // --- 螟門｣√ヰ繧ｦ繝ｳ繝・ぅ繝ｳ繧ｰ繝懊ャ繧ｯ繧ｹ (螢∝字繧ｪ繝輔そ繝・ヨ霎ｼ縺ｿ) ---
++    const bbox1F = window.RoofEngine ? window.RoofEngine.getFloorBoundingBox('1F', s) : { minX:0, maxX:10000, minY:0, maxY:10000 };
++    const bbox2F = window.RoofEngine ? window.RoofEngine.getFloorBoundingBox('2F', s) : { minX:0, maxX:10000, minY:0, maxY:10000 };
++    const bboxAll = {
++        minX: Math.min(bbox1F.minX, bbox2F.minX),
++        maxX: Math.max(bbox1F.maxX, bbox2F.maxX),
++        minY: Math.min(bbox1F.minY, bbox2F.minY),
++        maxY: Math.max(bbox1F.maxY, bbox2F.maxY)
++    };
+ 
+-    // Get floor bounding boxes with wall thickness offset
+-    const bbox1F = window.RoofEngine ? window.RoofEngine.getFloorBoundingBox('1F', s) : { minX: 0, maxX: 10000, minY: 0, maxY: 10000 };
+-    const bbox2F = window.RoofEngine ? window.RoofEngine.getFloorBoundingBox('2F', s) : { minX: 0, maxX: 10000, minY: 0, maxY: 10000 };
++    // 蟒ｺ迚ｩ蟷・W [mm] (譁ｹ蜷代↓蠢懊§縺ｦY蟷・or X蟷・
++    const W = (direction === 'X') ? (bboxAll.maxY - bboxAll.minY) : (bboxAll.maxX - bboxAll.minX);
++    if (W <= 0) return null;
+ 
+-    const minX = Math.min(bbox1F.minX, bbox2F.minX);
+-    const maxX = Math.max(bbox1F.maxX, bbox2F.maxX);
+-    const minY = Math.min(bbox1F.minY, bbox2F.minY);
+-    const maxY = Math.max(bbox1F.maxY, bbox2F.maxY);
++    // 2F霆帝ｫ倥・螻区ｹ譛鬮倬Κ繧偵せ繧ｭ繝｣繝ｳ繝ｩ繧､繝ｳ縺ｧ豎ゅａ繧・+    const eavesZ2F = lvl.fl2 + (parseFloat(config.floorHeight2F ?? 2.7)) * 1000; // mm
++    const eavesZ1F = lvl.fl2; // 1F霆帝ｫ・= 2FL
++    const roofFaces = s.roofFaces || [];
++
++    // 繧ｹ繧ｭ繝｣繝ｳ繝ｩ繧､繝ｳ: 譁ｹ蜷代↓蠢懊§縺欟蠎ｧ讓吶〒繝励Ο繝輔ぃ繧､繝ｫ繧堤函謌・+    const uMin = (direction === 'X') ? bboxAll.minY : bboxAll.minX;
++    const uMax = (direction === 'X') ? bboxAll.maxY : bboxAll.maxX;
++    const STEPS = 200;
++    const profile = []; // [{u, z}] 窶・u:mm, z:mm
++    for (let i = 0; i <= STEPS; i++) {
++        const u = uMin + (i / STEPS) * (uMax - uMin);
++        let maxZ = eavesZ2F; // 譛菴弱〒繧りｻ帝ｫ・+
++        roofFaces.forEach(face => {
++            if (!face.vertices) return;
++            const floor = face.floor || '2F';
++            const baseDelta = parseFloat(face.baseHeightDelta ?? 0);
++            const zBase = (floor === '2F' ? eavesZ2F : eavesZ1F) + baseDelta;
++            const slope = parseFloat(face.slope ?? 0);
++            const slopeVal = slope / 10;
++
++            let ux = 0, uy = 1;
++            const pA = (face.slopeLine && face.slopeLine.length > 0) ? face.slopeLine[0] : face.vertices[0];
++            if (!pA) return;
++            if (face.slopeLine && face.slopeLine.length >= 3) {
++                const pB = face.slopeLine[1], pC = face.slopeLine[2];
++                if (pB && pC) {
++                    const dx = pB.x - pA.x, dy = pB.y - pA.y;
++                    let nx = -dy, ny = dx;
++                    if ((nx*(pC.x-pA.x) + ny*(pC.y-pA.y)) < 0) { nx=-nx; ny=-ny; }
++                    const len = Math.hypot(nx, ny);
++                    ux = len > 0 ? nx/len : 0;
++                    uy = len > 0 ? ny/len : 1;
++                }
++            } else if (face.slopeLine && face.slopeLine.length === 2) {
++                const p2 = face.slopeLine[1];
++                if (p2) { const dx=p2.x-pA.x, dy=p2.y-pA.y, len=Math.hypot(dx,dy); ux=len>0?dx/len:0; uy=len>0?dy/len:1; }
++            }
+ 
+-    // Wind-receiving width W
+-    const W = (direction === 'X') ? (maxY - minY) : (maxX - minX);
+-    if (W <= 0) return null;
++            const numV = face.vertices.length;
++            for (let j = 0; j < numV; j++) {
++                const v1 = face.vertices[j], v2 = face.vertices[(j+1)%numV];
++                const val1 = (direction === 'X') ? v1.y : v1.x;
++                const val2 = (direction === 'X') ? v2.y : v2.x;
++                if ((val1 <= u && val2 >= u) || (val2 <= u && val1 >= u)) {
++                    if (Math.abs(val2-val1) < 0.01) continue;
++                    const t = (u-val1)/(val2-val1);
++                    const ix = v1.x + t*(v2.x-v1.x), iy = v1.y + t*(v2.y-v1.y);
++                    const dist = (ix-pA.x)*ux + (iy-pA.y)*uy;
++                    const z = zBase + dist*slopeVal;
++                    if (z > maxZ) maxZ = z;
++                }
++            }
++        });
++        profile.push({ u, z: maxZ });
++    }
+ 
+-    // Create 2D high-res Canvas
++    const maxZ_total = Math.max(...profile.map(p => p.z));
++    const totalH = Math.max(maxZ_total, eavesZ2F + 1000); // 繧ｭ繝｣繝ｳ繝舌せ鬮倥＆蝓ｺ貅・+
++    // --- Canvas逕滓・ ---
+     const canvas = document.createElement('canvas');
+     canvas.width = 900;
+-    canvas.height = 550;
++    canvas.height = 600;
+     const ctx = canvas.getContext('2d');
+ 
+-    // Solid white background
+     ctx.fillStyle = '#ffffff';
+     ctx.fillRect(0, 0, canvas.width, canvas.height);
+ 
+-    // Draw stylish CAD-grid background
+-    ctx.strokeStyle = '#f1f2f6';
+-    ctx.lineWidth = 1;
+-    for (let x = 0; x < canvas.width; x += 30) {
+-        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
+-    }
+-    for (let y = 0; y < canvas.height; y += 30) {
+-        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
+-    }
++    // CAD繧ｰ繝ｪ繝・ラ
++    ctx.strokeStyle = '#f1f2f6'; ctx.lineWidth = 1;
++    for (let x = 0; x < canvas.width; x += 30) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,canvas.height); ctx.stroke(); }
++    for (let y = 0; y < canvas.height; y += 30) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(canvas.width,y); ctx.stroke(); }
+ 
+-    // Margins and padding
+-    const padL = 100;
+-    const padR = 420; // Room on the right for elegant formulas
+-    const padT = 80;
+-    const padB = 80;
++    const padL = 90, padR = 400, padT = 70, padB = 60;
+     const drawW = canvas.width - padL - padR;
+     const drawH = canvas.height - padT - padB;
+ 
+-    // Scale calculations
+-    const scaleX = drawW / W;
+-    const scaleY = drawH / maxH;
+-    const scale = Math.min(scaleX, scaleY) * 0.9;
+-
+-    const toCanvasX = (val) => padL + (val * scale);
+-    const toCanvasY = (val) => canvas.height - padB - (val * scale);
++    const scaleU = drawW / W;
++    const scaleZ = drawH / totalH;
++    const scale = Math.min(scaleU, scaleZ) * 0.90;
+ 
+-    // Polygon Vertices
+-    const pts = [
+-        { u: 0, v: 0 },
+-        { u: W, v: 0 },
+-        { u: W, v: maxEavesH },
+-        { u: W / 2, v: maxH },
+-        { u: 0, v: maxEavesH }
+-    ];
++    const toX = (u) => padL + (u - uMin) * scale;
++    const toY = (z) => canvas.height - padB - z * scale;
+ 
+     const primaryColor = (direction === 'X') ? '#e67e22' : '#2980b9';
+-    const fillColor = (direction === 'X') ? 'rgba(230, 126, 34, 0.10)' : 'rgba(41, 128, 185, 0.10)';
++    const fill2F = (direction === 'X') ? 'rgba(230,126,34,0.18)' : 'rgba(41,128,185,0.18)';
++    const fill1F = (direction === 'X') ? 'rgba(230,126,34,0.08)' : 'rgba(41,128,185,0.08)';
+ 
+-    // Fill silhouette
+-    ctx.fillStyle = fillColor;
++    const cutY2 = toY(lvl.cut2);  // 2F荳狗ｫｯ繧ｫ繝・ヨ繝ｩ繧､繝ｳ
++    const cutY1 = toY(lvl.cut1);  // 1F荳狗ｫｯ繧ｫ繝・ヨ繝ｩ繧､繝ｳ
++    const glY   = toY(0);         // GL
++
++    // --- 繧ｷ繝ｫ繧ｨ繝・ヨ螟夊ｧ貞ｽ｢繧呈ｧ狗ｯ・---
++    const silPts = [];
++    silPts.push({ x: toX(uMin), y: toY(0) }); // GL蟾ｦ
++    profile.forEach(p => silPts.push({ x: toX(p.u), y: toY(p.z) }));
++    silPts.push({ x: toX(uMax), y: toY(0) }); // GL蜿ｳ
++
++    // 2F隕矩刋繧ｨ繝ｪ繧｢ (cut2莉･荳・ 繧貞｡励ｊ縺､縺ｶ縺・+    ctx.save();
+     ctx.beginPath();
+-    ctx.moveTo(toCanvasX(pts[0].u), toCanvasY(pts[0].v));
+-    for (let i = 1; i < pts.length; i++) {
+-        ctx.lineTo(toCanvasX(pts[i].u), toCanvasY(pts[i].v));
+-    }
++    ctx.moveTo(toX(uMin), cutY2);
++    profile.forEach(p => ctx.lineTo(toX(p.u), Math.min(toY(p.z), cutY2)));
++    ctx.lineTo(toX(uMax), cutY2);
++    ctx.closePath();
++    ctx.fillStyle = fill2F;
++    ctx.fill();
++    ctx.restore();
++
++    // 1F霑ｽ蜉隕矩刋繧ｨ繝ｪ繧｢ (cut1縲彡ut2) 繧貞｡励ｊ縺､縺ｶ縺・+    ctx.save();
++    ctx.beginPath();
++    ctx.moveTo(toX(uMin), cutY1);
++    ctx.lineTo(toX(uMin), Math.max(cutY2, toY(eavesZ1F)));
++    ctx.lineTo(toX(uMax), Math.max(cutY2, toY(eavesZ1F)));
++    ctx.lineTo(toX(uMax), cutY1);
+     ctx.closePath();
++    ctx.fillStyle = fill1F;
+     ctx.fill();
++    ctx.restore();
+ 
+-    // Architectural diagonal hatching
+-    ctx.strokeStyle = (direction === 'X') ? 'rgba(230, 126, 34, 0.15)' : 'rgba(41, 128, 185, 0.15)';
+-    ctx.lineWidth = 1;
++    // 螟門｣√す繝ｫ繧ｨ繝・ヨ霈ｪ驛ｭ (clip 縺励※譁懃ｷ壹ワ繝・メ繝ｳ繧ｰ)
+     ctx.save();
++    ctx.beginPath();
++    silPts.forEach((p, i) => i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y));
++    ctx.closePath();
+     ctx.clip();
+-    for (let offset = -canvas.width; offset < canvas.width; offset += 15) {
+-        ctx.beginPath();
+-        ctx.moveTo(offset, 0);
+-        ctx.lineTo(offset + canvas.height, canvas.height);
+-        ctx.stroke();
++    ctx.strokeStyle = direction === 'X' ? 'rgba(230,126,34,0.12)' : 'rgba(41,128,185,0.12)';
++    ctx.lineWidth = 1;
++    for (let off = -canvas.width; off < canvas.width; off += 12) {
++        ctx.beginPath(); ctx.moveTo(off, 0); ctx.lineTo(off + canvas.height, canvas.height); ctx.stroke();
+     }
+     ctx.restore();
+ 
+-    // Outline silhouette
+-    ctx.strokeStyle = primaryColor;
+-    ctx.lineWidth = 3.5;
+-    ctx.lineJoin = 'round';
++    // 繧ｷ繝ｫ繧ｨ繝・ヨ霈ｪ驛ｭ邱・+    ctx.strokeStyle = primaryColor; ctx.lineWidth = 3; ctx.lineJoin = 'round';
+     ctx.beginPath();
+-    ctx.moveTo(toCanvasX(pts[0].u), toCanvasY(pts[0].v));
+-    for (let i = 1; i < pts.length; i++) {
+-        ctx.lineTo(toCanvasX(pts[i].u), toCanvasY(pts[i].v));
+-    }
++    silPts.forEach((p, i) => i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y));
+     ctx.closePath();
+     ctx.stroke();
+ 
+-    // Ground Line (GL)
+-    ctx.strokeStyle = '#2c3e50';
+-    ctx.lineWidth = 3;
+-    ctx.beginPath();
+-    ctx.moveTo(padL - 30, toCanvasY(0));
+-    ctx.lineTo(padL + drawW + 30, toCanvasY(0));
+-    ctx.stroke();
++    // GL邱・+    ctx.strokeStyle = '#2c3e50'; ctx.lineWidth = 3;
++    ctx.beginPath(); ctx.moveTo(padL-20, glY); ctx.lineTo(padL+drawW+20, glY); ctx.stroke();
++    ctx.font = 'bold 11px sans-serif'; ctx.fillStyle = '#2c3e50'; ctx.textAlign = 'right';
++    ctx.fillText('笆ｼ GL', padL - 25, glY + 4);
++
++    // 1F繧ｫ繝・ヨ繝ｩ繧､繝ｳ (遐ｴ邱・
++    ctx.setLineDash([8, 5]); ctx.strokeStyle = '#27ae60'; ctx.lineWidth = 1.5;
++    ctx.beginPath(); ctx.moveTo(padL-10, cutY1); ctx.lineTo(padL+drawW+10, cutY1); ctx.stroke();
++    ctx.setLineDash([]);
++    ctx.font = 'bold 10px sans-serif'; ctx.fillStyle = '#27ae60'; ctx.textAlign = 'right';
++    ctx.fillText(`笆ｶ 1FL+1350 (${(lvl.cut1/1000).toFixed(3)}m)`, padL-14, cutY1 - 3);
++
++    // 2F繧ｫ繝・ヨ繝ｩ繧､繝ｳ (遐ｴ邱・
++    ctx.setLineDash([8, 5]); ctx.strokeStyle = '#e74c3c'; ctx.lineWidth = 1.5;
++    ctx.beginPath(); ctx.moveTo(padL-10, cutY2); ctx.lineTo(padL+drawW+10, cutY2); ctx.stroke();
++    ctx.setLineDash([]);
++    ctx.font = 'bold 10px sans-serif'; ctx.fillStyle = '#e74c3c'; ctx.textAlign = 'right';
++    ctx.fillText(`笆ｶ 2FL+1350 (${(lvl.cut2/1000).toFixed(3)}m)`, padL-14, cutY2 - 3);
++
++    // 1FL繝ｻ2FL邱・(阮・＞)
++    [{ z: lvl.fl1, label: `1FL (${(lvl.fl1/1000).toFixed(3)}m)`, color: '#27ae60' },
++     { z: lvl.fl2, label: `2FL (${(lvl.fl2/1000).toFixed(3)}m)`, color: '#e74c3c' }
++    ].forEach(({ z, label, color }) => {
++        const cy = toY(z);
++        ctx.setLineDash([4,4]); ctx.strokeStyle = color + '88'; ctx.lineWidth = 1;
++        ctx.beginPath(); ctx.moveTo(padL-10, cy); ctx.lineTo(padL+drawW+10, cy); ctx.stroke();
++        ctx.setLineDash([]);
++        ctx.font = '9px sans-serif'; ctx.fillStyle = color; ctx.textAlign = 'right';
++        ctx.fillText(label, padL-14, cy + 3);
++    });
+ 
+-    ctx.font = 'bold 12px sans-serif';
+-    ctx.fillStyle = '#2c3e50';
+-    ctx.textAlign = 'right';
+-    ctx.fillText('笆ｼ GL', padL - 35, toCanvasY(0) + 4);
+-
+-    // Dimension helper
+-    const drawDimLine = (x1, y1, x2, y2, offset, labelText) => {
+-        ctx.strokeStyle = '#7f8c8d';
+-        ctx.lineWidth = 1;
+-        ctx.fillStyle = '#c62828'; // Crimson red for high legibility
+-        ctx.font = 'bold 11px sans-serif';
+-
+-        const dx = x2 - x1;
+-        const dy = y2 - y1;
+-        const len = Math.hypot(dx, dy) || 1;
+-        const nx = -dy / len;
+-        const ny = dx / len;
+-
+-        const px1 = x1 + nx * offset;
+-        const py1 = y1 + ny * offset;
+-        const px2 = x2 + nx * offset;
+-        const py2 = y2 + ny * offset;
+-
+-        ctx.beginPath();
+-        ctx.moveTo(x1, y1);
+-        ctx.lineTo(px1, py1);
+-        ctx.moveTo(x2, y2);
+-        ctx.lineTo(px2, py2);
+-        ctx.stroke();
+-
+-        ctx.beginPath();
+-        ctx.moveTo(px1, py1);
+-        ctx.lineTo(px2, py2);
+-        ctx.stroke();
+-
+-        const slashSize = 5;
+-        const drawSlash = (px, py) => {
+-            ctx.beginPath();
+-            ctx.moveTo(px - slashSize, py + slashSize);
+-            ctx.lineTo(px + slashSize, py - slashSize);
+-            ctx.stroke();
+-        };
+-        drawSlash(px1, py1);
+-        drawSlash(px2, py2);
+-
+-        const mx = (px1 + px2) / 2;
+-        const my = (py1 + py2) / 2;
+-        ctx.save();
+-        ctx.translate(mx, my);
+-        ctx.strokeStyle = '#ffffff';
+-        ctx.lineWidth = 4;
+-        ctx.textAlign = 'center';
+-        ctx.textBaseline = 'middle';
+-        ctx.strokeText(labelText, 0, -8);
+-        ctx.fillText(labelText, 0, -8);
+-        ctx.restore();
++    // --- 蜿ｳ蛛ｴ繝・く繧ｹ繝・(險育ｮ怜ｼ・ ---
++    const textL = canvas.width - padR + 40;
++    let textY = padT;
++    const area2F_x = window.AppState.config.projectedAreas?.['2F']?.x ?? 0;
++    const area2F_y = window.AppState.config.projectedAreas?.['2F']?.y ?? 0;
++    const area1F_x = window.AppState.config.projectedAreas?.['1F']?.x ?? 0;
++    const area1F_y = window.AppState.config.projectedAreas?.['1F']?.y ?? 0;
++    const areaShown2F = direction === 'X' ? area2F_x : area2F_y;
++    const areaShown1F_add = direction === 'X' ? area1F_x : area1F_y;
++    const areaTotal = areaShown2F + areaShown1F_add;
++
++    ctx.fillStyle = '#2c3e50'; ctx.font = 'bold 15px sans-serif'; ctx.textAlign = 'left';
++    ctx.fillText(`${direction}譁ｹ蜷・隕倶ｻ倬擇遨榊峙 (GL蝓ｺ貅悶・繧ｹ繧ｭ繝｣繝ｳ繝ｩ繧､繝ｳ豕・`, textL, textY); textY += 24;
++    ctx.fillStyle = '#7f8c8d'; ctx.font = '10px sans-serif';
++    ctx.fillText(`螟門｣・ 譟ｱ闃ｯﾂｱ螢∝字${wallThick}mm 繧ｪ繝輔そ繝・ヨ貂・, textL, textY); textY += 30;
++
++    const box = (title, val, color) => {
++        ctx.fillStyle = '#2c3e50'; ctx.font = 'bold 12px sans-serif'; ctx.fillText(title, textL, textY); textY += 18;
++        ctx.fillStyle = '#555'; ctx.font = '11px monospace'; ctx.fillText(`繧ｫ繝・ヨ繝ｩ繧､繝ｳ莉･荳・= ${val.toFixed(3)} 緕｡`, textL+10, textY); textY += 28;
+     };
++    box('笆 2F隕矩刋 (2FL+1350莉･荳・', areaShown2F, primaryColor);
++    box('笆 1F霑ｽ蜉隕矩刋 (1FL+1350縲・FL+1350)', areaShown1F_add, '#27ae60');
+ 
+-    const cx0 = toCanvasX(0), cy0 = toCanvasY(0);
+-    const cxW = toCanvasX(W), cyW = toCanvasY(0);
+-    const cxEh = toCanvasX(W), cyEh = toCanvasY(maxEavesH);
+-    const cxMh = toCanvasX(W/2), cyMh = toCanvasY(maxH);
+-    const cxEhL = toCanvasX(0), cyEhL = toCanvasY(maxEavesH);
+-
+-    // Render dimensions
+-    drawDimLine(cx0, cy0, cxW, cyW, -30, `W = ${(W/1000).toFixed(3)} m (${W.toFixed(0)} mm)`);
+-    drawDimLine(cxEhL, cyEhL, cx0, cy0, -35, `霆帝ｫ・H_e = ${(maxEavesH/1000).toFixed(3)} m`);
+-    drawDimLine(cxMh, cyMh, cxMh, cy0, -toCanvasX(W/2) + padL - 50, `譛鬮倬ｫ・H_max = ${(maxH/1000).toFixed(3)} m`);
++    ctx.strokeStyle = '#bdc3c7'; ctx.lineWidth = 1;
++    ctx.beginPath(); ctx.moveTo(textL, textY-8); ctx.lineTo(canvas.width-30, textY-8); ctx.stroke();
++    textY += 4;
+ 
+-    // Formulas and texts on the right
+-    const textL = canvas.width - padR + 50;
+-    let textY = padT;
++    ctx.fillStyle = '#2c3e50'; ctx.font = 'bold 14px sans-serif'; ctx.fillText('盗 蜷郁ｨ・謚募ｽｱ隕倶ｻ倬擇遨・, textL, textY); textY += 22;
++    ctx.font = 'bold 22px monospace'; ctx.fillStyle = '#c62828';
++    ctx.fillText(`${areaTotal.toFixed(3)} 緕｡`, textL+10, textY); textY += 30;
+ 
+-    ctx.fillStyle = '#2c3e50';
+-    ctx.font = 'bold 16px sans-serif';
+-    ctx.textAlign = 'left';
+-    ctx.fillText(`${direction}譁ｹ蜷・隕倶ｻ倡ｫ矩擇繧ｷ繝ｫ繧ｨ繝・ヨ蝗ｳ`, textL, textY);
+-    textY += 28;
+-
+-    ctx.fillStyle = '#7f8c8d';
+-    ctx.font = '11px sans-serif';
+-    ctx.fillText(`窶ｻ螟門捉螢√°繧牙｣∝字繧ｪ繝輔そ繝・ヨ (${wallThick.toFixed(0)}mm) 繧貞性繧√◆螳牙・蛛ｴ繝｢繝・Ν`, textL, textY);
+-    textY += 35;
+-
+-    const sBody = (W / 1000) * (maxEavesH / 1000);
+-    const sRoof = ((W / 1000) * ((maxH - maxEavesH) / 1000)) / 2;
+-    const sTotal = sBody + sRoof;
+-
+-    // Body area
+-    ctx.fillStyle = '#2c3e50';
+-    ctx.font = 'bold 13px sans-serif';
+-    ctx.fillText('笆 遏ｩ蠖｢驛ｨ (蝨溷床縺九ｉ霆帝ｫ倥∪縺ｧ)', textL, textY);
+-    textY += 20;
+-    ctx.font = '12px monospace';
+-    ctx.fillStyle = '#555';
+-    ctx.fillText(`蜈ｬ蠑・: 蟷・ﾃ・霆帝ｫ倭, textL + 15, textY);
+-    textY += 18;
+-    ctx.fillText(`邂怜ｼ・: ${(W/1000).toFixed(3)}m ﾃ・${(maxEavesH/1000).toFixed(3)}m`, textL + 15, textY);
+-    textY += 18;
+-    ctx.font = 'bold 12px monospace';
+-    ctx.fillStyle = primaryColor;
+-    ctx.fillText(`髱｢遨・: ${sBody.toFixed(3)} 緕｡`, textL + 15, textY);
+-    textY += 32;
+-
+-    // Roof area
+-    ctx.fillStyle = '#2c3e50';
+-    ctx.font = 'bold 13px sans-serif';
+-    ctx.fillText('笆 荳芽ｧ帝Κ (霆帝ｫ倥°繧画怙鬮俶｣滄ｫ倥∪縺ｧ)', textL, textY);
+-    textY += 20;
+-    ctx.font = '12px monospace';
+-    ctx.fillStyle = '#555';
+-    ctx.fillText(`蜈ｬ蠑・: (蟷・ﾃ・(譛鬮倬ｫ・- 霆帝ｫ・) ﾃｷ 2`, textL + 15, textY);
+-    textY += 18;
+-    ctx.fillText(`邂怜ｼ・: (${(W/1000).toFixed(3)}m ﾃ・${((maxH - maxEavesH)/1000).toFixed(3)}m) ﾃｷ 2`, textL + 15, textY);
+-    textY += 18;
+-    ctx.font = 'bold 12px monospace';
+-    ctx.fillStyle = primaryColor;
+-    ctx.fillText(`髱｢遨・: ${sRoof.toFixed(3)} 緕｡`, textL + 15, textY);
+-    textY += 38;
+-
+-    // Divider
+-    ctx.strokeStyle = '#bdc3c7';
+-    ctx.lineWidth = 1;
+-    ctx.beginPath(); ctx.moveTo(textL, textY - 12); ctx.lineTo(canvas.width - 40, textY - 12); ctx.stroke();
+-
+-    // Total area
+-    ctx.fillStyle = '#2c3e50';
+-    ctx.font = 'bold 14px sans-serif';
+-    ctx.fillText('盗 蜷郁ｨ域兜蠖ｱ隕倶ｻ倬擇遨・, textL, textY);
+-    textY += 25;
+-    ctx.font = 'bold 24px monospace';
+-    ctx.fillStyle = '#c62828';
+-    ctx.fillText(`${sTotal.toFixed(3)} 緕｡`, textL + 15, textY);
+-
+-    // Frame border
+-    ctx.strokeStyle = '#bdc3c7';
+-    ctx.lineWidth = 1;
+-    ctx.strokeRect(10, 10, canvas.width - 20, canvas.height - 20);
++    ctx.strokeStyle = '#bdc3c7'; ctx.lineWidth = 1; ctx.strokeRect(8, 8, canvas.width-16, canvas.height-16);
+ 
+-    return { img: canvas.toDataURL('image/png'), area: sTotal };
++    return { img: canvas.toDataURL('image/png'), area: areaTotal };
+ }
+ 
+ function showAreaPreview() {
