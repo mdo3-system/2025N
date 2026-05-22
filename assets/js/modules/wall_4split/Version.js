@@ -1,4 +1,4 @@
 /**
  * Version.js - Centralized Version Management
  */
-window.APP_VERSION = "v2.7.10"; // Fix: RoofEngine calcCutPolygonArea2D 単位不一致バグ修正 (z: mm→m統一)
+window.APP_VERSION = "v2.7.11"; // Feature: 見附面積ロジックおよび3D見附図描画の改修 (一般的な公式による求積)

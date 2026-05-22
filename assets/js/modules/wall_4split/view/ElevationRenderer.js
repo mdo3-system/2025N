@@ -468,5 +468,100 @@ window.ElevationRenderer = {
 
         html += `</tbody></table></div>`;
         return html;
+    },
+
+    /**
+     * [v2.7.11] 見附面積求積表のHTMLを生成する
+     * 審査機関向けに「底辺×高さ」の一般的な公式形式で面積算出過程を示す
+     */
+    generateElevationAreaTableHtml: function(state) {
+        const s = state || window.AppState;
+        const c = s.config || {};
+        const formulaAreas = c.elevationFormulaAreas;
+        
+        if (!formulaAreas) return `<div style="padding:20px; color:#666;">見附面積データがありません。3Dプレビューを開いて再計算してください。</div>`;
+
+        let html = `<div style="margin-top:20px; font-family:sans-serif; font-size:11px;">
+            <h3 style="font-size:14px; margin-bottom:10px; color:#2c3e50; border-bottom:2px solid #bdc3c7; padding-bottom:5px;">見附面積 求積表 (風圧力用)</h3>
+            <p style="color:#7f8c8d; margin-bottom:10px;">※ 1F見附下端=1F床高+1.35m, 2F見附下端=2F床高+1.35m</p>
+        `;
+
+        const renderTableForDirection = (title, floorDataX, floorDataY) => {
+            let tableHtml = `<h4 style="font-size:12px; margin:15px 0 5px; color:#34495e;">${title}</h4>
+                <table style="width:100%; border-collapse:collapse; border:1px solid #ddd; text-align:right;">
+                    <thead>
+                        <tr style="background:#f1f5f9; border-bottom:1px solid #cbd5e1;">
+                            <th style="border:1px solid #ddd; padding:4px; text-align:left;">部位</th>
+                            <th style="border:1px solid #ddd; padding:4px;">底辺(m)</th>
+                            <th style="border:1px solid #ddd; padding:4px;">高さ(m)</th>
+                            <th style="border:1px solid #ddd; padding:4px; text-align:left;">計算式</th>
+                            <th style="border:1px solid #ddd; padding:4px;">面積(㎡)</th>
+                        </tr>
+                    </thead>
+                    <tbody>`;
+            
+            const floors = ['2F', '1F'];
+            floors.forEach(f => {
+                const data = f === '2F' ? floorDataX : floorDataY; // For loop iteration target
+                const items = f === '2F' ? formulaAreas['2F'] : formulaAreas['1F'];
+                const targetItems = items ? items[floorDataX] : []; // floorDataX variable here is actually used as key 'x' or 'y'
+                
+                // Let's rewrite loop cleanly
+            });
+            // End placeholder
+            return tableHtml;
+        };
+
+        const renderTable = (title, dirKey) => {
+            let tableHtml = `<h4 style="font-size:13px; margin:15px 0 5px; color:#34495e;">${title}</h4>
+                <table style="width:100%; border-collapse:collapse; border:1px solid #ddd; text-align:right;">
+                    <thead>
+                        <tr style="background:#f1f5f9; border-bottom:1px solid #cbd5e1;">
+                            <th style="border:1px solid #ddd; padding:4px; text-align:center;">階</th>
+                            <th style="border:1px solid #ddd; padding:4px; text-align:left;">部位</th>
+                            <th style="border:1px solid #ddd; padding:4px;">底辺(m)</th>
+                            <th style="border:1px solid #ddd; padding:4px;">高さ(m)</th>
+                            <th style="border:1px solid #ddd; padding:4px; text-align:left;">計算式</th>
+                            <th style="border:1px solid #ddd; padding:4px; font-weight:bold;">面積(㎡)</th>
+                        </tr>
+                    </thead>
+                    <tbody>`;
+            
+            ['2F', '1F'].forEach(f => {
+                const items = formulaAreas[f][dirKey] || [];
+                let fTotal = 0;
+                
+                if (items.length === 0) {
+                    tableHtml += `<tr>
+                        <td style="border:1px solid #ddd; padding:4px; text-align:center; background:#f8fafc;">${f}</td>
+                        <td colspan="5" style="border:1px solid #ddd; padding:4px; text-align:center; color:#999;">データなし</td>
+                    </tr>`;
+                } else {
+                    items.forEach((item, idx) => {
+                        fTotal += item.area;
+                        tableHtml += `<tr>
+                            ${idx === 0 ? `<td rowspan="${items.length + 1}" style="border:1px solid #ddd; padding:4px; text-align:center; background:#f8fafc; font-weight:bold;">${f}</td>` : ''}
+                            <td style="border:1px solid #ddd; padding:4px; text-align:left;">${item.name}</td>
+                            <td style="border:1px solid #ddd; padding:4px;">${item.w.toFixed(3)}</td>
+                            <td style="border:1px solid #ddd; padding:4px;">${item.h.toFixed(3)}</td>
+                            <td style="border:1px solid #ddd; padding:4px; text-align:left; font-size:10px;">${item.formula}</td>
+                            <td style="border:1px solid #ddd; padding:4px;">${item.area.toFixed(2)}</td>
+                        </tr>`;
+                    });
+                    tableHtml += `<tr style="background:#fffaf0; font-weight:bold;">
+                        <td colspan="4" style="border:1px solid #ddd; padding:4px; text-align:center;">${f} 計</td>
+                        <td style="border:1px solid #ddd; padding:4px; color:#d35400;">${fTotal.toFixed(2)} ㎡</td>
+                    </tr>`;
+                }
+            });
+            tableHtml += `</tbody></table>`;
+            return tableHtml;
+        };
+
+        html += renderTable('【 X方向加力 】 (見附面: Y方向に広がる面)', 'x');
+        html += renderTable('【 Y方向加力 】 (見附面: X方向に広がる面)', 'y');
+
+        html += `</div>`;
+        return html;
     }
 };

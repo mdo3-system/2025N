@@ -411,11 +411,35 @@ window.MainRenderer = {
 
                 if (name) {
                     ctx.textAlign = "center";
-                    ctx.strokeStyle = '#ffffff'; 
-                    ctx.lineWidth = 5;
-                    ctx.strokeText(name, cx, labelY);
-                    ctx.fillStyle = '#c62828'; // Crimson Red
-                    ctx.fillText(name, cx, labelY);
+                    ctx.font = `bold ${labelFontSize}px sans-serif`;
+                    const tw = ctx.measureText(name).width;
+                    const padX = 6;
+                    const padY = 3;
+                    const bw = tw + padX * 2;
+                    const bh = labelFontSize + padY * 2;
+                    const bx = cx - bw / 2;
+                    const by = labelY - labelFontSize / 2 - bh / 2;
+                    
+                    // 白バブル背景の描画
+                    ctx.save();
+                    ctx.beginPath();
+                    const borderC = isManual ? '#e91e63' : '#2980b9';
+                    if (ctx.roundRect) {
+                        ctx.roundRect(bx, by, bw, bh, 4);
+                    } else {
+                        ctx.rect(bx, by, bw, bh);
+                    }
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fill();
+                    ctx.strokeStyle = borderC;
+                    ctx.lineWidth = 1.5;
+                    ctx.stroke();
+                    ctx.restore();
+
+                    // 文字の描画
+                    ctx.fillStyle = '#2c3e50'; // ダークネイビー
+                    ctx.textBaseline = "middle";
+                    ctx.fillText(name, cx, by + bh / 2 + 1);
                 }
                 ctx.restore();
             }
@@ -462,18 +486,51 @@ window.MainRenderer = {
                 ctx.strokeStyle = isManual ? '#e91e63' : '#2980b9';
                 ctx.lineWidth = isManual ? 1.5 : 1.0;
                 
-                const tw = name ? ctx.measureText(name).width : 0;
-                const lineStartX = labelX + tw + 6;
+                let lineStartX = labelX + 6;
+                let tw = 0;
+                if (name) {
+                    tw = ctx.measureText(name).width;
+                    const padX = 6;
+                    const padY = 3;
+                    const bw = tw + padX * 2;
+                    const bh = labelFontSize + padY * 2;
+                    const bx = labelX - padX;
+                    const by = cy - bh / 2;
+                    
+                    lineStartX = bx + bw + 4;
+                }
 
                 ctx.beginPath(); ctx.moveTo(lineStartX, cy); ctx.lineTo(rightX, cy); ctx.stroke();
 
                 if (name) {
+                    const padX = 6;
+                    const padY = 3;
+                    const bw = tw + padX * 2;
+                    const bh = labelFontSize + padY * 2;
+                    const bx = labelX - padX;
+                    const by = cy - bh / 2;
+
+                    // 白バブル背景の描画
+                    ctx.save();
+                    ctx.beginPath();
+                    const borderC = isManual ? '#e91e63' : '#2980b9';
+                    if (ctx.roundRect) {
+                        ctx.roundRect(bx, by, bw, bh, 4);
+                    } else {
+                        ctx.rect(bx, by, bw, bh);
+                    }
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fill();
+                    ctx.strokeStyle = borderC;
+                    ctx.lineWidth = 1.5;
+                    ctx.stroke();
+                    ctx.restore();
+
+                    // 文字の描画
+                    ctx.fillStyle = '#2c3e50'; // ダークネイビー
                     ctx.textAlign = "left";
-                    ctx.strokeStyle = '#ffffff'; 
-                    ctx.lineWidth = 5;
-                    ctx.strokeText(name, labelX, cy + 5);
-                    ctx.fillStyle = '#c62828'; // Crimson Red
-                    ctx.fillText(name, labelX, cy + 5);
+                    ctx.textBaseline = "middle";
+                    ctx.fillText(name, labelX, by + bh / 2 + 1);
                 }
                 ctx.restore();
             }
@@ -885,22 +942,47 @@ window.MainRenderer = {
         const ctx = state.ctx;
         const canvas = state.canvas;
         ctx.save();
-        ctx.setTransform(1, 0, 0, 1, 0, 0); // リセット
         
-        const x = 10, y = canvas.height - 110;
-        ctx.fillStyle = "rgba(0,0,0,0.5)";
-        ctx.fillRect(x, y, 180, 100);
+        const dpr = window.devicePixelRatio || 1;
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0); // CSSピクセル基準にスケーリング
         
-        ctx.fillStyle = "#fff";
-        ctx.font = "12px sans-serif";
+        const cssW = canvas.width / dpr;
+        const cssH = canvas.height / dpr;
+        
+        // 4KやFHDでも見やすいようスケーリング
+        const scaleFactor = 1.2;
+        const width = 210 * scaleFactor;
+        const height = 115 * scaleFactor;
+        const x = 15;
+        const y = cssH - height - 15;
+        
+        // 背景 (ダークグラス調, 角丸)
+        ctx.fillStyle = "rgba(26, 26, 36, 0.85)";
+        ctx.beginPath();
+        if (ctx.roundRect) {
+            ctx.roundRect(x, y, width, height, 8);
+        } else {
+            ctx.rect(x, y, width, height);
+        }
+        ctx.fill();
+        
+        // 枠線 (薄い紫)
+        ctx.strokeStyle = "rgba(142, 68, 173, 0.4)";
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+        
+        ctx.fillStyle = "#ffffff";
+        ctx.font = `bold ${13 * scaleFactor}px sans-serif`;
         ctx.textAlign = "left";
-        ctx.fillText("■ 凡例 (耐力壁)", x + 10, y + 20);
+        ctx.textBaseline = "top";
+        ctx.fillText("■ 凡例 (耐力壁)", x + 12 * scaleFactor, y + 12 * scaleFactor);
         
-        ctx.font = "10px sans-serif";
-        ctx.fillText("緑線: 1F壁 / 橙線: 2F壁", x + 10, y + 40);
-        ctx.fillText("数字: 壁倍率の合計", x + 10, y + 55);
-        ctx.fillText("記号: 面材種類(外+内)", x + 10, y + 70);
-        ctx.fillText("赤三角: 筋交い", x + 10, y + 85);
+        ctx.font = `${11 * scaleFactor}px sans-serif`;
+        ctx.fillStyle = "#e0e0e0";
+        ctx.fillText("緑線: 1F壁 / 橙線: 2F壁", x + 12 * scaleFactor, y + 32 * scaleFactor);
+        ctx.fillText("数字: 壁倍率の合計", x + 12 * scaleFactor, y + 50 * scaleFactor);
+        ctx.fillText("記号: 面材種類(外+内)", x + 12 * scaleFactor, y + 68 * scaleFactor);
+        ctx.fillText("赤三角: 筋交い", x + 12 * scaleFactor, y + 86 * scaleFactor);
         
         ctx.restore();
     },

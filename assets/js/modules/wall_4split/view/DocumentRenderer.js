@@ -144,22 +144,73 @@ window.DocumentRenderer = {
 
             // Dimensions
             if (showAreaDims) {
-                ctx.font = `bold ${Math.round(18 * dimScale)}px sans-serif`;
-                ctx.textAlign = "center";
+                ctx.save();
                 for (let i = 0; i < a.vertices.length; i++) {
                     let v1 = a.vertices[i], v2 = a.vertices[(i + 1) % a.vertices.length];
                     let p1 = toC(v1.x, v1.y), p2 = toC(v2.x, v2.y);
                     let d = Math.round(Math.sqrt(Math.pow(v2.x - v1.x, 2) + Math.pow(v2.y - v1.y, 2)));
+                    
                     let mx = (p1.cx + p2.cx) / 2, my = (p1.cy + p2.cy) / 2;
                     let dxCentroid = mx - cx, dyCentroid = my - cy;
                     let lenCentroid = Math.hypot(dxCentroid, dyCentroid) || 1;
                     let nx = dxCentroid / lenCentroid, ny = dyCentroid / lenCentroid;
 
-                    let offset = 25 * dimScale;
-                    ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 4 * dimScale;
-                    ctx.strokeText(String(d), mx + nx * offset, my + ny * offset);
-                    ctx.fillStyle = '#c0392b'; ctx.fillText(String(d), mx + nx * offset, my + ny * offset);
+                    let offsetDist = 40 * dimScale;
+                    let p1_off = { cx: p1.cx + nx * offsetDist, cy: p1.cy + ny * offsetDist };
+                    let p2_off = { cx: p2.cx + nx * offsetDist, cy: p2.cy + ny * offsetDist };
+                    let mx_off = mx + nx * offsetDist;
+                    let my_off = my + ny * offsetDist;
+
+                    // 1. 点線の引出線
+                    ctx.strokeStyle = 'rgba(127, 140, 141, 0.7)'; // グレー
+                    ctx.lineWidth = 1.0 * dimScale;
+                    ctx.setLineDash([3, 3]);
+                    ctx.beginPath();
+                    ctx.moveTo(p1.cx, p1.cy);
+                    ctx.lineTo(p1_off.cx, p1_off.cy);
+                    ctx.moveTo(p2.cx, p2.cy);
+                    ctx.lineTo(p2_off.cx, p2_off.cy);
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+
+                    // 2. 実線の寸法線
+                    ctx.strokeStyle = '#2c3e50'; // ダークネイビー
+                    ctx.lineWidth = 1.2 * dimScale;
+                    ctx.beginPath();
+                    ctx.moveTo(p1_off.cx, p1_off.cy);
+                    ctx.lineTo(p2_off.cx, p2_off.cy);
+                    ctx.stroke();
+
+                    // 3. 45度斜めチッマーク
+                    ctx.strokeStyle = '#2c3e50';
+                    ctx.lineWidth = 1.5 * dimScale;
+                    const tickLen = 6 * dimScale;
+                    // p1_off のチッマーク
+                    ctx.beginPath();
+                    ctx.moveTo(p1_off.cx - tickLen, p1_off.cy + tickLen);
+                    ctx.lineTo(p1_off.cx + tickLen, p1_off.cy - tickLen);
+                    ctx.stroke();
+                    // p2_off のチッマーク
+                    ctx.beginPath();
+                    ctx.moveTo(p2_off.cx - tickLen, p2_off.cy + tickLen);
+                    ctx.lineTo(p2_off.cx + tickLen, p2_off.cy - tickLen);
+                    ctx.stroke();
+
+                    // 4. 寸法値テキスト（背景白矩形付き）
+                    ctx.font = `bold ${Math.round(18 * dimScale)}px sans-serif`;
+                    ctx.textAlign = "center";
+                    ctx.textBaseline = "middle";
+                    const txt = String(d);
+                    const tw = ctx.measureText(txt).width;
+                    const th = 18 * dimScale;
+
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(mx_off - tw / 2 - 4, my_off - th / 2 - 2, tw + 8, th + 4);
+                    
+                    ctx.fillStyle = '#c0392b'; // 赤色
+                    ctx.fillText(txt, mx_off, my_off);
                 }
+                ctx.restore();
             }
         });
     },

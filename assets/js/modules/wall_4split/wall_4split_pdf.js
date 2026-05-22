@@ -1,4 +1,4 @@
-﻿// ==========================================
+// ==========================================
 // wall_4split_pdf.js - 帳票画像・PDF生成エンジン (Phase 3.9)
 // v2.2.0 Refactoring
 // ==========================================
@@ -512,10 +512,52 @@ function generateAutoMitsukeCanvas(direction) {
     const W = (direction === 'X') ? (bboxAll.maxY - bboxAll.minY) : (bboxAll.maxX - bboxAll.minX);
     if (W <= 0) return null;
 
-    // 2F軒高・屋根最高部をスキャンラインで求める
-    const eavesZ2F = lvl.fl2 + (parseFloat(config.floorHeight2F ?? 2.7)) * 1000; // mm
-    const eavesZ1F = lvl.fl2; // 1F軒高 = 2FL
     const roofFaces = s.roofFaces || [];
+
+    // Determine 2F eaves height (eavesZ2F) dynamically so that roof peak reaches maxH
+    let relZMax2F = 0;
+    let has2FRoof = false;
+
+    roofFaces.forEach(face => {
+        if (!face.vertices || face.floor !== '2F') return;
+        has2FRoof = true;
+        const slope = parseFloat(face.slope ?? 4.5);
+        const slopeVal = slope / 10;
+        const thickness = parseFloat(face.roofThickness ?? config.roofThickness ?? 150);
+        const tVertical = thickness * Math.sqrt(1 + slopeVal * slopeVal);
+        const baseDelta = parseFloat(face.baseHeightDelta ?? 0);
+
+        let ux = 0, uy = 1;
+        const pA = (face.slopeLine && face.slopeLine.length > 0) ? face.slopeLine[0] : face.vertices[0];
+        if (!pA) return;
+        if (face.slopeLine && face.slopeLine.length >= 3) {
+            const pB = face.slopeLine[1], pC = face.slopeLine[2];
+            if (pB && pC) {
+                const dx = pB.x - pA.x, dy = pB.y - pA.y;
+                let nx = -dy, ny = dx;
+                if ((nx*(pC.x-pA.x) + ny*(pC.y-pA.y)) < 0) { nx = -nx; ny = -ny; }
+                const len = Math.hypot(nx, ny);
+                ux = len > 0 ? nx/len : 0; uy = len > 0 ? ny/len : 1;
+            }
+        } else if (face.slopeLine && face.slopeLine.length === 2) {
+            const p2 = face.slopeLine[1];
+            if (p2) { const dx=p2.x-pA.x, dy=p2.y-pA.y, len=Math.hypot(dx,dy); ux=len>0?dx/len:0; uy=len>0?dy/len:1; }
+        }
+
+        face.vertices.forEach(v => {
+            const dist = (v.x - pA.x)*ux + (v.y - pA.y)*uy;
+            const z = dist * slopeVal + tVertical + baseDelta;
+            if (z > relZMax2F) {
+                relZMax2F = z;
+            }
+        });
+    });
+
+    const maxH = parseFloat(config.maxHeight ?? 8000);
+    // 2F軒高 (GL絶対値mm)
+    const eavesZ2F = has2FRoof ? (maxH - relZMax2F) : (lvl.fl2 + (parseFloat(config.floorHeight2F ?? 2.7)) * 1000);
+    // 1F軒高 (= 2FL, GL絶対値mm)
+    const eavesZ1F = lvl.fl2;
 
     // スキャンライン: 方向に応じたU座標でプロファイルを生成
     const uMin = (direction === 'X') ? bboxAll.minY : bboxAll.minX;
@@ -533,6 +575,8 @@ function generateAutoMitsukeCanvas(direction) {
             const zBase = (floor === '2F' ? eavesZ2F : eavesZ1F) + baseDelta;
             const slope = parseFloat(face.slope ?? 0);
             const slopeVal = slope / 10;
+            const thickness = parseFloat(face.roofThickness ?? config.roofThickness ?? 150);
+            const tVertical = thickness * Math.sqrt(1 + slopeVal * slopeVal);
 
             let ux = 0, uy = 1;
             const pA = (face.slopeLine && face.slopeLine.length > 0) ? face.slopeLine[0] : face.vertices[0];
@@ -562,7 +606,7 @@ function generateAutoMitsukeCanvas(direction) {
                     const t = (u-val1)/(val2-val1);
                     const ix = v1.x + t*(v2.x-v1.x), iy = v1.y + t*(v2.y-v1.y);
                     const dist = (ix-pA.x)*ux + (iy-pA.y)*uy;
-                    const z = zBase + dist*slopeVal;
+                    const z = zBase + dist*slopeVal + tVertical;
                     if (z > maxZ) maxZ = z;
                 }
             }
@@ -687,6 +731,126 @@ function generateAutoMitsukeCanvas(direction) {
         ctx.fillText(label, padL-14, cy + 3);
     });
 
+    // 最高の高さ (破線)
+    const maxY_maxH = toY(maxH);
+    ctx.setLineDash([8, 5]); ctx.strokeStyle = '#c0392b'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(padL-10, maxY_maxH); ctx.lineTo(padL+drawW+10, maxY_maxH); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.font = 'bold 10px sans-serif'; ctx.fillStyle = '#c0392b'; ctx.textAlign = 'right';
+    ctx.fillText(`▶ 最高の高さ (${(maxH/1000).toFixed(3)}m)`, padL-14, maxY_maxH - 3);
+
+    // --- CAD風寸法線の描画 ---
+    const drawTick = (px, py) => {
+        ctx.strokeStyle = '#2c3e50';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(px - 5, py + 5);
+        ctx.lineTo(px + 5, py - 5);
+        ctx.stroke();
+    };
+
+    const drawHorizDim = (uStart, uEnd, zPos, valText) => {
+        const x1 = toX(uStart);
+        const x2 = toX(uEnd);
+        const y = toY(zPos);
+
+        // 1. 引出線 (点線)
+        ctx.strokeStyle = 'rgba(127, 140, 141, 0.7)';
+        ctx.lineWidth = 1.0;
+        ctx.setLineDash([3, 3]);
+        ctx.beginPath();
+        const zTarget = zPos > 0 ? zPos - 300 : 0;
+        ctx.moveTo(x1, toY(zTarget));
+        ctx.lineTo(x1, y + 8 * (zPos > 0 ? -1 : 1));
+        ctx.moveTo(x2, toY(zTarget));
+        ctx.lineTo(x2, y + 8 * (zPos > 0 ? -1 : 1));
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // 2. 寸法線 (実線)
+        ctx.strokeStyle = '#2c3e50';
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.moveTo(x1, y);
+        ctx.lineTo(x2, y);
+        ctx.stroke();
+
+        // 3. チッマーク
+        drawTick(x1, y);
+        drawTick(x2, y);
+
+        // 4. テキスト (背景白矩形付き)
+        ctx.font = 'bold 11px monospace';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        const tw = ctx.measureText(valText).width;
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect((x1 + x2)/2 - tw/2 - 3, y - 6, tw + 6, 12);
+        ctx.fillStyle = '#c0392b';
+        ctx.fillText(valText, (x1 + x2)/2, y);
+    };
+
+    const drawVertDim = (zStart, zEnd, xPos, valText) => {
+        const y1 = toY(zStart);
+        const y2 = toY(zEnd);
+        const x = xPos;
+
+        // 1. 引出線 (点線)
+        ctx.strokeStyle = 'rgba(127, 140, 141, 0.7)';
+        ctx.lineWidth = 1.0;
+        ctx.setLineDash([3, 3]);
+        ctx.beginPath();
+        ctx.moveTo(padL - 10, y1);
+        ctx.lineTo(x - 8, y1);
+        ctx.moveTo(padL - 10, y2);
+        ctx.lineTo(x - 8, y2);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // 2. 寸法線 (実線)
+        ctx.strokeStyle = '#2c3e50';
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.moveTo(x, y1);
+        ctx.lineTo(x, y2);
+        ctx.stroke();
+
+        // 3. チッマーク
+        drawTick(x, y1);
+        drawTick(x, y2);
+
+        // 4. テキスト (背景白矩形付き)
+        ctx.font = 'bold 11px monospace';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        const tw = ctx.measureText(valText).width;
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(x - tw/2 - 3, (y1 + y2)/2 - 6, tw + 6, 12);
+        ctx.fillStyle = '#c0392b';
+        ctx.fillText(valText, x, (y1 + y2)/2);
+    };
+
+    // 水平寸法線 (建物全幅、1F壁幅、2F壁幅)
+    drawHorizDim(uMin, uMax, -500, Math.round(W).toString());
+    
+    const uMin1F = direction === 'X' ? bbox1F.minY : bbox1F.minX;
+    const uMax1F = direction === 'X' ? bbox1F.maxY : bbox1F.maxX;
+    if (uMax1F > uMin1F) {
+        drawHorizDim(uMin1F, uMax1F, (lvl.fl1 + lvl.cut1) / 2, Math.round(uMax1F - uMin1F).toString());
+    }
+
+    const uMin2F = direction === 'X' ? bbox2F.minY : bbox2F.minX;
+    const uMax2F = direction === 'X' ? bbox2F.maxY : bbox2F.maxX;
+    if (uMax2F > uMin2F) {
+        drawHorizDim(uMin2F, uMax2F, (lvl.fl2 + lvl.cut2) / 2, Math.round(uMax2F - uMin2F).toString());
+    }
+
+    // 垂直寸法線 (高さ関係)
+    drawVertDim(0, lvl.cut1, padL - 45, Math.round(lvl.cut1).toString());
+    drawVertDim(lvl.cut1, lvl.cut2, padL - 45, Math.round(lvl.cut2 - lvl.cut1).toString());
+    drawVertDim(lvl.cut2, maxH, padL - 45, Math.round(maxH - lvl.cut2).toString());
+    drawVertDim(0, maxH, padL - 75, Math.round(maxH).toString());
+
     // --- 右側テキスト (計算式) ---
     const textL = canvas.width - padR + 40;
     let textY = padT;
@@ -723,6 +887,91 @@ function generateAutoMitsukeCanvas(direction) {
     return { img: canvas.toDataURL('image/png'), area: areaTotal };
 }
 
+function generateFloorAreaTableHtml(state) {
+    const areaLines = state.areaLines || [];
+    let html = '';
+    
+    ['1F', '2F', 'RF'].forEach(f => {
+        const fAreas = areaLines.filter(a => a.floor === f);
+        if (fAreas.length === 0) return;
+        
+        html += `<div style="margin-top: 15px; margin-bottom: 25px;">
+            <div style="background:#27ae60; color:#fff; padding:6px 12px; font-weight:bold; font-size:13px; border-radius:4px 4px 0 0; display:flex; justify-content:space-between; align-items:center;">
+                <span>🏢 ${f} 床面積 求積一覧表</span>
+            </div>
+            <table class="report-table" style="font-size:11px; width:100%; text-align:center; border: 1px solid #ddd; border-top:none;">
+                <tr style="background:#f8f9fa; font-weight:bold;">
+                    <th style="width:8%;">No.</th>
+                    <th style="width:15%;">用途・区分</th>
+                    <th style="width:12%;">底辺(m)</th>
+                    <th style="width:12%;">高さ(m)</th>
+                    <th style="border-right:1px solid #ddd; text-align:center;">計算式</th>
+                    <th style="width:15%;">面積(㎡)</th>
+                </tr>`;
+        
+        let totalA = 0;
+        fAreas.forEach((area, i) => {
+            const cleanVertices = window.MathUtils && window.MathUtils.dedupPolygon ? window.MathUtils.dedupPolygon(area.vertices) : area.vertices;
+            const vCount = cleanVertices.length;
+            const c = Geometry.polygonCentroid(area.vertices);
+            if (!c) return;
+            const MathAbsArea = Math.abs(c.area / 1000000);
+            const sign = (c.area / 1000000) > 0 ? 1 : -1;
+            const areaVal = sign * MathAbsArea;
+            totalA += areaVal;
+            
+            const typeName = { attic: '小屋裏', balcony: 'バルコニー', void: '吹き抜け', porch: 'ポーチ・屋根' }[area.areaType] || '床面積';
+            
+            if (vCount === 3 || vCount === 4) {
+                const minX = Math.min(...cleanVertices.map(v => v.x)), maxX = Math.max(...cleanVertices.map(v => v.x));
+                const minY = Math.min(...cleanVertices.map(v => v.y)), maxY = Math.max(...cleanVertices.map(v => v.y));
+                const w = (maxX - minX) / 1000, h_dim = (maxY - minY) / 1000;
+                
+                const formula = vCount === 3 ? `${sign < 0 ? '-' : ''}底辺 × 高さ / 2` : `${sign < 0 ? '-' : ''}底辺 × 高さ`;
+                html += `<tr>
+                    <td>${i + 1}${sign < 0 ? ' (除外)' : ''}</td>
+                    <td><b>${typeName}</b></td>
+                    <td>${w.toFixed(3)}</td>
+                    <td>${h_dim.toFixed(3)}</td>
+                    <td style="text-align:left; padding-left:10px;">${formula}</td>
+                    <td style="font-weight:bold;">${areaVal.toFixed(2)}</td>
+                </tr>`;
+            } else {
+                const triangles = triangulatePolygon(cleanVertices);
+                triangles.forEach((tri, subIdx) => {
+                    const tc = Geometry.polygonCentroid(tri);
+                    if (!tc) return;
+                    const subAreaVal = Math.abs(tc.area / 1000000);
+                    const minX = Math.min(...tri.map(v => v.x)), maxX = Math.max(...tri.map(v => v.x));
+                    const minY = Math.min(...tri.map(v => v.y)), maxY = Math.max(...tri.map(v => v.y));
+                    const w = (maxX - minX) / 1000, h_dim = (maxY - minY) / 1000;
+                    
+                    const formula = `${sign < 0 ? '-' : ''}底辺 × 高さ / 2 (三角形分割)`;
+                    const subVal = sign * subAreaVal;
+                    
+                    html += `<tr>
+                        <td>${i + 1}-${subIdx + 1}${sign < 0 ? ' (除外)' : ''}</td>
+                        <td><b>${typeName}</b></td>
+                        <td>${w.toFixed(3)}</td>
+                        <td>${h_dim.toFixed(3)}</td>
+                        <td style="text-align:left; padding-left:10px;">${formula}</td>
+                        <td>${subVal.toFixed(2)}</td>
+                    </tr>`;
+                });
+            }
+        });
+        
+        html += `<tr style="font-weight:bold; background:#e8f8f0;">
+            <td colspan="5" style="text-align:right; padding-right:15px; font-size:12px;">${f} 合計床面積：</td>
+            <td style="color:#d35400; font-size:13px;">${totalA.toFixed(2)} ㎡</td>
+        </tr>
+        </table>
+        </div>`;
+    });
+    
+    return html;
+}
+
 function showAreaPreview() {
     const pc = document.getElementById('area-preview-container');
     if (!pc) return;
@@ -742,24 +991,104 @@ function showAreaPreview() {
     const iAutoEX = generateAutoMitsukeCanvas('X');
     const iAutoEY = generateAutoMitsukeCanvas('Y');
 
-    const appendBox = (imgObj, title) => {
-        if (!imgObj || !imgObj.img) return;
-        pc.insertAdjacentHTML('beforeend', `<div class="img-preview-box"><div style="font-weight:bold;color:#0056b3;margin-bottom:5px;">${title}</div><img src="${imgObj.img}" style="max-width:100%; border:1px solid #ddd; padding:5px; border-radius:4px; box-shadow:0 2px 8px rgba(0,0,0,0.08);"></div>`);
-    };
+    // タブUI全体のHTML構築
+    let tabHtml = `
+        <div class="preview-tabs" style="display:flex; gap:8px; border-bottom:2px solid #ddd; padding-bottom:10px; margin-bottom:15px; width:100%;">
+            <button class="preview-tab-btn active" data-target="tab-floor" style="padding:8px 16px; border:none; background:#f1f2f6; border-radius:4px; font-weight:bold; cursor:pointer; transition:all 0.3s;">🏢 床面積</button>
+            <button class="preview-tab-btn" data-target="tab-mitsuke" style="padding:8px 16px; border:none; background:#f1f2f6; border-radius:4px; font-weight:bold; cursor:pointer; transition:all 0.3s;">📐 見附面積</button>
+            <button class="preview-tab-btn" data-target="tab-div4" style="padding:8px 16px; border:none; background:#f1f2f6; border-radius:4px; font-weight:bold; cursor:pointer; transition:all 0.3s;">📊 4分割法</button>
+            <button class="preview-tab-btn" data-target="tab-pillar" style="padding:8px 16px; border:none; background:#f1f2f6; border-radius:4px; font-weight:bold; cursor:pointer; transition:all 0.3s;">🎯 柱負担面積</button>
+        </div>
+        
+        <div id="tab-floor" class="preview-tab-content active" style="width:100%;">
+            <div class="tab-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap:20px; margin-bottom:20px;">
+                \${iF1 ? \`<div class="img-preview-box"><div style="font-weight:bold;color:#0056b3;margin-bottom:5px;">1F 床面積図</div><img src="\${iF1.img}" style="width:100%; border:1px solid #ddd; padding:5px; border-radius:4px; box-shadow:0 2px 8px rgba(0,0,0,0.08);"></div>\` : ''}
+                \${iF2 ? \`<div class="img-preview-box"><div style="font-weight:bold;color:#0056b3;margin-bottom:5px;">2F 床面積図</div><img src="\${iF2.img}" style="width:100%; border:1px solid #ddd; padding:5px; border-radius:4px; box-shadow:0 2px 8px rgba(0,0,0,0.08);"></div>\` : ''}
+                \${iFR ? \`<div class="img-preview-box"><div style="font-weight:bold;color:#0056b3;margin-bottom:5px;">R階 床面積図</div><img src="\${iFR.img}" style="width:100%; border:1px solid #ddd; padding:5px; border-radius:4px; box-shadow:0 2px 8px rgba(0,0,0,0.08);"></div>\` : ''}
+            </div>
+            <div id="floor-table-container"></div>
+        </div>
+        
+        <div id="tab-mitsuke" class="preview-tab-content" style="width:100%; display:none;">
+            <div class="tab-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap:20px; margin-bottom:20px;">
+                \${iAutoEX ? \`<div class="img-preview-box"><div style="font-weight:bold;color:#0056b3;margin-bottom:5px;">X方向 見附面積図 (自動計算モデル)</div><img src="\${iAutoEX.img}" style="width:100%; border:1px solid #ddd; padding:5px; border-radius:4px; box-shadow:0 2px 8px rgba(0,0,0,0.08);"></div>\` : ''}
+                \${iEX ? \`<div class="img-preview-box"><div style="font-weight:bold;color:#0056b3;margin-bottom:5px;">X方向 見附面積図 (DXF読込)</div><img src="\${iEX.img}" style="width:100%; border:1px solid #ddd; padding:5px; border-radius:4px; box-shadow:0 2px 8px rgba(0,0,0,0.08);"></div>\` : ''}
+                \${iAutoEY ? \`<div class="img-preview-box"><div style="font-weight:bold;color:#0056b3;margin-bottom:5px;">Y方向 見附面積図 (自動計算モデル)</div><img src="\${iAutoEY.img}" style="width:100%; border:1px solid #ddd; padding:5px; border-radius:4px; box-shadow:0 2px 8px rgba(0,0,0,0.08);"></div>\` : ''}
+                \${iEY ? \`<div class="img-preview-box"><div style="font-weight:bold;color:#0056b3;margin-bottom:5px;">Y方向 見附面積図 (DXF読込)</div><img src="\${iEY.img}" style="width:100%; border:1px solid #ddd; padding:5px; border-radius:4px; box-shadow:0 2px 8px rgba(0,0,0,0.08);"></div>\` : ''}
+            </div>
+            <div id="mitsuke-table-container"></div>
+        </div>
+        
+        <div id="tab-div4" class="preview-tab-content" style="width:100%; display:none;">
+            <div class="tab-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap:20px; margin-bottom:20px;">
+                \${iD1 ? \`<div class="img-preview-box"><div style="font-weight:bold;color:#0056b3;margin-bottom:5px;">1F 4分割図</div><img src="\${iD1.img}" style="width:100%; border:1px solid #ddd; padding:5px; border-radius:4px; box-shadow:0 2px 8px rgba(0,0,0,0.08);"></div>\` : ''}
+                \${iD2 ? \`<div class="img-preview-box"><div style="font-weight:bold;color:#0056b3;margin-bottom:5px;">2F 4分割図</div><img src="\${iD2.img}" style="width:100%; border:1px solid #ddd; padding:5px; border-radius:4px; box-shadow:0 2px 8px rgba(0,0,0,0.08);"></div>\` : ''}
+            </div>
+        </div>
+        
+        <div id="tab-pillar" class="preview-tab-content" style="width:100%; display:none;">
+            <div class="tab-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap:20px; margin-bottom:20px;">
+                \${iPA1 ? \`<div class="img-preview-box"><div style="font-weight:bold;color:#0056b3;margin-bottom:5px;">1F 柱負担面積図</div><img src="\${iPA1.img}" style="width:100%; border:1px solid #ddd; padding:5px; border-radius:4px; box-shadow:0 2px 8px rgba(0,0,0,0.08);"></div>\` : ''}
+                \${iPA2 ? \`<div class="img-preview-box"><div style="font-weight:bold;color:#0056b3;margin-bottom:5px;">2F 柱負担面積図</div><img src="\${iPA2.img}" style="width:100%; border:1px solid #ddd; padding:5px; border-radius:4px; box-shadow:0 2px 8px rgba(0,0,0,0.08);"></div>\` : ''}
+            </div>
+        </div>
+    `;
 
-    appendBox(iF1, '1F 床面積図・表'); appendBox(iF2, '2F 床面積図・表'); appendBox(iFR, 'R階 床面積図・表');
-    
-    // Prioritize automatic projection models, display DXF as secondary backup
-    if (iAutoEX) appendBox(iAutoEX, 'X方向 見付面積図 (自動計算モデル)');
-    appendBox(iEX, 'X方向 見付面積図・表 (DXF読込)');
-    
-    if (iAutoEY) appendBox(iAutoEY, 'Y方向 見付面積図 (自動計算モデル)');
-    appendBox(iEY, 'Y方向 見付面積図・表 (DXF読込)');
-    
-    appendBox(iD1, '1F 4分割図・表'); appendBox(iD2, '2F 4分割図・表');
-    appendBox(iPA1, '1F 柱負担面積図'); appendBox(iPA2, '2F 柱負担面積図');
+    // タブのインラインCSSとアクティブクラスのスタイル定義
+    let tabStyle = `
+        <style>
+            .preview-tab-btn {
+                background: #f1f2f6;
+                color: #2c3e50;
+                border: 1px solid #dcdde1;
+                outline: none;
+            }
+            .preview-tab-btn:hover {
+                background: #e1e2e6;
+            }
+            .preview-tab-btn.active {
+                background: #8e44ad !important;
+                color: #ffffff !important;
+                border-color: #8e44ad !important;
+            }
+            .img-preview-box img {
+                max-height: 70vh !important;
+                object-fit: contain;
+            }
+        </style>
+    `;
 
-    if (pc.innerHTML === '') { pc.innerHTML = '<div style="padding:20px;color:#999;width:100%;text-align:center;">挿絵用のDXF図面が読み込まれていません。右パネルから読み込んでください。</div>'; }
+    pc.innerHTML = tabStyle + tabHtml;
+
+    // テーブルの挿入
+    const floorTableContainer = document.getElementById('floor-table-container');
+    if (floorTableContainer) {
+        floorTableContainer.innerHTML = generateFloorAreaTableHtml(window.AppState);
+    }
+
+    const mitsukeTableContainer = document.getElementById('mitsuke-table-container');
+    if (mitsukeTableContainer && window.ElevationRenderer && window.ElevationRenderer.generateElevationAreaTableHtml) {
+        mitsukeTableContainer.innerHTML = window.ElevationRenderer.generateElevationAreaTableHtml(window.AppState);
+    }
+
+    // イベントバインディング
+    const tabBtns = pc.querySelectorAll('.preview-tab-btn');
+    tabBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+            // Remove active classes
+            tabBtns.forEach(b => b.classList.remove('active'));
+            pc.querySelectorAll('.preview-tab-content').forEach(c => c.style.display = 'none');
+            
+            // Add active class
+            this.classList.add('active');
+            const targetId = this.getAttribute('data-target');
+            const targetContent = document.getElementById(targetId);
+            if (targetContent) {
+                targetContent.style.display = 'block';
+            }
+        });
+    });
+
     const modal = document.getElementById('modal-area');
     if (modal) { modal.style.display = 'flex'; }
 }

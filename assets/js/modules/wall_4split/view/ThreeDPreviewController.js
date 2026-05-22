@@ -214,22 +214,82 @@ window.ThreeDPreviewController = {
         this.meshes = [];
 
         // Build structural components:
-        // Standard wall heights: 1F is Z = 0..3000, 2F is Z = 3000..6000
         const walls = state.walls || [];
         const pillars = state.pillars || [];
         const roofFaces = state.roofFaces || [];
 
+        // Dynamic Heights & Levels calculation
+        const lvl = window.RoofEngine ? window.RoofEngine.getFloorLevels(state) : { fl1: 561, fl2: 3297, cut1: 1911, cut2: 4647 };
+        const c = state.config || {};
+        const baseH       = parseFloat(c.baseHeight    ?? 400);
+        const basePack    = parseFloat(c.basePack       ?? 20);
+        const baseSill    = parseFloat(c.baseSill       ?? 105);
+        const flTk1       = parseFloat(c.floorThick1F   ?? 36);
+        const flTk2       = parseFloat(c.floorThick2F   ?? 36);
+        const axH1        = (parseFloat(c.floorHeight1F ?? 2.7)) * 1000; // mm
+        const axH2        = (parseFloat(c.floorHeight2F ?? 2.7)) * 1000; // mm
+        const maxH        = parseFloat(c.maxHeight      ?? 8000); // mm
+
+        // 1F pillar bottom / top of sill
+        const zMin1F = baseH + basePack + baseSill;
+        const h1F = axH1;
+
+        // 2F pillar bottom / top of 2F horizontal member
+        const zMin2F = zMin1F + axH1;
+
+        // Determine 2F eaves height (eavesZ2F) dynamically so that roof peak reaches maxH
+        let relZMax2F = 0;
+        let has2FRoof = false;
+
+        roofFaces.forEach(face => {
+            if (!face.vertices || face.floor !== '2F') return;
+            has2FRoof = true;
+            const slope = parseFloat(face.slope ?? 4.5);
+            const slopeVal = slope / 10;
+            const thickness = parseFloat(face.roofThickness ?? c.roofThickness ?? 150);
+            const tVertical = thickness * Math.sqrt(1 + slopeVal * slopeVal);
+            const baseDelta = parseFloat(face.baseHeightDelta ?? 0);
+
+            let ux = 0, uy = 1;
+            const pA = (face.slopeLine && face.slopeLine.length > 0) ? face.slopeLine[0] : face.vertices[0];
+            if (!pA) return;
+            if (face.slopeLine && face.slopeLine.length >= 3) {
+                const pB = face.slopeLine[1], pC = face.slopeLine[2];
+                if (pB && pC) {
+                    const dx = pB.x - pA.x, dy = pB.y - pA.y;
+                    let nx = -dy, ny = dx;
+                    if ((nx*(pC.x-pA.x) + ny*(pC.y-pA.y)) < 0) { nx = -nx; ny = -ny; }
+                    const len = Math.hypot(nx, ny);
+                    ux = len > 0 ? nx/len : 0; uy = len > 0 ? ny/len : 1;
+                }
+            } else if (face.slopeLine && face.slopeLine.length === 2) {
+                const p2 = face.slopeLine[1];
+                if (p2) { const dx=p2.x-pA.x, dy=p2.y-pA.y, len=Math.hypot(dx,dy); ux=len>0?dx/len:0; uy=len>0?dy/len:1; }
+            }
+
+            face.vertices.forEach(v => {
+                const dist = (v.x - pA.x)*ux + (v.y - pA.y)*uy;
+                const z = dist * slopeVal + tVertical + baseDelta;
+                if (z > relZMax2F) {
+                    relZMax2F = z;
+                }
+            });
+        });
+
+        const eavesZ2F = has2FRoof ? (maxH - relZMax2F) : (zMin2F + axH2);
+        const h2F = eavesZ2F - zMin2F;
+        const eavesZ1F = zMin2F; // 1F roof base is 2FL
+
         // 1. Draw Pillars
         pillars.forEach(p => {
             if (p.isDeleted || p.isInvalidPos) return;
-            const h = 3000;
-            const zMin = p.floor === '2F' ? 3000 : 0;
+            const h = p.floor === '2F' ? h2F : h1F;
+            const zMin = p.floor === '2F' ? zMin2F : zMin1F;
             
             const geom = new THREE.BoxGeometry(120, h, 120);
             const mat = new THREE.MeshPhongMaterial({ color: '#8e44ad', opacity: 0.8, transparent: true });
             const mesh = new THREE.Mesh(geom, mat);
             
-            // Map 2D (x, y) to 3D (X, Z, -Y) because Y is up in Three.js
             mesh.position.set(p.x, zMin + h/2, -p.y);
             this.scene.add(mesh);
             this.meshes.push(mesh);
@@ -244,20 +304,18 @@ window.ThreeDPreviewController = {
             const len = Math.hypot(dx, dy);
             if (len < 5) return;
 
-            const h = 3000;
-            const zMin = w.floor === '2F' ? 3000 : 0;
+            const h = w.floor === '2F' ? h2F : h1F;
+            const zMin = w.floor === '2F' ? zMin2F : zMin1F;
             
             const geom = new THREE.BoxGeometry(100, h, len);
             
-            // Slate/Beige color depending on load factor
             const factor = w.multiplier || 1.0;
-            const color = factor >= 2.0 ? '#c0392b' : '#7f8c8d'; // strong wall is red, normal grey
+            const color = factor >= 2.0 ? '#c0392b' : '#7f8c8d';
 
             const mat = new THREE.MeshPhongMaterial({ color: color, opacity: 0.5, transparent: true });
             const mesh = new THREE.Mesh(geom, mat);
 
-            // Position and rotate
-            const angle = Math.atan2(dx, dy); // rotation around Y axis in Three.js
+            const angle = Math.atan2(dx, dy);
             mesh.position.set((p1.x + p2.x)/2, zMin + h/2, -(p1.y + p2.y)/2);
             mesh.rotation.y = angle;
 
@@ -271,10 +329,8 @@ window.ThreeDPreviewController = {
             const validVertices = face.vertices.filter(v => v && typeof v.x === 'number' && !isNaN(v.x) && typeof v.y === 'number' && !isNaN(v.y));
             if (validVertices.length < 3) return;
 
-            // Define base height z_base
-            const zBase = (face.floor === '2F' ? 6000 : 3000) + (face.baseHeightDelta || 0);
+            const zBase = (face.floor === '2F' ? eavesZ2F : eavesZ1F) + (face.baseHeightDelta || 0);
 
-            // Get slope reference line points (3-point definition support: [0]=rafter start, [1]=rafter end, [2]=slope high point)
             let ux = 0, uy = 1;
             const pA = (face.slopeLine && face.slopeLine.length > 0) ? face.slopeLine[0] : validVertices[0];
             if (!pA) return;
@@ -314,27 +370,23 @@ window.ThreeDPreviewController = {
             const thickness = face.roofThickness !== undefined ? parseFloat(face.roofThickness) : 150;
             const tVertical = (isNaN(thickness) ? 150 : thickness) * Math.sqrt(1 + slopeVal * slopeVal);
 
-            // We construct solid 3D sloped slab geometry using custom buffer vertices
             const topVertices = [];
             const bottomVertices = [];
 
             validVertices.forEach(v => {
                 const dist = (v.x - pA.x) * ux + (v.y - pA.y) * uy;
-                const z = zBase + dist * slopeVal;
+                const zCore = zBase + dist * slopeVal;
                 
-                topVertices.push(new THREE.Vector3(v.x, z, -v.y));
-                bottomVertices.push(new THREE.Vector3(v.x, z - tVertical, -v.y));
+                topVertices.push(new THREE.Vector3(v.x, zCore + tVertical, -v.y));
+                bottomVertices.push(new THREE.Vector3(v.x, zCore, -v.y));
             });
 
             if (topVertices.length < 3 || bottomVertices.length < 3) return;
 
-            // Create geometry
             const geom = new THREE.BufferGeometry();
             const positions = [];
             const indices = [];
 
-            // We triangulate the top polygon and bottom polygon.
-            // For simple convex shape drawing:
             const n = validVertices.length;
 
             // Top faces (winding order clockwise)
@@ -345,7 +397,6 @@ window.ThreeDPreviewController = {
             }
 
             // Bottom faces (winding order counter-clockwise)
-            const baseIdx = positions.length / 3;
             for (let i = 1; i < n - 1; i++) {
                 positions.push(bottomVertices[0].x, bottomVertices[0].y, bottomVertices[0].z);
                 positions.push(bottomVertices[i+1].x, bottomVertices[i+1].y, bottomVertices[i+1].z);
@@ -353,7 +404,6 @@ window.ThreeDPreviewController = {
             }
 
             // Side faces
-            const sideBaseIdx = positions.length / 3;
             for (let i = 0; i < n; i++) {
                 const next = (i + 1) % n;
                 
@@ -362,18 +412,15 @@ window.ThreeDPreviewController = {
                 const b1 = bottomVertices[i];
                 const b2 = bottomVertices[next];
 
-                // Side Quad Triangle 1: t1 -> t2 -> b2
                 positions.push(t1.x, t1.y, t1.z);
                 positions.push(t2.x, t2.y, t2.z);
                 positions.push(b2.x, b2.y, b2.z);
 
-                // Side Quad Triangle 2: t1 -> b2 -> b1
                 positions.push(t1.x, t1.y, t1.z);
                 positions.push(b2.x, b2.y, b2.z);
                 positions.push(b1.x, b1.y, b1.z);
             }
 
-            // Map all indices sequentially
             const numVerts = positions.length / 3;
             for (let i = 0; i < numVerts; i++) {
                 indices.push(i);
@@ -383,7 +430,6 @@ window.ThreeDPreviewController = {
             geom.setIndex(indices);
             geom.computeVertexNormals();
 
-            // Slate-blue color for 2F roofs, Tile-red color for 1F roofs
             const color = face.floor === '2F' ? '#2980b9' : '#e67e22';
             const mat = new THREE.MeshPhongMaterial({ 
                 color: color, 
@@ -398,7 +444,7 @@ window.ThreeDPreviewController = {
             this.meshes.push(mesh);
         });
 
-        // Autofit camera lookAt to centroid of building (pillars, walls, or roofs)
+        // Autofit camera lookAt to centroid of building
         let sumX = 0, sumY = 0, count = 0;
         if (pillars && pillars.length > 0) {
             pillars.forEach(p => { sumX += p.x; sumY += p.y; count++; });
@@ -434,298 +480,213 @@ window.ThreeDPreviewController = {
             this.controls.target.set(0, 3000, 0);
         }
 
-        // 4. Draw 3D projected Mitsuke Planes (Visual wow factor for projection bounds)
+        // 4. Draw 3D projected Mitsuke Planes
         if (state.config) {
             const config = state.config;
             const wallThick = config.wallThickness !== undefined ? parseFloat(config.wallThickness) : 150;
             const maxH = config.maxHeight !== undefined ? parseFloat(config.maxHeight) : 8000;
-            const maxEavesH = config.maxEavesHeight !== undefined ? parseFloat(config.maxEavesHeight) : 6000;
 
-            const baseH = config.baseHeight !== undefined ? parseFloat(config.baseHeight) : 400;
-            const basePack = config.basePack !== undefined ? parseFloat(config.basePack) : 20;
-            const baseSill = config.baseSill !== undefined ? parseFloat(config.baseSill) : 105;
-            const floorThick1F = config.floorThick1F !== undefined ? parseFloat(config.floorThick1F) : 36;
-            const floorThick2F = config.floorThick2F !== undefined ? parseFloat(config.floorThick2F) : 36;
-            const roofThick = config.roofThickness !== undefined ? parseFloat(config.roofThickness) : 150;
+            const glTo1FFloor = zMin1F;
+            const glTo2FFloor = lvl.fl2;
+            const glToRoofEaves = eavesZ2F;
 
-            // Strict GL-relative floor levels calculation
-            const glTo1FFloor = baseH + basePack + baseSill; // 1F pillar bottom / top of sill
-            const glTo2FFloor = glTo1FFloor + (parseFloat(config.floorHeight1F) || 2.7) * 1000; // 2F horizontal member top
-            const glToRoofEaves = glTo2FFloor + (parseFloat(config.floorHeight2F) || 2.7) * 1000; // Eaves height
-
-            // Calculate highly precise 3D boundary coordinates based on actual 3D components rendered
-            let pts3DForBBox = [];
-            
-            // Add pillars bounds
-            pillars.forEach(p => {
-                if (p.isDeleted || p.isInvalidPos) return;
-                pts3DForBBox.push({ x: p.x - 60, y: p.y - 60 });
-                pts3DForBBox.push({ x: p.x + 60, y: p.y + 60 });
-            });
-            // Add walls bounds
-            walls.forEach(w => {
-                if (w.isDeleted || w.isInvalidPos) return;
-                pts3DForBBox.push({ x: w.p1.x, y: w.p1.y });
-                pts3DForBBox.push({ x: w.p2.x, y: w.p2.y });
-            });
-            // Add roof vertices bounds (most accurate representation of building overhangs)
-            roofFaces.forEach(face => {
-                if (!face.vertices) return;
-                face.vertices.forEach(v => {
-                    if (v && typeof v.x === 'number' && !isNaN(v.x) && typeof v.y === 'number' && !isNaN(v.y)) {
-                        pts3DForBBox.push({ x: v.x, y: v.y });
-                    }
-                });
-            });
-
-            // Dynamic boundary fallback logic
-            let minX = 0, maxX = 10000, minY = 0, maxY = 10000;
-            if (pts3DForBBox.length > 0) {
-                const xs = pts3DForBBox.map(p => p.x);
-                const ys = pts3DForBBox.map(p => p.y);
-                minX = Math.min(...xs);
-                maxX = Math.max(...xs);
-                minY = Math.min(...ys);
-                maxY = Math.max(...ys);
-            } else {
-                const bbox1F = window.RoofEngine ? window.RoofEngine.getFloorBoundingBox('1F', state) : { minX: 0, maxX: 10000, minY: 0, maxY: 10000 };
-                const bbox2F = window.RoofEngine ? window.RoofEngine.getFloorBoundingBox('2F', state) : { minX: 0, maxX: 10000, minY: 0, maxY: 10000 };
-                minX = Math.min(bbox1F.minX, bbox2F.minX);
-                maxX = Math.max(bbox1F.maxX, bbox2F.maxX);
-                minY = Math.min(bbox1F.minY, bbox2F.minY);
-                maxY = Math.max(bbox1F.maxY, bbox2F.maxY);
-            }
-
-            // Apply wall thickness offsets to silhouette bounds (safety side calculation)
-            const wallOff = wallThick / 2;
-            const silMinX = minX - wallOff;
-            const silMaxX = maxX + wallOff;
-            const silMinY = minY - wallOff;
-            const silMaxY = maxY + wallOff;
-
-            // Real-time Scanline Elevation Profiler to reconstruct exact projected silhouette
-            const getScanlineProfile = (direction, minU, maxU) => {
-                const steps = 100; // high fidelity split
-                const profile = [];
-                const stepSize = (maxU - minU) / steps;
-
-                for (let i = 0; i <= steps; i++) {
-                    const u = minU + i * stepSize;
-                    let maxZ = 0;
-
-                    // 1. Pillars contribution (relative to GL floor levels)
-                    pillars.forEach(p => {
-                        if (p.isDeleted || p.isInvalidPos) return;
-                        const pU = (direction === 'X') ? p.y : p.x;
-                        const pZ = (p.floor === '2F' ? glToRoofEaves : glTo2FFloor);
-                        if (Math.abs(pU - u) <= (60 + wallOff)) {
-                            if (pZ > maxZ) maxZ = pZ;
-                        }
-                    });
-
-                    // 2. Walls contribution (relative to GL floor levels)
-                    walls.forEach(w => {
-                        if (w.isDeleted || w.isInvalidPos) return;
-                        const u1 = (direction === 'X') ? w.p1.y : w.p1.x;
-                        const u2 = (direction === 'X') ? w.p2.y : w.p2.x;
-                        const wZ = (w.floor === '2F' ? glToRoofEaves : glTo2FFloor);
-                        const minW = Math.min(u1, u2);
-                        const maxW = Math.max(u1, u2);
-                        if (u >= minW - wallOff && u <= maxW + wallOff) {
-                            if (wZ > maxZ) maxZ = wZ;
-                        }
-                    });
-
-                    // 3. Sloped Roof faces contribution (exact geometric interpolation + roofThickness)
-                    roofFaces.forEach(face => {
-                        if (!face.vertices) return;
-                        const uCoords = face.vertices.map(v => (direction === 'X') ? v.y : v.x);
-                        const minRoofU = Math.min(...uCoords);
-                        const maxRoofU = Math.max(...uCoords);
-
-                        if (u >= minRoofU - 10 && u <= maxRoofU + 10) {
-                            const zBase = (face.floor === '2F' ? glToRoofEaves : glTo2FFloor) + (face.baseHeightDelta || 0);
-                            
-                            let ux = 0, uy = 1;
-                            const pA = (face.slopeLine && face.slopeLine.length > 0) ? face.slopeLine[0] : face.vertices[0];
-                            if (!pA) return;
-
-                            if (face.slopeLine && face.slopeLine.length >= 3) {
-                                const pB = face.slopeLine[1];
-                                const pC = face.slopeLine[2];
-                                if (pB && pC) {
-                                    const dx = pB.x - pA.x;
-                                    const dy = pB.y - pA.y;
-                                    let nx = -dy; let ny = dx;
-                                    const vx = pC.x - pA.x; const vy = pC.y - pA.y;
-                                    const dot = nx * vx + ny * vy;
-                                    if (dot < 0) { nx = -nx; ny = -ny; }
-                                    const len = Math.hypot(nx, ny);
-                                    ux = len > 0 ? nx / len : 0;
-                                    uy = len > 0 ? ny / len : 1;
-                                }
-                            } else if (face.slopeLine && face.slopeLine.length === 2) {
-                                const p2 = face.slopeLine[1];
-                                if (p2) {
-                                    const dx = p2.x - pA.x;
-                                    const dy = p2.y - pA.y;
-                                    const len = Math.hypot(dx, dy);
-                                    ux = len > 0 ? dx / len : 0;
-                                    uy = len > 0 ? dy / len : 1;
-                                }
-                            }
-
-                            const slope = face.slope !== undefined ? parseFloat(face.slope) : 4.5;
-                            const slopeVal = isNaN(slope) ? 0.45 : (slope / 10);
-
-                            let roofZCandidates = [];
-                            const numV = face.vertices.length;
-
-                            // Calculate intersection with the scanline plane
-                            for (let j = 0; j < numV; j++) {
-                                const v1 = face.vertices[j];
-                                const v2 = face.vertices[(j + 1) % numV];
-                                if (!v1 || !v2) continue;
-                                const val1 = (direction === 'X') ? v1.y : v1.x;
-                                const val2 = (direction === 'X') ? v2.y : v2.x;
-
-                                if ((val1 <= u && val2 >= u) || (val2 <= u && val1 >= u)) {
-                                    let t = 0.5;
-                                    if (Math.abs(val2 - val1) > 0.01) {
-                                        t = (u - val1) / (val2 - val1);
-                                    }
-                                    const intersectX = v1.x + t * (v2.x - v1.x);
-                                    const intersectY = v1.y + t * (v2.y - v1.y);
-
-                                    const dist = (intersectX - pA.x) * ux + (intersectY - pA.y) * uy;
-                                    // Add sloped thickness (safety thickness representation)
-                                    const z = zBase + dist * slopeVal + roofThick;
-                                    roofZCandidates.push(z);
-                                }
-                            }
-
-                            if (roofZCandidates.length === 0) {
-                                face.vertices.forEach(v => {
-                                    const val = (direction === 'X') ? v.y : v.x;
-                                    if (Math.abs(val - u) <= stepSize) {
-                                        const dist = (v.x - pA.x) * ux + (v.y - pA.y) * uy;
-                                        const z = zBase + dist * slopeVal + roofThick;
-                                        roofZCandidates.push(z);
-                                    }
-                                });
-                            }
-
-                            if (roofZCandidates.length > 0) {
-                                const maxRoofZ = Math.max(...roofZCandidates);
-                                if (maxRoofZ > maxZ) maxZ = maxRoofZ;
-                            }
-                        }
-                    });
-
-                    profile.push({ u: u, z: maxZ });
-                }
-                return profile;
+            // Calculate precise 3D boundary coordinates based on actual 3D components rendered
+            const bbox1F = window.RoofEngine ? window.RoofEngine.getFloorBoundingBox('1F', state) : { minX: 0, maxX: 10000, minY: 0, maxY: 10000 };
+            const bbox2F = window.RoofEngine ? window.RoofEngine.getFloorBoundingBox('2F', state) : { minX: 0, maxX: 10000, minY: 0, maxY: 10000 };
+            const bboxAll = {
+                minX: Math.min(bbox1F.minX, bbox2F.minX),
+                maxX: Math.max(bbox1F.maxX, bbox2F.maxX),
+                minY: Math.min(bbox1F.minY, bbox2F.minY),
+                maxY: Math.max(bbox1F.maxY, bbox2F.maxY)
             };
 
-            // Generate Scanline Profiles using safety offset bounds
-            const profileX = getScanlineProfile('X', silMinY, silMaxY);
-            const profileY = getScanlineProfile('Y', silMinX, silMaxX);
-
-            // Exactly locate the real peak ridge (highest sampled roof vertex)
-            let peakX = (silMinX + silMaxX) / 2;
-            let peakY = (silMinY + silMaxY) / 2;
-            let bestZ_X = 0;
-            profileY.forEach(p => {
-                if (p.z > bestZ_X) {
-                    bestZ_X = p.z;
-                    peakX = p.u;
-                }
-            });
-            let bestZ_Y = 0;
-            profileX.forEach(p => {
-                if (p.z > bestZ_Y) {
-                    bestZ_Y = p.z;
-                    peakY = p.u;
-                }
-            });
-
-            const actualMaxH = Math.max(bestZ_X, bestZ_Y, glToRoofEaves);
+            // Wall offset applied directly
+            const wallOff = wallThick;
+            const silMinX = bboxAll.minX - wallOff;
+            const silMaxX = bboxAll.maxX + wallOff;
+            const silMinY = bboxAll.minY - wallOff;
+            const silMaxY = bboxAll.maxY + wallOff;
 
             const xProjX = silMinX - 3000;
             const yProjY = silMinY - 3000;
 
-            const planeMatX = new THREE.MeshBasicMaterial({ color: 0xe67e22, side: THREE.DoubleSide, transparent: true, opacity: 0.2 });
-            const planeMatY = new THREE.MeshBasicMaterial({ color: 0x2980b9, side: THREE.DoubleSide, transparent: true, opacity: 0.2 });
+            // X-direction Mitsuke (Orange, Y-load, Z_3d moves along Y axis)
+            const planeMatX1F = new THREE.MeshBasicMaterial({ color: 0xe67e22, side: THREE.DoubleSide, transparent: true, opacity: 0.08 });
+            const planeMatX2F = new THREE.MeshBasicMaterial({ color: 0xe67e22, side: THREE.DoubleSide, transparent: true, opacity: 0.18 });
+            const lineMatX = new THREE.LineBasicMaterial({ color: 0xe67e22, linewidth: 3 });
+
+            // Y-direction Mitsuke (Blue, X-load, X_3d moves along X axis)
+            const planeMatY1F = new THREE.MeshBasicMaterial({ color: 0x2980b9, side: THREE.DoubleSide, transparent: true, opacity: 0.08 });
+            const planeMatY2F = new THREE.MeshBasicMaterial({ color: 0x2980b9, side: THREE.DoubleSide, transparent: true, opacity: 0.18 });
+            const lineMatY = new THREE.LineBasicMaterial({ color: 0x2980b9, linewidth: 3 });
+
+            const drawProjectedPolygon = (pts, dir, planeMat, lineMat, depth) => {
+                if (pts.length < 3) return;
+                
+                const geom = new THREE.BufferGeometry();
+                const pos = [];
+                pts.forEach(p => pos.push(p.x, p.y, p.z));
+                geom.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+                
+                const idx = [];
+                for (let i = 1; i < pts.length - 1; i++) idx.push(0, i, i + 1);
+                geom.setIndex(idx);
+                
+                const mesh = new THREE.Mesh(geom, planeMat);
+                this.scene.add(mesh);
+                this.meshes.push(mesh);
+
+                if (lineMat) {
+                    const lineGeom = new THREE.BufferGeometry().setFromPoints([...pts, pts[0]]);
+                    const line = new THREE.Line(lineGeom, lineMat);
+                    this.scene.add(line);
+                    this.meshes.push(line);
+                }
+            };
+
+            // Scanline Profile generator matching 2D calculation exactly
+            const getScanlineProfile = (direction) => {
+                const W = (direction === 'X') ? (silMaxY - silMinY) : (silMaxX - silMinX);
+                const uMin = (direction === 'X') ? silMinY : silMinX;
+                const uMax = (direction === 'X') ? silMaxY : silMaxX;
+                const STEPS = 200;
+                const profile = [];
+
+                for (let i = 0; i <= STEPS; i++) {
+                    const u = uMin + (i / STEPS) * (uMax - uMin);
+                    let maxZ = eavesZ2F; // Base is dynamic eavesZ2F
+
+                    roofFaces.forEach(face => {
+                        if (!face.vertices) return;
+                        const floor = face.floor || '2F';
+                        const baseDelta = parseFloat(face.baseHeightDelta ?? 0);
+                        const zBase = (floor === '2F' ? eavesZ2F : eavesZ1F) + baseDelta;
+                        const slope = parseFloat(face.slope ?? 0);
+                        const slopeVal = slope / 10;
+                        const thickness = parseFloat(face.roofThickness ?? config.roofThickness ?? 150);
+                        const tVertical = thickness * Math.sqrt(1 + slopeVal * slopeVal);
+
+                        let ux = 0, uy = 1;
+                        const pA = (face.slopeLine && face.slopeLine.length > 0) ? face.slopeLine[0] : face.vertices[0];
+                        if (!pA) return;
+                        if (face.slopeLine && face.slopeLine.length >= 3) {
+                            const pB = face.slopeLine[1], pC = face.slopeLine[2];
+                            if (pB && pC) {
+                                const dx = pB.x - pA.x, dy = pB.y - pA.y;
+                                let nx = -dy, ny = dx;
+                                if ((nx*(pC.x-pA.x) + ny*(pC.y-pA.y)) < 0) { nx=-nx; ny=-ny; }
+                                const len = Math.hypot(nx, ny);
+                                ux = len > 0 ? nx/len : 0;
+                                uy = len > 0 ? ny/len : 1;
+                            }
+                        } else if (face.slopeLine && face.slopeLine.length === 2) {
+                            const p2 = face.slopeLine[1];
+                            if (p2) { const dx=p2.x-pA.x, dy=p2.y-pA.y, len=Math.hypot(dx,dy); ux=len>0?dx/len:0; uy=len>0?dy/len:1; }
+                        }
+
+                        const numV = face.vertices.length;
+                        for (let j = 0; j < numV; j++) {
+                            const v1 = face.vertices[j], v2 = face.vertices[(j+1)%numV];
+                            const val1 = (direction === 'X') ? v1.y : v1.x;
+                            const val2 = (direction === 'X') ? v2.y : v2.x;
+                            if ((val1 <= u && val2 >= u) || (val2 <= u && val1 >= u)) {
+                                if (Math.abs(val2-val1) < 0.01) continue;
+                                const t = (u-val1)/(val2-val1);
+                                const ix = v1.x + t*(v2.x-v1.x), iy = v1.y + t*(v2.y-v1.y);
+                                const dist = (ix-pA.x)*ux + (iy-pA.y)*uy;
+                                const z = zBase + dist*slopeVal + tVertical;
+                                if (z > maxZ) maxZ = z;
+                            }
+                        }
+                    });
+                    profile.push({ u, z: maxZ });
+                }
+                return { uMin, uMax, profile };
+            };
+
+            const drawProjectedProfile = (direction, planeMat1F, planeMat2F, lineMat, depth) => {
+                const { uMin, uMax, profile } = getScanlineProfile(direction);
+                
+                // 1. 1F Additional Mitsuke Area (cut1 to Math.min(eavesZ1F, cut2))
+                const top1F = Math.min(eavesZ1F, lvl.cut2);
+                if (top1F > lvl.cut1) {
+                    const pts1F = [];
+                    if (direction === 'X') {
+                        // Projected to Y-plane (Orange, X = xProjX)
+                        pts1F.push(new THREE.Vector3(xProjX, lvl.cut1, -uMin));
+                        pts1F.push(new THREE.Vector3(xProjX, lvl.cut1, -uMax));
+                        pts1F.push(new THREE.Vector3(xProjX, top1F, -uMax));
+                        pts1F.push(new THREE.Vector3(xProjX, top1F, -uMin));
+                    } else {
+                        // Projected to X-plane (Blue, Z = -yProjY)
+                        pts1F.push(new THREE.Vector3(uMin, lvl.cut1, -yProjY));
+                        pts1F.push(new THREE.Vector3(uMax, lvl.cut1, -yProjY));
+                        pts1F.push(new THREE.Vector3(uMax, top1F, -yProjY));
+                        pts1F.push(new THREE.Vector3(uMin, top1F, -yProjY));
+                    }
+                    drawProjectedPolygon(pts1F, direction, planeMat1F, null, depth);
+                }
+
+                // 2. 2F Mitsuke Area (cut2 and above)
+                const pts2F = [];
+                if (direction === 'X') {
+                    pts2F.push(new THREE.Vector3(xProjX, lvl.cut2, -uMin));
+                    pts2F.push(new THREE.Vector3(xProjX, lvl.cut2, -uMax));
+                    for (let i = profile.length - 1; i >= 0; i--) {
+                        const p = profile[i];
+                        pts2F.push(new THREE.Vector3(xProjX, p.z, -p.u));
+                    }
+                } else {
+                    pts2F.push(new THREE.Vector3(uMin, lvl.cut2, -yProjY));
+                    pts2F.push(new THREE.Vector3(uMax, lvl.cut2, -yProjY));
+                    for (let i = profile.length - 1; i >= 0; i--) {
+                        const p = profile[i];
+                        pts2F.push(new THREE.Vector3(p.u, p.z, -yProjY));
+                    }
+                }
+                drawProjectedPolygon(pts2F, direction, planeMat2F, null, depth);
+
+                // 3. Complete outer silhouette line
+                const silPts = [];
+                if (direction === 'X') {
+                    silPts.push(new THREE.Vector3(xProjX, 0, -uMin));
+                    profile.forEach(p => silPts.push(new THREE.Vector3(xProjX, p.z, -p.u)));
+                    silPts.push(new THREE.Vector3(xProjX, 0, -uMax));
+                } else {
+                    silPts.push(new THREE.Vector3(uMin, 0, -yProjY));
+                    profile.forEach(p => silPts.push(new THREE.Vector3(p.u, p.z, -yProjY)));
+                    silPts.push(new THREE.Vector3(uMax, 0, -yProjY));
+                }
+                
+                const lineGeom = new THREE.BufferGeometry().setFromPoints([...silPts, silPts[0]]);
+                const line = new THREE.Line(lineGeom, lineMat);
+                this.scene.add(line);
+                this.meshes.push(line);
+            };
+
+            // Draw integrated profile projections
+            // X-direction projection (Y-load, Orange plane)
+            drawProjectedProfile('X', planeMatX1F, planeMatX2F, lineMatX, xProjX);
             
-            const lineMatX = new THREE.LineBasicMaterial({ color: 0xe67e22, linewidth: 2 });
-            const lineMatY = new THREE.LineBasicMaterial({ color: 0x2980b9, linewidth: 2 });
+            // Y-direction projection (X-load, Blue plane)
+            drawProjectedProfile('Y', planeMatY1F, planeMatY2F, lineMatY, -yProjY);
 
-            // --- Draw X-direction Mitsuke Silhouette (Y-direction Projection) ---
-            const silVertsX = [];
-            silVertsX.push(new THREE.Vector3(xProjX, 0, -silMinY)); // GL Start Left
-            profileX.forEach(p => {
-                silVertsX.push(new THREE.Vector3(xProjX, p.z, -p.u)); // Profile Points
-            });
-            silVertsX.push(new THREE.Vector3(xProjX, 0, -silMaxY)); // GL End Right
-
-            const geomX = new THREE.BufferGeometry();
-            const posX = [];
-            silVertsX.forEach(v => posX.push(v.x, v.y, v.z));
-            geomX.setAttribute('position', new THREE.Float32BufferAttribute(posX, 3));
+            // Draw Projection Rays from peak points
+            const profileX = getScanlineProfile('X').profile;
+            const profileY = getScanlineProfile('Y').profile;
+            const maxZ_X = Math.max(...profileX.map(p => p.z));
+            const maxZ_Y = Math.max(...profileY.map(p => p.z));
             
-            // Reconstruct precise triangulation index using Triangle Fan matching the profile
-            const idxX = [];
-            const numVertsX = silVertsX.length;
-            for (let i = 1; i < numVertsX - 1; i++) {
-                idxX.push(0, i, i + 1);
-            }
-            geomX.setIndex(idxX);
-            
-            const meshX = new THREE.Mesh(geomX, planeMatX);
-            this.scene.add(meshX);
-            this.meshes.push(meshX);
+            let peakU_X = silMinY;
+            profileX.forEach(p => { if (p.z === maxZ_X) peakU_X = p.u; });
+            let peakU_Y = silMinX;
+            profileY.forEach(p => { if (p.z === maxZ_Y) peakU_Y = p.u; });
 
-            const lineGeomX = new THREE.BufferGeometry().setFromPoints(silVertsX);
-            const lineX = new THREE.Line(lineGeomX, lineMatX);
-            this.scene.add(lineX);
-            this.meshes.push(lineX);
-
-            // --- Draw Y-direction Mitsuke Silhouette (X-direction Projection) ---
-            const silVertsY = [];
-            silVertsY.push(new THREE.Vector3(silMinX, 0, -yProjY)); // GL Start Left
-            profileY.forEach(p => {
-                silVertsY.push(new THREE.Vector3(p.u, p.z, -yProjY)); // Profile Points
-            });
-            silVertsY.push(new THREE.Vector3(silMaxX, 0, -yProjY)); // GL End Right
-
-            const geomY = new THREE.BufferGeometry();
-            const posY = [];
-            silVertsY.forEach(v => posY.push(v.x, v.y, v.z));
-            geomY.setAttribute('position', new THREE.Float32BufferAttribute(posY, 3));
-            
-            const idxY = [];
-            const numVertsY = silVertsY.length;
-            for (let i = 1; i < numVertsY - 1; i++) {
-                idxY.push(0, i, i + 1);
-            }
-            geomY.setIndex(idxY);
-            
-            const meshY = new THREE.Mesh(geomY, planeMatY);
-            this.scene.add(meshY);
-            this.meshes.push(meshY);
-
-            const lineGeomY = new THREE.BufferGeometry().setFromPoints(silVertsY);
-            const lineY = new THREE.Line(lineGeomY, lineMatY);
-            this.scene.add(lineY);
-            this.meshes.push(lineY);
-
-            // Draw Projection Rays (Dashed lines to exact peak ridge and boundaries)
             const rayMat = new THREE.LineDashedMaterial({ color: 0x7f8c8d, dashSize: 200, gapSize: 100 });
+            // Projection rays from 3D space peak coordinates
             const rayPoints = [
-                new THREE.Vector3(peakX, actualMaxH, -peakY), new THREE.Vector3(xProjX, actualMaxH, -peakY),
-                new THREE.Vector3(peakX, actualMaxH, -peakY), new THREE.Vector3(peakX, actualMaxH, -yProjY),
-                new THREE.Vector3(silMaxX, 0, -silMaxY), new THREE.Vector3(xProjX, 0, -silMaxY),
-                new THREE.Vector3(silMaxX, 0, -yProjY), new THREE.Vector3(silMaxX, 0, -silMaxY)
+                new THREE.Vector3(peakU_Y, maxZ_Y, -peakU_X), new THREE.Vector3(xProjX, maxZ_Y, -peakU_X),
+                new THREE.Vector3(peakU_Y, maxZ_Y, -peakU_X), new THREE.Vector3(peakU_Y, maxZ_Y, -yProjY)
             ];
 
             for (let i = 0; i < rayPoints.length; i += 2) {
@@ -735,6 +696,20 @@ window.ThreeDPreviewController = {
                 this.scene.add(rayLine);
                 this.meshes.push(rayLine);
             }
+
+            // Draw maximum height level helper lines (Dashed lines at config.maxHeight)
+            const dashedMat = new THREE.LineDashedMaterial({ color: 0xe74c3c, dashSize: 200, gapSize: 100, linewidth: 2 });
+            const maxHLines = [
+                [new THREE.Vector3(silMinX - 500, maxH, -yProjY), new THREE.Vector3(silMaxX + 500, maxH, -yProjY)],
+                [new THREE.Vector3(xProjX, maxH, -silMinY + 500), new THREE.Vector3(xProjX, maxH, -silMaxY - 500)],
+            ];
+            maxHLines.forEach(pts => {
+                const geom = new THREE.BufferGeometry().setFromPoints(pts);
+                const line = new THREE.Line(geom, dashedMat);
+                line.computeLineDistances();
+                this.scene.add(line);
+                this.meshes.push(line);
+            });
         }
     }
 };

@@ -30,9 +30,10 @@ window.RoofEngine = {
     },
 
     /**
-     * [v2.7.9] GL基準・スキャンライン法による見附面積計算
-     * 壁部: 外壁多角形(壁厚オフセット)のX/Y方向幅 × (軒高 - カットライン)
+     * [v2.7.11] GL基準・スキャンライン法による見附面積計算
+     * 壁部: 外壁多角形(壁厚オフセット)のX/Y方向幅 × (桁高 - カットライン)
      * 屋根部: 各面のスキャンライン投影から1.35mカット以上の面積を積分
+     * 2F軒高 (eavesZ2F) は maxH から屋根上面最高点を逆算して決定
      */
     updateProjectedAreas: function(state) {
         const s = state || window.AppState;
@@ -44,8 +45,50 @@ window.RoofEngine = {
         const bbox1F = this.getFloorBoundingBox('1F', s);
         const bbox2F = this.getFloorBoundingBox('2F', s);
 
+        const roofFaces = s.roofFaces || [];
+
+        // Determine 2F eaves height (eavesZ2F) dynamically so that roof peak reaches maxH
+        let relZMax2F = 0;
+        let has2FRoof = false;
+
+        roofFaces.forEach(face => {
+            if (!face.vertices || face.floor !== '2F') return;
+            has2FRoof = true;
+            const slope = parseFloat(face.slope ?? 4.5);
+            const slopeVal = slope / 10;
+            const thickness = parseFloat(face.roofThickness ?? c.roofThickness ?? 150);
+            const tVertical = thickness * Math.sqrt(1 + slopeVal * slopeVal);
+            const baseDelta = parseFloat(face.baseHeightDelta ?? 0);
+
+            let ux = 0, uy = 1;
+            const pA = (face.slopeLine && face.slopeLine.length > 0) ? face.slopeLine[0] : face.vertices[0];
+            if (!pA) return;
+            if (face.slopeLine && face.slopeLine.length >= 3) {
+                const pB = face.slopeLine[1], pC = face.slopeLine[2];
+                if (pB && pC) {
+                    const dx = pB.x - pA.x, dy = pB.y - pA.y;
+                    let nx = -dy, ny = dx;
+                    if ((nx*(pC.x-pA.x) + ny*(pC.y-pA.y)) < 0) { nx = -nx; ny = -ny; }
+                    const len = Math.hypot(nx, ny);
+                    ux = len > 0 ? nx/len : 0; uy = len > 0 ? ny/len : 1;
+                }
+            } else if (face.slopeLine && face.slopeLine.length === 2) {
+                const p2 = face.slopeLine[1];
+                if (p2) { const dx=p2.x-pA.x, dy=p2.y-pA.y, len=Math.hypot(dx,dy); ux=len>0?dx/len:0; uy=len>0?dy/len:1; }
+            }
+
+            face.vertices.forEach(v => {
+                const dist = (v.x - pA.x)*ux + (v.y - pA.y)*uy;
+                const z = dist * slopeVal + tVertical + baseDelta;
+                if (z > relZMax2F) {
+                    relZMax2F = z;
+                }
+            });
+        });
+
+        const maxH = parseFloat(c.maxHeight ?? 8000);
         // 2F軒高 (GL絶対値mm)
-        const eavesZ2F = lvl.fl2 + (parseFloat(c.floorHeight2F ?? 2.7)) * 1000;
+        const eavesZ2F = has2FRoof ? (maxH - relZMax2F) : (lvl.fl2 + (parseFloat(c.floorHeight2F ?? 2.7)) * 1000);
         // 1F軒高 (= 2FL, GL絶対値mm)
         const eavesZ1F = lvl.fl2;
 
@@ -78,7 +121,6 @@ window.RoofEngine = {
         };
 
         // --- 屋根面の投影面積 (スキャンライン法) ---
-        const roofFaces = s.roofFaces || [];
         roofFaces.forEach(face => {
             if (!face.vertices || face.vertices.length < 3) return;
 
@@ -88,7 +130,7 @@ window.RoofEngine = {
             const thickness = parseFloat(face.roofThickness ?? c.roofThickness ?? 150) / 1000; // m
             const baseDelta = parseFloat(face.baseHeightDelta ?? 0); // mm
 
-            // このフェースの軒高 (m単位)
+            // このフェースの桁高 (m単位)
             const zBase_m = (floor === '2F' ? eavesZ2F_m : eavesZ1F_m) + baseDelta / 1000;
             // カットライン (m単位)
             const cutZ_m = floor === '2F' ? cut2_m : cut1_m;
@@ -119,11 +161,15 @@ window.RoofEngine = {
 
             // 各頂点の3D座標 (すべてm単位に統一)
             // slopeVal (寸勾配) × dist(m) → 高さ増分(m)
+            const cosTheta = 1 / Math.sqrt(1 + slopeVal*slopeVal);
+            const vThick_m = thickness / cosTheta; // m
+
             const pts3D = face.vertices.map(v => {
                 const vx_m = v.x / 1000, vy_m = v.y / 1000;
                 const pAx_m = pA.x / 1000, pAy_m = pA.y / 1000;
                 const dist_m = (vx_m - pAx_m)*ux + (vy_m - pAy_m)*uy;
-                return { x: vx_m, y: vy_m, z: zBase_m + dist_m * slopeVal }; // z: m
+                // 最初から鉛直かさ上げ分 vThick_m を加算して屋根の上面にする
+                return { x: vx_m, y: vy_m, z: zBase_m + dist_m * slopeVal + vThick_m }; // z: m
             });
 
             // スキャンライン法 (X/Y各方向へ投影した有効面積) — すべてm単位
@@ -134,16 +180,8 @@ window.RoofEngine = {
             const ptsXZ = pts3D.map(p => ({ u: p.x, v: p.z }));
             const roof_ay = this.calcCutPolygonArea2D(ptsXZ, cutZ_m, null);
 
-            // 屋根厚さ補正 (垂直投影) — m単位
-            const cosTheta = 1 / Math.sqrt(1 + slopeVal*slopeVal);
-            const vThick_m = thickness / cosTheta; // m
-            const ys = pts3D.map(p => p.y);
-            const xs = pts3D.map(p => p.x);
-            const thickCorr_ax = (Math.max(...ys) - Math.min(...ys)) * vThick_m;
-            const thickCorr_ay = (Math.max(...xs) - Math.min(...xs)) * vThick_m;
-
-            areas[floor].x += roof_ax + thickCorr_ax;
-            areas[floor].y += roof_ay + thickCorr_ay;
+            areas[floor].x += roof_ax;
+            areas[floor].y += roof_ay;
         });
 
         // State反映
@@ -151,6 +189,92 @@ window.RoofEngine = {
         c.projectedAreas['1F'].y = areas['1F'].y;
         c.projectedAreas['2F'].x = areas['2F'].x;
         c.projectedAreas['2F'].y = areas['2F'].y;
+
+        // [v2.7.11] 求積表（一般的な公式）用データの構築
+        const formulaAreas = { '1F': { x: [], y: [] }, '2F': { x: [], y: [] } };
+        
+        // 1F 壁部分
+        if (add1F_mm > 0) {
+            const h1 = add1F_mm / 1000;
+            if (wall1F_widthY > 0) formulaAreas['1F'].x.push({ name: '1F外壁 (X加力用)', w: wall1F_widthY, h: h1, formula: '底辺 × 高さ', area: wall_ax1add });
+            if (wall1F_widthX > 0) formulaAreas['1F'].y.push({ name: '1F外壁 (Y加力用)', w: wall1F_widthX, h: h1, formula: '底辺 × 高さ', area: wall_ay1add });
+        }
+        
+        // 2F 壁部分
+        if (wallH2_mm > 0) {
+            const h2 = wallH2_mm / 1000;
+            if (wall2F_widthY > 0) formulaAreas['2F'].x.push({ name: '2F外壁 (X加力用)', w: wall2F_widthY, h: h2, formula: '底辺 × 高さ', area: wall_ax2 });
+            if (wall2F_widthX > 0) formulaAreas['2F'].y.push({ name: '2F外壁 (Y加力用)', w: wall2F_widthX, h: h2, formula: '底辺 × 高さ', area: wall_ay2 });
+        }
+
+        // 屋根面の求積データ構築
+        roofFaces.forEach((face, idx) => {
+            if (!face.vertices || face.vertices.length < 3) return;
+            const floor = face.floor || '2F';
+            const slope = parseFloat(face.slope ?? 0);
+            const slopeVal = slope / 10;
+            const thickness = parseFloat(face.roofThickness ?? c.roofThickness ?? 150) / 1000;
+            const baseDelta = parseFloat(face.baseHeightDelta ?? 0);
+            // このフェースの桁高 (m単位)
+            const zBase_m = (floor === '2F' ? eavesZ2F_m : eavesZ1F_m) + baseDelta / 1000;
+            const cutZ_m = floor === '2F' ? cut2_m : cut1_m;
+
+            let ux = 0, uy = 1;
+            const pA = (face.slopeLine && face.slopeLine.length > 0) ? face.slopeLine[0] : face.vertices[0];
+            if (!pA) return;
+            if (face.slopeLine && face.slopeLine.length >= 3) {
+                const pB = face.slopeLine[1], pC = face.slopeLine[2];
+                if (pB && pC) {
+                    const dx = pB.x - pA.x, dy = pB.y - pA.y;
+                    let nx = -dy, ny = dx;
+                    if ((nx*(pC.x-pA.x) + ny*(pC.y-pA.y)) < 0) { nx = -nx; ny = -ny; }
+                    const len = Math.hypot(nx, ny);
+                    ux = len > 0 ? nx/len : 0; uy = len > 0 ? ny/len : 1;
+                }
+            } else if (face.slopeLine && face.slopeLine.length === 2) {
+                const p2 = face.slopeLine[1];
+                if (p2) {
+                    const dx = p2.x - pA.x, dy = p2.y - pA.y;
+                    const len = Math.hypot(dx, dy);
+                    ux = len > 0 ? dx/len : 0; uy = len > 0 ? ny/len : 1;
+                }
+            }
+
+            const cosTheta = 1 / Math.sqrt(1 + slopeVal*slopeVal);
+            const vThick_m = thickness / cosTheta;
+
+            const pts3D = face.vertices.map(v => {
+                const vx_m = v.x / 1000, vy_m = v.y / 1000;
+                const pAx_m = pA.x / 1000, pAy_m = pA.y / 1000;
+                const dist_m = (vx_m - pAx_m)*ux + (vy_m - pAy_m)*uy;
+                // 最初から鉛直かさ上げ分 vThick_m を加算
+                return { x: vx_m, y: vy_m, z: zBase_m + dist_m * slopeVal + vThick_m };
+            });
+
+            const ptsYZ = pts3D.map(p => ({ u: p.y, v: p.z }));
+            const roof_ax = this.calcCutPolygonArea2D(ptsYZ, cutZ_m, null);
+            const ptsXZ = pts3D.map(p => ({ u: p.x, v: p.z }));
+            const roof_ay = this.calcCutPolygonArea2D(ptsXZ, cutZ_m, null);
+
+            const ys = pts3D.map(p => p.y);
+            const xs = pts3D.map(p => p.x);
+            const widthY = Math.max(...ys) - Math.min(...ys);
+            const widthX = Math.max(...xs) - Math.min(...xs);
+
+            const totalAx = roof_ax;
+            const totalAy = roof_ay;
+
+            if (totalAx > 0.01) {
+                const hEq = totalAx / widthY;
+                formulaAreas[floor].x.push({ name: `屋根投影 (面${idx+1})`, w: widthY, h: hEq, formula: '底辺 × 換算高さ (積分面積/幅)', area: totalAx });
+            }
+            if (totalAy > 0.01) {
+                const hEq = totalAy / widthX;
+                formulaAreas[floor].y.push({ name: `屋根投影 (面${idx+1})`, w: widthX, h: hEq, formula: '底辺 × 換算高さ (積分面積/幅)', area: totalAy });
+            }
+        });
+
+        c.elevationFormulaAreas = formulaAreas;
 
         this.syncToDOM(areas);
     },
@@ -192,8 +316,6 @@ window.RoofEngine = {
         }
         return area;
     },
-
-
 
     /**
      * Get floor bounding box including wall thickness offset in mm
@@ -314,16 +436,58 @@ window.RoofEngine = {
      * Calculate 3D height at coordinates in mm
      */
     calculate3DHeightAtCoordinate: function(v, face) {
+        const s = window.AppState;
+        const c = (s && s.config) ? s.config : {};
+        const lvl = this.getFloorLevels(s);
         const floor = face.floor || '2F';
         const slope = face.slope || 0; // 寸
         const baseDelta = face.baseHeightDelta || 0; // mm
 
-        // Ceiling baseline height (桁高) in mm
-        let zBase = 3000;
-        if (floor === '2F') {
-            zBase = 6000;
-        }
-        zBase += baseDelta;
+        // Calculate eavesZ2F dynamically
+        const roofFaces = s.roofFaces || [];
+        let relZMax2F = 0;
+        let has2FRoof = false;
+
+        roofFaces.forEach(f => {
+            if (!f.vertices || f.floor !== '2F') return;
+            has2FRoof = true;
+            const sl = parseFloat(f.slope ?? 4.5);
+            const slVal = sl / 10;
+            const thick = parseFloat(f.roofThickness ?? c.roofThickness ?? 150);
+            const tVert = thick * Math.sqrt(1 + slVal * slVal);
+            const bd = parseFloat(f.baseHeightDelta ?? 0);
+
+            let ux = 0, uy = 1;
+            const pA = (f.slopeLine && f.slopeLine.length > 0) ? f.slopeLine[0] : f.vertices[0];
+            if (!pA) return;
+            if (f.slopeLine && f.slopeLine.length >= 3) {
+                const pB = f.slopeLine[1], pC = f.slopeLine[2];
+                if (pB && pC) {
+                    const dx = pB.x - pA.x, dy = pB.y - pA.y;
+                    let nx = -dy, ny = dx;
+                    if ((nx*(pC.x-pA.x) + ny*(pC.y-pA.y)) < 0) { nx = -nx; ny = -ny; }
+                    const len = Math.hypot(nx, ny);
+                    ux = len > 0 ? nx/len : 0; uy = len > 0 ? ny/len : 1;
+                }
+            } else if (f.slopeLine && f.slopeLine.length === 2) {
+                const p2 = f.slopeLine[1];
+                if (p2) { const dx=p2.x-pA.x, dy=p2.y-pA.y, len=Math.hypot(dx,dy); ux=len>0?dx/len:0; uy=len>0?dy/len:1; }
+            }
+
+            f.vertices.forEach(vt => {
+                const dist = (vt.x - pA.x)*ux + (vt.y - pA.y)*uy;
+                const z = dist * slVal + tVert + bd;
+                if (z > relZMax2F) {
+                    relZMax2F = z;
+                }
+            });
+        });
+
+        const maxH = parseFloat(c.maxHeight ?? 8000);
+        const eavesZ2F = has2FRoof ? (maxH - relZMax2F) : (lvl.fl2 + (parseFloat(c.floorHeight2F ?? 2.7)) * 1000);
+        const eavesZ1F = lvl.fl2;
+
+        const zBase = (floor === '2F' ? eavesZ2F : eavesZ1F) + baseDelta;
 
         let ux = 0, uy = 1;
         const pA = face.slopeLine ? face.slopeLine[0] : { x: 0, y: 0 };
@@ -350,7 +514,7 @@ window.RoofEngine = {
             const dy = p2.y - pA.y;
             const len = Math.hypot(dx, dy);
             ux = len > 0 ? dx / len : 0;
-            uy = len > 0 ? dy / len : 1;
+            uy = len > 0 ? ny / len : 1;
         }
 
         const slopeVal = slope / 10;
