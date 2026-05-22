@@ -53,8 +53,24 @@ window.RoofEngine = {
             maxY: Math.max(bbox1F.maxY, bbox2F.maxY)
         };
 
-        const uMin = (direction === 'X') ? bboxAll.minY : bboxAll.minX;
-        const uMax = (direction === 'X') ? bboxAll.maxY : bboxAll.maxX;
+        // スキャン範囲を屋根の全頂点も含めて拡張する
+        let roofMinX = bboxAll.minX;
+        let roofMaxX = bboxAll.maxX;
+        let roofMinY = bboxAll.minY;
+        let roofMaxY = bboxAll.maxY;
+
+        roofFaces.forEach(face => {
+            if (!face.vertices) return;
+            face.vertices.forEach(v => {
+                if (v.x < roofMinX) roofMinX = v.x;
+                if (v.x > roofMaxX) roofMaxX = v.x;
+                if (v.y < roofMinY) roofMinY = v.y;
+                if (v.y > roofMaxY) roofMaxY = v.y;
+            });
+        });
+
+        const uMin = (direction === 'X') ? roofMinY : roofMinX;
+        const uMax = (direction === 'X') ? roofMaxY : roofMaxX;
         const uMin1F = direction === 'X' ? bbox1F.minY : bbox1F.minX;
         const uMax1F = direction === 'X' ? bbox1F.maxY : bbox1F.maxX;
         const uMin2F = direction === 'X' ? bbox2F.minY : bbox2F.minX;

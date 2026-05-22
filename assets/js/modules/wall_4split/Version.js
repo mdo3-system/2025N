@@ -1,4 +1,4 @@
 /**
  * Version.js - Centralized Version Management
  */
-window.APP_VERSION = "v2.7.15"; // BugFix: 3D投影面および2D見附図における外壁線反映と計算関係の統一
+window.APP_VERSION = "v2.7.16"; // BugFix: スキャンラインの走査範囲を屋根頂点も含めて拡張し軒の出を正しく浮かす
