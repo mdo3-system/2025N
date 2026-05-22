@@ -546,122 +546,131 @@ window.ThreeDPreviewController = {
 
             // Scanline Profile generator matching 2D calculation exactly
             const getScanlineProfile = (direction) => {
-                const W = (direction === 'X') ? (silMaxY - silMinY) : (silMaxX - silMinX);
-                const uMin = (direction === 'X') ? silMinY : silMinX;
-                const uMax = (direction === 'X') ? silMaxY : silMaxX;
-                const STEPS = 200;
-                const profile = [];
-
-                for (let i = 0; i <= STEPS; i++) {
-                    const u = uMin + (i / STEPS) * (uMax - uMin);
-                    let maxZ = eavesZ2F; // Base is dynamic eavesZ2F
-
-                    roofFaces.forEach(face => {
-                        if (!face.vertices) return;
-                        const floor = face.floor || '2F';
-                        const baseDelta = parseFloat(face.baseHeightDelta ?? 0);
-                        const zBase = (floor === '2F' ? eavesZ2F : eavesZ1F) + baseDelta;
-                        const slope = parseFloat(face.slope ?? 0);
-                        const slopeVal = slope / 10;
-                        const thickness = parseFloat(face.roofThickness ?? config.roofThickness ?? 150);
-                        const tVertical = thickness * Math.sqrt(1 + slopeVal * slopeVal);
-
-                        let ux = 0, uy = 1;
-                        const pA = (face.slopeLine && face.slopeLine.length > 0) ? face.slopeLine[0] : face.vertices[0];
-                        if (!pA) return;
-                        if (face.slopeLine && face.slopeLine.length >= 3) {
-                            const pB = face.slopeLine[1], pC = face.slopeLine[2];
-                            if (pB && pC) {
-                                const dx = pB.x - pA.x, dy = pB.y - pA.y;
-                                let nx = -dy, ny = dx;
-                                if ((nx*(pC.x-pA.x) + ny*(pC.y-pA.y)) < 0) { nx=-nx; ny=-ny; }
-                                const len = Math.hypot(nx, ny);
-                                ux = len > 0 ? nx/len : 0;
-                                uy = len > 0 ? ny/len : 1;
-                            }
-                        } else if (face.slopeLine && face.slopeLine.length === 2) {
-                            const p2 = face.slopeLine[1];
-                            if (p2) { const dx=p2.x-pA.x, dy=p2.y-pA.y, len=Math.hypot(dx,dy); ux=len>0?dx/len:0; uy=len>0?dy/len:1; }
-                        }
-
-                        const numV = face.vertices.length;
-                        for (let j = 0; j < numV; j++) {
-                            const v1 = face.vertices[j], v2 = face.vertices[(j+1)%numV];
-                            const val1 = (direction === 'X') ? v1.y : v1.x;
-                            const val2 = (direction === 'X') ? v2.y : v2.x;
-                            if ((val1 <= u && val2 >= u) || (val2 <= u && val1 >= u)) {
-                                if (Math.abs(val2-val1) < 0.01) continue;
-                                const t = (u-val1)/(val2-val1);
-                                const ix = v1.x + t*(v2.x-v1.x), iy = v1.y + t*(v2.y-v1.y);
-                                const dist = (ix-pA.x)*ux + (iy-pA.y)*uy;
-                                const z = zBase + dist*slopeVal + tVertical;
-                                if (z > maxZ) maxZ = z;
-                            }
-                        }
-                    });
-                    profile.push({ u, z: maxZ });
-                }
-                return { uMin, uMax, profile };
+                return window.RoofEngine.getScanlineProfile(direction, state);
             };
 
             const drawProjectedProfile = (direction, planeMat1F, planeMat2F, lineMat, depth) => {
                 const { uMin, uMax, profile } = getScanlineProfile(direction);
+                const STEPS_VAL = profile.length - 1;
                 
                 // 1. 1F Additional Mitsuke Area (cut1 to Math.min(eavesZ1F, cut2))
-                const top1F = Math.min(eavesZ1F, lvl.cut2);
-                if (top1F > lvl.cut1) {
-                    const pts1F = [];
-                    if (direction === 'X') {
-                        // Projected to Y-plane (Orange, X = xProjX)
-                        pts1F.push(new THREE.Vector3(xProjX, lvl.cut1, -uMin));
-                        pts1F.push(new THREE.Vector3(xProjX, lvl.cut1, -uMax));
-                        pts1F.push(new THREE.Vector3(xProjX, top1F, -uMax));
-                        pts1F.push(new THREE.Vector3(xProjX, top1F, -uMin));
-                    } else {
-                        // Projected to X-plane (Blue, Z = -yProjY)
-                        pts1F.push(new THREE.Vector3(uMin, lvl.cut1, -yProjY));
-                        pts1F.push(new THREE.Vector3(uMax, lvl.cut1, -yProjY));
-                        pts1F.push(new THREE.Vector3(uMax, top1F, -yProjY));
-                        pts1F.push(new THREE.Vector3(uMin, top1F, -yProjY));
+                const pts1F = [];
+                if (direction === 'X') {
+                    for (let i = 0; i <= STEPS_VAL; i++) {
+                        const p = profile[i];
+                        const topZ = Math.min(p.z, lvl.cut2);
+                        const botZ = Math.max(p.zBottom, lvl.cut1);
+                        if (topZ > botZ) {
+                            pts1F.push(new THREE.Vector3(xProjX, topZ, -p.u));
+                        }
                     }
+                    for (let i = STEPS_VAL; i >= 0; i--) {
+                        const p = profile[i];
+                        const topZ = Math.min(p.z, lvl.cut2);
+                        const botZ = Math.max(p.zBottom, lvl.cut1);
+                        if (topZ > botZ) {
+                            pts1F.push(new THREE.Vector3(xProjX, botZ, -p.u));
+                        }
+                    }
+                } else {
+                    for (let i = 0; i <= STEPS_VAL; i++) {
+                        const p = profile[i];
+                        const topZ = Math.min(p.z, lvl.cut2);
+                        const botZ = Math.max(p.zBottom, lvl.cut1);
+                        if (topZ > botZ) {
+                            pts1F.push(new THREE.Vector3(p.u, topZ, -yProjY));
+                        }
+                    }
+                    for (let i = STEPS_VAL; i >= 0; i--) {
+                        const p = profile[i];
+                        const topZ = Math.min(p.z, lvl.cut2);
+                        const botZ = Math.max(p.zBottom, lvl.cut1);
+                        if (topZ > botZ) {
+                            pts1F.push(new THREE.Vector3(p.u, botZ, -yProjY));
+                        }
+                    }
+                }
+                if (pts1F.length >= 3) {
                     drawProjectedPolygon(pts1F, direction, planeMat1F, null, depth);
                 }
 
                 // 2. 2F Mitsuke Area (cut2 and above)
                 const pts2F = [];
                 if (direction === 'X') {
-                    pts2F.push(new THREE.Vector3(xProjX, lvl.cut2, -uMin));
-                    pts2F.push(new THREE.Vector3(xProjX, lvl.cut2, -uMax));
-                    for (let i = profile.length - 1; i >= 0; i--) {
+                    for (let i = 0; i <= STEPS_VAL; i++) {
                         const p = profile[i];
-                        pts2F.push(new THREE.Vector3(xProjX, p.z, -p.u));
+                        const topZ = Math.max(p.z, lvl.cut2);
+                        const botZ = Math.max(p.zBottom, lvl.cut2);
+                        if (topZ > botZ) {
+                            pts2F.push(new THREE.Vector3(xProjX, topZ, -p.u));
+                        }
+                    }
+                    for (let i = STEPS_VAL; i >= 0; i--) {
+                        const p = profile[i];
+                        const topZ = Math.max(p.z, lvl.cut2);
+                        const botZ = Math.max(p.zBottom, lvl.cut2);
+                        if (topZ > botZ) {
+                            pts2F.push(new THREE.Vector3(xProjX, botZ, -p.u));
+                        }
                     }
                 } else {
-                    pts2F.push(new THREE.Vector3(uMin, lvl.cut2, -yProjY));
-                    pts2F.push(new THREE.Vector3(uMax, lvl.cut2, -yProjY));
-                    for (let i = profile.length - 1; i >= 0; i--) {
+                    for (let i = 0; i <= STEPS_VAL; i++) {
                         const p = profile[i];
-                        pts2F.push(new THREE.Vector3(p.u, p.z, -yProjY));
+                        const topZ = Math.max(p.z, lvl.cut2);
+                        const botZ = Math.max(p.zBottom, lvl.cut2);
+                        if (topZ > botZ) {
+                            pts2F.push(new THREE.Vector3(p.u, topZ, -yProjY));
+                        }
+                    }
+                    for (let i = STEPS_VAL; i >= 0; i--) {
+                        const p = profile[i];
+                        const topZ = Math.max(p.z, lvl.cut2);
+                        const botZ = Math.max(p.zBottom, lvl.cut2);
+                        if (topZ > botZ) {
+                            pts2F.push(new THREE.Vector3(p.u, botZ, -yProjY));
+                        }
                     }
                 }
-                drawProjectedPolygon(pts2F, direction, planeMat2F, null, depth);
+                if (pts2F.length >= 3) {
+                    drawProjectedPolygon(pts2F, direction, planeMat2F, null, depth);
+                }
 
                 // 3. Complete outer silhouette line
                 const silPts = [];
                 if (direction === 'X') {
-                    silPts.push(new THREE.Vector3(xProjX, 0, -uMin));
-                    profile.forEach(p => silPts.push(new THREE.Vector3(xProjX, p.z, -p.u)));
-                    silPts.push(new THREE.Vector3(xProjX, 0, -uMax));
+                    for (let i = 0; i <= STEPS_VAL; i++) {
+                        const p = profile[i];
+                        if (p.z > p.zBottom) {
+                            silPts.push(new THREE.Vector3(xProjX, p.z, -p.u));
+                        }
+                    }
+                    for (let i = STEPS_VAL; i >= 0; i--) {
+                        const p = profile[i];
+                        if (p.z > p.zBottom) {
+                            silPts.push(new THREE.Vector3(xProjX, p.zBottom, -p.u));
+                        }
+                    }
                 } else {
-                    silPts.push(new THREE.Vector3(uMin, 0, -yProjY));
-                    profile.forEach(p => silPts.push(new THREE.Vector3(p.u, p.z, -yProjY)));
-                    silPts.push(new THREE.Vector3(uMax, 0, -yProjY));
+                    for (let i = 0; i <= STEPS_VAL; i++) {
+                        const p = profile[i];
+                        if (p.z > p.zBottom) {
+                            silPts.push(new THREE.Vector3(p.u, p.z, -yProjY));
+                        }
+                    }
+                    for (let i = STEPS_VAL; i >= 0; i--) {
+                        const p = profile[i];
+                        if (p.z > p.zBottom) {
+                            silPts.push(new THREE.Vector3(p.u, p.zBottom, -yProjY));
+                        }
+                    }
                 }
                 
-                const lineGeom = new THREE.BufferGeometry().setFromPoints([...silPts, silPts[0]]);
-                const line = new THREE.Line(lineGeom, lineMat);
-                this.scene.add(line);
-                this.meshes.push(line);
+                if (silPts.length >= 3) {
+                    const lineGeom = new THREE.BufferGeometry().setFromPoints([...silPts, silPts[0]]);
+                    const line = new THREE.Line(lineGeom, lineMat);
+                    this.scene.add(line);
+                    this.meshes.push(line);
+                }
             };
 
             // Draw integrated profile projections

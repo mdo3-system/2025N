@@ -498,121 +498,20 @@ function generateAutoMitsukeCanvas(direction) {
     // --- GL基準高さ取得 ---
     const lvl = window.RoofEngine ? window.RoofEngine.getFloorLevels(s) : { fl1: 561, fl2: 3297, cut1: 1911, cut2: 4647 };
 
-    // --- 外壁バウンディングボックス (壁厚オフセット込み) ---
-    const bbox1F = window.RoofEngine ? window.RoofEngine.getFloorBoundingBox('1F', s) : { minX:0, maxX:10000, minY:0, maxY:10000 };
-    const bbox2F = window.RoofEngine ? window.RoofEngine.getFloorBoundingBox('2F', s) : { minX:0, maxX:10000, minY:0, maxY:10000 };
-    const bboxAll = {
-        minX: Math.min(bbox1F.minX, bbox2F.minX),
-        maxX: Math.max(bbox1F.maxX, bbox2F.maxX),
-        minY: Math.min(bbox1F.minY, bbox2F.minY),
-        maxY: Math.max(bbox1F.maxY, bbox2F.maxY)
-    };
+    const scan = window.RoofEngine ? window.RoofEngine.getScanlineProfile(direction, s) : null;
+    if (!scan) return null;
 
-    // 建物幅 W [mm] (方向に応じてY幅 or X幅)
-    const W = (direction === 'X') ? (bboxAll.maxY - bboxAll.minY) : (bboxAll.maxX - bboxAll.minX);
-    if (W <= 0) return null;
-
-    const roofFaces = s.roofFaces || [];
-
-    // Determine 2F eaves height (eavesZ2F) dynamically so that roof peak reaches maxH
-    let relZMax2F = 0;
-    let has2FRoof = false;
-
-    roofFaces.forEach(face => {
-        if (!face.vertices || face.floor !== '2F') return;
-        has2FRoof = true;
-        const slope = parseFloat(face.slope ?? 4.5);
-        const slopeVal = slope / 10;
-        const thickness = parseFloat(face.roofThickness ?? config.roofThickness ?? 150);
-        const tVertical = thickness * Math.sqrt(1 + slopeVal * slopeVal);
-        const baseDelta = parseFloat(face.baseHeightDelta ?? 0);
-
-        let ux = 0, uy = 1;
-        const pA = (face.slopeLine && face.slopeLine.length > 0) ? face.slopeLine[0] : face.vertices[0];
-        if (!pA) return;
-        if (face.slopeLine && face.slopeLine.length >= 3) {
-            const pB = face.slopeLine[1], pC = face.slopeLine[2];
-            if (pB && pC) {
-                const dx = pB.x - pA.x, dy = pB.y - pA.y;
-                let nx = -dy, ny = dx;
-                if ((nx*(pC.x-pA.x) + ny*(pC.y-pA.y)) < 0) { nx = -nx; ny = -ny; }
-                const len = Math.hypot(nx, ny);
-                ux = len > 0 ? nx/len : 0; uy = len > 0 ? ny/len : 1;
-            }
-        } else if (face.slopeLine && face.slopeLine.length === 2) {
-            const p2 = face.slopeLine[1];
-            if (p2) { const dx=p2.x-pA.x, dy=p2.y-pA.y, len=Math.hypot(dx,dy); ux=len>0?dx/len:0; uy=len>0?dy/len:1; }
-        }
-
-        face.vertices.forEach(v => {
-            const dist = (v.x - pA.x)*ux + (v.y - pA.y)*uy;
-            const z = dist * slopeVal + tVertical + baseDelta;
-            if (z > relZMax2F) {
-                relZMax2F = z;
-            }
-        });
-    });
-
-    const maxH = parseFloat(config.maxHeight ?? 8000);
-    // 2F軒高 (GL絶対値mm)
-    const eavesZ2F = has2FRoof ? (maxH - relZMax2F) : (lvl.fl2 + (parseFloat(config.floorHeight2F ?? 2.7)) * 1000);
-    // 1F軒高 (= 2FL, GL絶対値mm)
-    const eavesZ1F = lvl.fl2;
-
-    // スキャンライン: 方向に応じたU座標でプロファイルを生成
-    const uMin = (direction === 'X') ? bboxAll.minY : bboxAll.minX;
-    const uMax = (direction === 'X') ? bboxAll.maxY : bboxAll.maxX;
-    const STEPS = 200;
-    const profile = []; // [{u, z}] — u:mm, z:mm
-    for (let i = 0; i <= STEPS; i++) {
-        const u = uMin + (i / STEPS) * (uMax - uMin);
-        let maxZ = eavesZ2F; // 最低でも軒高
-
-        roofFaces.forEach(face => {
-            if (!face.vertices) return;
-            const floor = face.floor || '2F';
-            const baseDelta = parseFloat(face.baseHeightDelta ?? 0);
-            const zBase = (floor === '2F' ? eavesZ2F : eavesZ1F) + baseDelta;
-            const slope = parseFloat(face.slope ?? 0);
-            const slopeVal = slope / 10;
-            const thickness = parseFloat(face.roofThickness ?? config.roofThickness ?? 150);
-            const tVertical = thickness * Math.sqrt(1 + slopeVal * slopeVal);
-
-            let ux = 0, uy = 1;
-            const pA = (face.slopeLine && face.slopeLine.length > 0) ? face.slopeLine[0] : face.vertices[0];
-            if (!pA) return;
-            if (face.slopeLine && face.slopeLine.length >= 3) {
-                const pB = face.slopeLine[1], pC = face.slopeLine[2];
-                if (pB && pC) {
-                    const dx = pB.x - pA.x, dy = pB.y - pA.y;
-                    let nx = -dy, ny = dx;
-                    if ((nx*(pC.x-pA.x) + ny*(pC.y-pA.y)) < 0) { nx=-nx; ny=-ny; }
-                    const len = Math.hypot(nx, ny);
-                    ux = len > 0 ? nx/len : 0;
-                    uy = len > 0 ? ny/len : 1;
-                }
-            } else if (face.slopeLine && face.slopeLine.length === 2) {
-                const p2 = face.slopeLine[1];
-                if (p2) { const dx=p2.x-pA.x, dy=p2.y-pA.y, len=Math.hypot(dx,dy); ux=len>0?dx/len:0; uy=len>0?dy/len:1; }
-            }
-
-            const numV = face.vertices.length;
-            for (let j = 0; j < numV; j++) {
-                const v1 = face.vertices[j], v2 = face.vertices[(j+1)%numV];
-                const val1 = (direction === 'X') ? v1.y : v1.x;
-                const val2 = (direction === 'X') ? v2.y : v2.x;
-                if ((val1 <= u && val2 >= u) || (val2 <= u && val1 >= u)) {
-                    if (Math.abs(val2-val1) < 0.01) continue;
-                    const t = (u-val1)/(val2-val1);
-                    const ix = v1.x + t*(v2.x-v1.x), iy = v1.y + t*(v2.y-v1.y);
-                    const dist = (ix-pA.x)*ux + (iy-pA.y)*uy;
-                    const z = zBase + dist*slopeVal + tVertical;
-                    if (z > maxZ) maxZ = z;
-                }
-            }
-        });
-        profile.push({ u, z: maxZ });
-    }
+    const W = scan.W;
+    const uMin = scan.uMin;
+    const uMax = scan.uMax;
+    const uMin1F = direction === 'X' ? scan.bbox1F.minY : scan.bbox1F.minX;
+    const uMax1F = direction === 'X' ? scan.bbox1F.maxY : scan.bbox1F.maxX;
+    const uMin2F = direction === 'X' ? scan.bbox2F.minY : scan.bbox2F.minX;
+    const uMax2F = direction === 'X' ? scan.bbox2F.maxY : scan.bbox2F.maxX;
+    const maxH = scan.maxH;
+    const eavesZ1F = scan.eavesZ1F;
+    const eavesZ2F = scan.eavesZ2F;
+    const profile = scan.profile;
 
     const maxZ_total = Math.max(...profile.map(p => p.z));
     const totalH = Math.max(maxZ_total, eavesZ2F + 1000); // キャンバス高さ基準
@@ -650,30 +549,52 @@ function generateAutoMitsukeCanvas(direction) {
     const cutY1 = toY(lvl.cut1);  // 1F下端カットライン
     const glY   = toY(0);         // GL
 
-    // --- シルエット多角形を構築 ---
+    // --- シルエット多角形を構築 (上面と下面を往復する閉じたパス) ---
     const silPts = [];
-    silPts.push({ x: toX(uMin), y: toY(0) }); // GL左
-    profile.forEach(p => silPts.push({ x: toX(p.u), y: toY(p.z) }));
-    silPts.push({ x: toX(uMax), y: toY(0) }); // GL右
+    for (let i = 0; i < profile.length; i++) {
+        silPts.push({ x: toX(profile[i].u), y: toY(profile[i].z) });
+    }
+    for (let i = profile.length - 1; i >= 0; i--) {
+        silPts.push({ x: toX(profile[i].u), y: toY(profile[i].zBottom) });
+    }
 
-    // 2F見附エリア (cut2以上) を塗りつぶし
+    // 2F見附エリア (cut2以上) を塗りつぶし (上面・下面を往復する閉じたパス)
+    const pts2F = [];
+    for (let i = 0; i < profile.length; i++) {
+        const p = profile[i];
+        const topZ = Math.max(p.z, lvl.cut2);
+        pts2F.push({ x: toX(p.u), y: toY(topZ) });
+    }
+    for (let i = profile.length - 1; i >= 0; i--) {
+        const p = profile[i];
+        const botZ = Math.max(p.zBottom, lvl.cut2);
+        pts2F.push({ x: toX(p.u), y: toY(botZ) });
+    }
+
     ctx.save();
     ctx.beginPath();
-    ctx.moveTo(toX(uMin), cutY2);
-    profile.forEach(p => ctx.lineTo(toX(p.u), Math.min(toY(p.z), cutY2)));
-    ctx.lineTo(toX(uMax), cutY2);
+    pts2F.forEach((p, i) => i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y));
     ctx.closePath();
     ctx.fillStyle = fill2F;
     ctx.fill();
     ctx.restore();
 
-    // 1F追加見附エリア (cut1〜cut2) を塗りつぶし
+    // 1F追加見附エリア (cut1〜cut2) を塗りつぶし (上面・下面を往復する閉じたパス)
+    const pts1F = [];
+    for (let i = 0; i < profile.length; i++) {
+        const p = profile[i];
+        const topZ = Math.min(p.z, lvl.cut2);
+        pts1F.push({ x: toX(p.u), y: toY(topZ) });
+    }
+    for (let i = profile.length - 1; i >= 0; i--) {
+        const p = profile[i];
+        const botZ = Math.max(p.zBottom, lvl.cut1);
+        pts1F.push({ x: toX(p.u), y: toY(botZ) });
+    }
+
     ctx.save();
     ctx.beginPath();
-    ctx.moveTo(toX(uMin), cutY1);
-    ctx.lineTo(toX(uMin), Math.max(cutY2, toY(eavesZ1F)));
-    ctx.lineTo(toX(uMax), Math.max(cutY2, toY(eavesZ1F)));
-    ctx.lineTo(toX(uMax), cutY1);
+    pts1F.forEach((p, i) => i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y));
     ctx.closePath();
     ctx.fillStyle = fill1F;
     ctx.fill();
@@ -833,14 +754,10 @@ function generateAutoMitsukeCanvas(direction) {
     // 水平寸法線 (建物全幅、1F壁幅、2F壁幅)
     drawHorizDim(uMin, uMax, -500, Math.round(W).toString());
     
-    const uMin1F = direction === 'X' ? bbox1F.minY : bbox1F.minX;
-    const uMax1F = direction === 'X' ? bbox1F.maxY : bbox1F.maxX;
     if (uMax1F > uMin1F) {
         drawHorizDim(uMin1F, uMax1F, (lvl.fl1 + lvl.cut1) / 2, Math.round(uMax1F - uMin1F).toString());
     }
 
-    const uMin2F = direction === 'X' ? bbox2F.minY : bbox2F.minX;
-    const uMax2F = direction === 'X' ? bbox2F.maxY : bbox2F.maxX;
     if (uMax2F > uMin2F) {
         drawHorizDim(uMin2F, uMax2F, (lvl.fl2 + lvl.cut2) / 2, Math.round(uMax2F - uMin2F).toString());
     }
@@ -1002,34 +919,34 @@ function showAreaPreview() {
         
         <div id="tab-floor" class="preview-tab-content active" style="width:100%;">
             <div class="tab-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap:20px; margin-bottom:20px;">
-                \${iF1 ? \`<div class="img-preview-box"><div style="font-weight:bold;color:#0056b3;margin-bottom:5px;">1F 床面積図</div><img src="\${iF1.img}" style="width:100%; border:1px solid #ddd; padding:5px; border-radius:4px; box-shadow:0 2px 8px rgba(0,0,0,0.08);"></div>\` : ''}
-                \${iF2 ? \`<div class="img-preview-box"><div style="font-weight:bold;color:#0056b3;margin-bottom:5px;">2F 床面積図</div><img src="\${iF2.img}" style="width:100%; border:1px solid #ddd; padding:5px; border-radius:4px; box-shadow:0 2px 8px rgba(0,0,0,0.08);"></div>\` : ''}
-                \${iFR ? \`<div class="img-preview-box"><div style="font-weight:bold;color:#0056b3;margin-bottom:5px;">R階 床面積図</div><img src="\${iFR.img}" style="width:100%; border:1px solid #ddd; padding:5px; border-radius:4px; box-shadow:0 2px 8px rgba(0,0,0,0.08);"></div>\` : ''}
+                ${iF1 ? `<div class="img-preview-box"><div style="font-weight:bold;color:#0056b3;margin-bottom:5px;">1F 床面積図</div><img src="${iF1.img}" style="width:100%; border:1px solid #ddd; padding:5px; border-radius:4px; box-shadow:0 2px 8px rgba(0,0,0,0.08);"></div>` : ''}
+                ${iF2 ? `<div class="img-preview-box"><div style="font-weight:bold;color:#0056b3;margin-bottom:5px;">2F 床面積図</div><img src="${iF2.img}" style="width:100%; border:1px solid #ddd; padding:5px; border-radius:4px; box-shadow:0 2px 8px rgba(0,0,0,0.08);"></div>` : ''}
+                ${iFR ? `<div class="img-preview-box"><div style="font-weight:bold;color:#0056b3;margin-bottom:5px;">R階 床面積図</div><img src="${iFR.img}" style="width:100%; border:1px solid #ddd; padding:5px; border-radius:4px; box-shadow:0 2px 8px rgba(0,0,0,0.08);"></div>` : ''}
             </div>
             <div id="floor-table-container"></div>
         </div>
         
         <div id="tab-mitsuke" class="preview-tab-content" style="width:100%; display:none;">
             <div class="tab-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap:20px; margin-bottom:20px;">
-                \${iAutoEX ? \`<div class="img-preview-box"><div style="font-weight:bold;color:#0056b3;margin-bottom:5px;">X方向 見附面積図 (自動計算モデル)</div><img src="\${iAutoEX.img}" style="width:100%; border:1px solid #ddd; padding:5px; border-radius:4px; box-shadow:0 2px 8px rgba(0,0,0,0.08);"></div>\` : ''}
-                \${iEX ? \`<div class="img-preview-box"><div style="font-weight:bold;color:#0056b3;margin-bottom:5px;">X方向 見附面積図 (DXF読込)</div><img src="\${iEX.img}" style="width:100%; border:1px solid #ddd; padding:5px; border-radius:4px; box-shadow:0 2px 8px rgba(0,0,0,0.08);"></div>\` : ''}
-                \${iAutoEY ? \`<div class="img-preview-box"><div style="font-weight:bold;color:#0056b3;margin-bottom:5px;">Y方向 見附面積図 (自動計算モデル)</div><img src="\${iAutoEY.img}" style="width:100%; border:1px solid #ddd; padding:5px; border-radius:4px; box-shadow:0 2px 8px rgba(0,0,0,0.08);"></div>\` : ''}
-                \${iEY ? \`<div class="img-preview-box"><div style="font-weight:bold;color:#0056b3;margin-bottom:5px;">Y方向 見附面積図 (DXF読込)</div><img src="\${iEY.img}" style="width:100%; border:1px solid #ddd; padding:5px; border-radius:4px; box-shadow:0 2px 8px rgba(0,0,0,0.08);"></div>\` : ''}
+                ${iAutoEX ? `<div class="img-preview-box"><div style="font-weight:bold;color:#0056b3;margin-bottom:5px;">X方向 見附面積図 (自動計算モデル)</div><img src="${iAutoEX.img}" style="width:100%; border:1px solid #ddd; padding:5px; border-radius:4px; box-shadow:0 2px 8px rgba(0,0,0,0.08);"></div>` : ''}
+                ${iEX ? `<div class="img-preview-box"><div style="font-weight:bold;color:#0056b3;margin-bottom:5px;">X方向 見附面積図 (DXF読込)</div><img src="${iEX.img}" style="width:100%; border:1px solid #ddd; padding:5px; border-radius:4px; box-shadow:0 2px 8px rgba(0,0,0,0.08);"></div>` : ''}
+                ${iAutoEY ? `<div class="img-preview-box"><div style="font-weight:bold;color:#0056b3;margin-bottom:5px;">Y方向 見附面積図 (自動計算モデル)</div><img src="${iAutoEY.img}" style="width:100%; border:1px solid #ddd; padding:5px; border-radius:4px; box-shadow:0 2px 8px rgba(0,0,0,0.08);"></div>` : ''}
+                ${iEY ? `<div class="img-preview-box"><div style="font-weight:bold;color:#0056b3;margin-bottom:5px;">Y方向 見附面積図 (DXF読込)</div><img src="${iEY.img}" style="width:100%; border:1px solid #ddd; padding:5px; border-radius:4px; box-shadow:0 2px 8px rgba(0,0,0,0.08);"></div>` : ''}
             </div>
             <div id="mitsuke-table-container"></div>
         </div>
         
         <div id="tab-div4" class="preview-tab-content" style="width:100%; display:none;">
             <div class="tab-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap:20px; margin-bottom:20px;">
-                \${iD1 ? \`<div class="img-preview-box"><div style="font-weight:bold;color:#0056b3;margin-bottom:5px;">1F 4分割図</div><img src="\${iD1.img}" style="width:100%; border:1px solid #ddd; padding:5px; border-radius:4px; box-shadow:0 2px 8px rgba(0,0,0,0.08);"></div>\` : ''}
-                \${iD2 ? \`<div class="img-preview-box"><div style="font-weight:bold;color:#0056b3;margin-bottom:5px;">2F 4分割図</div><img src="\${iD2.img}" style="width:100%; border:1px solid #ddd; padding:5px; border-radius:4px; box-shadow:0 2px 8px rgba(0,0,0,0.08);"></div>\` : ''}
+                ${iD1 ? `<div class="img-preview-box"><div style="font-weight:bold;color:#0056b3;margin-bottom:5px;">1F 4分割図</div><img src="${iD1.img}" style="width:100%; border:1px solid #ddd; padding:5px; border-radius:4px; box-shadow:0 2px 8px rgba(0,0,0,0.08);"></div>` : ''}
+                ${iD2 ? `<div class="img-preview-box"><div style="font-weight:bold;color:#0056b3;margin-bottom:5px;">2F 4分割図</div><img src="${iD2.img}" style="width:100%; border:1px solid #ddd; padding:5px; border-radius:4px; box-shadow:0 2px 8px rgba(0,0,0,0.08);"></div>` : ''}
             </div>
         </div>
         
         <div id="tab-pillar" class="preview-tab-content" style="width:100%; display:none;">
             <div class="tab-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap:20px; margin-bottom:20px;">
-                \${iPA1 ? \`<div class="img-preview-box"><div style="font-weight:bold;color:#0056b3;margin-bottom:5px;">1F 柱負担面積図</div><img src="\${iPA1.img}" style="width:100%; border:1px solid #ddd; padding:5px; border-radius:4px; box-shadow:0 2px 8px rgba(0,0,0,0.08);"></div>\` : ''}
-                \${iPA2 ? \`<div class="img-preview-box"><div style="font-weight:bold;color:#0056b3;margin-bottom:5px;">2F 柱負担面積図</div><img src="\${iPA2.img}" style="width:100%; border:1px solid #ddd; padding:5px; border-radius:4px; box-shadow:0 2px 8px rgba(0,0,0,0.08);"></div>\` : ''}
+                ${iPA1 ? `<div class="img-preview-box"><div style="font-weight:bold;color:#0056b3;margin-bottom:5px;">1F 柱負担面積図</div><img src="${iPA1.img}" style="width:100%; border:1px solid #ddd; padding:5px; border-radius:4px; box-shadow:0 2px 8px rgba(0,0,0,0.08);"></div>` : ''}
+                ${iPA2 ? `<div class="img-preview-box"><div style="font-weight:bold;color:#0056b3;margin-bottom:5px;">2F 柱負担面積図</div><img src="${iPA2.img}" style="width:100%; border:1px solid #ddd; padding:5px; border-radius:4px; box-shadow:0 2px 8px rgba(0,0,0,0.08);"></div>` : ''}
             </div>
         </div>
     `;

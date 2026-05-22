@@ -1,4 +1,4 @@
 /**
  * Version.js - Centralized Version Management
  */
-window.APP_VERSION = "v2.7.11"; // Feature: 見附面積ロジックおよび3D見附図描画の改修 (一般的な公式による求積)
+window.APP_VERSION = "v2.7.15"; // BugFix: 3D投影面および2D見附図における外壁線反映と計算関係の統一
