@@ -163,20 +163,26 @@ window.MainRenderer = {
     },
 
     drawGrids: function(state) {
-        if (!state.elementVisibility.grids || (state.gridXCoords.length === 0 && state.gridYCoords.length === 0)) return;
+        const hasStandardGrids = state.gridXCoords && state.gridYCoords && (state.gridXCoords.length > 0 || state.gridYCoords.length > 0);
         
-        if (state.currentAppMode === 'roof') {
-            const ctx = state.ctx;
-            ctx.save();
-            ctx.globalAlpha = 0.25; // Standard grids are semi-transparent in roof mode
-            this.drawStandardGrids(state);
-            ctx.restore();
-            
-            this.drawRoofGrids(state);
-            return;
+        // 1. 標準グリッドの描画
+        if (state.elementVisibility.grids && hasStandardGrids) {
+            if (state.currentAppMode === 'roof') {
+                const ctx = state.ctx;
+                ctx.save();
+                ctx.globalAlpha = 0.25; // Standard grids are semi-transparent in roof mode
+                this.drawStandardGrids(state);
+                ctx.restore();
+            } else {
+                this.drawStandardGrids(state);
+            }
         }
-
-        this.drawStandardGrids(state);
+        
+        // 2. 屋根グリッドの描画 (独立して判定)
+        // Note: drawRoofGrids internally checks state.elementVisibility.roofGrids
+        if (state.currentAppMode === 'roof') {
+            this.drawRoofGrids(state);
+        }
     },
 
     drawStandardGrids: function(state) {

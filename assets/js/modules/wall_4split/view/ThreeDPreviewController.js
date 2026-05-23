@@ -510,201 +510,99 @@ window.ThreeDPreviewController = {
             const xProjX = silMinX - 3000;
             const yProjY = silMinY - 3000;
 
-            // X-direction Mitsuke (Orange, Y-load, Z_3d moves along Y axis)
-            const planeMatX1F = new THREE.MeshBasicMaterial({ color: 0xe67e22, side: THREE.DoubleSide, transparent: true, opacity: 0.08 });
-            const planeMatX2F = new THREE.MeshBasicMaterial({ color: 0xe67e22, side: THREE.DoubleSide, transparent: true, opacity: 0.18 });
-            const lineMatX = new THREE.LineBasicMaterial({ color: 0xe67e22, linewidth: 3 });
+            // ==========================================
+            // 4. Draw Projected Wireframes (Parallel Projection onto Mitsuke planes)
+            // ==========================================
+            const lineMatX = new THREE.LineBasicMaterial({ color: 0xe67e22, linewidth: 2 });
+            const lineMatY = new THREE.LineBasicMaterial({ color: 0x2980b9, linewidth: 2 });
 
-            // Y-direction Mitsuke (Blue, X-load, X_3d moves along X axis)
-            const planeMatY1F = new THREE.MeshBasicMaterial({ color: 0x2980b9, side: THREE.DoubleSide, transparent: true, opacity: 0.08 });
-            const planeMatY2F = new THREE.MeshBasicMaterial({ color: 0x2980b9, side: THREE.DoubleSide, transparent: true, opacity: 0.18 });
-            const lineMatY = new THREE.LineBasicMaterial({ color: 0x2980b9, linewidth: 3 });
-
-            const drawProjectedPolygon = (pts, dir, planeMat, lineMat, depth) => {
-                if (pts.length < 3) return;
-                
-                const geom = new THREE.BufferGeometry();
-                const pos = [];
-                pts.forEach(p => pos.push(p.x, p.y, p.z));
-                geom.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-                
-                const idx = [];
-                for (let i = 1; i < pts.length - 1; i++) idx.push(0, i, i + 1);
-                geom.setIndex(idx);
-                
-                const mesh = new THREE.Mesh(geom, planeMat);
-                this.scene.add(mesh);
-                this.meshes.push(mesh);
-
-                if (lineMat) {
-                    const lineGeom = new THREE.BufferGeometry().setFromPoints([...pts, pts[0]]);
-                    const line = new THREE.Line(lineGeom, lineMat);
-                    this.scene.add(line);
-                    this.meshes.push(line);
-                }
+            const drawProjectedWireframe = (pts3D, dir, mat, projDepth) => {
+                if (pts3D.length < 2) return;
+                const projectedPts = [];
+                pts3D.forEach(p => {
+                    if (dir === 'X') {
+                        // Project onto X-plane (Y-load projection)
+                        projectedPts.push(new THREE.Vector3(projDepth, p.y, p.z));
+                    } else {
+                        // Project onto Z-plane (X-load projection)
+                        projectedPts.push(new THREE.Vector3(p.x, p.y, projDepth));
+                    }
+                });
+                const geom = new THREE.BufferGeometry().setFromPoints(projectedPts);
+                const line = new THREE.Line(geom, mat);
+                this.scene.add(line);
+                this.meshes.push(line);
             };
 
-            // Scanline Profile generator matching 2D calculation exactly
-            const getScanlineProfile = (direction) => {
-                return window.RoofEngine.getScanlineProfile(direction, state);
-            };
-
-            const drawProjectedProfile = (direction, planeMat1F, planeMat2F, lineMat, depth) => {
-                const { uMin, uMax, profile } = getScanlineProfile(direction);
-                const STEPS_VAL = profile.length - 1;
+            // Project Walls
+            walls.forEach(w => {
+                if (w.isDeleted || w.isInvalidPos) return;
+                const h = w.floor === '2F' ? h2F : h1F;
+                const zMin = w.floor === '2F' ? zMin2F : zMin1F;
                 
-                // 1. 1F Additional Mitsuke Area (cut1 to Math.min(eavesZ1F, cut2))
-                const pts1F = [];
-                if (direction === 'X') {
-                    for (let i = 0; i <= STEPS_VAL; i++) {
-                        const p = profile[i];
-                        const topZ = Math.min(p.z, lvl.cut2);
-                        const botZ = Math.max(p.zBottom, lvl.cut1);
-                        if (topZ > botZ) {
-                            pts1F.push(new THREE.Vector3(xProjX, topZ, -p.u));
-                        }
-                    }
-                    for (let i = STEPS_VAL; i >= 0; i--) {
-                        const p = profile[i];
-                        const topZ = Math.min(p.z, lvl.cut2);
-                        const botZ = Math.max(p.zBottom, lvl.cut1);
-                        if (topZ > botZ) {
-                            pts1F.push(new THREE.Vector3(xProjX, botZ, -p.u));
-                        }
-                    }
-                } else {
-                    for (let i = 0; i <= STEPS_VAL; i++) {
-                        const p = profile[i];
-                        const topZ = Math.min(p.z, lvl.cut2);
-                        const botZ = Math.max(p.zBottom, lvl.cut1);
-                        if (topZ > botZ) {
-                            pts1F.push(new THREE.Vector3(p.u, topZ, -yProjY));
-                        }
-                    }
-                    for (let i = STEPS_VAL; i >= 0; i--) {
-                        const p = profile[i];
-                        const topZ = Math.min(p.z, lvl.cut2);
-                        const botZ = Math.max(p.zBottom, lvl.cut1);
-                        if (topZ > botZ) {
-                            pts1F.push(new THREE.Vector3(p.u, botZ, -yProjY));
-                        }
-                    }
-                }
-                if (pts1F.length >= 3) {
-                    drawProjectedPolygon(pts1F, direction, planeMat1F, null, depth);
-                }
+                const pts = [
+                    new THREE.Vector3(w.p1.x, zMin, -w.p1.y),
+                    new THREE.Vector3(w.p2.x, zMin, -w.p2.y),
+                    new THREE.Vector3(w.p2.x, zMin + h, -w.p2.y),
+                    new THREE.Vector3(w.p1.x, zMin + h, -w.p1.y),
+                    new THREE.Vector3(w.p1.x, zMin, -w.p1.y)
+                ];
+                drawProjectedWireframe(pts, 'X', lineMatX, xProjX);
+                drawProjectedWireframe(pts, 'Y', lineMatY, -yProjY);
+            });
 
-                // 2. 2F Mitsuke Area (cut2 and above)
-                const pts2F = [];
-                if (direction === 'X') {
-                    for (let i = 0; i <= STEPS_VAL; i++) {
-                        const p = profile[i];
-                        const topZ = Math.max(p.z, lvl.cut2);
-                        const botZ = Math.max(p.zBottom, lvl.cut2);
-                        if (topZ > botZ) {
-                            pts2F.push(new THREE.Vector3(xProjX, topZ, -p.u));
-                        }
-                    }
-                    for (let i = STEPS_VAL; i >= 0; i--) {
-                        const p = profile[i];
-                        const topZ = Math.max(p.z, lvl.cut2);
-                        const botZ = Math.max(p.zBottom, lvl.cut2);
-                        if (topZ > botZ) {
-                            pts2F.push(new THREE.Vector3(xProjX, botZ, -p.u));
-                        }
-                    }
-                } else {
-                    for (let i = 0; i <= STEPS_VAL; i++) {
-                        const p = profile[i];
-                        const topZ = Math.max(p.z, lvl.cut2);
-                        const botZ = Math.max(p.zBottom, lvl.cut2);
-                        if (topZ > botZ) {
-                            pts2F.push(new THREE.Vector3(p.u, topZ, -yProjY));
-                        }
-                    }
-                    for (let i = STEPS_VAL; i >= 0; i--) {
-                        const p = profile[i];
-                        const topZ = Math.max(p.z, lvl.cut2);
-                        const botZ = Math.max(p.zBottom, lvl.cut2);
-                        if (topZ > botZ) {
-                            pts2F.push(new THREE.Vector3(p.u, botZ, -yProjY));
-                        }
-                    }
-                }
-                if (pts2F.length >= 3) {
-                    drawProjectedPolygon(pts2F, direction, planeMat2F, null, depth);
-                }
-
-                // 3. Complete outer silhouette line
-                const silPts = [];
-                if (direction === 'X') {
-                    for (let i = 0; i <= STEPS_VAL; i++) {
-                        const p = profile[i];
-                        if (p.z > p.zBottom) {
-                            silPts.push(new THREE.Vector3(xProjX, p.z, -p.u));
-                        }
-                    }
-                    for (let i = STEPS_VAL; i >= 0; i--) {
-                        const p = profile[i];
-                        if (p.z > p.zBottom) {
-                            silPts.push(new THREE.Vector3(xProjX, p.zBottom, -p.u));
-                        }
-                    }
-                } else {
-                    for (let i = 0; i <= STEPS_VAL; i++) {
-                        const p = profile[i];
-                        if (p.z > p.zBottom) {
-                            silPts.push(new THREE.Vector3(p.u, p.z, -yProjY));
-                        }
-                    }
-                    for (let i = STEPS_VAL; i >= 0; i--) {
-                        const p = profile[i];
-                        if (p.z > p.zBottom) {
-                            silPts.push(new THREE.Vector3(p.u, p.zBottom, -yProjY));
-                        }
-                    }
-                }
+            // Project Roofs
+            roofFaces.forEach(face => {
+                if (!face.vertices || face.vertices.length < 3) return;
                 
-                if (silPts.length >= 3) {
-                    const lineGeom = new THREE.BufferGeometry().setFromPoints([...silPts, silPts[0]]);
-                    const line = new THREE.Line(lineGeom, lineMat);
-                    this.scene.add(line);
-                    this.meshes.push(line);
+                const zBase = (face.floor === '2F' ? eavesZ2F : eavesZ1F) + (face.baseHeightDelta || 0);
+                const slope = face.slope !== undefined ? parseFloat(face.slope) : 4.5;
+                const slopeVal = isNaN(slope) ? 0.45 : (slope / 10);
+                const thickness = face.roofThickness !== undefined ? parseFloat(face.roofThickness) : 150;
+                const tVertical = (isNaN(thickness) ? 150 : thickness) * Math.sqrt(1 + slopeVal * slopeVal);
+
+                let ux = 0, uy = 1;
+                const pA = (face.slopeLine && face.slopeLine.length > 0) ? face.slopeLine[0] : face.vertices[0];
+                if (face.slopeLine && face.slopeLine.length >= 3) {
+                    const pB = face.slopeLine[1], pC = face.slopeLine[2];
+                    const dx = pB.x - pA.x, dy = pB.y - pA.y;
+                    let nx = -dy, ny = dx;
+                    const vx = pC.x - pA.x, vy = pC.y - pA.y;
+                    if ((nx * vx + ny * vy) < 0) { nx = -nx; ny = -ny; }
+                    const len = Math.hypot(nx, ny);
+                    ux = len > 0 ? nx / len : 0; uy = len > 0 ? ny / len : 1;
+                } else if (face.slopeLine && face.slopeLine.length === 2) {
+                    const p2 = face.slopeLine[1];
+                    const dx = p2.x - pA.x, dy = p2.y - pA.y;
+                    const len = Math.hypot(dx, dy);
+                    ux = len > 0 ? dx / len : 0; uy = len > 0 ? dy / len : 1;
                 }
-            };
 
-            // Draw integrated profile projections
-            // X-direction projection (Y-load, Orange plane)
-            drawProjectedProfile('X', planeMatX1F, planeMatX2F, lineMatX, xProjX);
-            
-            // Y-direction projection (X-load, Blue plane)
-            drawProjectedProfile('Y', planeMatY1F, planeMatY2F, lineMatY, -yProjY);
+                const ptsTop = [];
+                const ptsBot = [];
+                face.vertices.forEach(v => {
+                    const dist = (v.x - pA.x) * ux + (v.y - pA.y) * uy;
+                    const zCore = zBase + dist * slopeVal;
+                    ptsTop.push(new THREE.Vector3(v.x, zCore + tVertical, -v.y));
+                    ptsBot.push(new THREE.Vector3(v.x, zCore, -v.y));
+                });
+                
+                // Close loop
+                ptsTop.push(ptsTop[0]);
+                ptsBot.push(ptsBot[0]);
 
-            // Draw Projection Rays from peak points
-            const profileX = getScanlineProfile('X').profile;
-            const profileY = getScanlineProfile('Y').profile;
-            const maxZ_X = Math.max(...profileX.map(p => p.z));
-            const maxZ_Y = Math.max(...profileY.map(p => p.z));
-            
-            let peakU_X = silMinY;
-            profileX.forEach(p => { if (p.z === maxZ_X) peakU_X = p.u; });
-            let peakU_Y = silMinX;
-            profileY.forEach(p => { if (p.z === maxZ_Y) peakU_Y = p.u; });
-
-            const rayMat = new THREE.LineDashedMaterial({ color: 0x7f8c8d, dashSize: 200, gapSize: 100 });
-            // Projection rays from 3D space peak coordinates
-            const rayPoints = [
-                new THREE.Vector3(peakU_Y, maxZ_Y, -peakU_X), new THREE.Vector3(xProjX, maxZ_Y, -peakU_X),
-                new THREE.Vector3(peakU_Y, maxZ_Y, -peakU_X), new THREE.Vector3(peakU_Y, maxZ_Y, -yProjY)
-            ];
-
-            for (let i = 0; i < rayPoints.length; i += 2) {
-                const rayGeom = new THREE.BufferGeometry().setFromPoints([rayPoints[i], rayPoints[i+1]]);
-                const rayLine = new THREE.Line(rayGeom, rayMat);
-                rayLine.computeLineDistances();
-                this.scene.add(rayLine);
-                this.meshes.push(rayLine);
-            }
+                drawProjectedWireframe(ptsTop, 'X', lineMatX, xProjX);
+                drawProjectedWireframe(ptsTop, 'Y', lineMatY, -yProjY);
+                drawProjectedWireframe(ptsBot, 'X', lineMatX, xProjX);
+                drawProjectedWireframe(ptsBot, 'Y', lineMatY, -yProjY);
+                
+                // Draw connecting edges for thickness
+                for (let i = 0; i < face.vertices.length; i++) {
+                    const edgePts = [ptsTop[i], ptsBot[i]];
+                    drawProjectedWireframe(edgePts, 'X', lineMatX, xProjX);
+                    drawProjectedWireframe(edgePts, 'Y', lineMatY, -yProjY);
+                }
+            });
 
             // Draw maximum height level helper lines (Dashed lines at config.maxHeight)
             const dashedMat = new THREE.LineDashedMaterial({ color: 0xe74c3c, dashSize: 200, gapSize: 100, linewidth: 2 });

@@ -30,9 +30,12 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        // 0. 繝舌繧ｸ繝ｧ繝ｳ陦ｨ遉ｺ縺ｮ譖ｴ譁ｰ
+        // 0. バージョン表示の更新
         const verEl = document.getElementById('app-version-title');
-        if (verEl) verEl.innerText = window.APP_VERSION || 'v2.x';
+        if (verEl) {
+            verEl.innerText = window.APP_VERSION || 'v2.x';
+            document.title = `上善如水 - 壁量計算WEB (${window.APP_VERSION || 'v2.x'})`; // 印刷ヘッダー用
+        }
 
         // 1. 迥ｶ諷九蛻晄悄蛹
         if (window.AppState && typeof window.AppState.init === 'function') {

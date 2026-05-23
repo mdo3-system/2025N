@@ -24,14 +24,22 @@ function calcRequired() {
 
     ['1F', '2F'].forEach(f => {
         const lv = f === '1F' ? '1' : '2';
+        const cq = c.reqWallCoeffs[f].seismic;
+        const cw = c.reqWallCoeffs[f].wind;
         
-        // StructuralEngine により計算済みの s.reqWall[f] の結果があるはずだが、
-        // なければ fallback（基本的にここを通る時は runAnalysis が完了している前提）
-        if (!s.reqWall || !s.reqWall[f]) return;
+        // 見付面積 (configから取得)
+        const awx = c.projectedAreas[f].x + (f === '1F' ? c.projectedAreas['2F'].x : 0);
+        const awy = c.projectedAreas[f].y + (f === '1F' ? c.projectedAreas['2F'].y : 0);
         
-        // 旧互換のため、reqWallの値をそのままセットしておく（実際には既に格納されているため不要だが念のため）
+        const eq = r[f].seismic * cq;
+        
         if (window.reqWall) {
-            window.reqWall[f] = s.reqWall[f];
+            window.reqWall[f] = {
+                qX: Math.max(eq, awx * cw),
+                qY: Math.max(eq, awy * cw),
+                eq: eq,
+                a_eff: r[f].seismic
+            };
         }
     });
 

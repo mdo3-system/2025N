@@ -481,9 +481,19 @@ window.ElevationRenderer = {
         
         if (!formulaAreas) return `<div style="padding:20px; color:#666;">見附面積データがありません。3Dプレビューを開いて再計算してください。</div>`;
 
+        const fl1 = (c.baseHeight || 400) + (c.basePack || 20) + (c.baseSill || 105);
+        const fl2 = fl1 + (c.floorHeight1F || 2.7) * 1000;
+        const wallThick = c.wallThickness || 150;
+
         let html = `<div style="margin-top:20px; font-family:sans-serif; font-size:11px;">
             <h3 style="font-size:14px; margin-bottom:10px; color:#2c3e50; border-bottom:2px solid #bdc3c7; padding-bottom:5px;">見附面積 求積表 (風圧力用)</h3>
-            <p style="color:#7f8c8d; margin-bottom:10px;">※ 1F見附下端=1F床高+1.35m, 2F見附下端=2F床高+1.35m</p>
+            <div style="background:#f8f9fa; border:1px solid #ddd; padding:8px; border-radius:4px; margin-bottom:15px; color:#555; line-height:1.4;">
+                <strong style="color:#2c3e50;">【計算の前提条件】</strong><br>
+                ・<b>1F床高:</b> GL+${fl1}mm (基礎高+パッキン+土台)<br>
+                ・<b>2F床高:</b> GL+${fl2}mm (1F床高+階高)<br>
+                ・<b>外壁厚:</b> ${wallThick}mm (投影時に加算)<br>
+                <span style="color:#7f8c8d; font-size:10px;">※ 1F見附下端 = 1F床高 + 1.35m, 2F見附下端 = 2F床高 + 1.35m</span>
+            </div>
         `;
 
         const renderTableForDirection = (title, floorDataX, floorDataY) => {
@@ -519,8 +529,8 @@ window.ElevationRenderer = {
                         <tr style="background:#f1f5f9; border-bottom:1px solid #cbd5e1;">
                             <th style="border:1px solid #ddd; padding:4px; text-align:center;">階</th>
                             <th style="border:1px solid #ddd; padding:4px; text-align:left;">部位</th>
-                            <th style="border:1px solid #ddd; padding:4px;">底辺(m)</th>
-                            <th style="border:1px solid #ddd; padding:4px;">高さ(m)</th>
+                            <th style="border:1px solid #ddd; padding:4px;">幅(m)</th>
+                            <th style="border:1px solid #ddd; padding:4px;">高さ/平均(m)</th>
                             <th style="border:1px solid #ddd; padding:4px; text-align:left;">計算式</th>
                             <th style="border:1px solid #ddd; padding:4px; font-weight:bold;">面積(㎡)</th>
                         </tr>

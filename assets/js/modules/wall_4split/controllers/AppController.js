@@ -339,35 +339,49 @@ window.AppController = {
             vis.f_beams = false;
             vis.f_manholes = false;
 
-            // 「作図・屋根モード用」のレイヤは全ON
-            vis.grids = true;
-            vis.pillars = true;
-            vis.pillarNValues = true;
-            vis.walls = true;
-            vis.windows = true;
-            vis.areas = true;
-            vis.div4 = true;
-            vis.f_ext_walls = true;
-            vis.roofGrids = true;
-            vis.roofs = true;
+            if (mode === 'roof') {
+                // 屋根モード：外壁線、屋根、屋根グリッドのみ表示
+                vis.grids = false;
+                vis.pillars = false;
+                vis.pillarNValues = false;
+                vis.walls = false;
+                vis.windows = false;
+                vis.areas = false;
+                vis.div4 = false;
+                vis.f_ext_walls = true;
+                vis.roofGrids = true;
+                vis.roofs = true;
+            } else {
+                // 作図モード (mode === 'wall' 等)：屋根と屋根グリッドを非表示
+                vis.grids = true;
+                vis.pillars = true;
+                vis.pillarNValues = true;
+                vis.walls = true;
+                vis.windows = true;
+                vis.areas = true;
+                vis.div4 = true;
+                vis.f_ext_walls = true;
+                vis.roofGrids = false;
+                vis.roofs = false;
+            }
         }
 
         // チェックボックスDOMへの同期反映
         const domMappings = {
-            'v-layer-grids': true,
-            'v-layer-pillars': true,
-            'v-layer-pillarNValues': true,
-            'vis-wall': true,
-            'v-layer-windows': true,
-            'vis-diaph': true,
+            'v-layer-grids': vis ? vis.grids : true,
+            'v-layer-pillars': vis ? vis.pillars : true,
+            'v-layer-pillarNValues': vis ? vis.pillarNValues : true,
+            'vis-wall': vis ? vis.walls : true,
+            'v-layer-windows': vis ? vis.windows : true,
+            'vis-diaph': vis ? vis.areas : true,
             'v-layer-f_slabs': false,
             'v-layer-f_beams': false,
             'v-layer-f_manholes': false,
-            'v-layer-f_ext_walls': true,
-            'v-layer-div4': true,
-            'v-layer-div4-sub': true,
-            'v-layer-roofGrids': true,
-            'v-layer-roofs': true
+            'v-layer-f_ext_walls': vis ? vis.f_ext_walls : true,
+            'v-layer-div4': vis ? vis.div4 : true,
+            'v-layer-div4-sub': vis ? vis.div4 : true,
+            'v-layer-roofGrids': vis ? vis.roofGrids : false,
+            'v-layer-roofs': vis ? vis.roofs : false
         };
         Object.keys(domMappings).forEach(id => {
             const el = document.getElementById(id);

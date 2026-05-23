@@ -13,6 +13,8 @@ window.RoofInputController = {
             this.handleDrawRoofClick(state);
         } else if (mode === 'delete-roof') {
             this.handleDeleteRoofClick(e, state);
+        } else if (mode === 'roof_select') {
+            this.handleSelectRoofClick(e, state);
         }
     },
 
@@ -66,6 +68,35 @@ window.RoofInputController = {
     },
 
     /**
+     * Select and edit roof face handler
+     */
+    handleSelectRoofClick: function(e, state) {
+        const mx = e.offsetX;
+        const my = e.offsetY;
+        
+        const toC = (x, y) => ({ cx: x * state.scale + state.offsetX, cy: state.canvas.height - (y * state.scale + state.offsetY) });
+        
+        let hitFace = null;
+        let bestArea = Infinity;
+
+        const faces = state.roofFaces || [];
+        faces.forEach(face => {
+            const canvasPts = face.vertices.map(v => toC(v.x, v.y));
+            if (this.isPointInPolygon(mx, my, canvasPts)) {
+                const area = window.RoofEngine.calculatePolygonArea2D(face.vertices.map(v => ({ u: v.x/1000, v: v.y/1000 })));
+                if (area < bestArea) {
+                    bestArea = area;
+                    hitFace = face;
+                }
+            }
+        });
+
+        if (hitFace) {
+            this.showPropertyPopup(state, hitFace);
+        }
+    },
+
+    /**
      * Delete roof face handler
      */
     handleDeleteRoofClick: function(e, state) {
@@ -112,44 +143,54 @@ window.RoofInputController = {
     /**
      * Show floating properties popup for the drawn roof face
      */
-    showPropertyPopup: function(state) {
+    showPropertyPopup: function(state, existingFace = null) {
         const popup = document.getElementById('roof-property-popup');
         const content = document.getElementById('roof-popup-content');
         if (!popup || !content) {
-            this.handlePropertyFallback(state);
+            this.handlePropertyFallback(state, existingFace);
             return;
         }
 
-        const defaultLabel = `R${(state.roofFaces || []).length + 1}`;
+        const defaultLabel = existingFace ? existingFace.label : `R${(state.roofFaces || []).length + 1}`;
+        const defaultSlope = existingFace ? existingFace.slope : 4.5;
+        const defaultThickness = existingFace ? existingFace.roofThickness : 150;
+        const defaultDelta = existingFace ? existingFace.baseHeightDelta : 0;
+        const defaultFloor = existingFace ? existingFace.floor : state.currentFloor;
+        const is2F = defaultFloor === '2F' ? 'selected' : '';
+        const is1F = defaultFloor === '1F' ? 'selected' : '';
         
+        const popupTitle = existingFace ? "屋根面の編集" : "屋根面の新規登録";
+        const btnText = existingFace ? "💾 更新" : "💾 登録";
+
         content.innerHTML = `
             <div style="display:flex; flex-direction:column; gap:10px; font-size:12px; color:#2c3e50;">
+                <div style="font-weight:bold; font-size:14px; border-bottom:1px solid #ccc; padding-bottom:5px; margin-bottom:5px;">${popupTitle}</div>
                 <div class="calc-row" style="display:flex; justify-content:space-between; align-items:center;">
                     <label style="font-weight:bold; width:150px;">屋根面の名称</label>
                     <input type="text" id="prop-roof-label" value="${defaultLabel}" style="width:160px; padding:4px; box-sizing:border-box;">
                 </div>
                 <div class="calc-row" style="display:flex; justify-content:space-between; align-items:center;">
                     <label style="font-weight:bold; width:150px;">屋根勾配 (寸)</label>
-                    <input type="number" id="prop-roof-slope" value="4.5" step="0.1" min="0" style="width:160px; padding:4px; box-sizing:border-box; text-align:right;">
+                    <input type="number" id="prop-roof-slope" value="${defaultSlope}" step="0.1" min="0" style="width:160px; padding:4px; box-sizing:border-box; text-align:right;">
                 </div>
                 <div class="calc-row" style="display:flex; justify-content:space-between; align-items:center;">
                     <label style="font-weight:bold; width:150px;">屋根厚さ (mm)</label>
-                    <input type="number" id="prop-roof-thickness" value="150" step="10" min="0" style="width:160px; padding:4px; box-sizing:border-box; text-align:right;">
+                    <input type="number" id="prop-roof-thickness" value="${defaultThickness}" step="10" min="0" style="width:160px; padding:4px; box-sizing:border-box; text-align:right;">
                 </div>
                 <div class="calc-row" style="display:flex; justify-content:space-between; align-items:center;">
                     <label style="font-weight:bold; width:150px;">基準高からの増減 (mm)</label>
-                    <input type="number" id="prop-roof-delta" value="0" step="50" style="width:160px; padding:4px; box-sizing:border-box; text-align:right;">
+                    <input type="number" id="prop-roof-delta" value="${defaultDelta}" step="50" style="width:160px; padding:4px; box-sizing:border-box; text-align:right;">
                 </div>
                 <div class="calc-row" style="display:flex; justify-content:space-between; align-items:center;">
                     <label style="font-weight:bold; width:150px;">所属階</label>
                     <select id="prop-roof-floor" style="width:160px; padding:4px; box-sizing:border-box;">
-                        <option value="2F" ${state.currentFloor === '2F' ? 'selected' : ''}>2階屋根 (標準)</option>
-                        <option value="1F" ${state.currentFloor === '1F' ? 'selected' : ''}>1階屋根 (下屋など)</option>
+                        <option value="2F" ${is2F}>2階屋根 (標準)</option>
+                        <option value="1F" ${is1F}>1階屋根 (下屋など)</option>
                     </select>
                 </div>
                 <div style="margin-top:15px; display:flex; gap:10px; justify-content:flex-end;">
                     <button type="button" id="btn-roof-popup-cancel" style="padding:6px 12px; background:#bdc3c7; color:#2c3e50; border:none; border-radius:4px; cursor:pointer; font-weight:bold;">キャンセル</button>
-                    <button type="button" id="btn-roof-popup-save" style="padding:6px 12px; background:#2980b9; color:#fff; border:none; border-radius:4px; cursor:pointer; font-weight:bold;">💾 屋根面を登録</button>
+                    <button type="button" id="btn-roof-popup-save" style="padding:6px 12px; background:#2980b9; color:#fff; border:none; border-radius:4px; cursor:pointer; font-weight:bold;">${btnText}</button>
                 </div>
             </div>
         `;
@@ -173,19 +214,26 @@ window.RoofInputController = {
             const delta = parseFloat(document.getElementById('prop-roof-delta').value) || 0;
             const floor = document.getElementById('prop-roof-floor').value;
 
-            const face = {
-                id: Date.now(),
-                label: label,
-                vertices: [...state.roofDrawPoints],
-                slopeLine: [...state.roofTempSlopeLine],
-                slope: slope,
-                roofThickness: thickness,
-                baseHeightDelta: delta,
-                floor: floor
-            };
-
-            if (!state.roofFaces) state.roofFaces = [];
-            state.roofFaces.push(face);
+            if (existingFace) {
+                existingFace.label = label;
+                existingFace.slope = slope;
+                existingFace.roofThickness = thickness;
+                existingFace.baseHeightDelta = delta;
+                existingFace.floor = floor;
+            } else {
+                const face = {
+                    id: Date.now(),
+                    label: label,
+                    vertices: [...state.roofDrawPoints],
+                    slopeLine: [...state.roofTempSlopeLine],
+                    slope: slope,
+                    roofThickness: thickness,
+                    baseHeightDelta: delta,
+                    floor: floor
+                };
+                if (!state.roofFaces) state.roofFaces = [];
+                state.roofFaces.push(face);
+            }
 
             // Clear temp states
             state.roofDrawPoints = [];
@@ -197,29 +245,40 @@ window.RoofInputController = {
         };
     },
 
-    handlePropertyFallback: function(state) {
-        const label = prompt("屋根面の名称を入力してください", `R${(state.roofFaces || []).length + 1}`) || `R${(state.roofFaces || []).length + 1}`;
-        const slopeStr = prompt("屋根勾配を「寸」で入力してください (例: 4.5)", "4.5");
-        const thicknessStr = prompt("屋根厚みを「mm」で入力してください", "150");
-        const deltaStr = prompt("基準高からの増減を「mm」で入力してください (基本: 0)", "0");
+    handlePropertyFallback: function(state, existingFace = null) {
+        const defaultLabel = existingFace ? existingFace.label : `R${(state.roofFaces || []).length + 1}`;
+        const defaultSlope = existingFace ? String(existingFace.slope) : "4.5";
+        const defaultThickness = existingFace ? String(existingFace.roofThickness) : "150";
+        const defaultDelta = existingFace ? String(existingFace.baseHeightDelta) : "0";
 
-        const slope = parseFloat(slopeStr) || 4.5;
-        const thickness = parseFloat(thicknessStr) || 150;
-        const delta = parseFloat(deltaStr) || 0;
+        const label = prompt("屋根面の名称を入力してください", defaultLabel) || defaultLabel;
+        const slopeStr = prompt("屋根勾配を「寸」で入力してください (例: 4.5)", defaultSlope);
+        const thicknessStr = prompt("屋根厚みを「mm」で入力してください", defaultThickness);
+        const deltaStr = prompt("基準高からの増減を「mm」で入力してください (基本: 0)", defaultDelta);
 
-        const face = {
-            id: Date.now(),
-            label: label,
-            vertices: [...state.roofDrawPoints],
-            slopeLine: [...state.roofTempSlopeLine],
-            slope: slope,
-            roofThickness: thickness,
-            baseHeightDelta: delta,
-            floor: state.currentFloor
-        };
+        const slope = parseFloat(slopeStr) || parseFloat(defaultSlope);
+        const thickness = parseFloat(thicknessStr) || parseFloat(defaultThickness);
+        const delta = parseFloat(deltaStr) || parseFloat(defaultDelta);
 
-        if (!state.roofFaces) state.roofFaces = [];
-        state.roofFaces.push(face);
+        if (existingFace) {
+            existingFace.label = label;
+            existingFace.slope = slope;
+            existingFace.roofThickness = thickness;
+            existingFace.baseHeightDelta = delta;
+        } else {
+            const face = {
+                id: Date.now(),
+                label: label,
+                vertices: [...state.roofDrawPoints],
+                slopeLine: [...state.roofTempSlopeLine],
+                slope: slope,
+                roofThickness: thickness,
+                baseHeightDelta: delta,
+                floor: state.currentFloor
+            };
+            if (!state.roofFaces) state.roofFaces = [];
+            state.roofFaces.push(face);
+        }
 
         state.roofDrawPoints = [];
         state.roofTempSlopeLine = [];

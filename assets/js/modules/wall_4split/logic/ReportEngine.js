@@ -124,9 +124,6 @@ window.ReportEngine = {
         if (lc) lc.innerHTML = h1 + h2 + lambdaBlock;
     },
 
-    /**
-     * 凡例表示用のデータを構築します
-     */
     buildWallLegendData: function(state) {
         const s = state || window.AppState;
         const panelDic = {};
@@ -139,5 +136,72 @@ window.ReportEngine = {
         });
         
         return { panelDic };
+    },
+
+    /**
+     * 4分割の検定表をHTML文字列で生成して返します（プレビューモーダル用）
+     */
+    generateDiv4TableHtml: function(state) {
+        const s = state || window.AppState;
+        if (!s || !s.reqWall) return '';
+        const getVal = window.MathUtils.getVal || ((id) => parseFloat(document.getElementById(id)?.value) || 0);
+        let html = '<div style="display:flex; flex-wrap:wrap; gap:20px;">';
+
+        ['2F', '1F'].forEach(f => {
+            if (!s.reqWall[f]) return;
+            const suffix = f[0];
+            const cq = getVal(`c-q${suffix}`);
+            const ext = getVal(`e-x-t${suffix}`), exb = getVal(`e-x-b${suffix}`), eyl = getVal(`e-y-l${suffix}`), eyr = getVal(`e-y-r${suffix}`);
+            const d4 = s.reqWall[f].div4 || { vxt: 0, vxb: 0, vyl: 0, vyr: 0, rxt: 0, rxb: 0, ryl: 0, ryr: 0, isXOk: true, isYOk: true };
+
+            html += `
+            <div style="flex:1; min-width:350px;">
+                <div style="background:#0056b3;color:#fff;padding:5px 8px;font-weight:bold;font-size:14px;border-radius:4px 4px 0 0;">${f} 4分割 壁釣り合い</div>
+                <table class="report-table" style="width:100%; font-size:13px; text-align:center; border-collapse:collapse; margin-bottom:10px;">
+                    <tr style="background:#f1f2f6;">
+                        <th style="border:1px solid #ddd; padding:6px;">方向</th>
+                        <th style="border:1px solid #ddd; padding:6px;">側端</th>
+                        <th style="border:1px solid #ddd; padding:6px;">側端面積(㎡)</th>
+                        <th style="border:1px solid #ddd; padding:6px;">必要(m)</th>
+                        <th style="border:1px solid #ddd; padding:6px;">存在(m)</th>
+                        <th style="border:1px solid #ddd; padding:6px;">壁率比</th>
+                        <th style="border:1px solid #ddd; padding:6px;">判定</th>
+                    </tr>
+                    <tr>
+                        <td rowspan="2" style="border:1px solid #ddd; font-weight:bold;">X</td>
+                        <td style="border:1px solid #ddd;">上</td>
+                        <td style="border:1px solid #ddd;">${ext.toFixed(2)}</td>
+                        <td style="border:1px solid #ddd; background:#fffaf0;">${(ext * cq).toFixed(2)}</td>
+                        <td style="border:1px solid #ddd;">${d4.vxt.toFixed(2)}</td>
+                        <td rowspan="2" style="border:1px solid #ddd; font-weight:bold;">${(Math.min(d4.rxt, d4.rxb) / (Math.max(d4.rxt, d4.rxb) || 1)).toFixed(2)}</td>
+                        <td rowspan="2" style="border:1px solid #ddd; font-weight:bold; color:${d4.isXOk ? '#27ae60' : '#c0392b'};">${d4.isXOk ? 'OK' : 'NG'}</td>
+                    </tr>
+                    <tr>
+                        <td style="border:1px solid #ddd;">下</td>
+                        <td style="border:1px solid #ddd;">${exb.toFixed(2)}</td>
+                        <td style="border:1px solid #ddd; background:#fffaf0;">${(exb * cq).toFixed(2)}</td>
+                        <td style="border:1px solid #ddd;">${d4.vxb.toFixed(2)}</td>
+                    </tr>
+                    <tr>
+                        <td rowspan="2" style="border:1px solid #ddd; font-weight:bold;">Y</td>
+                        <td style="border:1px solid #ddd;">左</td>
+                        <td style="border:1px solid #ddd;">${eyl.toFixed(2)}</td>
+                        <td style="border:1px solid #ddd; background:#fffaf0;">${(eyl * cq).toFixed(2)}</td>
+                        <td style="border:1px solid #ddd;">${d4.vyl.toFixed(2)}</td>
+                        <td rowspan="2" style="border:1px solid #ddd; font-weight:bold;">${(Math.min(d4.ryl, d4.ryr) / (Math.max(d4.ryl, d4.ryr) || 1)).toFixed(2)}</td>
+                        <td rowspan="2" style="border:1px solid #ddd; font-weight:bold; color:${d4.isYOk ? '#27ae60' : '#c0392b'};">${d4.isYOk ? 'OK' : 'NG'}</td>
+                    </tr>
+                    <tr>
+                        <td style="border:1px solid #ddd;">右</td>
+                        <td style="border:1px solid #ddd;">${eyr.toFixed(2)}</td>
+                        <td style="border:1px solid #ddd; background:#fffaf0;">${(eyr * cq).toFixed(2)}</td>
+                        <td style="border:1px solid #ddd;">${d4.vyr.toFixed(2)}</td>
+                    </tr>
+                </table>
+            </div>`;
+        });
+        
+        html += '</div>';
+        return html;
     }
 };

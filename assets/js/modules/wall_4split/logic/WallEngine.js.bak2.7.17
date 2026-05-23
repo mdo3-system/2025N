@@ -204,7 +204,41 @@ window.WallEngine = {
         return s.reqWall;
     },
 
-    // calculateDesignWalls is removed as it is now handled centrally by StructuralEngine.calculateRequiredWallAmounts
+    /**
+     * Calculate final design wall quantities including wind pressure checks
+     */
+    calculateDesignWalls: function(state) {
+        const s = state || window.AppState;
+        const config = s.config;
+        const triMult = config.triangleMultiplier || 1.33;
+
+        ['1F', '2F'].forEach(f => {
+            const suffix = f === '1F' ? '1' : '2';
+            const cq = config.reqWallCoeffs[f].seismic;
+            const cw = config.reqWallCoeffs[f].wind;
+            let awx = config.projectedAreas[f].x;
+            let awy = config.projectedAreas[f].y;
+            
+            // 1F includes 2F's wind pressure area
+            if (f === '1F') {
+                awx += config.projectedAreas['2F'].x;
+                awy += config.projectedAreas['2F'].y;
+            }
+
+            const a_seismic = s.reqWall[f].a_eff || 0;
+            const eq = a_seismic * cq;
+            
+            // Seismic force vs Wind pressure
+            const qX = Math.max(eq, awx * cw);
+            const qY = Math.max(eq, awy * cw);
+
+            s.reqWall[f].qX = qX;
+            s.reqWall[f].qY = qY;
+            s.reqWall[f].eq = eq;
+        });
+
+        return s.reqWall;
+    },
 
     calculateSlabAt: function(typeStr, pitch) {
         const diaTbl = { 'D10': 71.3, 'D13': 126.7, 'D16': 198.6 };

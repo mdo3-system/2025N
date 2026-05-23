@@ -372,8 +372,9 @@ function handleRoofGridInput(mode, state, clickX, clickY) {
             else if (typeStr === '2') type = 'keraba';
 
             const newGX = bestGX + offset;
-            const defaultName = type === 'eaves' ? `RX_eaves_${(state.roofGridManualX || []).length + 1}` : (type === 'keraba' ? `RX_keraba_${(state.roofGridManualX || []).length + 1}` : `RX_${(state.roofGridManualX || []).length + 1}`);
-            const name = prompt("追加する屋根X通りの名称を入力してください", defaultName);
+            const countX = (state.roofGridManualX || []).length + 1;
+            const defaultNameX = type === 'eaves' ? `${countX} 軒の出` : (type === 'keraba' ? `${countX} ケラバの出` : `${countX} その他`);
+            const name = prompt("追加する屋根X通りの名称を入力してください", defaultNameX);
             if (!name) return;
 
             if (!state.roofGridManualX) state.roofGridManualX = [];
@@ -402,8 +403,9 @@ function handleRoofGridInput(mode, state, clickX, clickY) {
             else if (typeStr === '2') type = 'keraba';
 
             const newGY = bestGY + offset;
-            const defaultName = type === 'eaves' ? `RY_eaves_${(state.roofGridManualY || []).length + 1}` : (type === 'keraba' ? `RY_keraba_${(state.roofGridManualY || []).length + 1}` : `RY_${(state.roofGridManualY || []).length + 1}`);
-            const name = prompt("追加する屋根Y通りの名称を入力してください", defaultName);
+            const countY = (state.roofGridManualY || []).length + 1;
+            const defaultNameY = type === 'eaves' ? `${countY} 軒の出` : (type === 'keraba' ? `${countY} ケラバの出` : `${countY} その他`);
+            const name = prompt("追加する屋根Y通りの名称を入力してください", defaultNameY);
             if (!name) return;
 
             if (!state.roofGridManualY) state.roofGridManualY = [];

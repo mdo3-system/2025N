@@ -488,7 +488,7 @@ function getAreaRowsHtml(area, i) {
     */
 
 
-function generateAutoMitsukeCanvas(direction) {
+function generateAutoMitsukeCanvas(direction, commonScale) {
     const s = window.AppState;
     if (!s || !s.config) return null;
 
@@ -512,6 +512,8 @@ function generateAutoMitsukeCanvas(direction) {
     const eavesZ1F = scan.eavesZ1F;
     const eavesZ2F = scan.eavesZ2F;
     const profile = scan.profile;
+    const profile1F = scan.profile1F;
+    const profile2F = scan.profile2F;
 
     const maxZ_total = Math.max(...profile.map(p => p.z));
     const totalH = Math.max(maxZ_total, eavesZ2F + 1000); // キャンバス高さ基準
@@ -534,91 +536,131 @@ function generateAutoMitsukeCanvas(direction) {
     const drawW = canvas.width - padL - padR;
     const drawH = canvas.height - padT - padB;
 
-    const scaleU = drawW / W;
-    const scaleZ = drawH / totalH;
-    const scale = Math.min(scaleU, scaleZ) * 0.90;
+    let scale = commonScale;
+    if (!scale) {
+        const scaleU = drawW / W;
+        const scaleZ = drawH / totalH;
+        scale = Math.min(scaleU, scaleZ) * 0.90;
+    }
 
     const toX = (u) => padL + (u - uMin) * scale;
     const toY = (z) => canvas.height - padB - z * scale;
 
     const primaryColor = (direction === 'X') ? '#e67e22' : '#2980b9';
-    const fill2F = (direction === 'X') ? 'rgba(230,126,34,0.18)' : 'rgba(41,128,185,0.18)';
-    const fill1F = (direction === 'X') ? 'rgba(230,126,34,0.08)' : 'rgba(41,128,185,0.08)';
 
-    const cutY2 = toY(lvl.cut2);  // 2F下端カットライン
-    const cutY1 = toY(lvl.cut1);  // 1F下端カットライン
-    const glY   = toY(0);         // GL
+    const cutY2 = toY(lvl.cut2);
+    const cutY1 = toY(lvl.cut1);
+    const glY   = toY(0);
 
-    // --- シルエット多角形を構築 (上面と下面を往復する閉じたパス) ---
-    const silPts = [];
-    for (let i = 0; i < profile.length; i++) {
-        silPts.push({ x: toX(profile[i].u), y: toY(profile[i].z) });
-    }
-    for (let i = profile.length - 1; i >= 0; i--) {
-        silPts.push({ x: toX(profile[i].u), y: toY(profile[i].zBottom) });
-    }
-
-    // 2F見附エリア (cut2以上) を塗りつぶし (上面・下面を往復する閉じたパス)
-    const pts2F = [];
+    // 1. 全体の最外周シルエット（profile）を線画で描画
+    // zBottom を使用し、empty の部分はパスを切る（地面に落とさない）
+    ctx.beginPath();
+    // 上の輪郭線 (zTop)
+    let isDrawing = false;
     for (let i = 0; i < profile.length; i++) {
         const p = profile[i];
-        const topZ = Math.max(p.z, lvl.cut2);
-        pts2F.push({ x: toX(p.u), y: toY(topZ) });
+        if (p.empty) {
+            isDrawing = false;
+            continue;
+        }
+        const cx = toX(p.u);
+        const cy = toY(p.z);
+        if (!isDrawing) {
+            ctx.moveTo(cx, cy);
+            isDrawing = true;
+        } else {
+            ctx.lineTo(cx, cy);
+        }
     }
+    // 下の輪郭線 (zBot) を逆順で繋ぐ
+    isDrawing = false;
     for (let i = profile.length - 1; i >= 0; i--) {
         const p = profile[i];
-        const botZ = Math.max(p.zBottom, lvl.cut2);
-        pts2F.push({ x: toX(p.u), y: toY(botZ) });
+        if (p.empty) {
+            isDrawing = false;
+            continue;
+        }
+        const cx = toX(p.u);
+        const cy = toY(p.zBottom);
+        if (!isDrawing) {
+            ctx.moveTo(cx, cy); // 途切れたところから再開する時は moveTo
+            isDrawing = true;
+        } else {
+            ctx.lineTo(cx, cy);
+        }
     }
-
-    ctx.save();
-    ctx.beginPath();
-    pts2F.forEach((p, i) => i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y));
-    ctx.closePath();
-    ctx.fillStyle = fill2F;
-    ctx.fill();
-    ctx.restore();
-
-    // 1F追加見附エリア (cut1〜cut2) を塗りつぶし (上面・下面を往復する閉じたパス)
-    const pts1F = [];
-    for (let i = 0; i < profile.length; i++) {
-        const p = profile[i];
-        const topZ = Math.min(p.z, lvl.cut2);
-        pts1F.push({ x: toX(p.u), y: toY(topZ) });
-    }
-    for (let i = profile.length - 1; i >= 0; i--) {
-        const p = profile[i];
-        const botZ = Math.max(p.zBottom, lvl.cut1);
-        pts1F.push({ x: toX(p.u), y: toY(botZ) });
-    }
-
-    ctx.save();
-    ctx.beginPath();
-    pts1F.forEach((p, i) => i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y));
-    ctx.closePath();
-    ctx.fillStyle = fill1F;
-    ctx.fill();
-    ctx.restore();
-
-    // 外壁シルエット輪郭 (clip して斜線ハッチング)
-    ctx.save();
-    ctx.beginPath();
-    silPts.forEach((p, i) => i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y));
-    ctx.closePath();
-    ctx.clip();
-    ctx.strokeStyle = direction === 'X' ? 'rgba(230,126,34,0.12)' : 'rgba(41,128,185,0.12)';
-    ctx.lineWidth = 1;
-    for (let off = -canvas.width; off < canvas.width; off += 12) {
-        ctx.beginPath(); ctx.moveTo(off, 0); ctx.lineTo(off + canvas.height, canvas.height); ctx.stroke();
-    }
-    ctx.restore();
-
-    // シルエット輪郭線
-    ctx.strokeStyle = primaryColor; ctx.lineWidth = 3; ctx.lineJoin = 'round';
-    ctx.beginPath();
-    silPts.forEach((p, i) => i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y));
-    ctx.closePath();
+    // 空洞（empty）がある場合、一筆書きで閉じることはできないため、
+    // ここでは stroke のみ行い、端を自動的に閉じる closePath は呼ばない
+    ctx.strokeStyle = primaryColor;
+    ctx.lineWidth = 2;
+    ctx.lineJoin = 'round';
     ctx.stroke();
+
+    // 2. 1Fと2Fそれぞれのカットライン以上の範囲を、
+    // formulaAreasの区画（長方形・三角形）として線画描画する
+    // ==========================================
+    ctx.save();
+
+    const fAreas = config.elevationFormulaAreas;
+    if (fAreas) {
+        const key = direction === 'X' ? 'x' : 'y';
+
+        const numberCircle = (num) => {
+            if (num <= 20) return String.fromCharCode(0x245F + num);
+            return `(${num})`;
+        };
+
+        // 1F と 2F の区画をまとめて描画
+        ['1F', '2F'].forEach(flr => {
+            const flrItems = fAreas[flr][key] || [];
+            const accentColor = flr === '2F'
+                ? (direction === 'X' ? 'rgba(230,126,34,1.0)' : 'rgba(41,128,185,1.0)')
+                : (direction === 'X' ? 'rgba(230,126,34,0.55)' : 'rgba(41,128,185,0.55)');
+
+            ctx.lineWidth = flr === '2F' ? 2 : 1.5;
+            ctx.strokeStyle = accentColor;
+            ctx.font = 'bold 12px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+
+            flrItems.forEach(item => {
+                if (!item.shape) return;
+                const sh = item.shape;
+                const uL = sh.uStart;
+                const uR = sh.uStart + sh.w;
+                const zBL = sh.zBot;
+                const zTL = sh.zBot + sh.hL;
+                const zTR = sh.zBot + sh.hR;
+
+                // 区画の外枠を線画で描画
+                ctx.beginPath();
+                ctx.moveTo(toX(uL), toY(zBL));
+                ctx.lineTo(toX(uR), toY(zBL));
+                ctx.lineTo(toX(uR), toY(zTR));
+                ctx.lineTo(toX(uL), toY(zTL));
+                ctx.closePath();
+                ctx.stroke();
+
+                // 番号ラベルを描画
+                const cx = toX(uL + sh.w / 2);
+                const cz = sh.type === 'tri'
+                    ? toY(zBL + (sh.hL + sh.hR) / 3)
+                    : toY(zBL + (sh.hL + sh.hR) / 2);
+
+                ctx.beginPath();
+                ctx.arc(cx, cz, 10, 0, Math.PI * 2);
+                ctx.fillStyle = '#ffffff';
+                ctx.fill();
+                ctx.strokeStyle = accentColor;
+                ctx.lineWidth = 1;
+                ctx.stroke();
+
+                ctx.fillStyle = '#1a252f';
+                ctx.fillText(numberCircle(item.id), cx, cz);
+            });
+        });
+    }
+    ctx.restore();
 
     // GL線
     ctx.strokeStyle = '#2c3e50'; ctx.lineWidth = 3;
@@ -899,14 +941,48 @@ function showAreaPreview() {
     const iFR = createLayerFilteredImage('floor', ['AREA_D_RF', 'AREA_RF'], ['BG_RF'], 'RF', true, 1.0, true);
     const iEX = createLayerFilteredImage('elev', ['AREA_X'], ['BG_X'], 'X', true, 1.0, true);
     const iEY = createLayerFilteredImage('elev', ['AREA_Y'], ['BG_Y'], 'Y', true, 1.0, true);
-    const iD1 = createLayerFilteredImage('div4', ['DIV4_D_1F', 'DIV4_1F'], ['BG_1F'], '1F', true, 1.0, true);
-    const iD2 = createLayerFilteredImage('div4', ['DIV4_D_2F', 'DIV4_2F'], ['BG_2F'], '2F', true, 1.0, true);
+    // 4分割図: 常に作図データ(壁・柱)から自動生成する（DXFは無視）
+    const iD1X = createNativeCanvasImage('1F', 'wall', 'X', true, 1.0, true);
+    const iD1Y = createNativeCanvasImage('1F', 'wall', 'Y', true, 1.0, true);
+    const iD2X = createNativeCanvasImage('2F', 'wall', 'X', true, 1.0, true);
+    const iD2Y = createNativeCanvasImage('2F', 'wall', 'Y', true, 1.0, true);
+    
+    let div4ImgHtml = `
+        ${iD1X ? `<div class="img-preview-box"><div style="font-weight:bold;color:#0056b3;margin-bottom:5px;">1F X方向 4分割図 (自動計算モデル) <span style="font-size:10px;color:#888;">※クリックで拡大</span></div><img src="${iD1X.img}" style="width:100%; border:1px solid #ddd; padding:5px; border-radius:4px; box-shadow:0 2px 8px rgba(0,0,0,0.08); cursor:zoom-in;" onclick="window._zoomMitsukeImg && window._zoomMitsukeImg(this.src, '1F X方向 4分割図')"></div>` : ''}
+        ${iD1Y ? `<div class="img-preview-box"><div style="font-weight:bold;color:#0056b3;margin-bottom:5px;">1F Y方向 4分割図 (自動計算モデル) <span style="font-size:10px;color:#888;">※クリックで拡大</span></div><img src="${iD1Y.img}" style="width:100%; border:1px solid #ddd; padding:5px; border-radius:4px; box-shadow:0 2px 8px rgba(0,0,0,0.08); cursor:zoom-in;" onclick="window._zoomMitsukeImg && window._zoomMitsukeImg(this.src, '1F Y方向 4分割図')"></div>` : ''}
+        ${iD2X ? `<div class="img-preview-box"><div style="font-weight:bold;color:#0056b3;margin-bottom:5px;">2F X方向 4分割図 (自動計算モデル) <span style="font-size:10px;color:#888;">※クリックで拡大</span></div><img src="${iD2X.img}" style="width:100%; border:1px solid #ddd; padding:5px; border-radius:4px; box-shadow:0 2px 8px rgba(0,0,0,0.08); cursor:zoom-in;" onclick="window._zoomMitsukeImg && window._zoomMitsukeImg(this.src, '2F X方向 4分割図')"></div>` : ''}
+        ${iD2Y ? `<div class="img-preview-box"><div style="font-weight:bold;color:#0056b3;margin-bottom:5px;">2F Y方向 4分割図 (自動計算モデル) <span style="font-size:10px;color:#888;">※クリックで拡大</span></div><img src="${iD2Y.img}" style="width:100%; border:1px solid #ddd; padding:5px; border-radius:4px; box-shadow:0 2px 8px rgba(0,0,0,0.08); cursor:zoom-in;" onclick="window._zoomMitsukeImg && window._zoomMitsukeImg(this.src, '2F Y方向 4分割図')"></div>` : ''}
+    `;
+
     const iPA1 = createHighResPlanImage('1F', 'area', null, true, 1.0, true);
     const iPA2 = createHighResPlanImage('2F', 'area', null, true, 1.0, true);
 
     // Generate high-fidelity analytical silhouette elevation plans
-    const iAutoEX = generateAutoMitsukeCanvas('X');
-    const iAutoEY = generateAutoMitsukeCanvas('Y');
+    let commonScale = null;
+    if (window.RoofEngine) {
+        const scanX = window.RoofEngine.getScanlineProfile('X', window.AppState);
+        const scanY = window.RoofEngine.getScanlineProfile('Y', window.AppState);
+        if (scanX && scanY) {
+            const maxZ_X = Math.max(...scanX.profile.map(p => p.z));
+            const totalH_X = Math.max(maxZ_X, scanX.eavesZ2F + 1000);
+            const maxZ_Y = Math.max(...scanY.profile.map(p => p.z));
+            const totalH_Y = Math.max(maxZ_Y, scanY.eavesZ2F + 1000);
+
+            const W_max = Math.max(scanX.W, scanY.W);
+            const totalH_max = Math.max(totalH_X, totalH_Y);
+
+            const padL = 90, padR = 400, padT = 70, padB = 60;
+            const drawW = 900 - padL - padR; // 410
+            const drawH = 600 - padT - padB; // 470
+
+            const scaleU = drawW / W_max;
+            const scaleZ = drawH / totalH_max;
+            commonScale = Math.min(scaleU, scaleZ) * 0.90;
+        }
+    }
+
+    const iAutoEX = generateAutoMitsukeCanvas('X', commonScale);
+    const iAutoEY = generateAutoMitsukeCanvas('Y', commonScale);
 
     // タブUI全体のHTML構築
     let tabHtml = `
@@ -928,19 +1004,19 @@ function showAreaPreview() {
         
         <div id="tab-mitsuke" class="preview-tab-content" style="width:100%; display:none;">
             <div class="tab-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap:20px; margin-bottom:20px;">
-                ${iAutoEX ? `<div class="img-preview-box"><div style="font-weight:bold;color:#0056b3;margin-bottom:5px;">X方向 見附面積図 (自動計算モデル)</div><img src="${iAutoEX.img}" style="width:100%; border:1px solid #ddd; padding:5px; border-radius:4px; box-shadow:0 2px 8px rgba(0,0,0,0.08);"></div>` : ''}
-                ${iEX ? `<div class="img-preview-box"><div style="font-weight:bold;color:#0056b3;margin-bottom:5px;">X方向 見附面積図 (DXF読込)</div><img src="${iEX.img}" style="width:100%; border:1px solid #ddd; padding:5px; border-radius:4px; box-shadow:0 2px 8px rgba(0,0,0,0.08);"></div>` : ''}
-                ${iAutoEY ? `<div class="img-preview-box"><div style="font-weight:bold;color:#0056b3;margin-bottom:5px;">Y方向 見附面積図 (自動計算モデル)</div><img src="${iAutoEY.img}" style="width:100%; border:1px solid #ddd; padding:5px; border-radius:4px; box-shadow:0 2px 8px rgba(0,0,0,0.08);"></div>` : ''}
-                ${iEY ? `<div class="img-preview-box"><div style="font-weight:bold;color:#0056b3;margin-bottom:5px;">Y方向 見附面積図 (DXF読込)</div><img src="${iEY.img}" style="width:100%; border:1px solid #ddd; padding:5px; border-radius:4px; box-shadow:0 2px 8px rgba(0,0,0,0.08);"></div>` : ''}
+                ${iAutoEX ? `<div class="img-preview-box"><div style="font-weight:bold;color:#0056b3;margin-bottom:5px;">X方向 見附面積図 (自動計算モデル) <span style="font-size:10px;color:#888;">※クリックで拡大</span></div><img src="${iAutoEX.img}" style="width:100%; border:1px solid #ddd; padding:5px; border-radius:4px; box-shadow:0 2px 8px rgba(0,0,0,0.08); cursor:zoom-in;" onclick="window._zoomMitsukeImg && window._zoomMitsukeImg(this.src, 'X方向 見附面積図')"></div>` : ''}
+                ${iEX ? `<div class="img-preview-box"><div style="font-weight:bold;color:#0056b3;margin-bottom:5px;">X方向 見附面積図 (DXF読込)</div><img src="${iEX.img}" style="width:100%; border:1px solid #ddd; padding:5px; border-radius:4px; box-shadow:0 2px 8px rgba(0,0,0,0.08); cursor:zoom-in;" onclick="window._zoomMitsukeImg && window._zoomMitsukeImg(this.src, 'X方向 見附面積図(DXF)')"></div>` : ''}
+                ${iAutoEY ? `<div class="img-preview-box"><div style="font-weight:bold;color:#0056b3;margin-bottom:5px;">Y方向 見附面積図 (自動計算モデル) <span style="font-size:10px;color:#888;">※クリックで拡大</span></div><img src="${iAutoEY.img}" style="width:100%; border:1px solid #ddd; padding:5px; border-radius:4px; box-shadow:0 2px 8px rgba(0,0,0,0.08); cursor:zoom-in;" onclick="window._zoomMitsukeImg && window._zoomMitsukeImg(this.src, 'Y方向 見附面積図')"></div>` : ''}
+                ${iEY ? `<div class="img-preview-box"><div style="font-weight:bold;color:#0056b3;margin-bottom:5px;">Y方向 見附面積図 (DXF読込)</div><img src="${iEY.img}" style="width:100%; border:1px solid #ddd; padding:5px; border-radius:4px; box-shadow:0 2px 8px rgba(0,0,0,0.08); cursor:zoom-in;" onclick="window._zoomMitsukeImg && window._zoomMitsukeImg(this.src, 'Y方向 見附面積図(DXF)')"></div>` : ''}
             </div>
             <div id="mitsuke-table-container"></div>
         </div>
         
         <div id="tab-div4" class="preview-tab-content" style="width:100%; display:none;">
             <div class="tab-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap:20px; margin-bottom:20px;">
-                ${iD1 ? `<div class="img-preview-box"><div style="font-weight:bold;color:#0056b3;margin-bottom:5px;">1F 4分割図</div><img src="${iD1.img}" style="width:100%; border:1px solid #ddd; padding:5px; border-radius:4px; box-shadow:0 2px 8px rgba(0,0,0,0.08);"></div>` : ''}
-                ${iD2 ? `<div class="img-preview-box"><div style="font-weight:bold;color:#0056b3;margin-bottom:5px;">2F 4分割図</div><img src="${iD2.img}" style="width:100%; border:1px solid #ddd; padding:5px; border-radius:4px; box-shadow:0 2px 8px rgba(0,0,0,0.08);"></div>` : ''}
+                ${div4ImgHtml}
             </div>
+            <div id="div4-table-container" style="margin-top:20px;"></div>
         </div>
         
         <div id="tab-pillar" class="preview-tab-content" style="width:100%; display:none;">
@@ -988,6 +1064,11 @@ function showAreaPreview() {
         mitsukeTableContainer.innerHTML = window.ElevationRenderer.generateElevationAreaTableHtml(window.AppState);
     }
 
+    const div4TableContainer = document.getElementById('div4-table-container');
+    if (div4TableContainer && window.ReportEngine && window.ReportEngine.generateDiv4TableHtml) {
+        div4TableContainer.innerHTML = window.ReportEngine.generateDiv4TableHtml(window.AppState);
+    }
+
     // イベントバインディング
     const tabBtns = pc.querySelectorAll('.preview-tab-btn');
     tabBtns.forEach(btn => {
@@ -1009,6 +1090,24 @@ function showAreaPreview() {
     const modal = document.getElementById('modal-area');
     if (modal) { modal.style.display = 'flex'; }
 }
+
+// 見附面積図クリック拡大機能
+window._zoomMitsukeImg = function(src, title) {
+    let overlay = document.getElementById('_mitsuke-zoom-overlay');
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = '_mitsuke-zoom-overlay';
+        overlay.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.85);z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:zoom-out;';
+        overlay.addEventListener('click', () => overlay.style.display = 'none');
+        document.body.appendChild(overlay);
+    }
+    overlay.innerHTML = `
+        <div style="color:#fff;font-size:14px;font-weight:bold;margin-bottom:10px;opacity:0.8;">${title} <span style="font-size:11px;font-weight:normal;">(クリックで閉じる)</span></div>
+        <img src="${src}" style="max-width:95vw;max-height:88vh;object-fit:contain;border:2px solid #fff;border-radius:6px;box-shadow:0 0 40px rgba(0,0,0,0.6);">
+    `;
+    overlay.style.display = 'flex';
+};
+
 // ★ 筋交いの向きラベルを返す補助関数
 // braceName文字列に(／)(＼)(Ｘ)等が含まれればそれを採用
 // braceName がない旧データは座標符号から方向を推定する
@@ -1372,12 +1471,12 @@ async function generateDoc() {
         }
 
         // [v2.7.0] 自動屋根伏図・実積（実面積）求積表の出力
-        const roofFaces = state.roofFaces || [];
+        const roofFaces = s.roofFaces || [];
         if (roofFaces.length > 0) {
             h += addAreaSecHeader('屋根伏図・屋根実積（実面積）の算定');
 
-            const c1R = window.RoofRenderer ? window.RoofRenderer.generateReportCanvas(state, '1F') : null;
-            const c2R = window.RoofRenderer ? window.RoofRenderer.generateReportCanvas(state, '2F') : null;
+            const c1R = window.RoofRenderer ? window.RoofRenderer.generateReportCanvas(s, '1F') : null;
+            const c2R = window.RoofRenderer ? window.RoofRenderer.generateReportCanvas(s, '2F') : null;
             const i1R = c1R ? c1R.toDataURL() : null;
             const i2R = c2R ? c2R.toDataURL() : null;
 
@@ -1691,7 +1790,10 @@ async function generateDoc() {
                     const k1s = f === '1F' && p.h1 ? `(${p.h1.toFixed(2)}/2.7)` : "-";
                     const k2s = p.h2 ? `(${p.h2.toFixed(2)}/2.7)` : `(2.70/2.7)`;
                     const hCoef = f === '1F' ? k1s : k2s;
-                    h += `<tr><td>${f[0]}</td><td>${p.gx}</td><td>${p.gy}</td><td>${m}</td><td>${hCoef}</td><td style="text-align:left;">${p.cStrX} = ${p.nCalcX.toFixed(2)}</td><td style="text-align:left;">${p.cStrY} = ${p.nCalcY.toFixed(2)}</td><td><b>${p.nValue.toFixed(2)}</b></td><td class="bg-ok">${p.nMark}</td><td class="bg-ok">${p.nMark}</td></tr>`;
+                    const nCalcX = p.nCalcX || 0;
+                    const nCalcY = p.nCalcY || 0;
+                    const nValue = p.nValue || 0;
+                    h += `<tr><td>${f[0]}</td><td>${p.gx}</td><td>${p.gy}</td><td>${m}</td><td>${hCoef}</td><td style="text-align:left;">${p.cStrX || '-'} = ${nCalcX.toFixed(2)}</td><td style="text-align:left;">${p.cStrY || '-'} = ${nCalcY.toFixed(2)}</td><td><b>${nValue.toFixed(2)}</b></td><td class="bg-ok">${p.nMark}</td><td class="bg-ok">${p.nMark}</td></tr>`;
                 }
             });
             h += `</table>`;

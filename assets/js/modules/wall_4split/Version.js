@@ -1,4 +1,4 @@
 /**
  * Version.js - Centralized Version Management
  */
-window.APP_VERSION = "v2.7.16"; // BugFix: スキャンラインの走査範囲を屋根頂点も含めて拡張し軒の出を正しく浮かす
+window.APP_VERSION = "v2.7.17"; // BugFix: 1Fと2Fのスキャンラインプロファイルを分離して中空抜けに対応、かつ見附面積図のX・Y同スケール描画対応
