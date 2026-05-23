@@ -552,49 +552,35 @@ function generateAutoMitsukeCanvas(direction, commonScale) {
     const cutY1 = toY(lvl.cut1);
     const glY   = toY(0);
 
-    // 1. 全体の最外周シルエット（profile）を線画で描画
-    // zBottom を使用し、empty の部分はパスを切る（地面に落とさない）
-    ctx.beginPath();
-    // 上の輪郭線 (zTop)
-    let isDrawing = false;
-    for (let i = 0; i < profile.length; i++) {
+    // 1. 全体の最外周シルエット（profile）を島ごとに閉じたポリゴンとして線画で描画
+    let currentIsland = [];
+    for (let i = 0; i <= profile.length; i++) {
         const p = profile[i];
-        if (p.empty) {
-            isDrawing = false;
-            continue;
-        }
-        const cx = toX(p.u);
-        const cy = toY(p.z);
-        if (!isDrawing) {
-            ctx.moveTo(cx, cy);
-            isDrawing = true;
+        if (p && !p.empty) {
+            currentIsland.push(p);
         } else {
-            ctx.lineTo(cx, cy);
+            if (currentIsland.length >= 2) {
+                ctx.beginPath();
+                // 上端 (左 -> 右)
+                ctx.moveTo(toX(currentIsland[0].u), toY(currentIsland[0].z));
+                for (let j = 1; j < currentIsland.length; j++) {
+                    ctx.lineTo(toX(currentIsland[j].u), toY(currentIsland[j].z));
+                }
+                // 右端を下端へ繋ぐ
+                ctx.lineTo(toX(currentIsland[currentIsland.length - 1].u), toY(currentIsland[currentIsland.length - 1].zBottom));
+                // 下端 (右 -> 左)
+                for (let j = currentIsland.length - 2; j >= 0; j--) {
+                    ctx.lineTo(toX(currentIsland[j].u), toY(currentIsland[j].zBottom));
+                }
+                ctx.closePath();
+                ctx.strokeStyle = primaryColor;
+                ctx.lineWidth = 2.5;
+                ctx.lineJoin = 'round';
+                ctx.stroke();
+            }
+            currentIsland = [];
         }
     }
-    // 下の輪郭線 (zBot) を逆順で繋ぐ
-    isDrawing = false;
-    for (let i = profile.length - 1; i >= 0; i--) {
-        const p = profile[i];
-        if (p.empty) {
-            isDrawing = false;
-            continue;
-        }
-        const cx = toX(p.u);
-        const cy = toY(p.zBottom);
-        if (!isDrawing) {
-            ctx.moveTo(cx, cy); // 途切れたところから再開する時は moveTo
-            isDrawing = true;
-        } else {
-            ctx.lineTo(cx, cy);
-        }
-    }
-    // 空洞（empty）がある場合、一筆書きで閉じることはできないため、
-    // ここでは stroke のみ行い、端を自動的に閉じる closePath は呼ばない
-    ctx.strokeStyle = primaryColor;
-    ctx.lineWidth = 2;
-    ctx.lineJoin = 'round';
-    ctx.stroke();
 
     // 2. 1Fと2Fそれぞれのカットライン以上の範囲を、
     // formulaAreasの区画（長方形・三角形）として線画描画する

@@ -12,6 +12,71 @@ window.RoofEngine = {
         return { fl1, fl2, cut1: fl1 + 1350, cut2: fl2 + 1350 };
     },
 
+    getFloorExteriorPolygons: function(floor, state) {
+        const s = state || window.AppState;
+        const c = s.config || {};
+        const wallThick = c.wallThickness !== undefined ? parseFloat(c.wallThickness) : 150;
+        let polys = [];
+        
+        const activeExtWalls = (s.exteriorWalls || []).filter(ew => ew.floor === floor && ew.vertices && ew.vertices.length >= 3);
+        if (activeExtWalls.length > 0) {
+            activeExtWalls.forEach(ew => { 
+                const oPoly = this.offsetPolygon(ew.vertices, wallThick);
+                if (oPoly.length >= 3) polys.push(oPoly);
+            });
+        } else {
+            const boundary = window.WallEngine ? window.WallEngine.extractOuterBoundary(floor, s) : null;
+            if (boundary && boundary.length >= 3) { 
+                const oPoly = this.offsetPolygon(boundary, wallThick);
+                if (oPoly.length >= 3) polys.push(oPoly);
+            }
+        }
+        
+        if (polys.length === 0) {
+            const areas = (s.areaLines || []).filter(a => a.floor === floor);
+            areas.forEach(a => {
+                if (a.vertices && a.vertices.length >= 3) {
+                    const oPoly = this.offsetPolygon(a.vertices, wallThick);
+                    if (oPoly.length >= 3) polys.push(oPoly);
+                }
+            });
+        }
+
+        if (polys.length === 0) {
+            const coordsX = s.gridXCoords || [];
+            const coordsY = s.gridYCoords || [];
+            if (coordsX.length > 0 && coordsY.length > 0) {
+                const minX = Math.min(...coordsX), maxX = Math.max(...coordsX);
+                const minY = Math.min(...coordsY), maxY = Math.max(...coordsY);
+                polys.push([
+                    { x: minX - wallThick, y: minY - wallThick },
+                    { x: maxX + wallThick, y: minY - wallThick },
+                    { x: maxX + wallThick, y: maxY + wallThick },
+                    { x: minX - wallThick, y: maxY + wallThick }
+                ]);
+            }
+        }
+        
+        return polys;
+    },
+
+    getFloorBoundingBox: function(floor, state) {
+        const polys = this.getFloorExteriorPolygons(floor, state);
+        let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+        let hasPts = false;
+        polys.forEach(poly => {
+            poly.forEach(v => {
+                if (v.x < minX) minX = v.x; if (v.x > maxX) maxX = v.x;
+                if (v.y < minY) minY = v.y; if (v.y > maxY) maxY = v.y;
+                hasPts = true;
+            });
+        });
+        if (!hasPts) {
+            return { minX: 0, maxX: 10000, minY: 0, maxY: 10000 };
+        }
+        return { minX, maxX, minY, maxY };
+    },
+
     getProjectedPolygons: function(direction, state) {
         const s = state || window.AppState;
         const c = s.config || {};
@@ -20,9 +85,24 @@ window.RoofEngine = {
         
         let polygons = [];
 
-        // 1. 外壁の2D投影（階層全体）
-        const bbox1F = this.getFloorBoundingBox('1F', s);
-        const bbox2F = this.getFloorBoundingBox('2F', s);
+        // 1. 外壁の2D投影（凹凸を考慮したエッジベースの投影）
+        const polys1F = this.getFloorExteriorPolygons('1F', s);
+        polys1F.forEach(poly => {
+            const n = poly.length;
+            for (let i = 0; i < n; i++) {
+                const v1 = poly[i], v2 = poly[(i+1)%n];
+                const u1 = direction === 'X' ? v1.y : v1.x;
+                const u2 = direction === 'X' ? v2.y : v2.x;
+                const uMinLocal = Math.min(u1, u2);
+                const uMaxLocal = Math.max(u1, u2);
+                if (uMaxLocal > uMinLocal + 1.0) { // 1mm以上の幅
+                    polygons.push([
+                        {u: uMinLocal, z: lvl.fl1}, {u: uMaxLocal, z: lvl.fl1},
+                        {u: uMaxLocal, z: lvl.fl2}, {u: uMinLocal, z: lvl.fl2}
+                    ]);
+                }
+            }
+        });
         
         let relZMax2F = 0;
         let has2FRoof = false;
@@ -59,34 +139,34 @@ window.RoofEngine = {
 
         const maxH = parseFloat(c.maxHeight ?? 8000);
         const eavesZ2F = has2FRoof ? (maxH - relZMax2F) : (lvl.fl2 + (parseFloat(c.floorHeight2F ?? 2.7)) * 1000);
-        const eavesZ1F = lvl.fl2;
 
-        const uMin1F = direction === 'X' ? bbox1F.minY : bbox1F.minX;
-        const uMax1F = direction === 'X' ? bbox1F.maxY : bbox1F.maxX;
-        if (uMax1F > uMin1F) {
-            polygons.push([
-                {u: uMin1F, z: lvl.fl1}, {u: uMax1F, z: lvl.fl1},
-                {u: uMax1F, z: eavesZ1F}, {u: uMin1F, z: eavesZ1F}
-            ]);
-        }
-        
-        const uMin2F = direction === 'X' ? bbox2F.minY : bbox2F.minX;
-        const uMax2F = direction === 'X' ? bbox2F.maxY : bbox2F.maxX;
-        if (uMax2F > uMin2F) {
-            polygons.push([
-                {u: uMin2F, z: lvl.fl2}, {u: uMax2F, z: lvl.fl2},
-                {u: uMax2F, z: eavesZ2F}, {u: uMin2F, z: eavesZ2F}
-            ]);
-        }
+        const polys2F = this.getFloorExteriorPolygons('2F', s);
+        polys2F.forEach(poly => {
+            const n = poly.length;
+            for (let i = 0; i < n; i++) {
+                const v1 = poly[i], v2 = poly[(i+1)%n];
+                const u1 = direction === 'X' ? v1.y : v1.x;
+                const u2 = direction === 'X' ? v2.y : v2.x;
+                const uMinLocal = Math.min(u1, u2);
+                const uMaxLocal = Math.max(u1, u2);
+                if (uMaxLocal > uMinLocal + 1.0) { // 1mm以上の幅
+                    polygons.push([
+                        {u: uMinLocal, z: lvl.fl2}, {u: uMaxLocal, z: lvl.fl2},
+                        {u: uMaxLocal, z: eavesZ2F}, {u: uMinLocal, z: eavesZ2F}
+                    ]);
+                }
+            }
+        });
 
         // 2. 屋根の2D投影
+        const wallThick = c.wallThickness !== undefined ? parseFloat(c.wallThickness) : 150;
         roofFaces.forEach(face => {
             if (!face.vertices || face.vertices.length < 3) return;
             const slopeVal = parseFloat(face.slope ?? 0) / 10;
             const thickness = parseFloat(face.roofThickness ?? c.roofThickness ?? 150);
             const tVertical = thickness * Math.sqrt(1 + slopeVal * slopeVal);
             const baseDelta = parseFloat(face.baseHeightDelta ?? 0);
-            const zBase = (face.floor === '1F' ? eavesZ1F : eavesZ2F) + baseDelta;
+            const zBase = (face.floor === '1F' ? lvl.fl2 : eavesZ2F) + baseDelta;
 
             let ux = 0, uy = 1;
             const pA = (face.slopeLine && face.slopeLine.length > 0) ? face.slopeLine[0] : face.vertices[0];
@@ -108,7 +188,11 @@ window.RoofEngine = {
             let topPts = [];
             let botPts = [];
             
-            face.vertices.forEach(v => {
+            // 屋根多角形を壁厚分だけ外側にオフセット
+            const offsetVertices = this.offsetPolygon(face.vertices, wallThick);
+            const verticesToUse = offsetVertices.length >= 3 ? offsetVertices : face.vertices;
+
+            verticesToUse.forEach(v => {
                 const u = direction === 'X' ? v.y : v.x;
                 const dist = (v.x - pA.x)*ux + (v.y - pA.y)*uy;
                 const zTop = zBase + dist * slopeVal + tVertical;
@@ -116,8 +200,6 @@ window.RoofEngine = {
                 botPts.push({u: u, z: zTop - tVertical});
             });
 
-            // 頂点を外周順に結合する（投影方向による反転を考慮）
-            // 簡易的に上面と下面を繋ぐ
             let poly = [];
             for (let j = 0; j < topPts.length; j++) poly.push(topPts[j]);
             for (let j = botPts.length - 1; j >= 0; j--) poly.push(botPts[j]);
@@ -134,6 +216,135 @@ window.RoofEngine = {
         });
 
         return { polygons, lvl, uMin: uMinAll, uMax: uMaxAll };
+    },
+
+    getScanlineProfile: function(direction, state) {
+        const s = state || window.AppState;
+        if (!s || !s.config) return null;
+        const config = s.config;
+        const lvl = this.getFloorLevels(s);
+
+        const proj = this.getProjectedPolygons(direction, s);
+        if (!proj || proj.polygons.length === 0) return null;
+
+        const scale = 1000;
+        const cpr = new ClipperLib.Clipper();
+        const subj = new ClipperLib.Paths();
+        
+        proj.polygons.forEach(poly => {
+            const path = new ClipperLib.Path();
+            poly.forEach(p => {
+                path.push(new ClipperLib.IntPoint(Math.round(p.u * scale), Math.round(p.z * scale)));
+            });
+            subj.push(path);
+        });
+
+        cpr.AddPaths(subj, ClipperLib.PolyType.ptSubject, true);
+        const silhouette = new ClipperLib.Paths();
+        cpr.Execute(ClipperLib.ClipType.ctUnion, silhouette, ClipperLib.PolyFillType.pftNonZero, ClipperLib.PolyFillType.pftNonZero);
+
+        const uMin = proj.uMin;
+        const uMax = proj.uMax;
+        const W = uMax - uMin;
+
+        // eavesZ2F 等の再計算
+        const roofFaces = s.roofFaces || [];
+        let relZMax2F = 0;
+        let has2FRoof = false;
+        roofFaces.forEach(face => {
+            if (!face.vertices || face.floor !== '2F') return;
+            has2FRoof = true;
+            const slope = parseFloat(face.slope ?? 4.5) / 10;
+            const thickness = parseFloat(face.roofThickness ?? config.roofThickness ?? 150);
+            const tVertical = thickness * Math.sqrt(1 + slope * slope);
+            const baseDelta = parseFloat(face.baseHeightDelta ?? 0);
+
+            let ux = 0, uy = 1;
+            const pA = (face.slopeLine && face.slopeLine.length > 0) ? face.slopeLine[0] : face.vertices[0];
+            if (!pA) return;
+            if (face.slopeLine && face.slopeLine.length >= 3) {
+                const pB = face.slopeLine[1], pC = face.slopeLine[2];
+                const dx = pB.x - pA.x, dy = pB.y - pA.y;
+                let nx = -dy, ny = dx;
+                if ((nx*(pC.x-pA.x) + ny*(pC.y-pA.y)) < 0) { nx = -nx; ny = -ny; }
+                const len = Math.hypot(nx, ny);
+                ux = len > 0 ? nx/len : 0; uy = len > 0 ? ny/len : 1;
+            } else if (face.slopeLine && face.slopeLine.length === 2) {
+                const p2 = face.slopeLine[1];
+                const dx=p2.x-pA.x, dy=p2.y-pA.y, len=Math.hypot(dx,dy); 
+                ux=len>0?dx/len:0; uy=len>0?dy/len:1;
+            }
+
+            face.vertices.forEach(v => {
+                const dist = (v.x - pA.x)*ux + (v.y - pA.y)*uy;
+                const z = dist * slope + tVertical + baseDelta;
+                if (z > relZMax2F) relZMax2F = z;
+            });
+        });
+
+        const maxH = parseFloat(config.maxHeight ?? 8000);
+        const eavesZ2F = has2FRoof ? (maxH - relZMax2F) : (lvl.fl2 + (parseFloat(config.floorHeight2F ?? 2.7)) * 1000);
+
+        const STEPS = 200;
+        const profileAll = [];
+
+        for (let i = 0; i <= STEPS; i++) {
+            const u = uMin + (i / STEPS) * W;
+            const X_target = Math.round(u * scale);
+
+            const intersects = [];
+            silhouette.forEach(path => {
+                const n = path.length;
+                for (let j = 0; j < n; j++) {
+                    const pt1 = path[j];
+                    const pt2 = path[(j + 1) % n];
+
+                    const minX = Math.min(pt1.X, pt2.X);
+                    const maxX = Math.max(pt1.X, pt2.X);
+
+                    if (X_target >= minX && X_target <= maxX) {
+                        if (maxX - minX > 0) {
+                            const t = (X_target - pt1.X) / (pt2.X - pt1.X);
+                            const Y_intersect = pt1.Y + t * (pt2.Y - pt1.Y);
+                            intersects.push(Y_intersect / scale);
+                        } else {
+                            intersects.push(pt1.Y / scale);
+                            intersects.push(pt2.Y / scale);
+                        }
+                    }
+                }
+            });
+
+            if (intersects.length > 0) {
+                const zTop = Math.max(...intersects);
+                const zBottom = Math.min(...intersects);
+                profileAll.push({ u, z: zTop, zBottom: zBottom, empty: false });
+            } else {
+                profileAll.push({ u, z: 0, zBottom: 0, empty: true });
+            }
+        }
+
+        const bbox1F = this.getFloorBoundingBox('1F', s);
+        const bbox2F = this.getFloorBoundingBox('2F', s);
+        const bboxAll = {
+            minX: Math.min(bbox1F.minX, bbox2F.minX),
+            maxX: Math.max(bbox1F.maxX, bbox2F.maxX),
+            minY: Math.min(bbox1F.minY, bbox2F.minY),
+            maxY: Math.max(bbox1F.maxY, bbox2F.maxY)
+        };
+
+        return {
+            uMin,
+            uMax,
+            profile: profileAll,
+            eavesZ1F: lvl.fl2,
+            eavesZ2F,
+            maxH,
+            bbox1F,
+            bbox2F,
+            bboxAll,
+            W
+        };
     },
 
     updateProjectedAreas: function(state) {
