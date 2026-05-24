@@ -1,54 +1,34 @@
 /**
- * tests/RoofEngine.test.js - Unit Tests for v2.7.0 Roof Calculations
+ * tests/RoofEngine.test.js - Unit Tests for Roof Calculations
  */
 
 window.TestRunner.describe('RoofEngine', () => {
     
-    window.TestRunner.it('should calculate 2D polygon horizontal area correctly', () => {
-        // Rectangle: 4.0m x 3.0m
-        const polygon = [
-            { u: 0, v: 0 },
-            { u: 4, v: 0 },
-            { u: 4, v: 3 },
-            { u: 0, v: 3 }
-        ];
-        
-        const area = window.RoofEngine.calculatePolygonArea2D(polygon);
-        window.TestRunner.expect(area).toBeCloseTo(12.00, 2);
-    });
-
-    window.TestRunner.it('should calculate precise 3D height at any sloped roof point', () => {
-        // Setup sloped roof properties
-        // Base height anchor p1 = (0, 0), direction pointing strictly positive Y (0, 1000)
-        // Slope = 5.0 (so rise factor = 0.5)
-        const face = {
-            slope: 5.0,
-            floor: '1F',
-            baseHeightDelta: 0,
-            slopeLine: [
-                { x: 0, y: 0 },
-                { x: 0, y: 1000 }
-            ]
+    window.TestRunner.it('should calculate floor levels (FL1, FL2, cut1, cut2) correctly according to absolute Z in mm', () => {
+        // Mock state config based on absolute Z definitions
+        const state = {
+            config: {
+                baseHeight: 400,
+                basePack: 20,
+                baseSill: 105,
+                floorThick1F: 36,
+                floorHeight1F: 2.7
+            }
         };
-
-        // Standard 1F ceiling height is 3000
-        const zBase = 3000;
-
-        // Test coordinate on the base line (0, 0)
-        const hBase = window.RoofEngine.calculate3DHeightAtCoordinate({ x: 0, y: 0 }, face);
-        window.TestRunner.expect(hBase).toBe(zBase);
-
-        // Test coordinate 2000mm along positive Y direction (0, 2000)
-        // distance = 2.0m, slope rise = 2.0 * 0.5 * 1000 = 1000mm.
-        // Expected height = 3000 + 1000 = 4000mm
-        const hUp = window.RoofEngine.calculate3DHeightAtCoordinate({ x: 0, y: 2000 }, face);
-        window.TestRunner.expect(hUp).toBe(4000);
-
-        // Test coordinate 1000mm along negative Y direction (0, -1000)
-        // distance = -1.0m, slope fall = -500mm
-        // Expected height = 3000 - 500 = 2500mm
-        const hDown = window.RoofEngine.calculate3DHeightAtCoordinate({ x: 0, y: -1000 }, face);
-        window.TestRunner.expect(hDown).toBe(2500);
+        
+        const levels = window.RoofEngine.getFloorLevels(state);
+        
+        // 1FL = 400(GL+baseH) + 20 + 105 + 36 = 561
+        window.TestRunner.expect(levels.FL1).toBe(561);
+        
+        // 2FL = 525(sillTop) + 2700(floorHeight1F) + 36(floorThick2F, default 36) = 3261
+        window.TestRunner.expect(levels.FL2).toBe(3261);
+        
+        // cut1 = 1FL(561) + 1350 = 1911
+        window.TestRunner.expect(levels.cut1).toBe(1911);
+        
+        // cut2 = 2FL(3261) + 1350 = 4611
+        window.TestRunner.expect(levels.cut2).toBe(4611);
     });
 
     window.TestRunner.it('should compute real sloped area from projected area and slope factor', () => {

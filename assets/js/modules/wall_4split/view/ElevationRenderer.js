@@ -527,12 +527,10 @@ window.ElevationRenderer = {
                 <table style="width:100%; border-collapse:collapse; border:1px solid #ddd; text-align:right;">
                     <thead>
                         <tr style="background:#f1f5f9; border-bottom:1px solid #cbd5e1;">
-                            <th style="border:1px solid #ddd; padding:4px; text-align:center;">階</th>
-                            <th style="border:1px solid #ddd; padding:4px; text-align:left;">部位</th>
-                            <th style="border:1px solid #ddd; padding:4px;">幅(m)</th>
-                            <th style="border:1px solid #ddd; padding:4px;">高さ/平均(m)</th>
-                            <th style="border:1px solid #ddd; padding:4px; text-align:left;">計算式</th>
-                            <th style="border:1px solid #ddd; padding:4px; font-weight:bold;">面積(㎡)</th>
+                            <th style="border:1px solid #ddd; padding:4px; text-align:center; width:40px;">階</th>
+                            <th style="border:1px solid #ddd; padding:4px; text-align:center; width:40px;">番号</th>
+                            <th style="border:1px solid #ddd; padding:4px; text-align:left;">計算式(m)</th>
+                            <th style="border:1px solid #ddd; padding:4px; font-weight:bold; width:80px;">面積(㎡)</th>
                         </tr>
                     </thead>
                     <tbody>`;
@@ -544,23 +542,24 @@ window.ElevationRenderer = {
                 if (items.length === 0) {
                     tableHtml += `<tr>
                         <td style="border:1px solid #ddd; padding:4px; text-align:center; background:#f8fafc;">${f}</td>
-                        <td colspan="5" style="border:1px solid #ddd; padding:4px; text-align:center; color:#999;">データなし</td>
+                        <td colspan="3" style="border:1px solid #ddd; padding:4px; text-align:center; color:#999;">データなし</td>
                     </tr>`;
                 } else {
                     items.forEach((item, idx) => {
                         fTotal += item.area;
-                        tableHtml += `<tr>
+                        const isDeduction = item.area < 0;
+                        const colorStyle = isDeduction ? 'color:#e74c3c;' : '';
+                        
+                        tableHtml += `<tr style="${isDeduction ? 'background:#fff5f5;' : ''}">
                             ${idx === 0 ? `<td rowspan="${items.length + 1}" style="border:1px solid #ddd; padding:4px; text-align:center; background:#f8fafc; font-weight:bold;">${f}</td>` : ''}
-                            <td style="border:1px solid #ddd; padding:4px; text-align:left;">${item.name}</td>
-                            <td style="border:1px solid #ddd; padding:4px;">${item.w.toFixed(3)}</td>
-                            <td style="border:1px solid #ddd; padding:4px;">${item.h.toFixed(3)}</td>
-                            <td style="border:1px solid #ddd; padding:4px; text-align:left; font-size:10px;">${item.formula}</td>
-                            <td style="border:1px solid #ddd; padding:4px;">${item.area.toFixed(2)}</td>
+                            <td style="border:1px solid #ddd; padding:4px; text-align:center; ${colorStyle}">${item.name}</td>
+                            <td style="border:1px solid #ddd; padding:4px; text-align:left; font-size:11px; ${colorStyle}">${item.formula} =</td>
+                            <td style="border:1px solid #ddd; padding:4px; ${colorStyle}">${item.area.toFixed(3)}</td>
                         </tr>`;
                     });
                     tableHtml += `<tr style="background:#fffaf0; font-weight:bold;">
-                        <td colspan="4" style="border:1px solid #ddd; padding:4px; text-align:center;">${f} 計</td>
-                        <td style="border:1px solid #ddd; padding:4px; color:#d35400;">${fTotal.toFixed(2)} ㎡</td>
+                        <td colspan="2" style="border:1px solid #ddd; padding:4px; text-align:center;">合計</td>
+                        <td style="border:1px solid #ddd; padding:4px; color:#d35400;">${fTotal.toFixed(3)}</td>
                     </tr>`;
                 }
             });

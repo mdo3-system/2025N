@@ -1,15 +1,36 @@
 /**
- * logic/RoofEngine.js - Roof Property & Calculation Engine
- * v2.8.0 - Clipper.js Boolean Polygon Method
+ * logic/RoofEngine.js - Roof Property & Semantic Primitive Projection Engine
+ * v2.8.0 - Semantic Primitive Generation with Absolute Z Levels
  */
 
 window.RoofEngine = {
     getFloorLevels: function(state) {
         const s = state || window.AppState;
         const c = s.config || {};
-        const fl1 = parseFloat(c.floorHeight1F ?? 0);
-        const fl2 = parseFloat(c.floorHeight2F ?? 2700) + fl1;
-        return { fl1, fl2, cut1: fl1 + 1350, cut2: fl2 + 1350 };
+        
+        // All values in absolute Z (mm) from GL(0)
+        const GL = 0;
+        
+        // 基礎高、パッキン、土台、床厚
+        const baseH = parseFloat(c.baseHeight ?? 400);
+        const basePack = parseFloat(c.basePack ?? 20);
+        const baseSill = parseFloat(c.baseSill ?? 105);
+        
+        const foundationTop = GL + baseH;
+        const sillTop = foundationTop + basePack + baseSill; // 土台天端
+        
+        const floorThick1F = parseFloat(c.floorThick1F ?? 36);
+        const FL1 = sillTop + floorThick1F; // 1FL = 基礎高さ＋基礎パッキン+土台高さ+床厚
+        
+        const floorHeight1F = parseFloat(c.floorHeight1F ?? 2.7) * 1000; // 軸組階高
+        const floorThick2F = parseFloat(c.floorThick2F ?? 36);
+        const FL2 = sillTop + floorHeight1F + floorThick2F; // 2FL = 基礎高＋基礎パッキン＋土台+1Ｆ軸組階高+2階の床厚
+        
+        // 見附面積カットライン (FL + 1350)
+        const cut1 = FL1 + 1350;
+        const cut2 = FL2 + 1350;
+        
+        return { GL, foundationTop, sillTop, FL1, FL2, fl1: FL1, fl2: FL2, cut1, cut2 };
     },
 
     getFloorExteriorPolygons: function(floor, state) {
@@ -77,33 +98,78 @@ window.RoofEngine = {
         return { minX, maxX, minY, maxY };
     },
 
-    getProjectedPolygons: function(direction, state) {
-        const s = state || window.AppState;
-        const c = s.config || {};
-        const roofFaces = s.roofFaces || [];
-        const lvl = this.getFloorLevels(s);
-        
-        let polygons = [];
+    offsetPolygon: function(poly, d) {
+        if (!poly || poly.length < 3) return [];
+        let pts = poly.map(v => ({ x: v.x, y: v.y }));
+        let sum = 0;
+        for (let i = 0; i < pts.length; i++) {
+            const p1 = pts[i], p2 = pts[(i + 1) % pts.length];
+            sum += (p2.x - p1.x) * (p2.y + p1.y);
+        }
+        if (sum > 0) pts.reverse();
+        const n = pts.length;
+        const normals = [];
+        for (let i = 0; i < n; i++) {
+            const p1 = pts[i], p2 = pts[(i + 1) % n];
+            const dx = p2.x - p1.x, dy = p2.y - p1.y, L = Math.hypot(dx, dy);
+            if (L < 1e-6) normals.push({ x: 0, y: 0 });
+            else normals.push({ x: dy / L, y: -dx / L });
+        }
+        const offsetPts = [];
+        for (let i = 0; i < n; i++) {
+            const p = pts[i], n_prev = normals[(i - 1 + n) % n], n_curr = normals[i];
+            const denom = 1 + (n_prev.x * n_curr.x + n_prev.y * n_curr.y);
+            const factor = denom > 1e-4 ? 1 / denom : 1;
+            const vx = (n_prev.x + n_curr.x) * factor, vy = (n_prev.y + n_curr.y) * factor;
+            offsetPts.push({ x: p.x + d * vx, y: p.y + d * vy });
+        }
+        return offsetPts;
+    },
 
-        // 1. 外壁の2D投影（凹凸を考慮したエッジベースの投影）
-        const polys1F = this.getFloorExteriorPolygons('1F', s);
-        polys1F.forEach(poly => {
+    _getProjectedWallSegments: function(polys, direction) {
+        let segments = [];
+        polys.forEach(poly => {
             const n = poly.length;
             for (let i = 0; i < n; i++) {
                 const v1 = poly[i], v2 = poly[(i+1)%n];
                 const u1 = direction === 'X' ? v1.y : v1.x;
                 const u2 = direction === 'X' ? v2.y : v2.x;
-                const uMinLocal = Math.min(u1, u2);
-                const uMaxLocal = Math.max(u1, u2);
-                if (uMaxLocal > uMinLocal + 1.0) { // 1mm以上の幅
-                    polygons.push([
-                        {u: uMinLocal, z: lvl.fl1}, {u: uMaxLocal, z: lvl.fl1},
-                        {u: uMaxLocal, z: lvl.fl2}, {u: uMinLocal, z: lvl.fl2}
-                    ]);
+                const uMin = Math.min(u1, u2);
+                const uMax = Math.max(u1, u2);
+                if (uMax - uMin > 10) { // 幅10mm以上を抽出
+                    segments.push({ uMin, uMax });
                 }
             }
         });
         
+        if (segments.length === 0) return [];
+        segments.sort((a, b) => a.uMin - b.uMin);
+        
+        // 区間のマージ (Union)
+        let merged = [segments[0]];
+        for (let i = 1; i < segments.length; i++) {
+            const last = merged[merged.length - 1];
+            const curr = segments[i];
+            if (curr.uMin <= last.uMax + 10) { // 10mmの隙間はマージ
+                last.uMax = Math.max(last.uMax, curr.uMax);
+            } else {
+                merged.push({...curr});
+            }
+        }
+        return merged;
+    },
+
+    getProjectedPrimitives: function(direction, state) {
+        const s = state || window.AppState;
+        const c = s.config || {};
+        const lvl = this.getFloorLevels(s);
+        const roofFaces = s.roofFaces || [];
+        const wallThick = c.wallThickness !== undefined ? parseFloat(c.wallThickness) : 150;
+        
+        let primitives = [];
+        let roof1FPrimitives = []; // 2F外壁の切り上げ用
+
+        // 1. 屋根の最大高さを計算して 2Fの桁高(eavesZ2F) を決める
         let relZMax2F = 0;
         let has2FRoof = false;
         roofFaces.forEach(face => {
@@ -138,35 +204,16 @@ window.RoofEngine = {
         });
 
         const maxH = parseFloat(c.maxHeight ?? 8000);
-        const eavesZ2F = has2FRoof ? (maxH - relZMax2F) : (lvl.fl2 + (parseFloat(c.floorHeight2F ?? 2.7)) * 1000);
+        const eavesZ2F = has2FRoof ? (maxH - relZMax2F) : (lvl.FL2 + (parseFloat(c.floorHeight2F ?? 2.7)) * 1000);
 
-        const polys2F = this.getFloorExteriorPolygons('2F', s);
-        polys2F.forEach(poly => {
-            const n = poly.length;
-            for (let i = 0; i < n; i++) {
-                const v1 = poly[i], v2 = poly[(i+1)%n];
-                const u1 = direction === 'X' ? v1.y : v1.x;
-                const u2 = direction === 'X' ? v2.y : v2.x;
-                const uMinLocal = Math.min(u1, u2);
-                const uMaxLocal = Math.max(u1, u2);
-                if (uMaxLocal > uMinLocal + 1.0) { // 1mm以上の幅
-                    polygons.push([
-                        {u: uMinLocal, z: lvl.fl2}, {u: uMaxLocal, z: lvl.fl2},
-                        {u: uMaxLocal, z: eavesZ2F}, {u: uMinLocal, z: eavesZ2F}
-                    ]);
-                }
-            }
-        });
-
-        // 2. 屋根の2D投影
-        const wallThick = c.wallThickness !== undefined ? parseFloat(c.wallThickness) : 150;
-        roofFaces.forEach(face => {
+        // 2. 屋根のプリミティブ抽出 (意味論的)
+        roofFaces.forEach((face, idx) => {
             if (!face.vertices || face.vertices.length < 3) return;
             const slopeVal = parseFloat(face.slope ?? 0) / 10;
             const thickness = parseFloat(face.roofThickness ?? c.roofThickness ?? 150);
             const tVertical = thickness * Math.sqrt(1 + slopeVal * slopeVal);
             const baseDelta = parseFloat(face.baseHeightDelta ?? 0);
-            const zBase = (face.floor === '1F' ? lvl.fl2 : eavesZ2F) + baseDelta;
+            const zBase = (face.floor === '1F' ? lvl.FL2 : eavesZ2F) + baseDelta;
 
             let ux = 0, uy = 1;
             const pA = (face.slopeLine && face.slopeLine.length > 0) ? face.slopeLine[0] : face.vertices[0];
@@ -187,8 +234,6 @@ window.RoofEngine = {
 
             let topPts = [];
             let botPts = [];
-            
-            // 屋根多角形を壁厚分だけ外側にオフセット
             const offsetVertices = this.offsetPolygon(face.vertices, wallThick);
             const verticesToUse = offsetVertices.length >= 3 ? offsetVertices : face.vertices;
 
@@ -203,398 +248,209 @@ window.RoofEngine = {
             let poly = [];
             for (let j = 0; j < topPts.length; j++) poly.push(topPts[j]);
             for (let j = botPts.length - 1; j >= 0; j--) poly.push(botPts[j]);
-            polygons.push(poly);
-        });
 
-        // 共通 bounding box の計算
-        let uMinAll = Infinity, uMaxAll = -Infinity;
-        polygons.forEach(poly => {
+            // バウンディングボックスと上端/下端の幅から図形を判定
+            let uMin = Infinity, uMax = -Infinity, zMin = Infinity, zMax = -Infinity;
             poly.forEach(p => {
-                if (p.u < uMinAll) uMinAll = p.u;
-                if (p.u > uMaxAll) uMaxAll = p.u;
+                if (p.u < uMin) uMin = p.u; if (p.u > uMax) uMax = p.u;
+                if (p.z < zMin) zMin = p.z; if (p.z > zMax) zMax = p.z;
             });
-        });
+            const w_mm = uMax - uMin;
+            if (w_mm < 10) return;
 
-        return { polygons, lvl, uMin: uMinAll, uMax: uMaxAll };
-    },
-
-    getScanlineProfile: function(direction, state) {
-        const s = state || window.AppState;
-        if (!s || !s.config) return null;
-        const config = s.config;
-        const lvl = this.getFloorLevels(s);
-
-        const proj = this.getProjectedPolygons(direction, s);
-        if (!proj || proj.polygons.length === 0) return null;
-
-        const scale = 1000;
-        const cpr = new ClipperLib.Clipper();
-        const subj = new ClipperLib.Paths();
-        
-        proj.polygons.forEach(poly => {
-            const path = new ClipperLib.Path();
+            let topUmin = Infinity, topUmax = -Infinity;
             poly.forEach(p => {
-                path.push(new ClipperLib.IntPoint(Math.round(p.u * scale), Math.round(p.z * scale)));
-            });
-            subj.push(path);
-        });
-
-        cpr.AddPaths(subj, ClipperLib.PolyType.ptSubject, true);
-        const silhouette = new ClipperLib.Paths();
-        cpr.Execute(ClipperLib.ClipType.ctUnion, silhouette, ClipperLib.PolyFillType.pftNonZero, ClipperLib.PolyFillType.pftNonZero);
-
-        const uMin = proj.uMin;
-        const uMax = proj.uMax;
-        const W = uMax - uMin;
-
-        // eavesZ2F 等の再計算
-        const roofFaces = s.roofFaces || [];
-        let relZMax2F = 0;
-        let has2FRoof = false;
-        roofFaces.forEach(face => {
-            if (!face.vertices || face.floor !== '2F') return;
-            has2FRoof = true;
-            const slope = parseFloat(face.slope ?? 4.5) / 10;
-            const thickness = parseFloat(face.roofThickness ?? config.roofThickness ?? 150);
-            const tVertical = thickness * Math.sqrt(1 + slope * slope);
-            const baseDelta = parseFloat(face.baseHeightDelta ?? 0);
-
-            let ux = 0, uy = 1;
-            const pA = (face.slopeLine && face.slopeLine.length > 0) ? face.slopeLine[0] : face.vertices[0];
-            if (!pA) return;
-            if (face.slopeLine && face.slopeLine.length >= 3) {
-                const pB = face.slopeLine[1], pC = face.slopeLine[2];
-                const dx = pB.x - pA.x, dy = pB.y - pA.y;
-                let nx = -dy, ny = dx;
-                if ((nx*(pC.x-pA.x) + ny*(pC.y-pA.y)) < 0) { nx = -nx; ny = -ny; }
-                const len = Math.hypot(nx, ny);
-                ux = len > 0 ? nx/len : 0; uy = len > 0 ? ny/len : 1;
-            } else if (face.slopeLine && face.slopeLine.length === 2) {
-                const p2 = face.slopeLine[1];
-                const dx=p2.x-pA.x, dy=p2.y-pA.y, len=Math.hypot(dx,dy); 
-                ux=len>0?dx/len:0; uy=len>0?dy/len:1;
-            }
-
-            face.vertices.forEach(v => {
-                const dist = (v.x - pA.x)*ux + (v.y - pA.y)*uy;
-                const z = dist * slope + tVertical + baseDelta;
-                if (z > relZMax2F) relZMax2F = z;
-            });
-        });
-
-        const maxH = parseFloat(config.maxHeight ?? 8000);
-        const eavesZ2F = has2FRoof ? (maxH - relZMax2F) : (lvl.fl2 + (parseFloat(config.floorHeight2F ?? 2.7)) * 1000);
-
-        const STEPS = 200;
-        const profileAll = [];
-
-        for (let i = 0; i <= STEPS; i++) {
-            const u = uMin + (i / STEPS) * W;
-            const X_target = Math.round(u * scale);
-
-            const intersects = [];
-            silhouette.forEach(path => {
-                const n = path.length;
-                for (let j = 0; j < n; j++) {
-                    const pt1 = path[j];
-                    const pt2 = path[(j + 1) % n];
-
-                    const minX = Math.min(pt1.X, pt2.X);
-                    const maxX = Math.max(pt1.X, pt2.X);
-
-                    if (X_target >= minX && X_target <= maxX) {
-                        if (maxX - minX > 0) {
-                            const t = (X_target - pt1.X) / (pt2.X - pt1.X);
-                            const Y_intersect = pt1.Y + t * (pt2.Y - pt1.Y);
-                            intersects.push(Y_intersect / scale);
-                        } else {
-                            intersects.push(pt1.Y / scale);
-                            intersects.push(pt2.Y / scale);
-                        }
-                    }
+                if (Math.abs(p.z - zMax) < 100) { // 上端付近の幅
+                    if (p.u < topUmin) topUmin = p.u; if (p.u > topUmax) topUmax = p.u;
                 }
             });
+            const topW = (topUmax !== -Infinity) ? topUmax - topUmin : 0;
+            const isTri = topW < 100; // 上辺がほぼないなら三角形として扱う
 
-            if (intersects.length > 0) {
-                const zTop = Math.max(...intersects);
-                const zBottom = Math.min(...intersects);
-                profileAll.push({ u, z: zTop, zBottom: zBottom, empty: false });
-            } else {
-                profileAll.push({ u, z: 0, zBottom: 0, empty: true });
+            let isLeftHigh = true;
+            if (isTri) {
+                const maxZ_U = (topUmax !== -Infinity) ? (topUmin + topUmax) / 2 : (uMin + uMax) / 2;
+                isLeftHigh = (maxZ_U - uMin) <= (uMax - maxZ_U);
             }
-        }
 
-        const bbox1F = this.getFloorBoundingBox('1F', s);
-        const bbox2F = this.getFloorBoundingBox('2F', s);
-        const bboxAll = {
-            minX: Math.min(bbox1F.minX, bbox2F.minX),
-            maxX: Math.max(bbox1F.maxX, bbox2F.maxX),
-            minY: Math.min(bbox1F.minY, bbox2F.minY),
-            maxY: Math.max(bbox1F.maxY, bbox2F.maxY)
+            const hL_val = isTri ? (isLeftHigh ? (zMax - zMin) : 0) : (zMax - zMin);
+            const hR_val = isTri ? (isLeftHigh ? 0 : (zMax - zMin)) : (zMax - zMin);
+
+            const prim = {
+                type: isTri ? 'tri' : 'rect',
+                floor: face.floor,
+                name: `屋根`,
+                uMin: uMin, uMax: uMax, zMin: zMin, zMax: zMax,
+                shape: {
+                    type: isTri ? 'tri' : 'rect',
+                    uStart: uMin, w: w_mm,
+                    hL: hL_val, hR: hR_val,
+                    zBot: zMin
+                },
+                vertices: isTri 
+                    ? (isLeftHigh 
+                        ? [ { u: uMin, z: zMin }, { u: uMax, z: zMin }, { u: uMin, z: zMax } ]
+                        : [ { u: uMin, z: zMin }, { u: uMax, z: zMin }, { u: uMax, z: zMax } ])
+                    : [ { u: uMin, z: zMin }, { u: uMax, z: zMin }, { u: uMax, z: zMax }, { u: uMin, z: zMax } ]
+            };
+
+            // 手前と奥の屋根面が完全に重なる場合の重複排除
+            const isDuplicate = primitives.some(p => 
+                p.name === '屋根' && p.floor === prim.floor && p.type === prim.type &&
+                Math.abs(p.uMin - prim.uMin) < 10 && Math.abs(p.uMax - prim.uMax) < 10 &&
+                Math.abs(p.zMin - prim.zMin) < 10 && Math.abs(p.zMax - prim.zMax) < 10
+            );
+
+            if (!isDuplicate) {
+                primitives.push(prim);
+                if (face.floor === '1F') roof1FPrimitives.push(prim);
+            }
+        });
+
+        // 1F屋根と2F外壁の干渉回避用ヘルパー
+        const getRoof1FZMax = (uMin, uMax) => {
+            let maxZ = lvl.FL2;
+            roof1FPrimitives.forEach(rp => {
+                // 重なり判定
+                if (Math.max(uMin, rp.uMin) < Math.min(uMax, rp.uMax)) {
+                    maxZ = Math.max(maxZ, rp.zMax);
+                }
+            });
+            return maxZ;
         };
 
-        return {
-            uMin,
-            uMax,
-            profile: profileAll,
-            eavesZ1F: lvl.fl2,
-            eavesZ2F,
-            maxH,
-            bbox1F,
-            bbox2F,
-            bboxAll,
-            W
-        };
+        // 3. 外壁 (1F, 2F) の大区画抽出
+        ['1F', '2F'].forEach(f => {
+            const zTop = f === '1F' ? lvl.FL2 : eavesZ2F;
+            const polys = this.getFloorExteriorPolygons(f, s);
+            const segments = this._getProjectedWallSegments(polys, direction);
+            
+            segments.forEach(seg => {
+                const w_mm = seg.uMax - seg.uMin;
+                if (w_mm < 10) return;
+                
+                let zBot = f === '1F' ? lvl.FL1 : lvl.FL2;
+                if (f === '2F') {
+                    // 2F外壁の下端を、直下の1F屋根の最高点まで切り上げる (重なり防止)
+                    const roofZ = getRoof1FZMax(seg.uMin, seg.uMax);
+                    if (roofZ > zBot) zBot = roofZ;
+                }
+                
+                if (zTop - zBot > 10) { // 高さが十分ある場合のみ
+                    primitives.push({
+                        type: 'rect', floor: f, name: `外壁`,
+                        uMin: seg.uMin, uMax: seg.uMax, zMin: zBot, zMax: zTop,
+                        shape: {
+                            type: 'rect', uStart: seg.uMin, w: w_mm,
+                            hL: zTop - zBot, hR: zTop - zBot, zBot: zBot
+                        },
+                        vertices: [
+                            { u: seg.uMin, z: zBot },
+                            { u: seg.uMax, z: zBot },
+                            { u: seg.uMax, z: zTop },
+                            { u: seg.uMin, z: zTop }
+                        ]
+                    });
+                }
+            });
+        });
+
+        return { primitives, lvl, eavesZ2F };
     },
 
     updateProjectedAreas: function(state) {
         if (typeof ClipperLib === 'undefined') {
-            console.error("ClipperLib is not loaded. Cannot calculate projected areas.");
+            console.error("ClipperLib is not loaded.");
             return;
         }
 
         const s = state || window.AppState;
-        const c = s.config;
-        const lvl = this.getFloorLevels(s);
-
+        const c = s.config || {};
+        
         const areas = { '1F': { x: 0, y: 0 }, '2F': { x: 0, y: 0 } };
         const formulaAreas = { '1F': { x: [], y: [] }, '2F': { x: [], y: [] } };
-        let globalZoneIndex = 1;
+        
         const numberCircle = (num) => num <= 20 ? String.fromCharCode(0x245F + num) : `(${num})`;
 
-        // 台形を長方形・直角三角形に分解して計算式として登録する関数
-        const processTrapezoids = (trapezoids, floorStr, dirStr, resultsArray, areaRef) => {
-            trapezoids.forEach(poly => {
-                const w_m = poly.w / 1000;
-                const hL_m = poly.hL / 1000;
-                const hR_m = poly.hR / 1000;
-                const minH_m = Math.min(hL_m, hR_m);
-                const diffH_m = Math.abs(hL_m - hR_m);
-
-                // 10mm未満の幅の微小ポリゴン（ゴミ）は無視
-                if (poly.w < 10) return;
-
-                if (minH_m > 0.001) {
-                    const area = w_m * minH_m;
-                    const zId = globalZoneIndex++;
-                    resultsArray.push({
-                        id: zId, name: `${dirStr}方向 ${floorStr}見附 区画${numberCircle(zId)}`,
-                        w: w_m, h: minH_m, area: area, formula: `${w_m.toFixed(2)} × ${minH_m.toFixed(2)}`,
-                        shape: { type: 'rect', uStart: poly.uStart, w: poly.w, hL: minH_m*1000, hR: minH_m*1000, zBot: poly.zBotL }
-                    });
-                    areaRef.val += area;
-                }
-                if (diffH_m > 0.001) {
-                    const area = w_m * diffH_m / 2;
-                    const zId = globalZoneIndex++;
-                    const zBotTri = poly.zBotL + minH_m*1000;
-                    resultsArray.push({
-                        id: zId, name: `${dirStr}方向 ${floorStr}見附 区画${numberCircle(zId)}`,
-                        w: w_m, h: diffH_m, area: area, formula: `${w_m.toFixed(2)} × ${diffH_m.toFixed(2)} ÷ 2`,
-                        shape: { type: 'tri', uStart: poly.uStart, w: poly.w, hL: hL_m > hR_m ? diffH_m*1000 : 0, hR: hR_m > hL_m ? diffH_m*1000 : 0, zBot: zBotTri }
-                    });
-                    areaRef.val += area;
-                }
-            });
-        };
-
         ['X', 'Y'].forEach(dir => {
-            const proj = this.getProjectedPolygons(dir, s);
-            if (!proj || proj.polygons.length === 0) return;
             const key = dir === 'X' ? 'x' : 'y';
-
-            const scale = 1000; // ClipperLib のスケールファクタ
-            const cpr = new ClipperLib.Clipper();
-            const subj = new ClipperLib.Paths();
+            const { primitives, lvl } = this.getProjectedPrimitives(dir, s);
             
-            proj.polygons.forEach(poly => {
-                const path = new ClipperLib.Path();
-                poly.forEach(p => {
-                    path.push(new ClipperLib.IntPoint(Math.round(p.u * scale), Math.round(p.z * scale)));
-                });
-                subj.push(path);
-            });
+            let zoneIdx = 1;
 
-            // 全部材の Union を計算（最外郭シルエットの生成）
-            cpr.AddPaths(subj, ClipperLib.PolyType.ptSubject, true);
-            const silhouette = new ClipperLib.Paths();
-            cpr.Execute(ClipperLib.ClipType.ctUnion, silhouette, ClipperLib.PolyFillType.pftNonZero, ClipperLib.PolyFillType.pftNonZero);
-
-            // 階ごとの Clipping と台形分割を行うヘルパー関数
-            const sliceFloor = (cutBot, cutTop) => {
-                const clipPoly = new ClipperLib.Paths();
-                const pathClip = new ClipperLib.Path();
-                pathClip.push(new ClipperLib.IntPoint(-100000 * scale, cutBot * scale));
-                pathClip.push(new ClipperLib.IntPoint( 100000 * scale, cutBot * scale));
-                pathClip.push(new ClipperLib.IntPoint( 100000 * scale, cutTop * scale));
-                pathClip.push(new ClipperLib.IntPoint(-100000 * scale, cutTop * scale));
-                clipPoly.push(pathClip);
-
-                const cprFloor = new ClipperLib.Clipper();
-                cprFloor.AddPaths(silhouette, ClipperLib.PolyType.ptSubject, true);
-                cprFloor.AddPaths(clipPoly, ClipperLib.PolyType.ptClip, true);
-                const floorPolys = new ClipperLib.Paths();
-                cprFloor.Execute(ClipperLib.ClipType.ctIntersection, floorPolys, ClipperLib.PolyFillType.pftNonZero, ClipperLib.PolyFillType.pftNonZero);
-
-                // 全頂点の u (X座標) を収集してソート
-                let uSet = new Set();
-                floorPolys.forEach(path => {
-                    path.forEach(pt => uSet.add(pt.X));
-                });
-                let uList = Array.from(uSet).sort((a, b) => a - b);
-
-                const trapezoids = [];
-
-                // 各 u の間隔で縦にスライス (Trapezoidal Decomposition)
-                for (let i = 0; i < uList.length - 1; i++) {
-                    const u1_scaled = uList[i];
-                    const u2_scaled = uList[i+1];
-                    const w_scaled = u2_scaled - u1_scaled;
-                    if (w_scaled < 10 * scale) continue; // 10mm未満の幅のゴミは足切り
-
-                    const u1 = u1_scaled / scale;
-                    const u2 = u2_scaled / scale;
-
-                    const clipBand = new ClipperLib.Paths();
-                    const bandPath = new ClipperLib.Path();
-                    bandPath.push(new ClipperLib.IntPoint(u1_scaled, -100000 * scale));
-                    bandPath.push(new ClipperLib.IntPoint(u2_scaled, -100000 * scale));
-                    bandPath.push(new ClipperLib.IntPoint(u2_scaled,  100000 * scale));
-                    bandPath.push(new ClipperLib.IntPoint(u1_scaled,  100000 * scale));
-                    clipBand.push(bandPath);
-
-                    const cprBand = new ClipperLib.Clipper();
-                    cprBand.AddPaths(floorPolys, ClipperLib.PolyType.ptSubject, true);
-                    cprBand.AddPaths(clipBand, ClipperLib.PolyType.ptClip, true);
-                    const bandResult = new ClipperLib.Paths();
-                    cprBand.Execute(ClipperLib.ClipType.ctIntersection, bandResult, ClipperLib.PolyFillType.pftNonZero, ClipperLib.PolyFillType.pftNonZero);
-
-                    bandResult.forEach(path => {
-                        let maxZ1 = -Infinity, minZ1 = Infinity;
-                        let maxZ2 = -Infinity, minZ2 = Infinity;
-                        let found1 = false, found2 = false;
-
-                        // 頂点のZ座標を u1側 と u2側 で集める
-                        path.forEach(pt => {
-                            const u = pt.X / scale;
-                            const z = pt.Y / scale;
-                            if (Math.abs(u - u1) < 1.0) {
-                                if (z > maxZ1) maxZ1 = z;
-                                if (z < minZ1) minZ1 = z;
-                                found1 = true;
-                            } else if (Math.abs(u - u2) < 1.0) {
-                                if (z > maxZ2) maxZ2 = z;
-                                if (z < minZ2) minZ2 = z;
-                                found2 = true;
-                            }
+            ['1F', '2F'].forEach(f => {
+                const cutBot = f === '1F' ? lvl.cut1 : lvl.cut2;
+                const cutTop = f === '1F' ? lvl.cut2 : 100000; // 2Fは無限大
+                
+                let floorTotalAreaSqM = 0;
+                
+                // 階ごとのプリミティブを取り出し、カットラインで上下をクリップする
+                primitives.forEach(prim => {
+                    if (prim.floor !== f) return;
+                    if (prim.zMax <= cutBot) return; // 完全にカットラインより下
+                    
+                    const sh = prim.shape;
+                    // クリッピング計算
+                    let cZBot = Math.max(sh.zBot, cutBot);
+                    let cZTopL = Math.min(sh.zBot + sh.hL, cutTop);
+                    let cZTopR = Math.min(sh.zBot + sh.hR, cutTop);
+                    
+                    if (sh.type === 'tri') {
+                        // 三角形の高さクリップによる台形化を簡易的に矩形+三角にする等あるが、
+                        // 審査用としては元の大きな三角形の式を出した方が綺麗な場合が多い。
+                        // 今回は単純な面積合計を合わせるため、クリップ後の高さで再計算する。
+                        // 厳密なクリッピングは台形を生むが、Constructive方針に従い、
+                        // 頂点がカットされない前提とする（屋根は基本的にカットラインより上にある）。
+                        cZBot = Math.max(sh.zBot, cutBot);
+                    }
+                    
+                    const hL_c = Math.max(0, cZTopL - cZBot);
+                    const hR_c = Math.max(0, cZTopR - cZBot);
+                    if (hL_c < 10 && hR_c < 10) return; // 潰れた
+                    
+                    const w_m = sh.w / 1000;
+                    let area = 0;
+                    let formula = "";
+                    
+                    if (sh.type === 'rect') {
+                        const h_m = hL_c / 1000;
+                        area = w_m * h_m;
+                        formula = `${w_m.toFixed(3)} × ${h_m.toFixed(3)}`;
+                    } else if (sh.type === 'tri') {
+                        const h_m = Math.max(hL_c, hR_c) / 1000;
+                        area = (w_m * h_m) / 2;
+                        formula = `${w_m.toFixed(3)} × ${h_m.toFixed(3)} / 2`;
+                    }
+                    
+                    if (area > 0.01) {
+                        floorTotalAreaSqM += area;
+                        formulaAreas[f][key].push({
+                            id: zoneIdx++,
+                            name: numberCircle(zoneIdx - 1),
+                            formula: formula,
+                            area: area,
+                            shape: { type: sh.type, uStart: sh.uStart, w: sh.w, hL: hL_c, hR: hR_c, zBot: cZBot }
                         });
-
-                        // 正常な台形であれば左右にエッジがある
-                        if (found1 && found2 && maxZ1 >= minZ1 && maxZ2 >= minZ2) {
-                            trapezoids.push({
-                                uStart: u1,
-                                w: u2 - u1,
-                                hL: maxZ1 - minZ1,
-                                hR: maxZ2 - minZ2,
-                                zBotL: minZ1,
-                                zBotR: minZ2
-                            });
-                        }
-                    });
-                }
-                return trapezoids;
-            };
-
-            let area1Ref = { val: 0 };
-            let area2Ref = { val: 0 };
-
-            const traps2F = sliceFloor(lvl.cut2, 100000);
-            processTrapezoids(traps2F, '2F', dir, formulaAreas['2F'][key], area2Ref);
-
-            const traps1F = sliceFloor(lvl.cut1, lvl.cut2);
-            processTrapezoids(traps1F, '1F', dir, formulaAreas['1F'][key], area1Ref);
-
-            areas['2F'][key] = area2Ref.val;
-            areas['1F'][key] = area1Ref.val;
+                    }
+                });
+                
+                areas[f][key] = floorTotalAreaSqM;
+            });
         });
 
+        c.projectedAreas = c.projectedAreas || { '1F': {x:0, y:0}, '2F': {x:0, y:0} };
         c.projectedAreas['1F'].x = areas['1F'].x;
         c.projectedAreas['1F'].y = areas['1F'].y;
         c.projectedAreas['2F'].x = areas['2F'].x;
         c.projectedAreas['2F'].y = areas['2F'].y;
         c.elevationFormulaAreas = formulaAreas;
-
         this.syncToDOM(areas);
-    },
-
-    getFloorBoundingBox: function(floor, state) {
-        const s = state || window.AppState;
-        const c = s.config || {};
-        const wallThick = c.wallThickness !== undefined ? parseFloat(c.wallThickness) : 150;
-        let points = [];
-        const activeExtWalls = (s.exteriorWalls || []).filter(ew => ew.floor === floor && ew.vertices && ew.vertices.length >= 3);
-        if (activeExtWalls.length > 0) {
-            activeExtWalls.forEach(ew => { points = points.concat(this.offsetPolygon(ew.vertices, wallThick)); });
-        } else {
-            const boundary = window.WallEngine ? window.WallEngine.extractOuterBoundary(floor, s) : null;
-            if (boundary && boundary.length >= 3) { points = points.concat(this.offsetPolygon(boundary, wallThick)); }
-        }
-        if (points.length === 0) {
-            const areas = (s.areaLines || []).filter(a => a.floor === floor);
-            areas.forEach(a => { if (a.vertices) { a.vertices.forEach(v => { points.push({ x: v.x, y: v.y }); }); } });
-        }
-        if (points.length === 0) {
-            const coordsX = s.gridXCoords || [];
-            const coordsY = s.gridYCoords || [];
-            if (coordsX.length > 0) {
-                const minX = Math.min(...coordsX), maxX = Math.max(...coordsX);
-                const minY = Math.min(...coordsY), maxY = Math.max(...coordsY);
-                return { minX: minX - wallThick, maxX: maxX + wallThick, minY: minY - wallThick, maxY: maxY + wallThick };
-            }
-            return { minX: 0, maxX: 10000, minY: 0, maxY: 10000 };
-        }
-        let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-        points.forEach(v => {
-            if (v.x < minX) minX = v.x; if (v.x > maxX) maxX = v.x;
-            if (v.y < minY) minY = v.y; if (v.y > maxY) maxY = v.y;
-        });
-        return { minX, maxX, minY, maxY };
-    },
-
-    offsetPolygon: function(poly, d) {
-        if (!poly || poly.length < 3) return [];
-        let pts = poly.map(v => ({ x: v.x, y: v.y }));
-        let sum = 0;
-        for (let i = 0; i < pts.length; i++) {
-            const p1 = pts[i], p2 = pts[(i + 1) % pts.length];
-            sum += (p2.x - p1.x) * (p2.y + p1.y);
-        }
-        if (sum > 0) pts.reverse();
-        const n = pts.length;
-        const normals = [];
-        for (let i = 0; i < n; i++) {
-            const p1 = pts[i], p2 = pts[(i + 1) % n];
-            const dx = p2.x - p1.x, dy = p2.y - p1.y, L = Math.hypot(dx, dy);
-            if (L < 1e-6) normals.push({ x: 0, y: 0 });
-            else normals.push({ x: dy / L, y: -dx / L });
-        }
-        const offsetPts = [];
-        for (let i = 0; i < n; i++) {
-            const p = pts[i], n_prev = normals[(i - 1 + n) % n], n_curr = normals[i];
-            const denom = 1 + (n_prev.x * n_curr.x + n_prev.y * n_curr.y);
-            const factor = denom > 1e-4 ? 1 / denom : 1;
-            const vx = (n_prev.x + n_curr.x) * factor, vy = (n_prev.y + n_curr.y) * factor;
-            offsetPts.push({ x: p.x + d * vx, y: p.y + d * vy });
-        }
-        return offsetPts;
     },
 
     syncToDOM: function(areas) {
         const setVal = (id, val) => {
             const el = document.getElementById(id);
-            if (el) {
-                el.value = val.toFixed(2);
-            }
+            if (el) el.value = val.toFixed(2);
         };
         setVal('a-wx1', areas['1F'].x);
         setVal('a-wy1', areas['1F'].y);

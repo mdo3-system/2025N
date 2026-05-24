@@ -496,27 +496,38 @@ function generateAutoMitsukeCanvas(direction, commonScale) {
     const wallThick = parseFloat(config.wallThickness ?? 150);
 
     // --- GL基準高さ取得 ---
-    const lvl = window.RoofEngine ? window.RoofEngine.getFloorLevels(s) : { fl1: 561, fl2: 3297, cut1: 1911, cut2: 4647 };
+    const lvl = window.RoofEngine ? window.RoofEngine.getFloorLevels(s) : { FL1: 561, FL2: 3261, cut1: 1911, cut2: 4611 };
 
-    const scan = window.RoofEngine ? window.RoofEngine.getScanlineProfile(direction, s) : null;
-    if (!scan) return null;
+    const proj = window.RoofEngine && window.RoofEngine.getProjectedPrimitives ? window.RoofEngine.getProjectedPrimitives(direction, s) : null;
+    if (!proj || !proj.primitives || proj.primitives.length === 0) return null;
 
-    const W = scan.W;
-    const uMin = scan.uMin;
-    const uMax = scan.uMax;
-    const uMin1F = direction === 'X' ? scan.bbox1F.minY : scan.bbox1F.minX;
-    const uMax1F = direction === 'X' ? scan.bbox1F.maxY : scan.bbox1F.maxX;
-    const uMin2F = direction === 'X' ? scan.bbox2F.minY : scan.bbox2F.minX;
-    const uMax2F = direction === 'X' ? scan.bbox2F.maxY : scan.bbox2F.maxX;
-    const maxH = scan.maxH;
-    const eavesZ1F = scan.eavesZ1F;
-    const eavesZ2F = scan.eavesZ2F;
-    const profile = scan.profile;
-    const profile1F = scan.profile1F;
-    const profile2F = scan.profile2F;
+    let uMinAll = Infinity, uMaxAll = -Infinity, zMaxAll = -Infinity;
+    proj.primitives.forEach(prim => {
+        prim.vertices.forEach(v => {
+            if (v.u < uMinAll) uMinAll = v.u;
+            if (v.u > uMaxAll) uMaxAll = v.u;
+            if (v.z > zMaxAll) zMaxAll = v.z;
+        });
+    });
+    const W = uMaxAll > uMinAll ? uMaxAll - uMinAll : 10000;
+    const uMin = uMinAll;
+    const uMax = uMaxAll;
 
-    const maxZ_total = Math.max(...profile.map(p => p.z));
-    const totalH = Math.max(maxZ_total, eavesZ2F + 1000); // キャンバス高さ基準
+    // 1F外壁、2F外壁の幅を計測（寸法線用）
+    let uMin1F = Infinity, uMax1F = -Infinity;
+    let uMin2F = Infinity, uMax2F = -Infinity;
+    proj.primitives.forEach(prim => {
+        if (prim.type === 'rect') {
+            prim.vertices.forEach(v => {
+                if (prim.floor === '1F') { if (v.u < uMin1F) uMin1F = v.u; if (v.u > uMax1F) uMax1F = v.u; }
+                if (prim.floor === '2F') { if (v.u < uMin2F) uMin2F = v.u; if (v.u > uMax2F) uMax2F = v.u; }
+            });
+        }
+    });
+
+    const eavesZ2F = proj.eavesZ2F || (lvl.FL2 + 2700);
+    const maxH = Math.max(zMaxAll, eavesZ2F);
+    const totalH = Math.max(maxH, eavesZ2F + 1000); // キャンバス高さ基準
 
     // --- Canvas生成 ---
     const canvas = document.createElement('canvas');
@@ -552,58 +563,48 @@ function generateAutoMitsukeCanvas(direction, commonScale) {
     const cutY1 = toY(lvl.cut1);
     const glY   = toY(0);
 
-    // 1. 全体の最外周シルエット（profile）を島ごとに閉じたポリゴンとして線画で描画
-    let currentIsland = [];
-    for (let i = 0; i <= profile.length; i++) {
-        const p = profile[i];
-        if (p && !p.empty) {
-            currentIsland.push(p);
-        } else {
-            if (currentIsland.length >= 2) {
-                ctx.beginPath();
-                // 上端 (左 -> 右)
-                ctx.moveTo(toX(currentIsland[0].u), toY(currentIsland[0].z));
-                for (let j = 1; j < currentIsland.length; j++) {
-                    ctx.lineTo(toX(currentIsland[j].u), toY(currentIsland[j].z));
-                }
-                // 右端を下端へ繋ぐ
-                ctx.lineTo(toX(currentIsland[currentIsland.length - 1].u), toY(currentIsland[currentIsland.length - 1].zBottom));
-                // 下端 (右 -> 左)
-                for (let j = currentIsland.length - 2; j >= 0; j--) {
-                    ctx.lineTo(toX(currentIsland[j].u), toY(currentIsland[j].zBottom));
-                }
-                ctx.closePath();
-                ctx.strokeStyle = primaryColor;
-                ctx.lineWidth = 2.5;
-                ctx.lineJoin = 'round';
-                ctx.stroke();
-            }
-            currentIsland = [];
-        }
-    }
-
-    // 2. 1Fと2Fそれぞれのカットライン以上の範囲を、
-    // formulaAreasの区画（長方形・三角形）として線画描画する
-    // ==========================================
+    // 1. 各Primitiveを描画 (外壁と屋根)
     ctx.save();
+    proj.primitives.forEach(prim => {
+        if (!prim.vertices || prim.vertices.length < 3) return;
+        ctx.beginPath();
+        ctx.moveTo(toX(prim.vertices[0].u), toY(prim.vertices[0].z));
+        for (let i = 1; i < prim.vertices.length; i++) {
+            ctx.lineTo(toX(prim.vertices[i].u), toY(prim.vertices[i].z));
+        }
+        ctx.closePath();
+        
+        // 色分け (1F, 2F, 屋根)
+        if (prim.name.includes('屋根')) {
+            ctx.fillStyle = (direction === 'X') ? 'rgba(230,126,34,0.3)' : 'rgba(41,128,185,0.3)';
+            ctx.strokeStyle = primaryColor;
+        } else if (prim.floor === '2F') {
+            ctx.fillStyle = (direction === 'X') ? 'rgba(230,126,34,0.15)' : 'rgba(41,128,185,0.15)';
+            ctx.strokeStyle = primaryColor;
+        } else {
+            ctx.fillStyle = (direction === 'X') ? 'rgba(230,126,34,0.05)' : 'rgba(41,128,185,0.05)';
+            ctx.strokeStyle = primaryColor;
+        }
+        
+        ctx.fill();
+        ctx.lineWidth = 1;
+        ctx.stroke();
+    });
+    ctx.restore();
 
+    // 2. 分解された矩形・三角形の境界と番号を描画
+    ctx.save();
     const fAreas = config.elevationFormulaAreas;
     if (fAreas) {
         const key = direction === 'X' ? 'x' : 'y';
-
-        const numberCircle = (num) => {
-            if (num <= 20) return String.fromCharCode(0x245F + num);
-            return `(${num})`;
-        };
-
-        // 1F と 2F の区画をまとめて描画
+        
         ['1F', '2F'].forEach(flr => {
             const flrItems = fAreas[flr][key] || [];
             const accentColor = flr === '2F'
                 ? (direction === 'X' ? 'rgba(230,126,34,1.0)' : 'rgba(41,128,185,1.0)')
                 : (direction === 'X' ? 'rgba(230,126,34,0.55)' : 'rgba(41,128,185,0.55)');
 
-            ctx.lineWidth = flr === '2F' ? 2 : 1.5;
+            ctx.lineWidth = 1.5;
             ctx.strokeStyle = accentColor;
             ctx.font = 'bold 12px sans-serif';
             ctx.textAlign = 'center';
@@ -615,10 +616,10 @@ function generateAutoMitsukeCanvas(direction, commonScale) {
                 const uL = sh.uStart;
                 const uR = sh.uStart + sh.w;
                 const zBL = sh.zBot;
-                const zTL = sh.zBot + sh.hL;
-                const zTR = sh.zBot + sh.hR;
+                const zTL = sh.zBot + sh.hL; // hL is in mm
+                const zTR = sh.zBot + sh.hR; // hR is in mm
 
-                // 区画の外枠を線画で描画
+                // 領域の枠線を描画
                 ctx.beginPath();
                 ctx.moveTo(toX(uL), toY(zBL));
                 ctx.lineTo(toX(uR), toY(zBL));
@@ -642,12 +643,11 @@ function generateAutoMitsukeCanvas(direction, commonScale) {
                 ctx.stroke();
 
                 ctx.fillStyle = '#1a252f';
-                ctx.fillText(numberCircle(item.id), cx, cz);
+                ctx.fillText(item.name, cx, cz);
             });
         });
     }
     ctx.restore();
-
     // GL線
     ctx.strokeStyle = '#2c3e50'; ctx.lineWidth = 3;
     ctx.beginPath(); ctx.moveTo(padL-20, glY); ctx.lineTo(padL+drawW+20, glY); ctx.stroke();
@@ -669,8 +669,8 @@ function generateAutoMitsukeCanvas(direction, commonScale) {
     ctx.fillText(`▶ 2FL+1350 (${(lvl.cut2/1000).toFixed(3)}m)`, padL-14, cutY2 - 3);
 
     // 1FL・2FL線 (薄い)
-    [{ z: lvl.fl1, label: `1FL (${(lvl.fl1/1000).toFixed(3)}m)`, color: '#27ae60' },
-     { z: lvl.fl2, label: `2FL (${(lvl.fl2/1000).toFixed(3)}m)`, color: '#e74c3c' }
+    [{ z: lvl.FL1, label: `1FL (${(lvl.FL1/1000).toFixed(3)}m)`, color: '#27ae60' },
+     { z: lvl.FL2, label: `2FL (${(lvl.FL2/1000).toFixed(3)}m)`, color: '#e74c3c' }
     ].forEach(({ z, label, color }) => {
         const cy = toY(z);
         ctx.setLineDash([4,4]); ctx.strokeStyle = color + '88'; ctx.lineWidth = 1;
@@ -945,16 +945,29 @@ function showAreaPreview() {
 
     // Generate high-fidelity analytical silhouette elevation plans
     let commonScale = null;
-    if (window.RoofEngine) {
-        const scanX = window.RoofEngine.getScanlineProfile('X', window.AppState);
-        const scanY = window.RoofEngine.getScanlineProfile('Y', window.AppState);
-        if (scanX && scanY) {
-            const maxZ_X = Math.max(...scanX.profile.map(p => p.z));
-            const totalH_X = Math.max(maxZ_X, scanX.eavesZ2F + 1000);
-            const maxZ_Y = Math.max(...scanY.profile.map(p => p.z));
-            const totalH_Y = Math.max(maxZ_Y, scanY.eavesZ2F + 1000);
+    if (window.RoofEngine && window.RoofEngine.getProjectedPrimitives) {
+        const projX = window.RoofEngine.getProjectedPrimitives('X', window.AppState);
+        const projY = window.RoofEngine.getProjectedPrimitives('Y', window.AppState);
+        if (projX && projY) {
+            const getBounds = (proj) => {
+                let uMin = Infinity, uMax = -Infinity, zMax = -Infinity;
+                proj.primitives.forEach(prim => {
+                    prim.vertices.forEach(v => {
+                        if (v.u < uMin) uMin = v.u;
+                        if (v.u > uMax) uMax = v.u;
+                        if (v.z > zMax) zMax = v.z;
+                    });
+                });
+                return { W: uMax > uMin ? uMax - uMin : 10000, maxZ: zMax };
+            };
+            
+            const boundsX = getBounds(projX);
+            const boundsY = getBounds(projY);
 
-            const W_max = Math.max(scanX.W, scanY.W);
+            const totalH_X = Math.max(boundsX.maxZ, projX.eavesZ2F + 1000);
+            const totalH_Y = Math.max(boundsY.maxZ, projY.eavesZ2F + 1000);
+
+            const W_max = Math.max(boundsX.W, boundsY.W);
             const totalH_max = Math.max(totalH_X, totalH_Y);
 
             const padL = 90, padR = 400, padT = 70, padB = 60;
