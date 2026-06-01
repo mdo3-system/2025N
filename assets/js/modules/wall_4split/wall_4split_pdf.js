@@ -563,34 +563,80 @@ function generateAutoMitsukeCanvas(direction, commonScale) {
     const cutY1 = toY(lvl.cut1);
     const glY   = toY(0);
 
-    // 1. 各Primitiveを描画 (外壁と屋根)
+    // 1. 各Primitiveを描画 (外壁と屋根) - 塗りつぶしのみ
     ctx.save();
+    let clipperPolygons = []; // Clipper用ポリゴン配列
+    const scaleFactor = 1000; // Clipperの整数化用
+
     proj.primitives.forEach(prim => {
         if (!prim.vertices || prim.vertices.length < 3) return;
+        
+        // Clipper用パス生成
+        let path = [];
         ctx.beginPath();
         ctx.moveTo(toX(prim.vertices[0].u), toY(prim.vertices[0].z));
+        path.push({ X: Math.round(prim.vertices[0].u * scaleFactor), Y: Math.round(prim.vertices[0].z * scaleFactor) });
         for (let i = 1; i < prim.vertices.length; i++) {
             ctx.lineTo(toX(prim.vertices[i].u), toY(prim.vertices[i].z));
+            path.push({ X: Math.round(prim.vertices[i].u * scaleFactor), Y: Math.round(prim.vertices[i].z * scaleFactor) });
         }
         ctx.closePath();
+        clipperPolygons.push(path);
         
         // 色分け (1F, 2F, 屋根)
         if (prim.name.includes('屋根')) {
             ctx.fillStyle = (direction === 'X') ? 'rgba(230,126,34,0.3)' : 'rgba(41,128,185,0.3)';
-            ctx.strokeStyle = primaryColor;
         } else if (prim.floor === '2F') {
             ctx.fillStyle = (direction === 'X') ? 'rgba(230,126,34,0.15)' : 'rgba(41,128,185,0.15)';
-            ctx.strokeStyle = primaryColor;
         } else {
             ctx.fillStyle = (direction === 'X') ? 'rgba(230,126,34,0.05)' : 'rgba(41,128,185,0.05)';
-            ctx.strokeStyle = primaryColor;
         }
         
         ctx.fill();
-        ctx.lineWidth = 1;
-        ctx.stroke();
+        // ctx.stroke() はここでは行わない（内部の線を描かない）
     });
     ctx.restore();
+
+    // 1.5 Clipperによる全体のシルエット（アウトライン）描画
+    if (typeof ClipperLib !== 'undefined' && clipperPolygons.length > 0) {
+        const cpr = new ClipperLib.Clipper();
+        cpr.AddPaths(clipperPolygons, ClipperLib.PolyType.ptSubject, true);
+        const solution = new ClipperLib.Paths();
+        cpr.Execute(ClipperLib.ClipType.ctUnion, solution, ClipperLib.PolyFillType.pftNonZero, ClipperLib.PolyFillType.pftNonZero);
+        
+        ctx.save();
+        ctx.strokeStyle = primaryColor;
+        ctx.lineWidth = 2; // 外周は太線
+        ctx.lineJoin = 'round';
+        
+        solution.forEach(path => {
+            if (path.length < 3) return;
+            ctx.beginPath();
+            ctx.moveTo(toX(path[0].X / scaleFactor), toY(path[0].Y / scaleFactor));
+            for (let i = 1; i < path.length; i++) {
+                ctx.lineTo(toX(path[i].X / scaleFactor), toY(path[i].Y / scaleFactor));
+            }
+            ctx.closePath();
+            ctx.stroke();
+        });
+        ctx.restore();
+    } else {
+        // Clipperが無い場合のフォールバック（従来通りの枠線描画）
+        ctx.save();
+        proj.primitives.forEach(prim => {
+            if (!prim.vertices || prim.vertices.length < 3) return;
+            ctx.beginPath();
+            ctx.moveTo(toX(prim.vertices[0].u), toY(prim.vertices[0].z));
+            for (let i = 1; i < prim.vertices.length; i++) {
+                ctx.lineTo(toX(prim.vertices[i].u), toY(prim.vertices[i].z));
+            }
+            ctx.closePath();
+            ctx.strokeStyle = primaryColor;
+            ctx.lineWidth = 1;
+            ctx.stroke();
+        });
+        ctx.restore();
+    }
 
     // 2. 分解された矩形・三角形の境界と番号を描画
     ctx.save();

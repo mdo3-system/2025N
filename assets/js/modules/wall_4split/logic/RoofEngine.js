@@ -126,38 +126,7 @@ window.RoofEngine = {
         return offsetPts;
     },
 
-    _getProjectedWallSegments: function(polys, direction) {
-        let segments = [];
-        polys.forEach(poly => {
-            const n = poly.length;
-            for (let i = 0; i < n; i++) {
-                const v1 = poly[i], v2 = poly[(i+1)%n];
-                const u1 = direction === 'X' ? v1.y : v1.x;
-                const u2 = direction === 'X' ? v2.y : v2.x;
-                const uMin = Math.min(u1, u2);
-                const uMax = Math.max(u1, u2);
-                if (uMax - uMin > 10) { // 幅10mm以上を抽出
-                    segments.push({ uMin, uMax });
-                }
-            }
-        });
-        
-        if (segments.length === 0) return [];
-        segments.sort((a, b) => a.uMin - b.uMin);
-        
-        // 区間のマージ (Union)
-        let merged = [segments[0]];
-        for (let i = 1; i < segments.length; i++) {
-            const last = merged[merged.length - 1];
-            const curr = segments[i];
-            if (curr.uMin <= last.uMax + 10) { // 10mmの隙間はマージ
-                last.uMax = Math.max(last.uMax, curr.uMax);
-            } else {
-                merged.push({...curr});
-            }
-        }
-        return merged;
-    },
+
 
     getProjectedPrimitives: function(direction, state) {
         const s = state || window.AppState;
@@ -319,12 +288,34 @@ window.RoofEngine = {
             return maxZ;
         };
 
-        // 3. 外壁 (1F, 2F) の大区画抽出
+        // 3. 外壁 (1F, 2F) の大区画抽出 (Constructive Decomposition - A案:コーナー吸収)
         ['1F', '2F'].forEach(f => {
             const zTop = f === '1F' ? lvl.FL2 : eavesZ2F;
             const polys = this.getFloorExteriorPolygons(f, s);
-            const segments = this._getProjectedWallSegments(polys, direction);
             
+            let segments = [];
+            polys.forEach(poly => {
+                const n = poly.length;
+                for (let i = 0; i < n; i++) {
+                    const p1 = poly[i];
+                    const p2 = poly[(i + 1) % n];
+                    const dx = p2.x - p1.x;
+                    const dy = p2.y - p1.y;
+                    const len = Math.hypot(dx, dy);
+                    if (len < 10) continue;
+
+                    // direction === 'X' の場合、Y方向に広がる見附面積を求めるため、Y軸平行な辺を抽出する。
+                    // 同様に 'Y' の場合は X軸平行な辺を抽出する。
+                    const isTargetEdge = direction === 'X' ? (Math.abs(dy) > Math.abs(dx)) : (Math.abs(dx) > Math.abs(dy));
+                    
+                    if (isTargetEdge) {
+                        const u1 = direction === 'X' ? p1.y : p1.x;
+                        const u2 = direction === 'X' ? p2.y : p2.x;
+                        segments.push({ uMin: Math.min(u1, u2), uMax: Math.max(u1, u2) });
+                    }
+                }
+            });
+
             segments.forEach(seg => {
                 const w_mm = seg.uMax - seg.uMin;
                 if (w_mm < 10) return;
@@ -383,6 +374,7 @@ window.RoofEngine = {
                 const cutTop = f === '1F' ? lvl.cut2 : 100000; // 2Fは無限大
                 
                 let floorTotalAreaSqM = 0;
+                let floorClipperPaths = []; // Clipper用
                 
                 // 階ごとのプリミティブを取り出し、カットラインで上下をクリップする
                 primitives.forEach(prim => {
@@ -396,11 +388,6 @@ window.RoofEngine = {
                     let cZTopR = Math.min(sh.zBot + sh.hR, cutTop);
                     
                     if (sh.type === 'tri') {
-                        // 三角形の高さクリップによる台形化を簡易的に矩形+三角にする等あるが、
-                        // 審査用としては元の大きな三角形の式を出した方が綺麗な場合が多い。
-                        // 今回は単純な面積合計を合わせるため、クリップ後の高さで再計算する。
-                        // 厳密なクリッピングは台形を生むが、Constructive方針に従い、
-                        // 頂点がカットされない前提とする（屋根は基本的にカットラインより上にある）。
                         cZBot = Math.max(sh.zBot, cutBot);
                     }
                     
@@ -412,14 +399,28 @@ window.RoofEngine = {
                     let area = 0;
                     let formula = "";
                     
+                    let path = [];
+                    const scaleF = 1000;
+                    const sx1 = Math.round(sh.uStart * scaleF);
+                    const sx2 = Math.round((sh.uStart + sh.w) * scaleF);
+                    const syB = Math.round(cZBot * scaleF);
+                    const syTL = Math.round((cZBot + hL_c) * scaleF);
+                    const syTR = Math.round((cZBot + hR_c) * scaleF);
+                    
                     if (sh.type === 'rect') {
                         const h_m = hL_c / 1000;
                         area = w_m * h_m;
                         formula = `${w_m.toFixed(3)} × ${h_m.toFixed(3)}`;
+                        path = [{X: sx1, Y: syB}, {X: sx2, Y: syB}, {X: sx2, Y: syTR}, {X: sx1, Y: syTL}];
                     } else if (sh.type === 'tri') {
                         const h_m = Math.max(hL_c, hR_c) / 1000;
                         area = (w_m * h_m) / 2;
                         formula = `${w_m.toFixed(3)} × ${h_m.toFixed(3)} / 2`;
+                        if (hL_c > hR_c) {
+                            path = [{X: sx1, Y: syB}, {X: sx2, Y: syB}, {X: sx1, Y: syTL}];
+                        } else {
+                            path = [{X: sx1, Y: syB}, {X: sx2, Y: syB}, {X: sx2, Y: syTR}];
+                        }
                     }
                     
                     if (area > 0.01) {
@@ -431,8 +432,38 @@ window.RoofEngine = {
                             area: area,
                             shape: { type: sh.type, uStart: sh.uStart, w: sh.w, hL: hL_c, hR: hR_c, zBot: cZBot }
                         });
+                        if (path.length >= 3) floorClipperPaths.push(path);
                     }
                 });
+                
+                // ClipperでUnionし、重なり面積を控除する
+                if (typeof ClipperLib !== 'undefined' && floorClipperPaths.length > 0) {
+                    const cpr = new ClipperLib.Clipper();
+                    cpr.AddPaths(floorClipperPaths, ClipperLib.PolyType.ptSubject, true);
+                    const solution = new ClipperLib.Paths();
+                    cpr.Execute(ClipperLib.ClipType.ctUnion, solution, ClipperLib.PolyFillType.pftNonZero, ClipperLib.PolyFillType.pftNonZero);
+                    
+                    let unionArea = 0;
+                    solution.forEach(path => {
+                        unionArea += Math.abs(ClipperLib.Clipper.Area(path));
+                    });
+                    
+                    // mm*1000 の座標系なので、面積は mm^2 * 1e6。m^2 にするには 1e12 で割る。
+                    let trueAreaSqM = unionArea / 1000000000000;
+                    let diff = floorTotalAreaSqM - trueAreaSqM;
+                    
+                    if (diff > 0.01) {
+                        console.log(`[${f} ${dir}方向] 見附面積 重なり控除: -${diff.toFixed(2)} ㎡`);
+                        formulaAreas[f][key].push({
+                            id: zoneIdx++,
+                            name: "重なり控除",
+                            formula: "重なり除去 (ブーリアン控除)",
+                            area: -diff,
+                            shape: null
+                        });
+                        floorTotalAreaSqM = trueAreaSqM;
+                    }
+                }
                 
                 areas[f][key] = floorTotalAreaSqM;
             });
