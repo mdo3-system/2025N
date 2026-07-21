@@ -69,10 +69,20 @@ window.AppController = {
             window.GridEngine.analyzeGrids(state);
         }
 
-        // 0.2. Auto-calculate projected areas from roofFaces (if present)
+        // [v3.0.12] 0.2. 先に DOM からの値を同期 (init) してから、見附投影面積を自動計算し DOM へ書き戻す
+        state.init();
         if (window.MitsukeEngine && window.MitsukeEngine.updateProjectedAreas) {
             window.MitsukeEngine.updateProjectedAreas(state);
-            state.init();
+            // 自動計算された見付面積をDOM入力フィールドへ逆書き込み
+            ['1', '2'].forEach(lv => {
+                const f = lv + 'F';
+                const pxVal = state.config.projectedAreas[f]?.x || 0;
+                const pyVal = state.config.projectedAreas[f]?.y || 0;
+                const wxEl = document.getElementById('a-wx' + lv);
+                const wyEl = document.getElementById('a-wy' + lv);
+                if (wxEl) wxEl.value = pxVal.toFixed(3); // 平米（㎡）値をそのまま代入
+                if (wyEl) wyEl.value = pyVal.toFixed(3);
+            });
         }
 
         // 1. 解析の実行 (Logic)

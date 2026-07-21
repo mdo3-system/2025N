@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>上善如水 - 壁量計算WEB (v3.0.11)</title>
+    <title>上善如水 - 壁量計算WEB (v3.0.12)</title>
     <script src="https://cdn.jsdelivr.net/npm/dxf-parser@1.1.2/dist/dxf-parser.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/encoding-japanese/2.0.0/encoding.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/clipper-lib@6.4.2/clipper.js"></script>
@@ -472,7 +472,7 @@
     <!-- 左パネル -->
     <div id="left-panel">
         <h1 style="font-size:16px; margin:0 0 10px 0; color:#2c3e50; border-bottom:2px solid #2ecc71; padding-bottom:5px; display:flex; justify-content:space-between; align-items:center;">
-            <span>上善如水 <span style="font-size:12px; color:#7f8c8d;">壁量計算WEB <span id="app-version-title">v3.0.11</span></span></span>
+            <span>上善如水 <span style="font-size:12px; color:#7f8c8d;">壁量計算WEB <span id="app-version-title">v3.0.12</span></span></span>
         </h1>
 
         <div style="display:flex; gap:5px; margin-bottom:15px;">
@@ -629,6 +629,14 @@
             <div style="position: absolute; bottom: 10px; right: 10px; font-size: 11px; color: #aaa; background: rgba(0,0,0,0.7); padding: 5px; border-radius: 4px;">
                 <span style="color:#3498db; font-weight:bold;">● G: 重心</span> / <span style="color:#e74c3c; font-weight:bold;">● C: 剛心</span>
             </div>
+            <!-- [v3.0.10] 基礎要素のプロパティポップアップ（フローティング）を復元 -->
+            <div id="fd-property-popup" style="display:none; position:fixed; z-index:5000; background:#fff; border:1px solid #8e44ad; border-radius:8px; box-shadow:0 4px 20px rgba(0,0,0,0.3); width:480px; max-height:80vh; overflow-y:auto; font-family:sans-serif;">
+                <div id="fd-popup-header" style="background:#8e44ad; color:#fff; padding:8px 12px; display:flex; justify-content:space-between; align-items:center; border-radius:7px 7px 0 0; cursor: move; font-weight:bold; font-size:13px;">
+                    <span id="fd-popup-title">要素プロパティ</span>
+                    <button onclick="if(window.PropertyController) window.PropertyController.hideFdPopup(); else this.closest('#fd-property-popup').style.display='none';" style="background:#c0392b; border:none; border-radius:4px; padding:4px 8px; color:#fff; cursor:pointer; font-size:12px; font-weight:bold; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">✖ 閉じる</button>
+                </div>
+                <div id="fd-popup-content" style="padding:12px;"></div>
+            </div>
         </div>
     </div>
 
@@ -771,7 +779,7 @@
             </div>
         </details>
 
-        <!-- [v3.0.11] 表示設定 (Layer Control) を復元 -->
+        <!-- [v3.0.12] 表示設定 (Layer Control) を復元 -->
         <details open class="layer-control" id="element-visibility-panel" style="margin-bottom:15px; border:1px solid #bdc3c7; border-radius:4px;">
             <summary style="background:#f1c40f; color:#333; padding:5px 8px; font-weight:bold; cursor:pointer;">👁 表示設定 (表示/非表示の切替)</summary>
             <div style="padding:10px; font-size:11px; background:#fff; display:flex; flex-direction:column; gap:8px;">
@@ -917,7 +925,7 @@
         </div>
     </div>
 
-    <!-- [v3.0.11] 統合プロパティエディタ・モーダルを復元 -->
+    <!-- [v3.0.12] 統合プロパティエディタ・モーダルを復元 -->
     <div id="modal-property-editor" class="modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:10000; align-items:center; justify-content:center; backdrop-filter:blur(2px);">
         <div style="background:#fff; width:50vw; max-width:50vw; max-height:85vh; border-radius:10px; overflow:hidden; box-shadow:0 10px 30px rgba(0,0,0,0.3); display:flex; flex-direction:column;">
             <div id="modal-prop-header" style="background:#34495e; color:#fff; padding:12px 15px; display:flex; justify-content:space-between; align-items:center;">
@@ -934,7 +942,7 @@
         </div>
     </div>
 
-    <!-- [v3.0.11] 柱詳細計算根拠モーダルの復元 -->
+    <!-- [v3.0.12] 柱詳細計算根拠モーダルの復元 -->
     <div id="modal-pillar-detail" class="modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:10000; align-items:center; justify-content:center; backdrop-filter:blur(2px);">
         <div style="background:#fff; width:60vw; max-width:60vw; max-height:85vh; border-radius:10px; overflow:hidden; box-shadow:0 10px 30px rgba(0,0,0,0.3); display:flex; flex-direction:column;">
             <div style="background:#0056b3; color:#fff; padding:12px 15px; display:flex; justify-content:space-between; align-items:center;">
@@ -951,48 +959,48 @@
     </div>
 
     <!-- JavaScript モジュール群 -->
-    <script src="assets/js/modules/wall_4split/Version.js?v=3.0.11"></script>
-    <script src="assets/js/modules/wall_4split/state/Specs.js?v=3.0.11"></script>
-    <script src="assets/js/modules/wall_4split/state/AppState.js?v=3.0.11"></script>
-    <script src="assets/js/modules/wall_4split/wall_4split_bridge.js?v=3.0.11"></script>
-    <script src="assets/js/modules/wall_4split/logic/ServiceContainer.js?v=3.0.11"></script>
-    <script src="assets/js/modules/wall_4split/logic/MathUtils.js?v=3.0.11"></script>
-    <script src="assets/js/modules/wall_4split/logic/Parsers.js?v=3.0.11"></script>
-    <script src="assets/js/modules/wall_4split/logic/WallEngine.js?v=3.0.11"></script>
-    <script src="assets/js/modules/wall_4split/logic/CadEngine.js?v=3.0.11"></script>
-    <script src="assets/js/modules/wall_4split/logic/GridEngine.js?v=3.0.11"></script>
-    <script src="assets/js/modules/wall_4split/logic/StructuralEngine.js?v=3.0.11"></script>
-    <script src="assets/js/modules/wall_4split/logic/DocumentEngine.js?v=3.0.11"></script>
-    <script src="assets/js/modules/wall_4split/logic/NValueEngine.js?v=3.0.11"></script>
-    <script src="assets/js/modules/wall_4split/logic/AreaEngine.js?v=3.0.11"></script>
-    <script src="assets/js/modules/wall_4split/logic/AxialEngine.js?v=3.0.11"></script>
-    <script src="assets/js/modules/wall_4split/logic/SlabBeamSynchronizer.js?v=3.0.11"></script>
-    <script src="assets/js/modules/wall_4split/logic/FoundationEngine.js?v=3.0.11"></script>
-    <script src="assets/js/modules/wall_4split/logic/ReportEngine.js?v=3.0.11"></script>
-    <script src="assets/js/modules/wall_4split/logic/RoofEngine.js?v=3.0.11"></script>
-    <script src="assets/js/modules/wall_4split/logic/MitsukeEngine.js?v=3.0.11"></script>
-    <script src="assets/js/modules/wall_4split/controllers/PropertyController.js?v=3.0.11"></script>
-    <script src="assets/js/modules/wall_4split/controllers/InputController.js?v=3.0.11"></script>
-    <script src="assets/js/modules/wall_4split/controllers/ModalController.js?v=3.0.11"></script>
-    <script src="assets/js/modules/wall_4split/controllers/AppController.js?v=3.0.11"></script>
-    <script src="assets/js/modules/wall_4split/controllers/FoundationInputController.js?v=3.0.11"></script>
-    <script src="assets/js/modules/wall_4split/controllers/RoofInputController.js?v=3.0.11"></script>
-    <script src="assets/js/modules/wall_4split/view/UIView.js?v=3.0.11"></script>
-    <script src="assets/js/modules/wall_4split/view/MainRenderer.js?v=3.0.11"></script>
-    <script src="assets/js/modules/wall_4split/view/FoundationRenderer.js?v=3.0.11"></script>
-    <script src="assets/js/modules/wall_4split/view/DocumentRenderer.js?v=3.0.11"></script>
-    <script src="assets/js/modules/wall_4split/view/ElevationRenderer.js?v=3.0.11"></script>
-    <script src="assets/js/modules/wall_4split/view/RoofRenderer.js?v=3.0.11"></script>
-    <script src="assets/js/modules/wall_4split/view/ThreeDPreviewController.js?v=3.0.11"></script>
-    <script src="assets/js/modules/wall_4split/wall_4split_export.js?v=3.0.11"></script>
-    <script src="assets/js/modules/wall_4split/wall_4split_cad.js?v=3.0.11"></script>
-    <script src="assets/js/modules/wall_4split/wall_4split_render.js?v=3.0.11"></script>
-    <script src="assets/js/modules/wall_4split/wall_4split_pdf.js?v=3.0.11"></script>
-    <script src="assets/js/modules/wall_4split/wall_4split_calc.js?v=3.0.11"></script>
-    <script src="assets/js/modules/wall_4split/wall_4split_foundation_engine.js?v=3.0.11"></script>
-    <script src="assets/js/modules/wall_4split/wall_4split_report.js?v=3.0.11"></script>
-    <script src="assets/js/modules/wall_4split/wall_4split_input.js?v=3.0.11"></script>
-    <script src="assets/js/modules/wall_4split/wall_4split_main.js?v=3.0.11"></script>
+    <script src="assets/js/modules/wall_4split/Version.js?v=3.0.12"></script>
+    <script src="assets/js/modules/wall_4split/state/Specs.js?v=3.0.12"></script>
+    <script src="assets/js/modules/wall_4split/state/AppState.js?v=3.0.12"></script>
+    <script src="assets/js/modules/wall_4split/wall_4split_bridge.js?v=3.0.12"></script>
+    <script src="assets/js/modules/wall_4split/logic/ServiceContainer.js?v=3.0.12"></script>
+    <script src="assets/js/modules/wall_4split/logic/MathUtils.js?v=3.0.12"></script>
+    <script src="assets/js/modules/wall_4split/logic/Parsers.js?v=3.0.12"></script>
+    <script src="assets/js/modules/wall_4split/logic/WallEngine.js?v=3.0.12"></script>
+    <script src="assets/js/modules/wall_4split/logic/CadEngine.js?v=3.0.12"></script>
+    <script src="assets/js/modules/wall_4split/logic/GridEngine.js?v=3.0.12"></script>
+    <script src="assets/js/modules/wall_4split/logic/StructuralEngine.js?v=3.0.12"></script>
+    <script src="assets/js/modules/wall_4split/logic/DocumentEngine.js?v=3.0.12"></script>
+    <script src="assets/js/modules/wall_4split/logic/NValueEngine.js?v=3.0.12"></script>
+    <script src="assets/js/modules/wall_4split/logic/AreaEngine.js?v=3.0.12"></script>
+    <script src="assets/js/modules/wall_4split/logic/AxialEngine.js?v=3.0.12"></script>
+    <script src="assets/js/modules/wall_4split/logic/SlabBeamSynchronizer.js?v=3.0.12"></script>
+    <script src="assets/js/modules/wall_4split/logic/FoundationEngine.js?v=3.0.12"></script>
+    <script src="assets/js/modules/wall_4split/logic/ReportEngine.js?v=3.0.12"></script>
+    <script src="assets/js/modules/wall_4split/logic/RoofEngine.js?v=3.0.12"></script>
+    <script src="assets/js/modules/wall_4split/logic/MitsukeEngine.js?v=3.0.12"></script>
+    <script src="assets/js/modules/wall_4split/controllers/PropertyController.js?v=3.0.12"></script>
+    <script src="assets/js/modules/wall_4split/controllers/InputController.js?v=3.0.12"></script>
+    <script src="assets/js/modules/wall_4split/controllers/ModalController.js?v=3.0.12"></script>
+    <script src="assets/js/modules/wall_4split/controllers/AppController.js?v=3.0.12"></script>
+    <script src="assets/js/modules/wall_4split/controllers/FoundationInputController.js?v=3.0.12"></script>
+    <script src="assets/js/modules/wall_4split/controllers/RoofInputController.js?v=3.0.12"></script>
+    <script src="assets/js/modules/wall_4split/view/UIView.js?v=3.0.12"></script>
+    <script src="assets/js/modules/wall_4split/view/MainRenderer.js?v=3.0.12"></script>
+    <script src="assets/js/modules/wall_4split/view/FoundationRenderer.js?v=3.0.12"></script>
+    <script src="assets/js/modules/wall_4split/view/DocumentRenderer.js?v=3.0.12"></script>
+    <script src="assets/js/modules/wall_4split/view/ElevationRenderer.js?v=3.0.12"></script>
+    <script src="assets/js/modules/wall_4split/view/RoofRenderer.js?v=3.0.12"></script>
+    <script src="assets/js/modules/wall_4split/view/ThreeDPreviewController.js?v=3.0.12"></script>
+    <script src="assets/js/modules/wall_4split/wall_4split_export.js?v=3.0.12"></script>
+    <script src="assets/js/modules/wall_4split/wall_4split_cad.js?v=3.0.12"></script>
+    <script src="assets/js/modules/wall_4split/wall_4split_render.js?v=3.0.12"></script>
+    <script src="assets/js/modules/wall_4split/wall_4split_pdf.js?v=3.0.12"></script>
+    <script src="assets/js/modules/wall_4split/wall_4split_calc.js?v=3.0.12"></script>
+    <script src="assets/js/modules/wall_4split/wall_4split_foundation_engine.js?v=3.0.12"></script>
+    <script src="assets/js/modules/wall_4split/wall_4split_report.js?v=3.0.12"></script>
+    <script src="assets/js/modules/wall_4split/wall_4split_input.js?v=3.0.12"></script>
+    <script src="assets/js/modules/wall_4split/wall_4split_main.js?v=3.0.12"></script>
 
     <!-- マジックリンク認証制御JS -->
     <script>

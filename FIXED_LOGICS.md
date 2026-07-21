@@ -712,6 +712,16 @@ $$R_i = A + B \cdot x_i$$
 - **toWorldCoord の座標ズレ修正**: `wall_4split_bridge.js` の `toWorldCoord` にて、CSS上のCanvas伸縮サイズ（`getBoundingClientRect`）を正確に考慮し物理ピクセルにマッピング変換するよう修正。これにより高解像度DPR・伸縮画面下でも柱、基礎梁、壁等の選択ヒット判定が100%正確に一致するよう修復。
 - **解析実行順序の最優先化**: `AppController.js` の `refreshAll` の先頭（最優先）で `GridEngine.analyzeGrids` を実行するよう順序変更。これにより見附面積計算の直前に最新通り芯データが確実に構築され、「見附面積データがありません」というエラーを即座に完全解消。通り芯も正しい紫色のグリッド破線としてシステムに自動認識・描画されるよう修正。
 
+### ⑭ コマンドライン自動テスト構築 ＆ .cursorrules への自動テスト厳格化ルール追記 (v3.0.11)
+- **コマンドライン自動テストランナー構築**: `tests/run_node_tests.js` を作成し、Node.js環境下でテストに必要な window や AppState、DOM要素等のモックを作成してアプリの各モジュールテスト（MathUtils, StructuralEngine, FoundationEngine等）を一括かつヘッドレスに実行できる仕組みを構築。
+- **.cursorrules のアップデート**: 開発・バージョン管理厳守規約の「4. 承認後の自律実行」の末尾に、コード修正や機能追加後に必ず自動テストを走らせて正常稼働を確認し、その結果を報告することを義務付ける厳格化ルールを追記。
+
+### ⑮ スナップズレの再解決 ＆ 基礎ポップアップ復元 ＆ 見附DOMリセットバグ修正 (v3.0.12)
+- **入力判定ローカル座標変換のDPR標準化**: `wall_4split_input.js` 内にインライン記述されていた `toC` および `findHitElement` の座標計算を、DPR を正しく考慮するグローバル共通関数 `window.toCanvasPixel` / `window.toWorldCoord` に完全統一。これにより、DPR環境下での黄色いスナップ点ズレおよび意図しない要素を掴むバグを完全に解消。
+- **基礎ポップアップの復元**: 欠落していた基礎梁・スラブのプロパティポップアップ（`#fd-property-popup`）のHTMLを `index.html` に完全復元。
+- **見附面積DOM上書きリセット問題の解決**: `AppController.js` の `refreshAll` 内で `state.init()` の直後に `updateProjectedAreas(state)` を計算・逆同期するよう順序修復。HTMLフォーム上の `0.00` 手動値による自動計算値の上書き消失を防ぎ、「見附データがありません」エラーを完全解消。
+
+
 
 
 

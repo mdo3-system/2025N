@@ -652,7 +652,10 @@ function handleEditText(e, state) {
 
 function handleGeneralMouseMove(mx, my, state) {
     hoveredPillar = null; snapPoint = null;
-    const toC = (x, y) => ({ cx: x * state.scale + state.offsetX, cy: state.canvas.height - (y * state.scale + state.offsetY) });
+    const toC = (x, y) => {
+        const pt = window.toCanvasPixel(x, y);
+        return { cx: pt.cx, cy: pt.cy };
+    };
     
     // 柱ホバー判定
     for (const p of state.pillars.filter(p => !p.isDeleted && p.floor === state.currentFloor)) {
@@ -687,7 +690,7 @@ function handleGeneralMouseMove(mx, my, state) {
 }
 
 function findHitElement(mx, my, state) {
-    const wp = { x: (mx - state.offsetX) / state.scale, y: (state.canvas.height - my - state.offsetY) / state.scale };
+    const wp = window.toWorldCoord(mx, my);
     const floor = state.currentFloor;
 
     // 1. 柱 (判定優先度 高)
