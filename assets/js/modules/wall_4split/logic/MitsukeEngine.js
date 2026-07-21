@@ -257,9 +257,9 @@ window.MitsukeEngine = {
             });
             let inWall1F = wallBounds['1F'] && (uMid >= wallBounds['1F'].uMin && uMid <= wallBounds['1F'].uMax);
             let hasWallTop1F = false;
-            // 1F外壁があれば、少なくとも2F床(FL2)までは壁がある
-            if (inWall1F && zTop1F_mid < lvl.FL2) {
-                zTop1F_mid = lvl.FL2; 
+            // 1F外壁があれば、カットライン上限(lvl.cut2)まで壁が存在して2F見附と隙間なく連続する
+            if (inWall1F && zTop1F_mid < lvl.cut2) {
+                zTop1F_mid = lvl.cut2; 
                 hasWallTop1F = true;
             }
 
@@ -281,12 +281,12 @@ window.MitsukeEngine = {
             }
             
             if (zTop1F_mid > -Infinity) {
-                let zTL = hasWallTop1F ? lvl.FL2 : getZ(maxTop1F, uA);
-                let zTR = hasWallTop1F ? lvl.FL2 : getZ(maxTop1F, uB);
+                let zTL_raw = (hasWallTop1F && maxTop1F) ? Math.max(lvl.cut2, getZ(maxTop1F, uA)) : (hasWallTop1F ? lvl.cut2 : getZ(maxTop1F, uA));
+                let zTR_raw = (hasWallTop1F && maxTop1F) ? Math.max(lvl.cut2, getZ(maxTop1F, uB)) : (hasWallTop1F ? lvl.cut2 : getZ(maxTop1F, uB));
                 
                 // 2FのcutBot (lvl.cut2) で頭打ちにする (1F見附は cut1 ~ cut2)
-                zTL = Math.min(lvl.cut2, Math.max(zBot1F_effective_A, zTL));
-                zTR = Math.min(lvl.cut2, Math.max(zBot1F_effective_B, zTR));
+                let zTL = Math.min(lvl.cut2, Math.max(zBot1F_effective_A, zTL_raw));
+                let zTR = Math.min(lvl.cut2, Math.max(zBot1F_effective_B, zTR_raw));
                 const zBL = zBot1F_effective_A;
                 const zBR = zBot1F_effective_B;
                 
