@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>上善如水 - 壁量計算WEB (v3.0.1)</title>
+    <title>上善如水 - 壁量計算WEB (v3.0.2)</title>
     <script src="https://cdn.jsdelivr.net/npm/dxf-parser@1.1.2/dist/dxf-parser.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/encoding-japanese/2.0.0/encoding.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/clipper-lib@6.4.2/clipper.js"></script>
@@ -141,6 +141,24 @@
             background-color: #8e44ad;
         }
 
+        .btn-add-item {
+            background-color: #fff;
+            color: #0056b3;
+            border: 1px dashed #0056b3;
+            cursor: pointer;
+            padding: 5px;
+            font-size: 11px;
+            font-weight: bold;
+            border-radius: 4px;
+            width: 100%;
+            margin-bottom: 10px;
+            transition: 0.2s;
+        }
+
+        .btn-add-item:hover {
+            background-color: #e8f4f8;
+        }
+
         #cad-container {
             flex-grow: 1;
             position: relative;
@@ -242,7 +260,7 @@
             margin: auto;
         }
 
-        /* ログイン認証モーダル用 */
+        /* マジックリンク認証モーダル用スタイル */
         #modal-auth-login {
             display: flex;
             position: fixed;
@@ -332,6 +350,56 @@
             color: #991b1b;
             border: 1px solid #fecaca;
         }
+
+        .mode-selector {
+            background: #eef5f9;
+            padding: 10px;
+            border: 1px solid #bce8f1;
+            border-radius: 4px;
+            margin-bottom: 15px;
+        }
+
+        .mode-selector label {
+            display: inline-block;
+            margin-right: 10px;
+            margin-bottom: 5px;
+            font-size: 12px;
+            cursor: pointer;
+            color: #333;
+        }
+
+        .report-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 11px;
+            text-align: center;
+            margin-bottom: 15px;
+            background: #fff;
+        }
+
+        .report-table th,
+        .report-table td {
+            border: 1px solid #aaa;
+            padding: 4px 2px;
+        }
+
+        .report-table th {
+            background: #d9edf7;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .report-table td.bg-ok {
+            background: #d4edda;
+            color: #155724;
+            font-weight: bold;
+        }
+
+        .report-table td.bg-ng {
+            background: #f8d7da;
+            color: #721c24;
+            font-weight: bold;
+        }
     </style>
 </head>
 
@@ -361,10 +429,38 @@
         </div>
     </div>
 
-    <!-- メイン計算ツール画面 -->
+    <!-- 各種モーダル群 -->
+    <div id="modal-center" class="modal-overlay">
+        <div class="modal-content" style="max-width:700px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid #0056b3; padding-bottom:10px; margin-bottom:15px;">
+                <h2 style="margin:0; color:#0056b3;">🧲 重心・剛心 算出根拠</h2>
+                <button class="action-btn btn-close-modal" style="background:#6c757d;">✖ 閉じる</button>
+            </div>
+            <div id="scroll-area-center" style="padding:0; overflow-y:auto; max-height:80vh;">
+                <div id="center-calc-container"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-ratio" class="modal-overlay">
+        <div class="modal-content" style="max-width:600px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid #d35400; padding-bottom:10px; margin-bottom:15px;">
+                <h2 style="margin:0; color:#d35400;">📐 直下率</h2>
+                <button class="action-btn btn-close-modal" style="background:#6c757d;">✖ 閉じる</button>
+            </div>
+            <div id="scroll-area-ratio" style="padding:0; overflow-y:auto; max-height:75vh;">
+                <div style="font-size:12px; color:#555; margin-bottom:15px; background:#fff3cd; padding:8px; border:1px solid #ffeeba; border-radius:4px;">
+                    ※この機能は設計のバランスを確認するための補助ツールであり、確認申請等の審査対象ではありません。
+                </div>
+                <div id="ratio-container"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 左パネル -->
     <div id="left-panel">
         <h1 style="font-size:16px; margin:0 0 10px 0; color:#2c3e50; border-bottom:2px solid #2ecc71; padding-bottom:5px; display:flex; justify-content:space-between; align-items:center;">
-            <span>上善如水 <span style="font-size:12px; color:#7f8c8d;">壁量計算WEB <span id="app-version-title">v3.0.0</span></span></span>
+            <span>上善如水 <span style="font-size:12px; color:#7f8c8d;">壁量計算WEB <span id="app-version-title">v3.0.2</span></span></span>
         </h1>
 
         <div style="display:flex; gap:5px; margin-bottom:15px;">
@@ -404,12 +500,43 @@
                         <div class="calc-row"><label style="width:50px;">建築士</label><input type="text" id="info-license" value="一級 第00000号" style="width:calc(100% - 60px); text-align:left;"></div>
                         <div class="calc-row"><label style="width:50px;">設計者</label><input type="text" id="info-name" value="上善 如水" style="width:calc(100% - 60px); text-align:left;"></div>
                     </div>
+
+                    <div class="calc-box" style="background:#fff; border:1px solid #ddd; padding:10px; border-radius:6px; margin-top:10px;">
+                        <div style="font-size:11px; font-weight:bold; margin-bottom:8px; color:#555; border-bottom:1px solid #eee;">📐 床面積 ＆ 4分割面積</div>
+                        
+                        <div style="background:#2ecc71; color:#fff; text-align:center; font-size:10px; font-weight:bold; padding:2px; border-radius:3px; margin-bottom:5px;">1階 データ</div>
+                        <div class="calc-row"><label style="width:110px;">床面積(㎡)</label><input type="number" id="a-f1" value="0.00" step="0.01" style="width:60px;"></div>
+                        <div class="calc-row"><label style="width:110px;">小屋裏(㎡)</label><input type="number" id="a-attic1" value="0.00" step="0.01" style="width:60px;"></div>
+                        <div class="calc-row"><label style="width:110px;">バルコニー(㎡)</label><input type="number" id="a-balcony1" value="0.00" step="0.01" style="width:60px;"></div>
+                        <div class="calc-row"><label style="width:110px;">ポーチ・屋根(㎡)</label><input type="number" id="a-porch1" value="0.00" step="0.01" style="width:60px;"></div>
+                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:2px 5px; margin-top:5px; padding:5px; background:#f9f9f9; border-radius:4px;">
+                            <div class="calc-row"><label style="font-size:9px; width:45px;">X上(奥)</label><input type="number" id="e-x-t1" value="0.00" step="0.001" style="width:45px; font-size:10px;"></div>
+                            <div class="calc-row"><label style="font-size:9px; width:45px;">Y左</label><input type="number" id="e-y-l1" value="0.00" step="0.001" style="width:45px; font-size:10px;"></div>
+                            <div class="calc-row"><label style="font-size:9px; width:45px;">X下(前)</label><input type="number" id="e-x-b1" value="0.00" step="0.001" style="width:45px; font-size:10px;"></div>
+                            <div class="calc-row"><label style="font-size:9px; width:45px;">Y右</label><input type="number" id="e-y-r1" value="0.00" step="0.001" style="width:45px; font-size:10px;"></div>
+                        </div>
+
+                        <hr style="border:0; border-top:1px dashed #ccc; margin:10px 0;">
+
+                        <div style="background:#e67e22; color:#fff; text-align:center; font-size:10px; font-weight:bold; padding:2px; border-radius:3px; margin-bottom:5px;">2階 データ</div>
+                        <div class="calc-row"><label style="width:110px;">床面積(㎡)</label><input type="number" id="a-f2" value="0.00" step="0.01" style="width:60px;"></div>
+                        <div class="calc-row"><label style="width:110px;">小屋裏(㎡)</label><input type="number" id="a-attic2" value="0.00" step="0.01" style="width:60px;"></div>
+                        <div class="calc-row"><label style="width:110px;">バルコニー(㎡)</label><input type="number" id="a-balcony2" value="0.00" step="0.01" style="width:60px;"></div>
+                        <div class="calc-row"><label style="width:110px;">吹き抜け(㎡)</label><input type="number" id="a-void2" value="0.00" step="0.01" style="width:60px;"></div>
+                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:2px 5px; margin-top:5px; padding:5px; background:#f9f9f9; border-radius:4px;">
+                            <div class="calc-row"><label style="font-size:9px; width:45px;">X上(奥)</label><input type="number" id="e-x-t2" value="0.00" step="0.001" style="width:45px; font-size:10px;"></div>
+                            <div class="calc-row"><label style="font-size:9px; width:45px;">Y左</label><input type="number" id="e-y-l2" value="0.00" step="0.001" style="width:45px; font-size:10px;"></div>
+                            <div class="calc-row"><label style="font-size:9px; width:45px;">X下(前)</label><input type="number" id="e-x-b2" value="0.00" step="0.001" style="width:45px; font-size:10px;"></div>
+                            <div class="calc-row"><label style="font-size:9px; width:45px;">Y右</label><input type="number" id="e-y-r2" value="0.00" step="0.001" style="width:45px; font-size:10px;"></div>
+                        </div>
+                    </div>
                 </div>
             </details>
             <div id="left-report-container"></div>
         </div>
     </div>
 
+    <!-- 中央パネル -->
     <div id="center-panel">
         <div class="canvas-header">
             <div style="display: flex; align-items: center; gap: 5px;">
@@ -432,65 +559,307 @@
         </div>
         <div id="cad-container">
             <canvas id="cad-canvas"></canvas>
+            <div style="position: absolute; bottom: 10px; right: 10px; font-size: 11px; color: #aaa; background: rgba(0,0,0,0.7); padding: 5px; border-radius: 4px;">
+                <span style="color:#3498db; font-weight:bold;">● G: 重心</span> / <span style="color:#e74c3c; font-weight:bold;">● C: 剛心</span>
+            </div>
         </div>
     </div>
 
+    <!-- 右パネル -->
     <div id="right-panel">
         <details style="margin-bottom: 15px; border-color:#e67e22;">
             <summary style="background:#fdebd0; color:#d35400;">📂 1. DXFデータ読込 (必須)</summary>
             <div style="padding:10px; background:#fff; font-size:11px;">
-                <b style="color:#0056b3;">① 平面図 DXF読込</b>
+                <div style="margin-bottom:10px; padding:8px; background:#fff3cd; border:1px solid #ffeeba; border-radius:4px; line-height:1.5;">
+                    <b style="color:#d35400;">【作図・レイヤルール】</b><br>
+                    ・<b>平面図:</b> COL_1F/2F(柱), GRID(芯), BG_1F/2F/RF(背景)<br>
+                    ・<b>立面・見附用:</b> 見付面積も AREA_X, AREA_Y レイヤで作成してください。 BG_X/Y(背景)
+                </div>
+
+                <b style="color:#0056b3;">① 平面図 DXF読込 (マスト)</b>
                 <input type="file" id="dxf-upload" accept=".dxf" style="display: none;">
                 <label for="dxf-upload" class="action-btn" style="width:100%; box-sizing:border-box; padding:8px; font-size:12px; margin-top:5px;">📂 平面図を選択</label>
+
+                <input type="hidden" id="scale-sub" value="100">
+                <div style="margin-top:10px; display:flex; flex-direction:column; gap:5px;">
+                    <div style="display:flex; gap:5px; align-items:center;">
+                        <label style="margin:0;">平面図スケール: S=1/</label>
+                        <input type="number" id="scale-plan" value="100" style="margin:0; width:50px; padding:2px;">
+                    </div>
+                </div>
+                <div id="action-msg" style="margin-top: 5px; font-size: 10px; color: #d35400; font-weight:bold;"></div>
             </div>
         </details>
+
+        <details style="margin-bottom: 15px; border-color:#2980b9;">
+            <summary style="background:#e8f4f8; color:#0056b3;">⚙️ 2. 各種設定と仕様</summary>
+            <div style="padding:10px; background:#fff; font-size:11px;">
+                <div class="calc-box" style="border-color:#3498db; background:#f0f8ff; margin-bottom:10px; padding:10px; border-radius:6px;">
+                    <div style="font-size:11px; font-weight:bold; margin-bottom:8px; color:#2980b9; border-bottom:1px solid #bce8f1;">■ 荷重と外壁仕様 (表計算ツール)</div>
+                    <div class="calc-row" style="margin-bottom:5px;">
+                        <label>外壁仕様</label>
+                        <select id="prop-ext-wall" style="width:110px; padding:2px;">
+                            <option value="1000">土塗り壁等 (1k)</option>
+                            <option value="890">モルタル等 (890)</option>
+                            <option value="600" selected>サイディング (600)</option>
+                            <option value="500">金属板張 (500)</option>
+                            <option value="350">下見板張 (350)</option>
+                        </select>
+                    </div>
+                    <div class="calc-row" style="margin-bottom:5px;">
+                        <label>屋根材仕様</label>
+                        <select id="prop-roof-type" style="width:110px; padding:2px;">
+                            <option value="990">瓦ぶき (990)</option>
+                            <option value="740">スレートぶき (740)</option>
+                            <option value="500" selected>金属板ぶき (500)</option>
+                        </select>
+                    </div>
+                    <div class="calc-row" style="margin-bottom:5px;">
+                        <label>軒の出寸法(mm)</label>
+                        <input type="number" id="prop-eaves-len" value="300" style="width:110px; text-align:right; padding:2px;">
+                    </div>
+                    <div class="calc-row" style="margin-bottom:5px;">
+                        <label>太陽光発電</label>
+                        <select id="prop-solar" style="width:110px; padding:2px;">
+                            <option value="0" selected>なし (0)</option>
+                            <option value="200">あり (200)</option>
+                        </select>
+                    </div>
+                    <div class="calc-row" style="margin-bottom:5px;">
+                        <label>天井断熱(mm)</label>
+                        <input type="number" id="prop-ceiling-ins" value="100" style="width:60px; text-align:right; padding:2px;">
+                    </div>
+                    <div class="calc-row" style="margin-bottom:5px;">
+                        <label>外壁断熱(mm)</label>
+                        <input type="number" id="prop-wall-ins" value="70" style="width:60px; text-align:right; padding:2px;">
+                    </div>
+                    <div style="margin-top:10px; padding-top:10px; border-top:1px solid #bce8f1;">
+                        <div style="font-size:10px; font-weight:bold; color:#2980b9; margin-bottom:5px;">📈 必要壁量設定 (m/㎡)</div>
+                        <div class="calc-row" style="margin-bottom:3px;">
+                            <label style="font-size:11px;">1階 地震力必要壁量 (m/㎡)</label>
+                            <input type="number" id="c-q1" value="0.29" step="0.01" style="width:60px; text-align:right;">
+                        </div>
+                        <div class="calc-row" style="margin-bottom:3px;">
+                            <label style="font-size:11px;">2階 地震力必要壁量 (m/㎡)</label>
+                            <input type="number" id="c-q2" value="0.15" step="0.01" style="width:60px; text-align:right;">
+                        </div>
+                        <div class="calc-row">
+                            <label style="font-size:11px;">風圧力必要壁量 (m/㎡)</label>
+                            <input type="number" id="c-w" value="0.50" step="0.01" style="width:60px; text-align:right; border:1px solid #2980b9;">
+                        </div>
+                    </div>
+
+                    <div style="margin-top:10px; padding-top:10px; border-top:1px solid #bce8f1;">
+                        <div style="font-size:10px; font-weight:bold; color:#2c3e50; margin-bottom:5px;">🏠 見付面積の設定 (手動入力)</div>
+                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:5px;">
+                            <div class="calc-row"><label style="font-size:9px; width:45px;">1F X見付</label><input type="number" id="a-wx1" value="0.00" step="0.01" style="width:45px; font-size:10px;"></div>
+                            <div class="calc-row"><label style="font-size:9px; width:45px;">1F Y見付</label><input type="number" id="a-wy1" value="0.00" step="0.01" style="width:45px; font-size:10px;"></div>
+                            <div class="calc-row"><label style="font-size:9px; width:45px;">2F X見付</label><input type="number" id="a-wx2" value="0.00" step="0.01" style="width:45px; font-size:10px;"></div>
+                            <div class="calc-row"><label style="font-size:9px; width:45px;">2F Y見付</label><input type="number" id="a-wy2" value="0.00" step="0.01" style="width:45px; font-size:10px;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="calc-box" style="background:#fff5f5; border:1px solid #ffcdd2; padding:10px; border-radius:6px; margin-bottom:10px;">
+                    <div style="font-size:11px; font-weight:bold; margin-bottom:8px; color:#c62828; border-bottom:1px solid #ffcdd2;">■ 柱寸法・横架材間</div>
+                    <div style="display:flex; gap:8px;">
+                        <div style="flex:1;">
+                            <div style="background:#2ecc71; color:#fff; text-align:center; font-size:10px; font-weight:bold; padding:2px; border-radius:3px; margin-bottom:5px;">1F</div>
+                            <div class="calc-row" style="margin-bottom:3px;"><label style="font-size:9px;">軸組階高 h(m)</label><input type="number" id="n-h1" value="2.70" step="0.01" style="width:45px; font-size:10px;"></div>
+                            <div class="calc-row"><label style="font-size:9px;">柱小径 d(mm)</label><input type="number" id="p-d1" value="105" step="1" style="width:45px; font-size:10px;"></div>
+                        </div>
+                        <div style="flex:1;">
+                            <div style="background:#e67e22; color:#fff; text-align:center; font-size:10px; font-weight:bold; padding:2px; border-radius:3px; margin-bottom:5px;">2F</div>
+                            <div class="calc-row" style="margin-bottom:3px;"><label style="font-size:9px;">軸組階高 h(m)</label><input type="number" id="n-h2" value="2.70" step="0.01" style="width:45px; font-size:10px;"></div>
+                            <div class="calc-row"><label style="font-size:9px;">柱小径 d(mm)</label><input type="number" id="p-d2" value="105" step="1" style="width:45px; font-size:10px;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="calc-box" style="background:#f8f9fa; border:1px solid #ced4da; margin-bottom:10px; padding:10px; border-radius:6px;">
+                    <div style="font-size:11px; font-weight:bold; margin-bottom:8px; color:#495057; border-bottom:1px solid #dee2e6;">基礎</div>
+                    <div class="calc-row" style="display:flex; align-items:center; justify-content:space-between; margin-bottom:5px;">
+                        <label style="font-size:11px;">コンクリート強度 (Fc)</label>
+                        <select id="global-fc" style="padding:2px; border-radius:4px; border:1px solid #adb5bd; font-size:11px; width:80px;">
+                            <option value="18">Fc18</option>
+                            <option value="21" selected>Fc21</option>
+                            <option value="24">Fc24</option>
+                            <option value="27">Fc27</option>
+                            <option value="30">Fc30</option>
+                        </select>
+                    </div>
+                    <div class="calc-row" style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+                        <label style="font-size:11px;">三角形状割増係数</label>
+                        <input type="number" id="global-triangle-mult" value="1.33" step="0.01" style="padding:2px; border-radius:4px; border:1px solid #adb5bd; font-size:11px; width:80px; text-align:right;">
+                    </div>
+                    <div class="calc-row" style="display:flex; align-items:center; justify-content:space-between; margin-bottom:5px;">
+                        <label style="font-size:11px;">地耐力 fe (kN/㎡)</label>
+                        <input type="number" id="global-fe" value="20" step="1" style="padding:2px; border-radius:4px; border:1px solid #adb5bd; font-size:11px; width:80px; text-align:right;" onchange="triggerUpdate()">
+                    </div>
+                    <div class="calc-row" style="display:flex; align-items:center; justify-content:space-between; margin-bottom:5px;">
+                        <label style="font-size:11px;">底盤厚さ d (m)</label>
+                        <input type="number" id="global-fd-thickness-m" value="0.15" step="0.01" style="padding:2px; border-radius:4px; border:1px solid #adb5bd; font-size:11px; width:80px; text-align:right;" onchange="triggerUpdate()">
+                    </div>
+                </div>
+            </div>
+        </details>
+
+        <h2>🛠️ 操作モード</h2>
+        <div class="mode-selector">
+            <label style="background: #fff8e1; display: block; padding: 5px; border-radius: 4px; margin-bottom: 5px; border: 1px solid #ffe082;">
+                <input type="radio" name="mode" value="select"> 🔍 <b>選択・プロパティ編集</b>
+            </label>
+            
+            <div style="display:flex; align-items:center; gap:10px; margin-bottom:5px;">
+                <label style="margin:0;"><input type="radio" name="mode" value="draw-area"> 📐 1. 面積の作図</label>
+                <button id="btn-open-area-settings" style="background:#0056b3; color:#fff; border:none; padding:2px 6px; border-radius:3px; font-size:10px; cursor:pointer;">⚙️ 仕様設定</button>
+            </div>
+            
+            <label><input type="radio" name="mode" value="window"> 🪟 2. 開口部の配置</label><br>
+            
+            <div style="display:flex; align-items:center; gap:10px; margin-bottom:5px;">
+                <label style="margin:0;"><input type="radio" name="mode" value="wall" checked> 🟩 3. 壁の配置</label>
+                <button id="btn-open-wall-settings" style="background:#27ae60; color:#fff; border:none; padding:2px 6px; border-radius:3px; font-size:10px; cursor:pointer;">⚙️ 仕様変更</button>
+            </div>
+
+            <label><input type="radio" name="mode" value="delete-unified"> ❌ 5. 削除(柱/壁/窓/面積)</label>
+            <hr style="border:0; border-top:1px dashed #ccc; margin:5px 0;">
+            <label><input type="radio" name="mode" value="add-grid"> 📏 グリッド追加(オフセット)</label><br>
+            <label><input type="radio" name="mode" value="del-grid"> ❌ グリッド削除</label><br>
+            <label><input type="radio" name="mode" value="edit-text"> 📝 通り芯文字の編集</label><br>
+            <label><input type="radio" name="mode" value="add-pillar"> 🔵 柱の追加</label>
+            <hr style="border:0; border-top:1px dashed #ccc; margin:5px 0;">
+            <label><input type="radio" name="mode" value="n-value"> 🧲 <b>N値計算・金物図</b></label><br>
+            
+            <div style="margin-bottom:5px;">
+                <label style="display:block;"><input type="radio" name="mode" value="area"> 🔲 <b>柱負担面積図 (壁非表示)</b></label>
+                <div id="area-calc-sub-mode-inline" style="margin: 5px 0 0 20px; padding:5px; background:#e8f4f8; border-radius:4px; display:none;">
+                    <select id="area-calc-sub-select" style="width:100%; font-size:11px; padding:2px;" onchange="AppController.refreshAll()">
+                        <option value="auto">左パネル(地震力判定)に連動</option>
+                        <option value="kijun">見下げ面積 (基準法)</option>
+                        <option value="seinou">見上げ面積 (性能表示)</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div id="area-tools">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                <h2 style="margin:0;">📐 面積の作図</h2>
+                <button id="btn-open-area-settings" style="background:#0056b3; color:#fff; border:none; padding:4px 8px; border-radius:4px; font-size:11px; cursor:pointer;">⚙️ 設定</button>
+            </div>
+            <div id="area-type-display" style="font-size:12px; color:#333; background:#fff; border:1px solid #ddd; padding:8px; border-radius:4px; margin-bottom:5px; font-weight:bold; text-align:center;">
+                作図中: <span id="current-area-type-label">床面積 (通常)</span>
+            </div>
+        </div>
+
+        <div id="wall-tools">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                <h2 style="margin:0;">🧱 壁の仕様</h2>
+                <button id="btn-open-wall-settings" style="background:#27ae60; color:#fff; border:none; padding:4px 8px; border-radius:4px; font-size:11px; cursor:pointer;">⚙️ 変更</button>
+            </div>
+            <div style="background:#fff; border:1px solid #ddd; padding:8px; border-radius:4px; margin-bottom:10px;">
+                <div style="font-size:12px; font-weight:bold; color:#27ae60; text-align:center; margin-bottom:4px;">合計 <span id="total-val">0.0</span> 倍</div>
+                <div style="font-size:10px; color:#333; line-height:1.4;" id="wall-spec-summary">
+                    面材1: なし / 面材2: なし<br>筋交: なし
+                </div>
+            </div>
+            <input type="hidden" id="wall-p1" value="p0">
+            <input type="hidden" id="wall-p2" value="p0">
+            <input type="hidden" id="wall-b" value="b0">
+        </div>
+
+        <details>
+            <summary style="font-size:12px; margin-top:10px;">⚙️ 任意 面材・金物仕様の登録</summary>
+            <div class="calc-box" style="background:#eef5f9; border-color:#bce8f1; margin-top:5px; padding:10px;">
+                <div style="font-size:11px; font-weight:bold; margin-bottom:5px; color:#0056b3;">■ 面材仕様</div>
+                <div id="custom-wall-container">
+                    <div class="calc-row cust-wall-row" style="margin-bottom:5px;">
+                        <input type="text" class="cust-w-n" placeholder="名称" style="width:130px; margin:0;">
+                        <input type="number" class="cust-w-v" placeholder="倍率" step="0.1" style="margin:0;">
+                    </div>
+                </div>
+                <button id="btn-add-cust-wall" class="btn-add-item">＋ 面材を追加</button>
+                <hr style="border:0; border-top:1px dashed #ccc; margin:10px 0;">
+                <div style="font-size:11px; font-weight:bold; margin-bottom:5px; color:#0056b3;">■ 金物仕様</div>
+                <div id="custom-hw-container">
+                    <div class="calc-row cust-hw-row" style="margin-bottom:5px;">
+                        <input type="text" class="cust-h-n" placeholder="記号" style="width:130px; margin:0;">
+                        <input type="number" class="cust-h-v" placeholder="耐力(kN)" step="0.1" style="margin:0;">
+                    </div>
+                </div>
+                <button id="btn-add-cust-hw" class="btn-add-item">＋ 金物を追加</button>
+            </div>
+        </details>
+
+        <button class="btn-table" style="background:#8e44ad; color:#fff; border-radius:6px; padding:12px; cursor:pointer; font-weight:bold; font-size:14px; margin-top:10px;" id="btn-export-dxf">📥 壁・金物 DXF出力 (CAD逆輸入)</button>
+
+        <div id="pillar-props" style="display:none; background:#fff3cd; padding:10px; border:1px solid #ffeeba; border-radius:4px; margin-top:10px;">
+            <b style="color:#d35400;">📍 柱のプロパティ: <span id="prop-id"></span></b>
+            <div style="margin-top:5px; font-size:11px;">
+                <label style="display:flex; align-items:center; margin-bottom:5px;">
+                    <input type="checkbox" id="prop-corner" style="width:auto; margin-right:5px;"> 出隅(角)として強制計算
+                </label>
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:5px;">
+                    <label style="margin:0;">L値の算出:</label>
+                    <select id="prop-lcalc" style="margin:0; padding:2px; width:100px;">
+                        <option value="auto">簡易(告示)</option>
+                        <option value="detail">詳細(負担面積)</option>
+                    </select>
+                </div>
+                <label>手動 金物指定:</label>
+                <select id="prop-mark" style="margin-bottom:0;"></select>
+                <div id="prop-hw-alert" style="color:red; font-weight:bold; margin-top:5px;"></div>
+                <div id="prop-detail" style="font-family:monospace; margin-top:5px; color:#555; line-height:1.4; white-space:pre-wrap; background:#fdfdfd; padding:5px; border:1px solid #ddd;"></div>
+            </div>
+        </div>
     </div>
 
     <!-- JavaScript モジュール群 -->
-    <script src="assets/js/modules/wall_4split/Version.js?v=3.0.0"></script>
-    <script src="assets/js/modules/wall_4split/state/Specs.js?v=3.0.0"></script>
-    <script src="assets/js/modules/wall_4split/state/AppState.js?v=3.0.0"></script>
-    <script src="assets/js/modules/wall_4split/wall_4split_bridge.js?v=3.0.0"></script>
-    <script src="assets/js/modules/wall_4split/logic/ServiceContainer.js?v=3.0.0"></script>
-    <script src="assets/js/modules/wall_4split/logic/MathUtils.js?v=3.0.0"></script>
-    <script src="assets/js/modules/wall_4split/logic/Parsers.js?v=3.0.0"></script>
-    <script src="assets/js/modules/wall_4split/logic/WallEngine.js?v=3.0.0"></script>
-    <script src="assets/js/modules/wall_4split/logic/CadEngine.js?v=3.0.0"></script>
-    <script src="assets/js/modules/wall_4split/logic/GridEngine.js?v=3.0.0"></script>
-    <script src="assets/js/modules/wall_4split/logic/StructuralEngine.js?v=3.0.0"></script>
-    <script src="assets/js/modules/wall_4split/logic/DocumentEngine.js?v=3.0.0"></script>
-    <script src="assets/js/modules/wall_4split/logic/NValueEngine.js?v=3.0.0"></script>
-    <script src="assets/js/modules/wall_4split/logic/AreaEngine.js?v=3.0.0"></script>
-    <script src="assets/js/modules/wall_4split/logic/AxialEngine.js?v=3.0.0"></script>
-    <script src="assets/js/modules/wall_4split/logic/SlabBeamSynchronizer.js?v=3.0.0"></script>
-    <script src="assets/js/modules/wall_4split/logic/FoundationEngine.js?v=3.0.0"></script>
-    <script src="assets/js/modules/wall_4split/logic/ReportEngine.js?v=3.0.0"></script>
-    <script src="assets/js/modules/wall_4split/logic/RoofEngine.js?v=3.0.0"></script>
-    <script src="assets/js/modules/wall_4split/logic/MitsukeEngine.js?v=3.0.0"></script>
-    <script src="assets/js/modules/wall_4split/controllers/PropertyController.js?v=3.0.0"></script>
-    <script src="assets/js/modules/wall_4split/controllers/InputController.js?v=3.0.0"></script>
-    <script src="assets/js/modules/wall_4split/controllers/ModalController.js?v=3.0.0"></script>
-    <script src="assets/js/modules/wall_4split/controllers/AppController.js?v=3.0.0"></script>
-    <script src="assets/js/modules/wall_4split/controllers/FoundationInputController.js?v=3.0.0"></script>
-    <script src="assets/js/modules/wall_4split/controllers/RoofInputController.js?v=3.0.0"></script>
-    <script src="assets/js/modules/wall_4split/view/UIView.js?v=3.0.0"></script>
-    <script src="assets/js/modules/wall_4split/view/MainRenderer.js?v=3.0.0"></script>
-    <script src="assets/js/modules/wall_4split/view/FoundationRenderer.js?v=3.0.0"></script>
-    <script src="assets/js/modules/wall_4split/view/DocumentRenderer.js?v=3.0.0"></script>
-    <script src="assets/js/modules/wall_4split/view/ElevationRenderer.js?v=3.0.0"></script>
-    <script src="assets/js/modules/wall_4split/view/RoofRenderer.js?v=3.0.0"></script>
-    <script src="assets/js/modules/wall_4split/view/ThreeDPreviewController.js?v=3.0.0"></script>
-    <script src="assets/js/modules/wall_4split/wall_4split_export.js?v=3.0.0"></script>
-    <script src="assets/js/modules/wall_4split/wall_4split_cad.js?v=3.0.0"></script>
-    <script src="assets/js/modules/wall_4split/wall_4split_render.js?v=3.0.0"></script>
-    <script src="assets/js/modules/wall_4split/wall_4split_pdf.js?v=3.0.0"></script>
-    <script src="assets/js/modules/wall_4split/wall_4split_calc.js?v=3.0.0"></script>
-    <script src="assets/js/modules/wall_4split/wall_4split_foundation_engine.js?v=3.0.0"></script>
-    <script src="assets/js/modules/wall_4split/wall_4split_report.js?v=3.0.0"></script>
-    <script src="assets/js/modules/wall_4split/wall_4split_input.js?v=3.0.0"></script>
-    <script src="assets/js/modules/wall_4split/wall_4split_main.js?v=3.0.0"></script>
+    <script src="assets/js/modules/wall_4split/Version.js?v=3.0.2"></script>
+    <script src="assets/js/modules/wall_4split/state/Specs.js?v=3.0.2"></script>
+    <script src="assets/js/modules/wall_4split/state/AppState.js?v=3.0.2"></script>
+    <script src="assets/js/modules/wall_4split/wall_4split_bridge.js?v=3.0.2"></script>
+    <script src="assets/js/modules/wall_4split/logic/ServiceContainer.js?v=3.0.2"></script>
+    <script src="assets/js/modules/wall_4split/logic/MathUtils.js?v=3.0.2"></script>
+    <script src="assets/js/modules/wall_4split/logic/Parsers.js?v=3.0.2"></script>
+    <script src="assets/js/modules/wall_4split/logic/WallEngine.js?v=3.0.2"></script>
+    <script src="assets/js/modules/wall_4split/logic/CadEngine.js?v=3.0.2"></script>
+    <script src="assets/js/modules/wall_4split/logic/GridEngine.js?v=3.0.2"></script>
+    <script src="assets/js/modules/wall_4split/logic/StructuralEngine.js?v=3.0.2"></script>
+    <script src="assets/js/modules/wall_4split/logic/DocumentEngine.js?v=3.0.2"></script>
+    <script src="assets/js/modules/wall_4split/logic/NValueEngine.js?v=3.0.2"></script>
+    <script src="assets/js/modules/wall_4split/logic/AreaEngine.js?v=3.0.2"></script>
+    <script src="assets/js/modules/wall_4split/logic/AxialEngine.js?v=3.0.2"></script>
+    <script src="assets/js/modules/wall_4split/logic/SlabBeamSynchronizer.js?v=3.0.2"></script>
+    <script src="assets/js/modules/wall_4split/logic/FoundationEngine.js?v=3.0.2"></script>
+    <script src="assets/js/modules/wall_4split/logic/ReportEngine.js?v=3.0.2"></script>
+    <script src="assets/js/modules/wall_4split/logic/RoofEngine.js?v=3.0.2"></script>
+    <script src="assets/js/modules/wall_4split/logic/MitsukeEngine.js?v=3.0.2"></script>
+    <script src="assets/js/modules/wall_4split/controllers/PropertyController.js?v=3.0.2"></script>
+    <script src="assets/js/modules/wall_4split/controllers/InputController.js?v=3.0.2"></script>
+    <script src="assets/js/modules/wall_4split/controllers/ModalController.js?v=3.0.2"></script>
+    <script src="assets/js/modules/wall_4split/controllers/AppController.js?v=3.0.2"></script>
+    <script src="assets/js/modules/wall_4split/controllers/FoundationInputController.js?v=3.0.2"></script>
+    <script src="assets/js/modules/wall_4split/controllers/RoofInputController.js?v=3.0.2"></script>
+    <script src="assets/js/modules/wall_4split/view/UIView.js?v=3.0.2"></script>
+    <script src="assets/js/modules/wall_4split/view/MainRenderer.js?v=3.0.2"></script>
+    <script src="assets/js/modules/wall_4split/view/FoundationRenderer.js?v=3.0.2"></script>
+    <script src="assets/js/modules/wall_4split/view/DocumentRenderer.js?v=3.0.2"></script>
+    <script src="assets/js/modules/wall_4split/view/ElevationRenderer.js?v=3.0.2"></script>
+    <script src="assets/js/modules/wall_4split/view/RoofRenderer.js?v=3.0.2"></script>
+    <script src="assets/js/modules/wall_4split/view/ThreeDPreviewController.js?v=3.0.2"></script>
+    <script src="assets/js/modules/wall_4split/wall_4split_export.js?v=3.0.2"></script>
+    <script src="assets/js/modules/wall_4split/wall_4split_cad.js?v=3.0.2"></script>
+    <script src="assets/js/modules/wall_4split/wall_4split_render.js?v=3.0.2"></script>
+    <script src="assets/js/modules/wall_4split/wall_4split_pdf.js?v=3.0.2"></script>
+    <script src="assets/js/modules/wall_4split/wall_4split_calc.js?v=3.0.2"></script>
+    <script src="assets/js/modules/wall_4split/wall_4split_foundation_engine.js?v=3.0.2"></script>
+    <script src="assets/js/modules/wall_4split/wall_4split_report.js?v=3.0.2"></script>
+    <script src="assets/js/modules/wall_4split/wall_4split_input.js?v=3.0.2"></script>
+    <script src="assets/js/modules/wall_4split/wall_4split_main.js?v=3.0.2"></script>
 
-    <!-- マジックリンク認証制御クライアントスクリプト -->
+    <!-- マジックリンク認証制御JS -->
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             checkAuth();
@@ -500,15 +869,12 @@
             try {
                 const res = await fetch('api/check_auth.php', { cache: 'no-store' });
                 const data = await res.json();
-
                 const authModal = document.getElementById('modal-auth-login');
 
                 if (data.authenticated) {
-                    // 認証済み: ログインモーダルを非表示
                     if (authModal) authModal.style.display = 'none';
                     console.log('Logged in as:', data.user.email);
                 } else {
-                    // 未認証: モーダルを表示
                     if (authModal) authModal.style.display = 'flex';
                 }
             } catch (e) {
