@@ -97,8 +97,11 @@ window.toCanvasPixel = (x_or_obj, y_val) => {
 window.toWorldCoord = (cx, cy) => {
     const s = window.AppState;
     if (!s || !s.canvas) return { x: 0, y: 0 };
+    const rect = s.canvas.getBoundingClientRect();
+    const physX = cx * (s.canvas.width / (rect.width || 1));
+    const physY = cy * (s.canvas.height / (rect.height || 1));
     return {
-        x: (cx - s.offsetX) / s.scale,
-        y: (s.canvas.height - cy - s.offsetY) / s.scale
+        x: (physX - s.offsetX) / s.scale,
+        y: (s.canvas.height - physY - s.offsetY) / s.scale
     };
 };

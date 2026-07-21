@@ -64,6 +64,11 @@ window.AppController = {
             state.init();
         }
 
+        // [v3.0.10] 0.1. 最新の通り芯（グリッド）を最優先で解析・構築
+        if (window.GridEngine && window.GridEngine.analyzeGrids) {
+            window.GridEngine.analyzeGrids(state);
+        }
+
         // 0.2. Auto-calculate projected areas from roofFaces (if present)
         if (window.MitsukeEngine && window.MitsukeEngine.updateProjectedAreas) {
             window.MitsukeEngine.updateProjectedAreas(state);
