@@ -83,8 +83,8 @@ window.MitsukeEngine = {
                 const z = dist * slope + tVertical + baseDelta;
                 if (z > relZMax2F) relZMax2F = z;
             });
-        });
         const eavesZ2F = has2FRoof ? (maxH - relZMax2F) : (lvl.FL2 + (parseFloat(c.floorHeight2F ?? 2.7)) * 1000);
+        const eavesZ1F = lvl.FL2; // 1F下屋根の基点は2FL(3261mm)
 
         // 屋根の線分(Top, Bot)を収集
         let topSegments = [];

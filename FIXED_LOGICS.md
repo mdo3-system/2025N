@@ -503,9 +503,11 @@ $$R_i = A + B \cdot x_i$$
 3. **初期化スクリプト**:
    - `setup_database.php` をコマンドライン（SSH経由: `php setup_database.php`）で実行し、各テーブルを自動作成・保守する。
 
-### ⑨ 見附面積プレビュー (prim.name.includes) TypeError エラー解消 (v3.0.6)
-- `wall_4split_pdf.js` の `generateAutoMitsukeCanvas` (587行目) 内にて、未定義属性に対する `prim.name.includes('屋根')` 呼出を `if (prim.name && typeof prim.name.includes === 'function' && prim.name.includes('屋根'))` へ修正。
-- ヌルガードを完全適用し、見附面積図（求積図プレビュー）がクラッシュせず100%正常にプレビュー表示されるよう修復。
+### ⑩ 屋根流れ矢印向き変更 ＆ 柱ボックス表示強化 ＆ 見附面積図3D連動精度向上 (v3.0.7)
+- **屋根流れ矢印向き**: `RoofRenderer.js` の勾配方向ベクトルを反転し、「水上（高い方）から水下（低い方）へ下る方向」に矢印の向きを変更。
+- **柱ボックス描画の強化**: `MainRenderer.js` の `drawPillars` で柱正方形ボックス（出隅は円）に視認性の高いホワイト/ブラックの外周枠線を追記し、作図画面上での視認性を修復。
+- **見附面積図の3D空間連動**: `MitsukeEngine.js` の2F軒高基準 `eavesZ2F` および各頂点GL高さを `ThreeDPreviewController.js` の 3Dモデル生成基準と完全一致化。
+
 
 
 

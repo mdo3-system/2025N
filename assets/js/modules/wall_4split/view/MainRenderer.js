@@ -709,9 +709,20 @@ window.MainRenderer = {
                 const isSelected = state.selectedPillar === p;
                 const isHovered = state.hoveredPillar === p;
                 ctx.fillStyle = state.isPrintMode ? '#333' : (isSelected ? '#e74c3c' : (isHovered ? '#e67e22' : (p.isManual ? '#2ecc71' : '#3498db')));
+                ctx.strokeStyle = state.isPrintMode ? '#000000' : '#ffffff';
+                ctx.lineWidth = 1.5;
                 const isC = p.isManualCorner !== null ? p.isManualCorner : p.isCornerAuto;
-                if (isC) { ctx.beginPath(); ctx.arc(pt.cx, pt.cy, 8, 0, Math.PI * 2); ctx.fill(); }
-                else { ctx.fillRect(pt.cx - 7, pt.cy - 7, 14, 14); }
+                if (isC) { 
+                    ctx.beginPath(); 
+                    ctx.arc(pt.cx, pt.cy, 8, 0, Math.PI * 2); 
+                    ctx.fill(); 
+                    ctx.stroke();
+                } else { 
+                    ctx.beginPath();
+                    ctx.rect(pt.cx - 7, pt.cy - 7, 14, 14);
+                    ctx.fill();
+                    ctx.stroke();
+                }
 
                 // N値表示
                 if (state.elementVisibility.pillarNValues && (window.getMode() === 'n-value' || window.getMode() === 'select') && p.nValue !== undefined && !['不要', '-'].includes(p.nMark)) {

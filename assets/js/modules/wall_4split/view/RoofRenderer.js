@@ -103,11 +103,12 @@ window.RoofRenderer = {
         const sdx = cpP2.cx - cpP1.cx;
         const sdy = cpP2.cy - cpP1.cy;
         const slen = Math.hypot(sdx, sdy);
-        const sux = slen > 0 ? sdx / slen : 0;
-        const suy = slen > 0 ? sdy / slen : 1;
+        // [v3.0.7] 屋根の流れ方向（水上→水下：下る方向）に矢印の向きを変更
+        const sux = slen > 0 ? -sdx / slen : 0;
+        const suy = slen > 0 ? -sdy / slen : -1;
 
         ctx.save();
-        // 1. Draw directed arrow pointing in the direction of rise (p1 -> p2)
+        // 1. Draw directed arrow pointing in the downward slope direction (high -> low)
         const arrowLength = 36; // screen pixels
         const halfL = arrowLength / 2;
 
@@ -123,7 +124,7 @@ window.RoofRenderer = {
         ctx.lineTo(endCx, endCy);
         ctx.stroke();
 
-        // Draw arrowhead at end point
+        // Draw arrowhead at end point (pointing downwards)
         const headSize = 6;
         const angle = Math.atan2(suy, sux);
         ctx.fillStyle = isPrintMode ? '#d35400' : '#e67e22';
