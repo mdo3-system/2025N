@@ -972,6 +972,11 @@ function showAreaPreview() {
     if (!pc) return;
     pc.innerHTML = '';
 
+    // [v3.0.8] 見附面積データ・投影ポリゴンを自動再計算
+    if (window.MitsukeEngine && typeof window.MitsukeEngine.updateProjectedAreas === 'function') {
+        window.MitsukeEngine.updateProjectedAreas(window.AppState);
+    }
+
     const iF1 = createLayerFilteredImage('floor', ['AREA_D_1F', 'AREA_1F'], ['BG_1F'], '1F', true, 1.0, true);
     const iF2 = createLayerFilteredImage('floor', ['AREA_D_2F', 'AREA_2F'], ['BG_2F'], '2F', true, 1.0, true);
     const iFR = createLayerFilteredImage('floor', ['AREA_D_RF', 'AREA_RF'], ['BG_RF'], 'RF', true, 1.0, true);

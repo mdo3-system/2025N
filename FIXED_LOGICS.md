@@ -503,10 +503,11 @@ $$R_i = A + B \cdot x_i$$
 3. **初期化スクリプト**:
    - `setup_database.php` をコマンドライン（SSH経由: `php setup_database.php`）で実行し、各テーブルを自動作成・保守する。
 
-### ⑩ 屋根流れ矢印向き変更 ＆ 柱ボックス表示強化 ＆ 見附面積図3D連動精度向上 (v3.0.7)
-- **屋根流れ矢印向き**: `RoofRenderer.js` の勾配方向ベクトルを反転し、「水上（高い方）から水下（低い方）へ下る方向」に矢印の向きを変更。
-- **柱ボックス描画の強化**: `MainRenderer.js` の `drawPillars` で柱正方形ボックス（出隅は円）に視認性の高いホワイト/ブラックの外周枠線を追記し、作図画面上での視認性を修復。
-- **見附面積図の3D空間連動**: `MitsukeEngine.js` の2F軒高基準 `eavesZ2F` および各頂点GL高さを `ThreeDPreviewController.js` の 3Dモデル生成基準と完全一致化。
+### ⑪ 左パネルN値計算結果表示復元 ＆ 見附面積自動算出 ＆ 1F/2F階切替・個別レイヤ表示修復 (v3.0.8)
+- **左パネルN値表示**: `ReportEngine.js` と `index.html` (`#left-report-container`) の接続を修復し、N値計算根拠表・直下率・壁量判定およびプロパティ表示が左パネル下部に常に自動更新・完全表示されるよう復元。
+- **見附面積の自動算出**: `wall_4split_pdf.js` の `showAreaPreview()` 実行直前に `MitsukeEngine.updateProjectedAreas()` を自動呼出するよう接続し、3Dプレビューを挟まずに「🖼️ 見付面積」ボタン一つで即座に最新求積図がプレビュー描画される構造へ改修。
+- **1F/2F切替 ＆ 個別レイヤ表示機能**: `AppController.js` の `updateWallUI` 内でユーザーが手動で設定した `elementVisibility` (柱・耐力壁・基礎・壁・窓等の表示切替) が上書き消去されないようロジックを保持修復。
+
 
 
 

@@ -121,7 +121,7 @@ window.ReportEngine = {
         }
 
         const lc = document.getElementById('left-report-container');
-        if (lc) lc.innerHTML = h1 + h2 + lambdaBlock;
+        if (lc) lc.innerHTML = h1 + h2 + lambdaBlock + ratioBlock;
     },
 
     buildWallLegendData: function(state) {

@@ -333,34 +333,19 @@ window.AppController = {
 
         const vis = window.AppState.elementVisibility;
         if (vis) {
-            // 作図、屋根モード時の初期状態レイヤー制御：
-            // 「基礎モード用」の全レイヤは全OFF
-            vis.f_slabs = false;
-            vis.f_beams = false;
-            vis.f_manholes = false;
-
             if (mode === 'roof') {
-                // 屋根モード：外壁線、屋根、屋根グリッドのみ表示
-                vis.grids = false;
-                vis.pillars = false;
-                vis.pillarNValues = false;
-                vis.walls = false;
-                vis.windows = false;
-                vis.areas = false;
-                vis.div4 = false;
                 vis.f_ext_walls = true;
                 vis.roofGrids = true;
                 vis.roofs = true;
             } else {
-                // 作図モード (mode === 'wall' 等)：屋根と屋根グリッドを非表示
-                vis.grids = true;
-                vis.pillars = true;
-                vis.pillarNValues = true;
-                vis.walls = true;
-                vis.windows = true;
-                vis.areas = true;
-                vis.div4 = true;
-                vis.f_ext_walls = true;
+                // 初回未設定時のみ初期デフォルト値をセットし、ユーザーが個別に変更した設定を保持する
+                if (vis.pillars === undefined) vis.pillars = true;
+                if (vis.walls === undefined) vis.walls = true;
+                if (vis.windows === undefined) vis.windows = true;
+                if (vis.grids === undefined) vis.grids = true;
+                if (vis.areas === undefined) vis.areas = true;
+                if (vis.div4 === undefined) vis.div4 = true;
+                if (vis.pillarNValues === undefined) vis.pillarNValues = true;
                 vis.roofGrids = false;
                 vis.roofs = false;
             }
