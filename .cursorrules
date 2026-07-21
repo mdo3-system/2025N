@@ -69,7 +69,7 @@ AIは、コードを提案する際、必ず以下のヘッダーを冒頭に付
     - 次に `git add .` および `git commit -m "Backup before: [指示内容]"` を実行せよ。
     - コミット後、必ず `git push origin main` を行い、GitHubへプッシュすること。
     - **【重要】GitHubへのプッシュ完了後、必ず以下のSSHコマンドを実行し、本番Webサーバー(XServer)へ変更をデプロイすること。**
-      `ssh -o BatchMode=yes -p 10022 mdo3@mdo3.xsrv.jp "cd thanks.work/public_html/system && git pull origin main"`
+      `ssh -o BatchMode=yes -p 10022 mdo3@mdo3.xsrv.jp "cd eie.jp/public_html/2025 && git pull origin main"`
     - **【重要】データベースの変更（ALTER TABLE等のマイグレーションスクリプト）を作成した場合は、ユーザーにブラウザからアクセスさせるのではなく、AIが必ずSSH経由でコマンドラインから `php スクリプト名.php` を実行し、直接XServer上で反映させること。**
     - 「バックアップおよびデプロイ完了」と報告する際は、必ず実際に実行した Git/SSH コマンドの出力をチャット欄に引用せよ。証拠がない報告は虚偽と見なす。
 3.  **新バージョンの宣言と反映:**

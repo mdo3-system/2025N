@@ -1,5 +1,5 @@
-$path = '.\templates\calcs\wall_4split.html'
+$path = '.\index.html'
 $text = [IO.File]::ReadAllText($path, [System.Text.Encoding]::UTF8)
-$text = $text -replace '\?v=2\.6\.19', '?v=2.7.0'
+$text = $text -replace '\?v=v?[0-9\.]+', '?v=3.0.0'
 $utf8NoBom = New-Object System.Text.UTF8Encoding $False
 [IO.File]::WriteAllText($path, $text, $utf8NoBom)

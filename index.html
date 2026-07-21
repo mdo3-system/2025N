@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>上善如水 - 壁量計算WEB (v3.0.0)</title>
+    <script src="https://cdn.jsdelivr.net/npm/dxf-parser@1.1.2/dist/dxf-parser.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/encoding-japanese/2.0.0/encoding.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/clipper-lib@6.4.2/clipper.js"></script>
+    <link rel="icon" href="favicon.ico">
+    <style>
+        body {
+            margin: 0;
+            font-family: "Segoe UI", "Meiryo", sans-serif;
+            display: flex;
+            height: 100vh;
+            background-color: #f5f5f5;
+            color: #333;
+            overflow: hidden;
+        }
+
+        #left-panel {
+            width: 460px;
+            background-color: #ffffff;
+            border-right: 1px solid #ccc;
+            padding: 15px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #center-panel {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            background-color: #e8e8e8;
+        }
+
+        #right-panel {
+            width: 360px;
+            background-color: #ffffff;
+            border-left: 1px solid #ccc;
+            padding: 15px;
+            overflow-y: auto;
+        }
+
+        h2 {
+            font-size: 15px;
+            border-bottom: 2px solid #0056b3;
+            padding-bottom: 5px;
+            margin-top: 0;
+            color: #0056b3;
+        }
+
+        .canvas-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 20px;
+            background: #fff;
+            border-bottom: 1px solid #ccc;
+        }
+
+        .tab-btn {
+            padding: 8px 15px;
+            font-size: 13px;
+            font-weight: bold;
+            cursor: pointer;
+            border: 1px solid #ccc;
+            background: #f0f0f0;
+            border-radius: 4px;
+            margin-right: 5px;
+            outline: none;
+            transition: 0.2s;
+        }
+
+        .tab-btn.active {
+            background: #0056b3;
+            color: white;
+            border-color: #0056b3;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+
+        .action-btn {
+            background: #e67e22;
+            color: white;
+            padding: 5px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: bold;
+            border: none;
+            display: inline-block;
+            text-align: center;
+        }
+
+        .action-btn.save {
+            background: #27ae60;
+        }
+
+        .action-btn.load {
+            background: #8e44ad;
+        }
+
+        .btn-undo {
+            background-color: #6c757d;
+            color: white;
+            border: none;
+            cursor: pointer;
+            padding: 5px 12px;
+            font-size: 12px;
+            font-weight: bold;
+            border-radius: 4px;
+        }
+
+        .btn-table {
+            background-color: #17a2b8;
+            color: white;
+            border: none;
+            cursor: pointer;
+            padding: 8px;
+            font-size: 12px;
+            font-weight: bold;
+            border-radius: 4px;
+            width: 100%;
+            margin-bottom: 10px;
+        }
+
+        .btn-table.doc {
+            background-color: #2c3e50;
+            font-size: 14px;
+            padding: 12px;
+        }
+
+        .btn-table.csv {
+            background-color: #16a085;
+        }
+
+        .btn-table.calc {
+            background-color: #8e44ad;
+        }
+
+        #cad-container {
+            flex-grow: 1;
+            position: relative;
+            background-color: #1e1e1e;
+            overflow: hidden;
+        }
+
+        #cad-canvas {
+            display: block;
+            cursor: crosshair;
+        }
+
+        label {
+            font-size: 11px;
+            display: block;
+            margin-bottom: 2px;
+            color: #555;
+            font-weight: bold;
+        }
+
+        select,
+        input[type="number"],
+        input[type="text"] {
+            width: 100%;
+            padding: 5px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 12px;
+            box-sizing: border-box;
+        }
+
+        details {
+            background: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-bottom: 15px;
+        }
+
+        summary {
+            font-weight: bold;
+            font-size: 13px;
+            padding: 10px;
+            cursor: pointer;
+            background: #e8f4f8;
+            outline: none;
+            border-radius: 4px;
+            color: #0056b3;
+        }
+
+        .calc-content {
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .calc-box {
+            background: #fff;
+            border: 1px solid #ccc;
+            padding: 6px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+        }
+
+        .calc-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 3px;
+        }
+
+        .calc-row input,
+        .calc-row select {
+            width: 55px;
+            text-align: right;
+            margin-bottom: 0;
+            padding: 2px;
+            font-size: 11px;
+        }
+
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.6);
+            z-index: 10000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: #fff;
+            border-radius: 8px;
+            width: 95vw;
+            max-width: 1400px;
+            padding: 30px;
+            position: relative;
+            margin: auto;
+        }
+
+        /* ログイン認証モーダル用 */
+        #modal-auth-login {
+            display: flex;
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.95);
+            z-index: 999999;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(8px);
+        }
+
+        .auth-card {
+            background: #ffffff;
+            border-radius: 16px;
+            padding: 40px;
+            width: 100%;
+            max-width: 440px;
+            box-shadow: 0 20px 25px -5px rgba(0,0,0,0.3), 0 10px 10px -5px rgba(0,0,0,0.2);
+            text-align: center;
+        }
+
+        .auth-title {
+            font-size: 22px;
+            font-weight: 800;
+            color: #1e293b;
+            margin-top: 0;
+            margin-bottom: 8px;
+        }
+
+        .auth-subtitle {
+            font-size: 13px;
+            color: #64748b;
+            margin-bottom: 24px;
+            line-height: 1.5;
+        }
+
+        .auth-input {
+            width: 100%;
+            padding: 12px 16px;
+            font-size: 14px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            box-sizing: border-box;
+            transition: all 0.2s;
+            outline: none;
+        }
+
+        .auth-input:focus {
+            border-color: #2563eb;
+            box-shadow: 0 0 0 3px rgba(37,99,235,0.15);
+        }
+
+        .auth-btn {
+            width: 100%;
+            background: #2563eb;
+            color: #ffffff;
+            border: none;
+            padding: 14px;
+            font-size: 15px;
+            font-weight: 700;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .auth-btn:hover {
+            background: #1d4ed8;
+        }
+
+        .auth-msg {
+            margin-top: 16px;
+            font-size: 13px;
+            line-height: 1.5;
+            padding: 10px;
+            border-radius: 6px;
+        }
+
+        .auth-msg.success {
+            background: #dcfce7;
+            color: #166534;
+            border: 1px solid #bbf7d0;
+        }
+
+        .auth-msg.error {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- ========================================== -->
+    <!-- ログイン認証モーダル (マジックリンク) -->
+    <!-- ========================================== -->
+    <div id="modal-auth-login">
+        <div class="auth-card">
+            <div style="font-size:40px; margin-bottom:10px;">📐</div>
+            <div class="auth-title">上善如水 構造計算WEB</div>
+            <div class="auth-subtitle">
+                登録済みメールアドレスを入力してください。<br>ログイン用マジックリンクを送信いたします。
+            </div>
+            
+            <form id="auth-form" onsubmit="handleSendMagicLink(event)">
+                <input type="email" id="auth-email" class="auth-input" placeholder="example@domain.com" required>
+                <button type="submit" id="auth-submit-btn" class="auth-btn">✉️ ログインリンクを送信</button>
+            </form>
+
+            <div id="auth-status-msg" style="display:none;" class="auth-msg"></div>
+
+            <div style="margin-top:20px; font-size:11px; color:#94a3b8;">
+                送信元: <code>noreply@2025.eie.jp</code>
+            </div>
+        </div>
+    </div>
+
+    <!-- メイン計算ツール画面 -->
+    <div id="left-panel">
+        <h1 style="font-size:16px; margin:0 0 10px 0; color:#2c3e50; border-bottom:2px solid #2ecc71; padding-bottom:5px; display:flex; justify-content:space-between; align-items:center;">
+            <span>上善如水 <span style="font-size:12px; color:#7f8c8d;">壁量計算WEB <span id="app-version-title">v3.0.0</span></span></span>
+        </h1>
+
+        <div style="display:flex; gap:5px; margin-bottom:15px;">
+            <a href="manual/index.html" target="_blank" style="flex:1; background:#3498db; color:white; text-decoration:none; padding:8px 5px; border-radius:4px; font-size:12px; font-weight:bold; text-align:center; box-sizing:border-box;">📖 マニュアル・動画</a>
+            <a href="portal.php" style="flex:1; background:#95a5a6; color:white; text-decoration:none; padding:8px 5px; border-radius:4px; font-size:12px; font-weight:bold; text-align:center; box-sizing:border-box;">⚙️ 契約管理・解約</a>
+        </div>
+
+        <h2 style="margin-bottom: 10px;">📊 出力 ＆ サマリー</h2>
+        <div style="display:flex; gap:5px; flex-wrap:wrap; margin-bottom:10px;">
+            <button class="btn-table doc" style="flex:100%;" id="btn-gen-doc">📑 計算書を一括出力 (PDF)</button>
+            <button class="btn-table calc" style="flex:100%; background:#2980b9; color:#fff;" id="btn-elevation-viewer-left">📊 耐力壁の軸力図 (立面)</button>
+            <div style="display:flex; width:100%; gap:5px;">
+                <button class="btn-table calc" style="flex:1;" id="btn-show-area">🖼️ 見付面積</button>
+                <button class="btn-table calc" style="flex:1; background-color:#e67e22;" id="btn-show-ratio">📐 直下率</button>
+                <button class="btn-table calc" style="flex:1;" id="btn-show-center">🧲 重心剛心</button>
+                <button class="btn-table csv" style="flex:1;" id="btn-export-csv">📥 CSV保存</button>
+            </div>
+        </div>
+
+        <div id="wall-mode-panel">
+            <h2>⚙️ 計算モード</h2>
+            <div style="padding: 10px; background: #fff3cd; border: 1px solid #ffeeba; border-radius: 4px; margin-bottom: 15px;">
+                <label style="font-weight: bold; color: #d35400; font-size:12px; display:block; margin-bottom:5px;">面積算出・地震力判定モード:</label>
+                <select id="calc-mode-select" style="width:100%; padding:4px;" onchange="triggerUpdate()">
+                    <option value="kijun">建築基準法 (見下げ面積)</option>
+                    <option value="seinou">性能表示 (見上げ面積)</option>
+                </select>
+            </div>
+
+            <details open>
+                <summary>▼ 物件情報 ＆ 面積の登録</summary>
+                <div class="calc-content">
+                    <div class="calc-box" style="background:#fff3cd; border-color:#ffeeba;">
+                        <div style="font-size:11px; font-weight:bold; margin-bottom:5px; color:#d35400;">🏢 物件・設計者情報</div>
+                        <div class="calc-row"><label style="width:50px;">案件名</label><input type="text" id="info-prj" value="〇〇邸 新築工事" style="width:calc(100% - 60px); text-align:left;"></div>
+                        <div class="calc-row"><label style="width:50px;">事務所</label><input type="text" id="info-office" value="上善如水 建築設計" style="width:calc(100% - 60px); text-align:left;"></div>
+                        <div class="calc-row"><label style="width:50px;">建築士</label><input type="text" id="info-license" value="一級 第00000号" style="width:calc(100% - 60px); text-align:left;"></div>
+                        <div class="calc-row"><label style="width:50px;">設計者</label><input type="text" id="info-name" value="上善 如水" style="width:calc(100% - 60px); text-align:left;"></div>
+                    </div>
+                </div>
+            </details>
+            <div id="left-report-container"></div>
+        </div>
+    </div>
+
+    <div id="center-panel">
+        <div class="canvas-header">
+            <div style="display: flex; align-items: center; gap: 5px;">
+                <button class="tab-btn" id="tab-foundation">基礎</button>
+                <button class="tab-btn active" id="tab-1f">1階 作図</button>
+                <button class="tab-btn" id="tab-2f">2階 作図</button>
+                <button class="tab-btn" id="tab-1r">1階 屋根</button>
+                <button class="tab-btn" id="tab-2r">2階 屋根</button>
+                <button class="tab-btn" id="btn-open-3d" style="background:#8e44ad; color:#fff; border-color:#8e44ad;" onclick="window.ThreeDPreviewController.open()">🔮 3Dプレビュー</button>
+                <div style="width: 1px; height: 20px; background: #ccc; margin: 0 5px;"></div>
+                <button class="action-btn save" id="btn-save">💾 保存</button>
+                <input type="file" id="json-upload" accept=".json" style="display: none;">
+                <label for="json-upload" class="action-btn load">📂 復元</label>
+            </div>
+            <div style="display: flex; align-items: center; gap: 5px;">
+                <button class="btn-undo" id="btn-undo">↩ 戻る</button>
+                <button class="btn-undo" id="btn-redo" style="background:#666;">↪ 進む</button>
+                <button class="btn-undo" id="btn-toggle-layer" style="background:#2980b9;">🗂 レイヤ設定</button>
+            </div>
+        </div>
+        <div id="cad-container">
+            <canvas id="cad-canvas"></canvas>
+        </div>
+    </div>
+
+    <div id="right-panel">
+        <details style="margin-bottom: 15px; border-color:#e67e22;">
+            <summary style="background:#fdebd0; color:#d35400;">📂 1. DXFデータ読込 (必須)</summary>
+            <div style="padding:10px; background:#fff; font-size:11px;">
+                <b style="color:#0056b3;">① 平面図 DXF読込</b>
+                <input type="file" id="dxf-upload" accept=".dxf" style="display: none;">
+                <label for="dxf-upload" class="action-btn" style="width:100%; box-sizing:border-box; padding:8px; font-size:12px; margin-top:5px;">📂 平面図を選択</label>
+            </div>
+        </details>
+    </div>
+
+    <!-- JavaScript モジュール群 -->
+    <script src="assets/js/modules/wall_4split/Version.js?v=3.0.0"></script>
+    <script src="assets/js/modules/wall_4split/state/Specs.js?v=3.0.0"></script>
+    <script src="assets/js/modules/wall_4split/state/AppState.js?v=3.0.0"></script>
+    <script src="assets/js/modules/wall_4split/wall_4split_bridge.js?v=3.0.0"></script>
+    <script src="assets/js/modules/wall_4split/logic/ServiceContainer.js?v=3.0.0"></script>
+    <script src="assets/js/modules/wall_4split/logic/MathUtils.js?v=3.0.0"></script>
+    <script src="assets/js/modules/wall_4split/logic/Parsers.js?v=3.0.0"></script>
+    <script src="assets/js/modules/wall_4split/logic/WallEngine.js?v=3.0.0"></script>
+    <script src="assets/js/modules/wall_4split/logic/CadEngine.js?v=3.0.0"></script>
+    <script src="assets/js/modules/wall_4split/logic/GridEngine.js?v=3.0.0"></script>
+    <script src="assets/js/modules/wall_4split/logic/StructuralEngine.js?v=3.0.0"></script>
+    <script src="assets/js/modules/wall_4split/logic/DocumentEngine.js?v=3.0.0"></script>
+    <script src="assets/js/modules/wall_4split/logic/NValueEngine.js?v=3.0.0"></script>
+    <script src="assets/js/modules/wall_4split/logic/AreaEngine.js?v=3.0.0"></script>
+    <script src="assets/js/modules/wall_4split/logic/AxialEngine.js?v=3.0.0"></script>
+    <script src="assets/js/modules/wall_4split/logic/SlabBeamSynchronizer.js?v=3.0.0"></script>
+    <script src="assets/js/modules/wall_4split/logic/FoundationEngine.js?v=3.0.0"></script>
+    <script src="assets/js/modules/wall_4split/logic/ReportEngine.js?v=3.0.0"></script>
+    <script src="assets/js/modules/wall_4split/logic/RoofEngine.js?v=3.0.0"></script>
+    <script src="assets/js/modules/wall_4split/logic/MitsukeEngine.js?v=3.0.0"></script>
+    <script src="assets/js/modules/wall_4split/controllers/PropertyController.js?v=3.0.0"></script>
+    <script src="assets/js/modules/wall_4split/controllers/InputController.js?v=3.0.0"></script>
+    <script src="assets/js/modules/wall_4split/controllers/ModalController.js?v=3.0.0"></script>
+    <script src="assets/js/modules/wall_4split/controllers/AppController.js?v=3.0.0"></script>
+    <script src="assets/js/modules/wall_4split/controllers/FoundationInputController.js?v=3.0.0"></script>
+    <script src="assets/js/modules/wall_4split/controllers/RoofInputController.js?v=3.0.0"></script>
+    <script src="assets/js/modules/wall_4split/view/UIView.js?v=3.0.0"></script>
+    <script src="assets/js/modules/wall_4split/view/MainRenderer.js?v=3.0.0"></script>
+    <script src="assets/js/modules/wall_4split/view/FoundationRenderer.js?v=3.0.0"></script>
+    <script src="assets/js/modules/wall_4split/view/DocumentRenderer.js?v=3.0.0"></script>
+    <script src="assets/js/modules/wall_4split/view/ElevationRenderer.js?v=3.0.0"></script>
+    <script src="assets/js/modules/wall_4split/view/RoofRenderer.js?v=3.0.0"></script>
+    <script src="assets/js/modules/wall_4split/view/ThreeDPreviewController.js?v=3.0.0"></script>
+    <script src="assets/js/modules/wall_4split/wall_4split_export.js?v=3.0.0"></script>
+    <script src="assets/js/modules/wall_4split/wall_4split_cad.js?v=3.0.0"></script>
+    <script src="assets/js/modules/wall_4split/wall_4split_render.js?v=3.0.0"></script>
+    <script src="assets/js/modules/wall_4split/wall_4split_pdf.js?v=3.0.0"></script>
+    <script src="assets/js/modules/wall_4split/wall_4split_calc.js?v=3.0.0"></script>
+    <script src="assets/js/modules/wall_4split/wall_4split_foundation_engine.js?v=3.0.0"></script>
+    <script src="assets/js/modules/wall_4split/wall_4split_report.js?v=3.0.0"></script>
+    <script src="assets/js/modules/wall_4split/wall_4split_input.js?v=3.0.0"></script>
+    <script src="assets/js/modules/wall_4split/wall_4split_main.js?v=3.0.0"></script>
+
+    <!-- マジックリンク認証制御クライアントスクリプト -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            checkAuth();
+        });
+
+        async function checkAuth() {
+            try {
+                const res = await fetch('api/check_auth.php', { cache: 'no-store' });
+                const data = await res.json();
+
+                const authModal = document.getElementById('modal-auth-login');
+
+                if (data.authenticated) {
+                    // 認証済み: ログインモーダルを非表示
+                    if (authModal) authModal.style.display = 'none';
+                    console.log('Logged in as:', data.user.email);
+                } else {
+                    // 未認証: モーダルを表示
+                    if (authModal) authModal.style.display = 'flex';
+                }
+            } catch (e) {
+                console.error('Auth check error:', e);
+            }
+        }
+
+        async function handleSendMagicLink(e) {
+            e.preventDefault();
+            const emailInput = document.getElementById('auth-email');
+            const submitBtn = document.getElementById('auth-submit-btn');
+            const msgBox = document.getElementById('auth-status-msg');
+
+            const email = emailInput.value.trim();
+            if (!email) return;
+
+            submitBtn.disabled = true;
+            submitBtn.textContent = '送信中...';
+            msgBox.style.display = 'none';
+
+            try {
+                const res = await fetch('api/send_magic_link.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: email })
+                });
+
+                const data = await res.json();
+                msgBox.style.display = 'block';
+
+                if (data.success) {
+                    msgBox.className = 'auth-msg success';
+                    msgBox.textContent = data.message;
+                    emailInput.value = '';
+                } else {
+                    msgBox.className = 'auth-msg error';
+                    msgBox.textContent = data.message || '送信に失敗しました。';
+                }
+            } catch (err) {
+                msgBox.style.display = 'block';
+                msgBox.className = 'auth-msg error';
+                msgBox.textContent = '通信エラーが発生しました。';
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = '✉️ ログインリンクを送信';
+            }
+        }
+    </script>
+</body>
+
+</html>
