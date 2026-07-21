@@ -725,6 +725,9 @@ $$R_i = A + B \cdot x_i$$
 - **基礎梁・スラブのホバー（マウスオーバー）ハイライト実装**: `state/AppState.js`, `wall_4split_bridge.js`, `wall_4split_main.js` に `hoveredFdElement` 状態変数を追加。`FoundationInputController.js` 内の `handleMouseMove` にてマウス座標のヒットテストを行ってホバー中の要素（梁・スラブ・人通口等）を検出させ、`FoundationRenderer.js` にてホバー中の梁やスラブをオレンジ黄色（`#f39c12`）で太線・太枠ハイライト表示する仕様を導入。
 - **見附面積の致命的なスコープバグの解消**: `MitsukeEngine.js` の `generateElevationAreas` 関数内にて、`eavesZ2F` 変数の定義が `(s.roofFaces || []).forEach` ループの内側に誤って閉じ込められていたシンタックスバグ（ループの閉じ忘れ）を修正。これにより `eavesZ2F` が正しく外のスコープから見え、屋根の Z 軸レベルが `NaN` になることなく primitives 描画配列へ正しく投影されるよう改修。
 
+### ⑰ バージョン定着化 ＆ 些細な修正に伴うバージョンインクリメント (v3.0.14)
+- **バージョン管理規約の厳守**: 規約に基づき、前フェーズで完了した基礎ホバー表示および見附面積計算バグの修正内容を `v3.0.14` として定着化。キャッシュバスターと本体バージョン番号を更新し、整合性を完全に同期。
+
 
 
 
