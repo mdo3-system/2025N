@@ -104,6 +104,7 @@ Object.defineProperty(window, 'isDragging', { get: () => window.AppState.isDragg
 Object.defineProperty(window, 'lastMouseX', { get: () => window.AppState.lastMouseX, set: v => window.AppState.lastMouseX = v });
 Object.defineProperty(window, 'lastMouseY', { get: () => window.AppState.lastMouseY, set: v => window.AppState.lastMouseY = v });
 Object.defineProperty(window, 'hoveredPillar', { get: () => window.AppState.hoveredPillar, set: v => window.AppState.hoveredPillar = v });
+Object.defineProperty(window, 'hoveredFdElement', { get: () => window.AppState.hoveredFdElement, set: v => window.AppState.hoveredFdElement = v });
 Object.defineProperty(window, 'selectedPillar', { get: () => window.AppState.selectedPillar, set: v => window.AppState.selectedPillar = v });
 Object.defineProperty(window, 'snapPoint', { get: () => window.AppState.snapPoint, set: v => window.AppState.snapPoint = v });
 Object.defineProperty(window, 'areaDrawPoints', { get: () => window.AppState.areaDrawPoints, set: v => window.AppState.areaDrawPoints = v });

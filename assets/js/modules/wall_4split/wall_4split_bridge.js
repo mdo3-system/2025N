@@ -38,6 +38,7 @@ Object.defineProperties(window, {
     mouseX: { get: () => window.AppState.mouseX, set: (v) => window.AppState.mouseX = v, enumerable: true, configurable: true },
     mouseY: { get: () => window.AppState.mouseY, set: (v) => window.AppState.mouseY = v, enumerable: true, configurable: true },
     hoveredPillar: { get: () => window.AppState.hoveredPillar, set: (v) => window.AppState.hoveredPillar = v, enumerable: true, configurable: true },
+    hoveredFdElement: { get: () => window.AppState.hoveredFdElement, set: (v) => window.AppState.hoveredFdElement = v, enumerable: true, configurable: true },
     selectedPillar: { get: () => window.AppState.selectedPillar, set: (v) => window.AppState.selectedPillar = v, enumerable: true, configurable: true },
     snapPoint: { get: () => window.AppState.snapPoint, set: (v) => window.AppState.snapPoint = v, enumerable: true, configurable: true },
     currentG: { get: () => window.AppState.currentG, set: (v) => window.AppState.currentG = v, enumerable: true, configurable: true },

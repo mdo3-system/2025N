@@ -83,6 +83,7 @@ window.MitsukeEngine = {
                 const z = dist * slope + tVertical + baseDelta;
                 if (z > relZMax2F) relZMax2F = z;
             });
+        });
         // [v3.0.10] 2Fの軒高 eavesZ2F は 2FL + 2F階高 (2.7m) で確実に固定する
         const eavesZ2F = lvl.FL2 + (parseFloat(c.floorHeight2F ?? 2.7)) * 1000;
         const eavesZ1F = lvl.FL2; // 1F下屋根の基点は2FL(3261mm)

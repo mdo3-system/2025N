@@ -40,6 +40,91 @@ window.FoundationInputController = {
         // [v2.5.18 座標ズレ完全修正] handleMouseDownと同様に、物理ピクセル倍率(scaleX/Y)を掛けずに
         // 論理CSS座標(mx, my)をそのままgetFdSnapPointに渡すように修正。
         state.snapPoint = this.getFdSnapPoint(mx, my, state);
+
+        // [v3.0.13] 基礎梁・スラブ・人通口・外壁線のホバー（マウスオーバー）検出
+        let newHovered = null;
+        const fm = state.foundationMode || 'f_beam';
+        
+        // 選択モード (f_select) または削除モード (f_delete) の場合のみホバー表示を行う
+        if (fm === 'f_select' || fm === 'f_delete') {
+            const wp = window.toWorldCoord(mx, my);
+            const HIT_WORLD = 300; // mm
+            const HIT_MANHOLE_WORLD = 400; // mm
+            const candidates = [];
+
+            // 1. 人通口
+            (state.manholes || []).forEach(mh => {
+                const d = Math.hypot(wp.x - mh.x, wp.y - mh.y);
+                if (d < HIT_MANHOLE_WORLD) candidates.push({ type: 'manhole', item: mh, dist: d, priority: 1 });
+            });
+
+            // 2. 基礎梁
+            (state.foundationBeams || []).forEach(b => {
+                const segments = (b.spans && b.spans.length > 0)
+                    ? b.spans.map((s, i) => ({ p1: s.startNode, p2: s.endNode, spanIdx: i }))
+                    : [{ p1: b.p1, p2: b.p2, spanIdx: null }];
+
+                segments.forEach((seg) => {
+                    if (!seg.p1 || !seg.p2) return;
+                    const x1 = seg.p1.globalX ?? (Math.abs(seg.p1.x) < 100 ? seg.p1.x * 1000 : seg.p1.x);
+                    const y1 = seg.p1.globalY ?? (Math.abs(seg.p1.y) < 100 ? seg.p1.y * 1000 : seg.p1.y);
+                    const x2 = seg.p2.globalX ?? (Math.abs(seg.p2.x) < 100 ? seg.p2.x * 1000 : seg.p2.x);
+                    const y2 = seg.p2.globalY ?? (Math.abs(seg.p2.y) < 100 ? seg.p2.y * 1000 : seg.p2.y);
+
+                    const distWorld = window.MathUtils.distToBeamLine(wp.x, wp.y, x1, y1, x2, y2);
+                    if (distWorld < HIT_WORLD) {
+                        candidates.push({
+                            type: b.spans && b.spans.length > 0 ? 'beam_span' : 'beam',
+                            item: b,
+                            dist: distWorld,
+                            priority: 2,
+                            spanIndex: seg.spanIdx
+                        });
+                    }
+                });
+            });
+
+            // 3. 外壁線
+            (state.exteriorWalls || []).forEach(ew => {
+                if (ew.floor !== state.currentFloor) return;
+                const vts = ew.closed ? [...ew.vertices, ew.vertices[0]] : ew.vertices;
+                for (let i = 0; i < vts.length - 1; i++) {
+                    const d = window.MathUtils.distToBeamLine(wp.x, wp.y, vts[i].x, vts[i].y, vts[i+1].x, vts[i+1].y);
+                    if (d < HIT_WORLD) candidates.push({ type: 'ext_wall', item: ew, dist: d, priority: 3 });
+                }
+            });
+
+            // 4. スラブ
+            (state.foundationSlabs || []).forEach(s => {
+                if (window.MathUtils && window.MathUtils.isPointInPolygon(wp, s.vertices)) {
+                    candidates.push({ type: 'slab', item: s, dist: 10, priority: 4 });
+                }
+            });
+
+            if (candidates.length > 0) {
+                candidates.sort((a, b) => (a.priority - b.priority) || (a.dist - b.dist));
+                const best = candidates[0];
+                newHovered = { type: best.type, item: best.item, spanIndex: best.spanIndex };
+            }
+        }
+
+        // ホバー状態の更新
+        const prev = state.hoveredFdElement;
+        const isPrevNull = !prev;
+        const isNewNull = !newHovered;
+        let hasChanged = false;
+        if (isPrevNull !== isNewNull) {
+            hasChanged = true;
+        } else if (prev && newHovered) {
+            hasChanged = (prev.type !== newHovered.type || prev.item.id !== newHovered.item.id || prev.spanIndex !== newHovered.spanIndex);
+        }
+
+        if (hasChanged) {
+            state.hoveredFdElement = newHovered;
+            if (window.AppController && typeof window.AppController.refreshAll === 'function') {
+                window.AppController.refreshAll();
+            }
+        }
     },
 
     handleBeamInput: function(snap, state) {

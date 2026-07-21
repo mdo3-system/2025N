@@ -721,6 +721,10 @@ $$R_i = A + B \cdot x_i$$
 - **基礎ポップアップの復元**: 欠落していた基礎梁・スラブのプロパティポップアップ（`#fd-property-popup`）のHTMLを `index.html` に完全復元。
 - **見附面積DOM上書きリセット問題の解決**: `AppController.js` の `refreshAll` 内で `state.init()` の直後に `updateProjectedAreas(state)` を計算・逆同期するよう順序修復。HTMLフォーム上の `0.00` 手動値による自動計算値の上書き消失を防ぎ、「見附データがありません」エラーを完全解消。
 
+### ⑯ 基礎梁・スラブホバー機能追加 ＆ 見附面積計算バグの修正 (v3.0.13)
+- **基礎梁・スラブのホバー（マウスオーバー）ハイライト実装**: `state/AppState.js`, `wall_4split_bridge.js`, `wall_4split_main.js` に `hoveredFdElement` 状態変数を追加。`FoundationInputController.js` 内の `handleMouseMove` にてマウス座標のヒットテストを行ってホバー中の要素（梁・スラブ・人通口等）を検出させ、`FoundationRenderer.js` にてホバー中の梁やスラブをオレンジ黄色（`#f39c12`）で太線・太枠ハイライト表示する仕様を導入。
+- **見附面積の致命的なスコープバグの解消**: `MitsukeEngine.js` の `generateElevationAreas` 関数内にて、`eavesZ2F` 変数の定義が `(s.roofFaces || []).forEach` ループの内側に誤って閉じ込められていたシンタックスバグ（ループの閉じ忘れ）を修正。これにより `eavesZ2F` が正しく外のスコープから見え、屋根の Z 軸レベルが `NaN` になることなく primitives 描画配列へ正しく投影されるよう改修。
+
 
 
 

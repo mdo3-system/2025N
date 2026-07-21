@@ -36,14 +36,26 @@ window.FoundationRenderer = {
 
     drawSlabs: function(state, toCanvas, fdSel) {
         const ctx = state.ctx;
+        const hFd = state.hoveredFdElement || { type: null, item: null };
         (state.foundationSlabs || []).filter(s => !state.elementVisibility || state.elementVisibility.f_slabs !== false).forEach((slab, si) => {
             if (!slab.vertices || slab.vertices.length < 3) return;
             ctx.save();
             const isSelected = (fdSel.type === 'slab' && fdSel.item?.id === slab.id) || (window.highlightedSlabIndex === si);
+            const isHovered = hFd.type === 'slab' && hFd.item?.id === slab.id;
             
-            ctx.fillStyle = isSelected ? 'rgba(255, 105, 180, 0.3)' : 'rgba(52, 152, 219, 0.15)';
-            ctx.strokeStyle = isSelected ? '#e74c3c' : '#2980b9';
-            ctx.lineWidth = isSelected ? 4 : 2;
+            if (isSelected) {
+                ctx.fillStyle = 'rgba(255, 105, 180, 0.3)';
+                ctx.strokeStyle = '#e74c3c';
+                ctx.lineWidth = 4;
+            } else if (isHovered) {
+                ctx.fillStyle = 'rgba(243, 156, 18, 0.25)'; // ホバー時はオレンジ黄色
+                ctx.strokeStyle = '#f39c12';
+                ctx.lineWidth = 3.5;
+            } else {
+                ctx.fillStyle = 'rgba(52, 152, 219, 0.15)';
+                ctx.strokeStyle = '#2980b9';
+                ctx.lineWidth = 2;
+            }
             
             ctx.beginPath();
             slab.vertices.forEach((v, i) => {
@@ -179,42 +191,54 @@ window.FoundationRenderer = {
     drawBeams: function(state, toCanvas, fdSel) {
         if (!state.elementVisibility || state.elementVisibility.f_beams === false) return;
         const ctx = state.ctx;
+        const hFd = state.hoveredFdElement || { type: null, item: null };
         (state.foundationBeams || []).forEach(b => {
             const bp = b.props || {};
             if (b.spans && b.spans.length > 0) {
                 b.spans.forEach((span, idx) => {
                     if (!span || !span.startNode || !span.endNode) return;
                     const isSelected = fdSel.type === 'beam_span' && fdSel.item?.id === b.id && fdSel.spanIndex === idx;
+                    const isHovered = hFd.type === 'beam_span' && hFd.item?.id === b.id && hFd.spanIndex === idx;
                     
                     // [修正] スパン固有のプロパティと梁全体のプロパティをマージして参照する
                     // これにより、個別設定がない場合は全体のデフォルト値が正しく表示される
                     const effectiveProps = { ...bp, ...(span.props || {}) };
-                    this.drawBeamSegment(ctx, span.startNode, span.endNode, effectiveProps, isSelected, span.isNG, toCanvas);
+                    this.drawBeamSegment(ctx, span.startNode, span.endNode, effectiveProps, isSelected, isHovered, span.isNG, toCanvas);
                 });
             } else {
                 if (!b.p1 || !b.p2) return;
                 const isSelected = fdSel.type === 'beam' && fdSel.item?.id === b.id;
-                this.drawBeamSegment(ctx, b.p1, b.p2, bp, isSelected, b.isNG, toCanvas);
+                const isHovered = hFd.type === 'beam' && hFd.item?.id === b.id;
+                this.drawBeamSegment(ctx, b.p1, b.p2, bp, isSelected, isHovered, b.isNG, toCanvas);
             }
         });
     },
 
-    drawBeamSegment: function(ctx, p1Obj, p2Obj, props, isSelected, isNG, toCanvas) {
+    drawBeamSegment: function(ctx, p1Obj, p2Obj, props, isSelected, isHovered, isNG, toCanvas) {
         const p1 = toCanvas(p1Obj, null), p2 = toCanvas(p2Obj, null);
         if (p1.cx == null) return;
 
         ctx.save();
         ctx.beginPath(); ctx.moveTo(p1.cx, p1.cy); ctx.lineTo(p2.cx, p2.cy);
         ctx.globalAlpha = 1.0;
-        ctx.strokeStyle = isSelected ? '#ff00ff' : '#ff33aa';
-        ctx.lineWidth = isSelected ? 8 : 7;
+        
+        if (isSelected) {
+            ctx.strokeStyle = '#ff00ff';
+            ctx.lineWidth = 8;
+        } else if (isHovered) {
+            ctx.strokeStyle = '#f39c12'; // ホバー時はオレンジ黄色
+            ctx.lineWidth = 7.5;
+        } else {
+            ctx.strokeStyle = '#ff33aa';
+            ctx.lineWidth = 7;
+        }
         ctx.lineCap = 'round';
         ctx.stroke();
 
         const mx = (p1.cx + p2.cx) / 2, my = (p1.cy + p2.cy) / 2;
         const lstr = `${props?.width || 150}x${props?.height || 640}`;
         ctx.font = 'bold 11px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        ctx.fillStyle = isSelected ? '#ff00ff' : '#2c3e50';
+        ctx.fillStyle = isSelected ? '#ff00ff' : (isHovered ? '#d35400' : '#2c3e50');
         ctx.fillText(lstr, mx, my);
 
         if (isNG) {

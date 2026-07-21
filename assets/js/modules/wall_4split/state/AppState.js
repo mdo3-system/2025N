@@ -225,6 +225,7 @@ window.AppState = {
     selectedElement: null,        // Currently selected object (Wall, Pillar, etc.)
     hoveredElement: null,
     hoveredPillar: null,
+    hoveredFdElement: null, // { type: 'beam'|'slab'|'manhole'|etc, item: Object, spanIndex: number }
     selectedPillar: null,
     snapPoint: null,
     diagGridPoints: [], // [v2.5.10] Temporary points for drawing diagonal grids
