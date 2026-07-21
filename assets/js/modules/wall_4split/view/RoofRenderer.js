@@ -150,7 +150,17 @@ window.RoofRenderer = {
         ctx.fillText(`${face.slope.toFixed(1)}寸勾配`, cpCenter.cx, cpCenter.cy + textOffset - 4);
 
         // Areas (Horizontal projected area and sloped real area)
-        const projArea = window.RoofEngine.calculatePolygonArea2D(face.vertices.map(v => ({ u: v.x/1000, v: v.y/1000 })));
+        let projArea = 0;
+        if (window.RoofEngine && typeof window.RoofEngine.calculatePolygonArea2D === 'function') {
+            projArea = window.RoofEngine.calculatePolygonArea2D(face.vertices.map(v => ({ u: v.x/1000, v: v.y/1000 })));
+        } else if (face.vertices && face.vertices.length >= 3) {
+            let sum = 0;
+            for (let i = 0; i < face.vertices.length; i++) {
+                const p1 = face.vertices[i], p2 = face.vertices[(i + 1) % face.vertices.length];
+                sum += (p1.x/1000 * p2.y/1000) - (p2.x/1000 * p1.y/1000);
+            }
+            projArea = Math.abs(sum) / 2;
+        }
         const slopeVal = face.slope / 10;
         const slopedArea = projArea * Math.sqrt(1 + slopeVal * slopeVal);
         ctx.fillText(`投影: ${projArea.toFixed(2)}㎡`, cpCenter.cx, cpCenter.cy + textOffset + 8);

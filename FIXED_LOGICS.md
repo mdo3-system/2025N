@@ -503,10 +503,11 @@ $$R_i = A + B \cdot x_i$$
 3. **初期化スクリプト**:
    - `setup_database.php` をコマンドライン（SSH経由: `php setup_database.php`）で実行し、各テーブルを自動作成・保守する。
 
-### ⑦ MitsukeEngine オフセット計算TypeErrorエラー解消 (v3.0.4)
-- `MathUtils.js` 内に ClipperLib 幾何計算を利用した共通 `offsetPolygon(poly, d)` 関数を追加・配置。
-- `MitsukeEngine.js` 内の `offsetPolygon` を修正し、`MathUtils.offsetPolygon` -> `RoofEngine.offsetPolygon` -> `FoundationEngine._offsetPolygon` の順で安全にフォールバック参照するガード構造を適用。
-- 未定義関数呼出による `TypeError: window.WallEngine._offsetPolygon is not a function` エラーを完全解消。
+### ⑧ RoofEngine.calculatePolygonArea2D TypeError 解消 ＆ 屋根描画・全パネル完全修復 (v3.0.5)
+- `RoofEngine.js` 内に 2D 水平射影面積（㎡）を計算する `calculatePolygonArea2D(vertices)` 関数を完全実装・復元。
+- `RoofRenderer.js` の 153 行目に安全ガードを追加し、描画ループが途中でクラッシュして屋根が一部しか出ない現象を完全解消。
+- 描画クラッシュに伴う UI イベント切替（屋根作図ツールパネル、DXFレイヤ表示設定ダイアログ）の連動停止を完全に復旧。
+
 
 
 

@@ -1,4 +1,4 @@
 /**
  * Version.js - Centralized Version Management
  */
-window.APP_VERSION = "v3.0.4"; // Centralized MathUtils.offsetPolygon & MitsukeEngine TypeError fix
+window.APP_VERSION = "v3.0.5"; // Fix RoofEngine.calculatePolygonArea2D TypeError & restore full roof rendering & UI panels

@@ -126,5 +126,25 @@ window.RoofEngine = {
         return offsetPts;
     },
 
-
+    /**
+     * 2D多角形（頂点配列）の水平投影面積(㎡)を計算する
+     */
+    calculatePolygonArea2D: function(vertices) {
+        if (!vertices || vertices.length < 3) return 0;
+        let sum = 0;
+        for (let i = 0; i < vertices.length; i++) {
+            const p1 = vertices[i];
+            const p2 = vertices[(i + 1) % vertices.length];
+            const u1 = p1.u !== undefined ? p1.u : p1.x;
+            const v1 = p1.v !== undefined ? p1.v : p1.y;
+            const u2 = p2.u !== undefined ? p2.u : p2.x;
+            const v2 = p2.v !== undefined ? p2.v : p2.y;
+            sum += (u1 * v2) - (u2 * v1);
+        }
+        let area = Math.abs(sum) / 2;
+        if (area > 1000) {
+            area = area / 1000000;
+        }
+        return area;
+    }
 };
