@@ -276,7 +276,8 @@ window.ThreeDPreviewController = {
             });
         });
 
-        const eavesZ2F = has2FRoof ? (maxH - relZMax2F) : (zMin2F + axH2);
+        // [v3.0.10] 3Dプレビューの軒高も 2FL + 2F階高で完全同期固定化
+        const eavesZ2F = zMin2F + axH2;
         const h2F = eavesZ2F - zMin2F;
         const eavesZ1F = zMin2F; // 1F roof base is 2FL
 

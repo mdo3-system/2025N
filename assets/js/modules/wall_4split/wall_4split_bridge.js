@@ -88,20 +88,21 @@ window.toCanvasPixel = (x_or_obj, y_val) => {
     if (!s || !s.canvas) return { cx: 0, cy: 0 };
     let wx = Number(typeof x_or_obj === 'object' ? (x_or_obj.globalX ?? x_or_obj.x) : x_or_obj);
     let wy = Number(typeof x_or_obj === 'object' ? (x_or_obj.globalY ?? x_or_obj.y) : y_val);
+    const dpr = window.devicePixelRatio || 1;
+    const cssH = s.canvas.height / dpr; // CSS論理ピクセル高さに正規化
     return {
         cx: wx * s.scale + s.offsetX,
-        cy: s.canvas.height - (wy * s.scale + s.offsetY)
+        cy: cssH - (wy * s.scale + s.offsetY)
     };
 };
 
 window.toWorldCoord = (cx, cy) => {
     const s = window.AppState;
     if (!s || !s.canvas) return { x: 0, y: 0 };
-    const rect = s.canvas.getBoundingClientRect();
-    const physX = cx * (s.canvas.width / (rect.width || 1));
-    const physY = cy * (s.canvas.height / (rect.height || 1));
+    const dpr = window.devicePixelRatio || 1;
+    const cssH = s.canvas.height / dpr; // CSS論理ピクセル高さに正規化
     return {
-        x: (physX - s.offsetX) / s.scale,
-        y: (s.canvas.height - physY - s.offsetY) / s.scale
+        x: (cx - s.offsetX) / s.scale,
+        y: (cssH - cy - s.offsetY) / s.scale
     };
 };

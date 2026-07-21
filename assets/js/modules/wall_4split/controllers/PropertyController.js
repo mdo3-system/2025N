@@ -174,15 +174,44 @@ window.PropertyController = {
 
         if (type === 'pillar') {
             window.AppState.selectedPillar = item;
-            const gridName = window.getGridNameAt ? window.getGridNameAt(item.x, item.y) : null;
-            const isDefaultName = !item.name || 
-                                 /^(P|M)_?(P|M)?\d+$/i.test(item.name) || 
-                                 item.name.toLowerCase().startsWith('pillar') || 
-                                 item.name === `P_${item.id}` || 
-                                 item.name === item.id;
-            if (isDefaultName && gridName) item.name = gridName;
+            if (typeof window.showPillarProps === 'function') {
+                window.showPillarProps(item);
+            }
+            // 柱編集の右パネル側連動
+            const pMark = document.getElementById("prop-mark");
+            if (pMark) {
+                // 手動指定金物を読み込みセット
+                pMark.value = item.manualMark ? item.manualMark : "";
+                pMark.onchange = function() {
+                    item.manualMark = this.value === "" ? null : this.value;
+                    window.AppController.refreshAll();
+                    if (typeof window.showPillarProps === 'function') window.showPillarProps(item);
+                };
+            }
+            const pCorner = document.getElementById("prop-corner");
+            if (pCorner) {
+                pCorner.checked = item.isManualCorner !== null ? item.isManualCorner : (item.isCornerAuto || false);
+                pCorner.onchange = function() {
+                    item.isManualCorner = this.checked;
+                    window.AppController.refreshAll();
+                    if (typeof window.showPillarProps === 'function') window.showPillarProps(item);
+                };
+            }
+            const pLcalc = document.getElementById("prop-lcalc");
+            if (pLcalc) {
+                pLcalc.value = item.lCalcMode || "auto";
+                pLcalc.onchange = function() {
+                    item.lCalcMode = this.value;
+                    window.AppController.refreshAll();
+                    if (typeof window.showPillarProps === 'function') window.showPillarProps(item);
+                };
+            }
+            return; // 柱はモーダルではなく右パネルの '#pillar-props' を使用するため処理終了
         } else {
             window.AppState.selectedPillar = null;
+            // 柱以外の要素（壁等）が選択された場合は右パネルの柱情報を閉じる
+            const pp = document.getElementById('pillar-props');
+            if (pp) pp.style.display = 'none';
         }
 
         const headerTitle = document.querySelector("#modal-prop-header h3");
