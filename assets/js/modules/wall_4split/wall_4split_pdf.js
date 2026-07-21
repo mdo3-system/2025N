@@ -498,7 +498,7 @@ function generateAutoMitsukeCanvas(direction, commonScale) {
     // --- GL基準高さ取得 ---
     const lvl = window.RoofEngine ? window.RoofEngine.getFloorLevels(s) : { FL1: 561, FL2: 3261, cut1: 1911, cut2: 4611 };
 
-    const proj = window.RoofEngine && window.RoofEngine.getProjectedPrimitives ? window.RoofEngine.getProjectedPrimitives(direction, s) : null;
+    const proj = window.MitsukeEngine && window.MitsukeEngine.generateElevationAreas ? window.MitsukeEngine.generateElevationAreas(direction, s) : null;
     if (!proj || !proj.primitives || proj.primitives.length === 0) return null;
 
     let uMinAll = Infinity, uMaxAll = -Infinity, zMaxAll = -Infinity;
@@ -661,14 +661,15 @@ function generateAutoMitsukeCanvas(direction, commonScale) {
                 const sh = item.shape;
                 const uL = sh.uStart;
                 const uR = sh.uStart + sh.w;
-                const zBL = sh.zBot;
-                const zTL = sh.zBot + sh.hL; // hL is in mm
-                const zTR = sh.zBot + sh.hR; // hR is in mm
+                const zBL = sh.zBL !== undefined ? sh.zBL : sh.zBot;
+                const zBR = sh.zBR !== undefined ? sh.zBR : sh.zBot;
+                const zTL = sh.zTL !== undefined ? sh.zTL : (sh.zBot + sh.hL);
+                const zTR = sh.zTR !== undefined ? sh.zTR : (sh.zBot + sh.hR);
 
                 // 領域の枠線を描画
                 ctx.beginPath();
                 ctx.moveTo(toX(uL), toY(zBL));
-                ctx.lineTo(toX(uR), toY(zBL));
+                ctx.lineTo(toX(uR), toY(zBR));
                 ctx.lineTo(toX(uR), toY(zTR));
                 ctx.lineTo(toX(uL), toY(zTL));
                 ctx.closePath();
@@ -676,9 +677,12 @@ function generateAutoMitsukeCanvas(direction, commonScale) {
 
                 // 番号ラベルを描画
                 const cx = toX(uL + sh.w / 2);
-                const cz = sh.type === 'tri'
-                    ? toY(zBL + (sh.hL + sh.hR) / 3)
-                    : toY(zBL + (sh.hL + sh.hR) / 2);
+                let centerZ = (zBL + zBR + zTL + zTR) / 4;
+                if (sh.type === 'tri') {
+                    // 三角形の重心の近似 (1つは同じ点)
+                    centerZ = (zBL + Math.max(zTL, zTR) + Math.min(zTL, zTR)) / 3;
+                }
+                const cz = toY(centerZ);
 
                 ctx.beginPath();
                 ctx.arc(cx, cz, 10, 0, Math.PI * 2);
@@ -991,9 +995,9 @@ function showAreaPreview() {
 
     // Generate high-fidelity analytical silhouette elevation plans
     let commonScale = null;
-    if (window.RoofEngine && window.RoofEngine.getProjectedPrimitives) {
-        const projX = window.RoofEngine.getProjectedPrimitives('X', window.AppState);
-        const projY = window.RoofEngine.getProjectedPrimitives('Y', window.AppState);
+    if (window.MitsukeEngine && window.MitsukeEngine.generateElevationAreas) {
+        const projX = window.MitsukeEngine.generateElevationAreas('X', window.AppState);
+        const projY = window.MitsukeEngine.generateElevationAreas('Y', window.AppState);
         if (projX && projY) {
             const getBounds = (proj) => {
                 let uMin = Infinity, uMax = -Infinity, zMax = -Infinity;

@@ -65,8 +65,8 @@ window.AppController = {
         }
 
         // 0.2. Auto-calculate projected areas from roofFaces (if present)
-        if (window.RoofEngine) {
-            window.RoofEngine.updateProjectedAreas(state);
+        if (window.MitsukeEngine && window.MitsukeEngine.updateProjectedAreas) {
+            window.MitsukeEngine.updateProjectedAreas(state);
             state.init();
         }
 
