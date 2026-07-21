@@ -503,10 +503,11 @@ $$R_i = A + B \cdot x_i$$
 3. **初期化スクリプト**:
    - `setup_database.php` をコマンドライン（SSH経由: `php setup_database.php`）で実行し、各テーブルを自動作成・保守する。
 
-### ⑥ 屋根作図ツール・全表示・DXFレイヤ設定・見附面積エラー解消 (v3.0.3)
-- **屋根伏図作図パネル (`#roof-mode-panel`)**: 屋根選択・編集、屋根グリッド追加、屋根多角形作図、屋根削除の作図サブモードおよび屋根プロパティポップアップ (`#roof-property-popup`) を `index.html` に統合・復元。
-- **DXFレイヤ表示設定パネル (`#dxf-layer-panel`)**: `#btn-toggle-layer` の開閉制御対象となるレイヤリスト制御ダイアログを `index.html` 内の CAD コンテナ内に統合・復元。
-- **見附面積求積プレビューモーダル (`#modal-area`)**: `MitsukeEngine.js` および `wall_4split_pdf.js` の `showAreaPreview()` で参照するプレビュー用キャンバスコンテナ (`#area-preview-container`) を `index.html` に統合・復元。
+### ⑦ MitsukeEngine オフセット計算TypeErrorエラー解消 (v3.0.4)
+- `MathUtils.js` 内に ClipperLib 幾何計算を利用した共通 `offsetPolygon(poly, d)` 関数を追加・配置。
+- `MitsukeEngine.js` 内の `offsetPolygon` を修正し、`MathUtils.offsetPolygon` -> `RoofEngine.offsetPolygon` -> `FoundationEngine._offsetPolygon` の順で安全にフォールバック参照するガード構造を適用。
+- 未定義関数呼出による `TypeError: window.WallEngine._offsetPolygon is not a function` エラーを完全解消。
+
 
 
 

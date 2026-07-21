@@ -5,9 +5,19 @@ window.MitsukeEngine = {
     // ユーティリティ: ポリゴンのオフセット
     offsetPolygon: function(vertices, offset) {
         if (!vertices || vertices.length < 3) return [];
-        return window.MathUtils && window.MathUtils.offsetPolygon 
-            ? window.MathUtils.offsetPolygon(vertices, offset)
-            : (window.WallEngine ? window.WallEngine._offsetPolygon(vertices, offset) : vertices);
+        if (window.MathUtils && typeof window.MathUtils.offsetPolygon === 'function') {
+            return window.MathUtils.offsetPolygon(vertices, offset);
+        }
+        if (window.RoofEngine && typeof window.RoofEngine.offsetPolygon === 'function') {
+            return window.RoofEngine.offsetPolygon(vertices, offset);
+        }
+        if (window.FoundationEngine && typeof window.FoundationEngine._offsetPolygon === 'function') {
+            return window.FoundationEngine._offsetPolygon(vertices, offset);
+        }
+        if (window.WallEngine && typeof window.WallEngine._offsetPolygon === 'function') {
+            return window.WallEngine._offsetPolygon(vertices, offset);
+        }
+        return vertices;
     },
 
     // ユーティリティ: 階層の高さレベルを取得

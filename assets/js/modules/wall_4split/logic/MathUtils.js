@@ -40,6 +40,37 @@ window.MathUtils = {
     },
 
     /**
+     * 多角形（頂点配列）を指定距離 d だけ外側（または内側）にオフセット膨張させる幾何計算関数
+     */
+    offsetPolygon: function(poly, d) {
+        if (!poly || poly.length < 3) return [];
+        let pts = poly.map(v => ({ x: v.x, y: v.y }));
+        let sum = 0;
+        for (let i = 0; i < pts.length; i++) {
+            const p1 = pts[i], p2 = pts[(i + 1) % pts.length];
+            sum += (p2.x - p1.x) * (p2.y + p1.y);
+        }
+        if (sum > 0) pts.reverse();
+        const n = pts.length;
+        const normals = [];
+        for (let i = 0; i < n; i++) {
+            const p1 = pts[i], p2 = pts[(i + 1) % n];
+            const dx = p2.x - p1.x, dy = p2.y - p1.y, L = Math.hypot(dx, dy);
+            if (L < 1e-6) normals.push({ x: 0, y: 0 });
+            else normals.push({ x: dy / L, y: -dx / L });
+        }
+        const offsetPts = [];
+        for (let i = 0; i < n; i++) {
+            const p = pts[i], n_prev = normals[(i - 1 + n) % n], n_curr = normals[i];
+            const denom = 1 + (n_prev.x * n_curr.x + n_prev.y * n_curr.y);
+            const factor = denom > 1e-4 ? 1 / denom : 1;
+            const vx = (n_prev.x + n_curr.x) * factor, vy = (n_prev.y + n_curr.y) * factor;
+            offsetPts.push({ x: p.x + d * vx, y: p.y + d * vy });
+        }
+        return offsetPts;
+    },
+
+    /**
      * [v2.5.0] 壁または部材の、指定軸における投影情報を取得する
      * 左右加力の判定(isLeftEnd)や、1次元座標化に使用
      */
