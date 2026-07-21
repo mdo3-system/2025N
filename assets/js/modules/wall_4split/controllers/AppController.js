@@ -334,6 +334,8 @@ window.AppController = {
         const vis = window.AppState.elementVisibility;
         if (vis) {
             if (mode === 'roof') {
+                vis.grids = true; // [v3.0.9] 屋根モード時も通り芯を必ず表示！
+                vis.pillars = true; // 柱も基準として表示
                 vis.f_ext_walls = true;
                 vis.roofGrids = true;
                 vis.roofs = true;

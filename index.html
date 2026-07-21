@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>上善如水 - 壁量計算WEB (v3.0.8)</title>
+    <title>上善如水 - 壁量計算WEB (v3.0.9)</title>
     <script src="https://cdn.jsdelivr.net/npm/dxf-parser@1.1.2/dist/dxf-parser.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/encoding-japanese/2.0.0/encoding.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/clipper-lib@6.4.2/clipper.js"></script>
@@ -472,7 +472,7 @@
     <!-- 左パネル -->
     <div id="left-panel">
         <h1 style="font-size:16px; margin:0 0 10px 0; color:#2c3e50; border-bottom:2px solid #2ecc71; padding-bottom:5px; display:flex; justify-content:space-between; align-items:center;">
-            <span>上善如水 <span style="font-size:12px; color:#7f8c8d;">壁量計算WEB <span id="app-version-title">v3.0.8</span></span></span>
+            <span>上善如水 <span style="font-size:12px; color:#7f8c8d;">壁量計算WEB <span id="app-version-title">v3.0.9</span></span></span>
         </h1>
 
         <div style="display:flex; gap:5px; margin-bottom:15px;">
@@ -771,10 +771,45 @@
             </div>
         </details>
 
+        <!-- [v3.0.9] 表示設定 (Layer Control) を復元 -->
+        <details open class="layer-control" id="element-visibility-panel" style="margin-bottom:15px; border:1px solid #bdc3c7; border-radius:4px;">
+            <summary style="background:#f1c40f; color:#333; padding:5px 8px; font-weight:bold; cursor:pointer;">👁 表示設定 (表示/非表示の切替)</summary>
+            <div style="padding:10px; font-size:11px; background:#fff; display:flex; flex-direction:column; gap:8px;">
+                <div>
+                    <div style="font-weight:bold; color:#2980b9; margin-bottom:3px; border-bottom:1px dashed #ccc;">共通</div>
+                    <div style="display:flex; gap:12px; flex-wrap:wrap;">
+                        <label style="display:inline-flex; align-items:center; gap:3px; cursor:pointer; width:auto; font-size:11px; color:#333; margin:0;"><input type="checkbox" id="v-layer-grids" checked style="width:auto; margin:0;"> 通り芯・グリッド</label>
+                        <label style="display:inline-flex; align-items:center; gap:3px; cursor:pointer; width:auto; font-size:11px; color:#333; margin:0;"><input type="checkbox" id="v-layer-roofGrids" checked style="width:auto; margin:0;"> 屋根グリッド</label>
+                    </div>
+                </div>
+                <div>
+                    <div style="font-weight:bold; color:#27ae60; margin-bottom:3px; border-bottom:1px dashed #ccc;">作図・屋根モード用</div>
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:3px;">
+                        <label style="display:inline-flex; align-items:center; gap:3px; cursor:pointer; width:auto; font-size:11px; color:#333; margin:0;"><input type="checkbox" id="v-layer-roofs" checked style="width:auto; margin:0;"> 🏠 屋根</label>
+                        <label style="display:inline-flex; align-items:center; gap:3px; cursor:pointer; width:auto; font-size:11px; color:#333; margin:0;"><input type="checkbox" id="v-layer-pillars" checked style="width:auto; margin:0;"> 柱</label>
+                        <label style="display:inline-flex; align-items:center; gap:3px; cursor:pointer; width:auto; font-size:11px; color:#333; margin:0;"><input type="checkbox" id="v-layer-pillarNValues" checked style="width:auto; margin:0;"> N値・金物名</label>
+                        <label style="display:inline-flex; align-items:center; gap:3px; cursor:pointer; width:auto; font-size:11px; color:#333; margin:0;"><input type="checkbox" id="vis-wall" checked style="width:auto; margin:0;"> 耐力壁</label>
+                        <label style="display:inline-flex; align-items:center; gap:3px; cursor:pointer; width:auto; font-size:11px; color:#333; margin:0;"><input type="checkbox" id="v-layer-windows" checked style="width:auto; margin:0;"> 開口部</label>
+                        <label style="display:inline-flex; align-items:center; gap:3px; cursor:pointer; width:auto; font-size:11px; color:#333; margin:0;"><input type="checkbox" id="vis-diaph" checked style="width:auto; margin:0;"> 面積（エリア）</label>
+                        <label style="display:inline-flex; align-items:center; gap:3px; cursor:pointer; width:auto; font-size:11px; color:#333; margin:0;"><input type="checkbox" id="v-layer-div4-sub" checked style="width:auto; margin:0;"> 4分割枠</label>
+                        <label style="display:inline-flex; align-items:center; gap:3px; cursor:pointer; width:auto; font-size:11px; color:#333; margin:0;"><input type="checkbox" id="v-layer-f_ext_walls" checked style="width:auto; margin:0;"> 外壁線</label>
+                    </div>
+                </div>
+                <div>
+                    <div style="font-weight:bold; color:#8e44ad; margin-bottom:3px; border-bottom:1px dashed #ccc;">基礎モード用</div>
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:3px;">
+                        <label style="display:inline-flex; align-items:center; gap:3px; cursor:pointer; width:auto; font-size:11px; color:#333; margin:0;"><input type="checkbox" id="v-layer-f_slabs" checked style="width:auto; margin:0;"> スラブ</label>
+                        <label style="display:inline-flex; align-items:center; gap:3px; cursor:pointer; width:auto; font-size:11px; color:#333; margin:0;"><input type="checkbox" id="v-layer-f_beams" checked style="width:auto; margin:0;"> 基礎梁</label>
+                        <label style="display:inline-flex; align-items:center; gap:3px; cursor:pointer; width:auto; font-size:11px; color:#333; margin:0;"><input type="checkbox" id="v-layer-f_manholes" checked style="width:auto; margin:0;"> 人通口</label>
+                    </div>
+                </div>
+            </div>
+        </details>
+
         <h2>🛠️ 操作モード</h2>
         <div class="mode-selector">
-            <label style="background: #fff8e1; display: block; padding: 5px; border-radius: 4px; margin-bottom: 5px; border: 1px solid #ffe082;">
-                <input type="radio" name="mode" value="select"> 🔍 <b>選択・プロパティ編集</b>
+            <label style="background: #fff8e1; display: block; padding: 5px; border-radius: 4px; margin-bottom: 5px; border: 1px solid #ffe082; font-size:12px; font-weight:bold; color:#333; display:flex; align-items:center; gap:5px; cursor:pointer; width:auto;">
+                <input type="radio" name="mode" value="select" style="width:auto; margin:0;"> 🔍 <b>選択・プロパティ編集</b>
             </label>
             
             <div style="display:flex; align-items:center; gap:10px; margin-bottom:5px;">
@@ -883,48 +918,48 @@
     </div>
 
     <!-- JavaScript モジュール群 -->
-    <script src="assets/js/modules/wall_4split/Version.js?v=3.0.8"></script>
-    <script src="assets/js/modules/wall_4split/state/Specs.js?v=3.0.8"></script>
-    <script src="assets/js/modules/wall_4split/state/AppState.js?v=3.0.8"></script>
-    <script src="assets/js/modules/wall_4split/wall_4split_bridge.js?v=3.0.8"></script>
-    <script src="assets/js/modules/wall_4split/logic/ServiceContainer.js?v=3.0.8"></script>
-    <script src="assets/js/modules/wall_4split/logic/MathUtils.js?v=3.0.8"></script>
-    <script src="assets/js/modules/wall_4split/logic/Parsers.js?v=3.0.8"></script>
-    <script src="assets/js/modules/wall_4split/logic/WallEngine.js?v=3.0.8"></script>
-    <script src="assets/js/modules/wall_4split/logic/CadEngine.js?v=3.0.8"></script>
-    <script src="assets/js/modules/wall_4split/logic/GridEngine.js?v=3.0.8"></script>
-    <script src="assets/js/modules/wall_4split/logic/StructuralEngine.js?v=3.0.8"></script>
-    <script src="assets/js/modules/wall_4split/logic/DocumentEngine.js?v=3.0.8"></script>
-    <script src="assets/js/modules/wall_4split/logic/NValueEngine.js?v=3.0.8"></script>
-    <script src="assets/js/modules/wall_4split/logic/AreaEngine.js?v=3.0.8"></script>
-    <script src="assets/js/modules/wall_4split/logic/AxialEngine.js?v=3.0.8"></script>
-    <script src="assets/js/modules/wall_4split/logic/SlabBeamSynchronizer.js?v=3.0.8"></script>
-    <script src="assets/js/modules/wall_4split/logic/FoundationEngine.js?v=3.0.8"></script>
-    <script src="assets/js/modules/wall_4split/logic/ReportEngine.js?v=3.0.8"></script>
-    <script src="assets/js/modules/wall_4split/logic/RoofEngine.js?v=3.0.8"></script>
-    <script src="assets/js/modules/wall_4split/logic/MitsukeEngine.js?v=3.0.8"></script>
-    <script src="assets/js/modules/wall_4split/controllers/PropertyController.js?v=3.0.8"></script>
-    <script src="assets/js/modules/wall_4split/controllers/InputController.js?v=3.0.8"></script>
-    <script src="assets/js/modules/wall_4split/controllers/ModalController.js?v=3.0.8"></script>
-    <script src="assets/js/modules/wall_4split/controllers/AppController.js?v=3.0.8"></script>
-    <script src="assets/js/modules/wall_4split/controllers/FoundationInputController.js?v=3.0.8"></script>
-    <script src="assets/js/modules/wall_4split/controllers/RoofInputController.js?v=3.0.8"></script>
-    <script src="assets/js/modules/wall_4split/view/UIView.js?v=3.0.8"></script>
-    <script src="assets/js/modules/wall_4split/view/MainRenderer.js?v=3.0.8"></script>
-    <script src="assets/js/modules/wall_4split/view/FoundationRenderer.js?v=3.0.8"></script>
-    <script src="assets/js/modules/wall_4split/view/DocumentRenderer.js?v=3.0.8"></script>
-    <script src="assets/js/modules/wall_4split/view/ElevationRenderer.js?v=3.0.8"></script>
-    <script src="assets/js/modules/wall_4split/view/RoofRenderer.js?v=3.0.8"></script>
-    <script src="assets/js/modules/wall_4split/view/ThreeDPreviewController.js?v=3.0.8"></script>
-    <script src="assets/js/modules/wall_4split/wall_4split_export.js?v=3.0.8"></script>
-    <script src="assets/js/modules/wall_4split/wall_4split_cad.js?v=3.0.8"></script>
-    <script src="assets/js/modules/wall_4split/wall_4split_render.js?v=3.0.8"></script>
-    <script src="assets/js/modules/wall_4split/wall_4split_pdf.js?v=3.0.8"></script>
-    <script src="assets/js/modules/wall_4split/wall_4split_calc.js?v=3.0.8"></script>
-    <script src="assets/js/modules/wall_4split/wall_4split_foundation_engine.js?v=3.0.8"></script>
-    <script src="assets/js/modules/wall_4split/wall_4split_report.js?v=3.0.8"></script>
-    <script src="assets/js/modules/wall_4split/wall_4split_input.js?v=3.0.8"></script>
-    <script src="assets/js/modules/wall_4split/wall_4split_main.js?v=3.0.8"></script>
+    <script src="assets/js/modules/wall_4split/Version.js?v=3.0.9"></script>
+    <script src="assets/js/modules/wall_4split/state/Specs.js?v=3.0.9"></script>
+    <script src="assets/js/modules/wall_4split/state/AppState.js?v=3.0.9"></script>
+    <script src="assets/js/modules/wall_4split/wall_4split_bridge.js?v=3.0.9"></script>
+    <script src="assets/js/modules/wall_4split/logic/ServiceContainer.js?v=3.0.9"></script>
+    <script src="assets/js/modules/wall_4split/logic/MathUtils.js?v=3.0.9"></script>
+    <script src="assets/js/modules/wall_4split/logic/Parsers.js?v=3.0.9"></script>
+    <script src="assets/js/modules/wall_4split/logic/WallEngine.js?v=3.0.9"></script>
+    <script src="assets/js/modules/wall_4split/logic/CadEngine.js?v=3.0.9"></script>
+    <script src="assets/js/modules/wall_4split/logic/GridEngine.js?v=3.0.9"></script>
+    <script src="assets/js/modules/wall_4split/logic/StructuralEngine.js?v=3.0.9"></script>
+    <script src="assets/js/modules/wall_4split/logic/DocumentEngine.js?v=3.0.9"></script>
+    <script src="assets/js/modules/wall_4split/logic/NValueEngine.js?v=3.0.9"></script>
+    <script src="assets/js/modules/wall_4split/logic/AreaEngine.js?v=3.0.9"></script>
+    <script src="assets/js/modules/wall_4split/logic/AxialEngine.js?v=3.0.9"></script>
+    <script src="assets/js/modules/wall_4split/logic/SlabBeamSynchronizer.js?v=3.0.9"></script>
+    <script src="assets/js/modules/wall_4split/logic/FoundationEngine.js?v=3.0.9"></script>
+    <script src="assets/js/modules/wall_4split/logic/ReportEngine.js?v=3.0.9"></script>
+    <script src="assets/js/modules/wall_4split/logic/RoofEngine.js?v=3.0.9"></script>
+    <script src="assets/js/modules/wall_4split/logic/MitsukeEngine.js?v=3.0.9"></script>
+    <script src="assets/js/modules/wall_4split/controllers/PropertyController.js?v=3.0.9"></script>
+    <script src="assets/js/modules/wall_4split/controllers/InputController.js?v=3.0.9"></script>
+    <script src="assets/js/modules/wall_4split/controllers/ModalController.js?v=3.0.9"></script>
+    <script src="assets/js/modules/wall_4split/controllers/AppController.js?v=3.0.9"></script>
+    <script src="assets/js/modules/wall_4split/controllers/FoundationInputController.js?v=3.0.9"></script>
+    <script src="assets/js/modules/wall_4split/controllers/RoofInputController.js?v=3.0.9"></script>
+    <script src="assets/js/modules/wall_4split/view/UIView.js?v=3.0.9"></script>
+    <script src="assets/js/modules/wall_4split/view/MainRenderer.js?v=3.0.9"></script>
+    <script src="assets/js/modules/wall_4split/view/FoundationRenderer.js?v=3.0.9"></script>
+    <script src="assets/js/modules/wall_4split/view/DocumentRenderer.js?v=3.0.9"></script>
+    <script src="assets/js/modules/wall_4split/view/ElevationRenderer.js?v=3.0.9"></script>
+    <script src="assets/js/modules/wall_4split/view/RoofRenderer.js?v=3.0.9"></script>
+    <script src="assets/js/modules/wall_4split/view/ThreeDPreviewController.js?v=3.0.9"></script>
+    <script src="assets/js/modules/wall_4split/wall_4split_export.js?v=3.0.9"></script>
+    <script src="assets/js/modules/wall_4split/wall_4split_cad.js?v=3.0.9"></script>
+    <script src="assets/js/modules/wall_4split/wall_4split_render.js?v=3.0.9"></script>
+    <script src="assets/js/modules/wall_4split/wall_4split_pdf.js?v=3.0.9"></script>
+    <script src="assets/js/modules/wall_4split/wall_4split_calc.js?v=3.0.9"></script>
+    <script src="assets/js/modules/wall_4split/wall_4split_foundation_engine.js?v=3.0.9"></script>
+    <script src="assets/js/modules/wall_4split/wall_4split_report.js?v=3.0.9"></script>
+    <script src="assets/js/modules/wall_4split/wall_4split_input.js?v=3.0.9"></script>
+    <script src="assets/js/modules/wall_4split/wall_4split_main.js?v=3.0.9"></script>
 
     <!-- マジックリンク認証制御JS -->
     <script>

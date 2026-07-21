@@ -64,8 +64,9 @@ window.RoofEngine = {
         }
 
         if (polys.length === 0) {
-            const coordsX = s.gridXCoords || [];
-            const coordsY = s.gridYCoords || [];
+            // [v3.0.9] 絶対ルールに基づき、通り芯座標がロードされていない場合は、配置された柱・壁のグリッド座標から自動構築
+            const coordsX = (s.gridXCoords && s.gridXCoords.length > 0) ? s.gridXCoords : [...new Set((s.pillars || []).filter(p => !p.isDeleted).map(p => p.x))];
+            const coordsY = (s.gridYCoords && s.gridYCoords.length > 0) ? s.gridYCoords : [...new Set((s.pillars || []).filter(p => !p.isDeleted).map(p => p.y))];
             if (coordsX.length > 0 && coordsY.length > 0) {
                 const minX = Math.min(...coordsX), maxX = Math.max(...coordsX);
                 const minY = Math.min(...coordsY), maxY = Math.max(...coordsY);
