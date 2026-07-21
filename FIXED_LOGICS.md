@@ -503,10 +503,10 @@ $$R_i = A + B \cdot x_i$$
 3. **初期化スクリプト**:
    - `setup_database.php` をコマンドライン（SSH経由: `php setup_database.php`）で実行し、各テーブルを自動作成・保守する。
 
-### ⑧ RoofEngine.calculatePolygonArea2D TypeError 解消 ＆ 屋根描画・全パネル完全修復 (v3.0.5)
-- `RoofEngine.js` 内に 2D 水平射影面積（㎡）を計算する `calculatePolygonArea2D(vertices)` 関数を完全実装・復元。
-- `RoofRenderer.js` の 153 行目に安全ガードを追加し、描画ループが途中でクラッシュして屋根が一部しか出ない現象を完全解消。
-- 描画クラッシュに伴う UI イベント切替（屋根作図ツールパネル、DXFレイヤ表示設定ダイアログ）の連動停止を完全に復旧。
+### ⑨ 見附面積プレビュー (prim.name.includes) TypeError エラー解消 (v3.0.6)
+- `wall_4split_pdf.js` の `generateAutoMitsukeCanvas` (587行目) 内にて、未定義属性に対する `prim.name.includes('屋根')` 呼出を `if (prim.name && typeof prim.name.includes === 'function' && prim.name.includes('屋根'))` へ修正。
+- ヌルガードを完全適用し、見附面積図（求積図プレビュー）がクラッシュせず100%正常にプレビュー表示されるよう修復。
+
 
 
 

@@ -584,7 +584,7 @@ function generateAutoMitsukeCanvas(direction, commonScale) {
         clipperPolygons.push(path);
         
         // 色分け (1F, 2F, 屋根)
-        if (prim.name.includes('屋根')) {
+        if (prim.name && typeof prim.name.includes === 'function' && prim.name.includes('屋根')) {
             ctx.fillStyle = (direction === 'X') ? 'rgba(230,126,34,0.3)' : 'rgba(41,128,185,0.3)';
         } else if (prim.floor === '2F') {
             ctx.fillStyle = (direction === 'X') ? 'rgba(230,126,34,0.15)' : 'rgba(41,128,185,0.15)';
