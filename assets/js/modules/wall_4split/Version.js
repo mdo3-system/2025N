@@ -1,4 +1,4 @@
 /**
  * Version.js - Centralized Version Management
  */
-window.APP_VERSION = "v3.0.2"; // Full UI restoration (Left/Right panels) & Magic link auth integration
+window.APP_VERSION = "v3.0.3"; // Fix roof drawing tools, rendering, DXF layer control panel & mitsuke area preview modal

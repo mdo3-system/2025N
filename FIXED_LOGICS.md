@@ -503,10 +503,11 @@ $$R_i = A + B \cdot x_i$$
 3. **初期化スクリプト**:
    - `setup_database.php` をコマンドライン（SSH経由: `php setup_database.php`）で実行し、各テーブルを自動作成・保守する。
 
-### ⑤ 全画面UI構造の完全復元 (v3.0.2)
-- 左パネル (`#left-panel`): 荷重・外壁仕様、柱寸法・横架材間、基礎設定（Fc, fe, d）の各フォーム枠を完全統一・復元。
-- 右パネル (`#right-panel`): 操作モード選択ラジオボタン群、作図ツール設定エリア、面材・金物任意登録パネル、DXF出力ボタン、柱プロパティ枠を完全統一・復元。
-- マジックリンク認証モーダル (`#modal-auth-login`) を `index.html` に完全統合。
+### ⑥ 屋根作図ツール・全表示・DXFレイヤ設定・見附面積エラー解消 (v3.0.3)
+- **屋根伏図作図パネル (`#roof-mode-panel`)**: 屋根選択・編集、屋根グリッド追加、屋根多角形作図、屋根削除の作図サブモードおよび屋根プロパティポップアップ (`#roof-property-popup`) を `index.html` に統合・復元。
+- **DXFレイヤ表示設定パネル (`#dxf-layer-panel`)**: `#btn-toggle-layer` の開閉制御対象となるレイヤリスト制御ダイアログを `index.html` 内の CAD コンテナ内に統合・復元。
+- **見附面積求積プレビューモーダル (`#modal-area`)**: `MitsukeEngine.js` および `wall_4split_pdf.js` の `showAreaPreview()` で参照するプレビュー用キャンバスコンテナ (`#area-preview-container`) を `index.html` に統合・復元。
+
 
 
 
