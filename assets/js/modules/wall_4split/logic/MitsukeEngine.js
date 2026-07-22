@@ -318,8 +318,8 @@ window.MitsukeEngine = {
             }
         }
         
-        const merged2F = this.mergeAdjacentShapes(decomposition2F, '2F');
-        const merged1F = this.mergeAdjacentShapes(decomposition1F, '1F');
+        const merged2F = this.mergeAdjacentShapes(decomposition2F, '2F', totalArea2F);
+        const merged1F = this.mergeAdjacentShapes(decomposition1F, '1F', totalArea1F);
 
         let finalAreas = {
             '2F': { x: direction === 'X' ? totalArea2F : 0, y: direction === 'Y' ? totalArea2F : 0 },
@@ -340,12 +340,9 @@ window.MitsukeEngine = {
     },
 
     /**
-     * 隣接する細切れの図形を建築申請用の大きな図形（A1, A2... B1, B2...）へマージする
-     */
-    /**
      * 【極限単純化アルゴリズム】どんな複雑な建物も安全側の大きな外接図形（A1, A2... B1, B2...）へマージする
      */
-    mergeAdjacentShapes: function(shapes, floorName) {
+    mergeAdjacentShapes: function(shapes, floorName, targetTotalArea) {
         if (!shapes || shapes.length === 0) return [];
 
         let rectShapes = shapes.filter(s => s.type === 'rect');

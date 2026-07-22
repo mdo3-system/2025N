@@ -788,6 +788,9 @@ $$R_i = A + B \cdot x_i$$
 - **PDFモジュール内での基礎梁 NMQ 応力図 SVG 関数の直接呼び出し修復**: `wall_4split_pdf.js` 内で `window.getFoundationBeamReportHtml` および `window.generateBeamNMQSvg` を明示的に呼び出し、`beam.spans` 未生成時の自己補填ロジックを挿入。代用文字 `(応力解析図)` 落ちを完全根絶し、カラフルな N, M, Q 応力図 SVG が100%確実に表示・描画されるよう完修。
 - **「基礎計算書を出力」時の壁量要素一括消去CSS (@media print) の補正**: `index.html` の `@media print` に `body.print-mode-fd-only` および `body.print-mode-wall-only` ルールを追加。`printDocSection()` で `body` にモードクラスを自動付与することで、「基礎計算書を出力」選択時に壁量計算書（1〜5章・画像・判定表）が1文字たりとも残らず、1ページ目からA4判で基礎計算書のみが綺麗にPDF出力・印刷されるよう完修。
 
+### ㉛ MitsukeEngine.mergeAdjacentShapes 引数渡しの完全修復 (v3.0.28)
+- **MitsukeEngine targetTotalArea 未定義ReferenceErrorの解消**: `MitsukeEngine.js` 内の `mergeAdjacentShapes` 関数のシグネチャ `(shapes, floorName, targetTotalArea)` および呼び出し部 `this.mergeAdjacentShapes(decomposition, floor, totalArea)` の第3引数受け渡しを修復。`ReferenceError: targetTotalArea is not defined` 例外を100%根絶し、見附図および求積表の高速・安定描画を復元。
+
 
 
 
