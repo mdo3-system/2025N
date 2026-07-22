@@ -385,9 +385,11 @@ window.toggleFdElementList = function(type) {
         return;
     }
     
-    container.setAttribute('data-current-type', type);
-    container.style.display = 'block';
-    
+    // 連続梁を自動解析・結合して帳票と100%同期させる
+    if (window.FoundationEngine && typeof window.FoundationEngine.runAnalysis === 'function') {
+        window.FoundationEngine.runAnalysis(window.AppState);
+    }
+
     const s = window.AppState;
     let html = '';
     

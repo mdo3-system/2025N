@@ -823,6 +823,10 @@ $$R_i = A + B \cdot x_i$$
 - **帳票・SVG応力図における地震時引抜力 (Td) の単一データソース化 (Single Source of Truth)**: `wall_4split_foundation_engine.js` の `generateBeamNMQSvg` および `generateContinuousBeamReportHtml` にて、間違った `span.leftward?.Td` 参照を完全に撤廃し、個別モーダル（`PropertyController.js`）と同じ正解データ `beam.fdStress.seismic.leftward/rightward.Td[idx]` を直に節点インデックスで参照するよう統合。これにより、個別のプロパティモーダルと一括出力帳票・応力図の解が 100% 同一（完全一致）となる構造的修正を完修。
 - **画面左パネル一覧ボックスの縦長表示 ＆ 画面全体スクロールの適用**: `index.html` 内の `#fd-element-list-container` の固定上限（`max-height: 180px` および小枠スクロール）を撤廃し、画面全体のスクロール領域を活用して全ての要素を一覧表示できるUIへ改善。
 
+### ㊴ 基礎要素(全スラブ/全基礎梁)一覧表示の基礎モード限定制御 ＆ 連続基礎梁同期完修 (v3.0.36)
+- **左パネル基礎要素一覧表示の基礎モード限定制御**: `index.html` 内の `#fd-element-list-panel` を新設した `<div id="foundation-mode-panel">` の内部へ格納。作図モードや屋根伏図モードでは完全非表示とし、「基礎モード」選択時のみ左パネルに自動表示されるよう制御を完修。
+- **基礎梁一覧表示時の連続梁事前自動同期**: `FoundationInputController.js` の `toggleFdElementList` 関数冒頭で `FoundationEngine.runAnalysis` を自動実行するよう修正。リストから選択した梁（No.1）と一括出力帳票の梁（No.1）が確実に100%同一の連続基礎梁（全5スパン等）となり、節点表とN図の引抜力数値（7.262 kN 等）が完全一致するよう完修。
+
 
 
 

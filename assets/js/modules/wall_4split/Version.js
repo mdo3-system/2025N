@@ -1,4 +1,4 @@
 /**
  * Version.js - Centralized Version Management
  */
-window.APP_VERSION = "v3.0.35"; // Single source of truth for seismic Td data binding in beam report/SVG and expanded vertical foundation element list display
+window.APP_VERSION = "v3.0.36"; // Restrict foundation element list panel to foundation mode and sync continuous beam analysis for 100% report matching
