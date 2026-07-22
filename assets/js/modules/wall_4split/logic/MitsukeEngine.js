@@ -229,10 +229,10 @@ window.MitsukeEngine = {
             }
             
             if (maxTop2F) {
-                const zTL = Math.max(zBot2F_effective_A, getZ(maxTop2F, uA));
-                const zTR = Math.max(zBot2F_effective_B, getZ(maxTop2F, uB));
-                const zBL = zBot2F_effective_A;
-                const zBR = zBot2F_effective_B;
+                const zBL = Math.max(lvl.cut2, zBot2F_effective_A);
+                const zBR = Math.max(lvl.cut2, zBot2F_effective_B);
+                const zTL = Math.max(zBL, getZ(maxTop2F, uA));
+                const zTR = Math.max(zBR, getZ(maxTop2F, uB));
                 
                 if (zTL > zBL + 1 || zTR > zBR + 1) {
                     const res = this.decomposeShape(uA, uB, zTL, zTR, zBL, zBR, '2F');
