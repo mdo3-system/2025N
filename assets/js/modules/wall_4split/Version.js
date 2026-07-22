@@ -1,4 +1,4 @@
 /**
  * Version.js - Centralized Version Management
  */
-window.APP_VERSION = "v3.0.20"; // Fix pdf export modal error, merge mitsuke shapes into large blocks with A1/B1 labels and formal calculation table
+window.APP_VERSION = "v3.0.21"; // Fix modal-doc UI overflow/scroll and implement ultra-simplified mitsuke shapes (safe-side bounding blocks)

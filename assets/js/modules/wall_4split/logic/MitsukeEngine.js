@@ -342,76 +342,61 @@ window.MitsukeEngine = {
     /**
      * 隣接する細切れの図形を建築申請用の大きな図形（A1, A2... B1, B2...）へマージする
      */
+    /**
+     * 【極限単純化アルゴリズム】どんな複雑な建物も安全側の大きな外接図形（A1, A2... B1, B2...）へマージする
+     */
     mergeAdjacentShapes: function(shapes, floorName) {
         if (!shapes || shapes.length === 0) return [];
-        let merged = [];
-        let current = null;
 
-        shapes.forEach(s => {
-            if (!current) {
-                current = JSON.parse(JSON.stringify(s));
-                return;
-            }
-
-            // 隣接判定 (uStart + w == s.uStart かつ 同じ種類・高さ構造)
-            const isAdjacent = Math.abs((current.uStart + current.w) - s.uStart) < 2;
-            const isSameHeightRect = (current.type === 'rect' && s.type === 'rect' && Math.abs(current.zBL - s.zBL) < 2 && Math.abs(current.zTL - s.zTL) < 2);
-            
-            if (isAdjacent && isSameHeightRect) {
-                // 矩形同士をマージ
-                current.w += s.w;
-                const w_m = current.w / 1000;
-                const h_m = (current.zTL - current.zBL) / 1000;
-                current.area = w_m * h_m;
-                current.formula = `${w_m.toFixed(3)} × ${h_m.toFixed(3)}`;
-            } else {
-                merged.push(current);
-                current = JSON.parse(JSON.stringify(s));
-            }
-        });
-        if (current) merged.push(current);
-
-        // 頂部三角形の対（左右の傾斜）のマージ処理
+        let rectShapes = shapes.filter(s => s.type === 'rect');
+        let nonRectShapes = shapes.filter(s => s.type !== 'rect');
         let finalShapes = [];
-        let triLeft = null;
 
-        merged.forEach((sh, idx) => {
-            if (sh.type === 'tri') {
-                if (!triLeft) {
-                    triLeft = sh;
-                } else {
-                    // 左右の三角形が隣接し、かつ高さ構造が同じであれば1つの大屋根三角形（底辺 × 高さ / 2）にマージ
-                    const isAdjacentTri = Math.abs((triLeft.uStart + triLeft.w) - sh.uStart) < 2;
-                    const isSameBaseZ = Math.abs(triLeft.zBL - sh.zBL) < 2;
-                    const isPeakSame = Math.abs(Math.max(triLeft.zTL, triLeft.zTR) - Math.max(sh.zTL, sh.zTR)) < 2;
+        if (rectShapes.length > 0) {
+            // 外壁全体の最小U、最大U、および最大高さ・最小底面から1つの大きな長方形(外接矩形)を作る
+            let uMin = Math.min(...rectShapes.map(s => s.uStart));
+            let uMax = Math.max(...rectShapes.map(s => s.uStart + s.w));
+            let zBL_min = Math.min(...rectShapes.map(s => s.zBL !== undefined ? s.zBL : s.zBot));
+            let zTL_max = Math.max(...rectShapes.map(s => s.zTL !== undefined ? s.zTL : (s.zBot + (s.hL || 0))));
 
-                    if (isAdjacentTri && isSameBaseZ && isPeakSame) {
-                        const totalW_mm = triLeft.w + sh.w;
-                        const totalW_m = totalW_mm / 1000;
-                        const peakZ = Math.max(triLeft.zTL, triLeft.zTR);
-                        const h_m = (peakZ - triLeft.zBL) / 1000;
-                        
-                        const mergedTri = {
-                            name: `屋根(大三角)`, floor: floorName, type: 'tri',
-                            uStart: triLeft.uStart, w: totalW_mm,
-                            zBL: triLeft.zBL, zBR: sh.zBR,
-                            zTL: peakZ, zTR: peakZ,
-                            area: (totalW_m * h_m) / 2,
-                            formula: `${totalW_m.toFixed(3)} × ${h_m.toFixed(3)} ÷ 2.0`
-                        };
-                        finalShapes.push(mergedTri);
-                        triLeft = null;
-                    } else {
-                        finalShapes.push(triLeft);
-                        triLeft = sh;
-                    }
-                }
-            } else {
-                if (triLeft) { finalShapes.push(triLeft); triLeft = null; }
-                finalShapes.push(sh);
+            const totalW_mm = uMax - uMin;
+            const totalW_m = totalW_mm / 1000;
+            const h_m = Math.max(0, (zTL_max - zBL_min) / 1000);
+
+            if (totalW_m > 0 && h_m > 0) {
+                finalShapes.push({
+                    name: floorName === '2F' ? '2F壁(大矩形)' : '1F壁(大矩形)',
+                    floor: floorName, type: 'rect',
+                    uStart: uMin, w: totalW_mm,
+                    zBL: zBL_min, zBR: zBL_min, zTL: zTL_max, zTR: zTL_max,
+                    area: totalW_m * h_m,
+                    formula: `${totalW_m.toFixed(3)} × ${h_m.toFixed(3)}`
+                });
             }
-        });
-        if (triLeft) finalShapes.push(triLeft);
+        }
+
+        if (nonRectShapes.length > 0) {
+            let uMin = Math.min(...nonRectShapes.map(s => s.uStart));
+            let uMax = Math.max(...nonRectShapes.map(s => s.uStart + s.w));
+            let zBL_min = Math.min(...nonRectShapes.map(s => Math.min(s.zBL !== undefined ? s.zBL : s.zBot, s.zBR !== undefined ? s.zBR : s.zBot)));
+            let zTL_max = Math.max(...nonRectShapes.map(s => Math.max(s.zTL !== undefined ? s.zTL : (s.zBot + (s.hL||0)), s.zTR !== undefined ? s.zTR : (s.zBot + (s.hR||0)))));
+
+            const totalW_mm = uMax - uMin;
+            const totalW_m = totalW_mm / 1000;
+            const h_m = Math.max(0, (zTL_max - zBL_min) / 1000);
+
+            if (totalW_m > 0 && h_m > 0) {
+                finalShapes.push({
+                    name: floorName === '2F' ? '屋根(大三角)' : '下屋(大三角)',
+                    floor: floorName, type: 'tri',
+                    uStart: uMin, w: totalW_mm,
+                    zBL: zBL_min, zBR: zBL_min,
+                    zTL: zTL_max, zTR: zTL_max,
+                    area: (totalW_m * h_m) / 2.0,
+                    formula: `${totalW_m.toFixed(3)} × ${h_m.toFixed(3)} ÷ 2.0`
+                });
+            }
+        }
 
         // 丸番号 (2F: B1, B2..., 1F: A1, A2...) を割り振り
         const prefix = floorName === '2F' ? 'B' : 'A';

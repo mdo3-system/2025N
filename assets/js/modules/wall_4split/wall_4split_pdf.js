@@ -1372,15 +1372,16 @@ async function generateDoc() {
             summaryData[f] = { wallOk, div4Ok, lamOk, floorOk };
         });
 
-        let navHtml = `<div class="sticky-nav">
-            <button class="jump-btn" onclick="document.getElementById('sec-area')?.scrollIntoView({behavior:'smooth'})">1. 面積・必要壁量</button>
-            <button class="jump-btn" onclick="document.getElementById('sec-wall')?.scrollIntoView({behavior:'smooth'})">2. 耐力壁・壁量検定</button>
-            <button class="jump-btn" onclick="document.getElementById('sec-div4')?.scrollIntoView({behavior:'smooth'})">3. 4分割検定</button>
-            <button class="jump-btn" onclick="document.getElementById('sec-nval')?.scrollIntoView({behavior:'smooth'})">4. N値・金物</button>
-            <button class="jump-btn" onclick="document.getElementById('sec-pillar')?.scrollIntoView({behavior:'smooth'})">5. 柱負担・細長比</button>
+        let navHtml = `<div style="display:flex; align-items:center; gap:8px; width:100%; flex-wrap:wrap;">
+            <span style="color:#ecf0f1; font-weight:bold; font-size:14px; margin-right:8px;">📄 構造計算書目次:</span>
+            <button class="jump-btn" onclick="document.getElementById('sec-area')?.scrollIntoView({behavior:'smooth'})" style="padding:5px 10px; background:#34495e; color:#fff; border:1px solid #5d6d7e; border-radius:4px; cursor:pointer; font-size:11px;">1. 面積・必要壁量</button>
+            <button class="jump-btn" onclick="document.getElementById('sec-wall')?.scrollIntoView({behavior:'smooth'})" style="padding:5px 10px; background:#34495e; color:#fff; border:1px solid #5d6d7e; border-radius:4px; cursor:pointer; font-size:11px;">2. 耐力壁・壁量検定</button>
+            <button class="jump-btn" onclick="document.getElementById('sec-div4')?.scrollIntoView({behavior:'smooth'})" style="padding:5px 10px; background:#34495e; color:#fff; border:1px solid #5d6d7e; border-radius:4px; cursor:pointer; font-size:11px;">3. 4分割検定</button>
+            <button class="jump-btn" onclick="document.getElementById('sec-nval')?.scrollIntoView({behavior:'smooth'})" style="padding:5px 10px; background:#34495e; color:#fff; border:1px solid #5d6d7e; border-radius:4px; cursor:pointer; font-size:11px;">4. N値・金物</button>
+            <button class="jump-btn" onclick="document.getElementById('sec-pillar')?.scrollIntoView({behavior:'smooth'})" style="padding:5px 10px; background:#34495e; color:#fff; border:1px solid #5d6d7e; border-radius:4px; cursor:pointer; font-size:11px;">5. 柱負担・細長比</button>
             <div style="flex-grow:1;"></div>
-            <button class="print-btn" onclick="window.print()">🖨️ このまま印刷する</button>
-            <button class="close-btn-nav btn-close-modal">✖ 閉じる</button>
+            <button class="print-btn" onclick="window.print()" style="padding:6px 12px; background:#27ae60; color:#fff; border:none; border-radius:4px; font-weight:bold; cursor:pointer; font-size:12px;">🖨️ 印刷</button>
+            <button class="btn-close-modal" onclick="document.getElementById('modal-doc').style.display='none'" style="padding:6px 14px; background:#e74c3c; color:#fff; border:none; border-radius:4px; font-weight:bold; cursor:pointer; font-size:13px;">✖ 閉じる</button>
         </div>`;
 
         const navEl = document.getElementById('doc-nav-container');
