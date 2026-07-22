@@ -791,6 +791,11 @@ $$R_i = A + B \cdot x_i$$
 ### ㉛ MitsukeEngine.mergeAdjacentShapes 引数渡しの完全修復 (v3.0.28)
 - **MitsukeEngine targetTotalArea 未定義ReferenceErrorの解消**: `MitsukeEngine.js` 内の `mergeAdjacentShapes` 関数のシグネチャ `(shapes, floorName, targetTotalArea)` および呼び出し部 `this.mergeAdjacentShapes(decomposition, floor, totalArea)` の第3引数受け渡しを修復。`ReferenceError: targetTotalArea is not defined` 例外を100%根絶し、見附図および求積表の高速・安定描画を復元。
 
+### ㉜ generateBeamNMQSvg オプショナルガード徹底 ＆ サマリー枠ID付与 ＆ 基礎計算書PDF絶対分離CSS定義 (v3.0.29)
+- **generateBeamNMQSvg の TypeError クラッシュ防止・NMQ応力図(SVG)確実描画**: `wall_4split_foundation_engine.js` の `generateBeamNMQSvg` 内にて、`fs.stressData` のオプショナル・チェイニング（`fs?.stressData?.M_long_mid_Nmm`）および事前 null ガードを徹底適用。データ部分生成時にもクラッシュせず、軸力N・曲げM・せん断QのカラフルなSVG線図が100%確実に描画表示されるよう修復。
+- **一括計算書サマリー枠への ID (sec-summary) 付与**: `wall_4split_pdf.js` の最上部サマリー枠 `<div>` に `id="sec-summary"` および `class="doc-section"` を明示付与。
+- **基礎計算書単独PDF印刷時 (print-mode-fd-only) の非基礎要素一括消去CSS補正**: `index.html` の `@media print` 内に、最優先絶対消去ルール `body.print-mode-fd-only #sec-summary, body.print-mode-fd-only #doc-container > *:not(#sec-fd-slab):not(#sec-fd-beam) { display: none !important; }` を適用。「基礎計算書を出力」選択時に壁量サマリー表・1〜5章の文章・画像・表が1文字たりとも残らず100%消去され、A4判1ページ目から純粋な基礎計算書（スラブ検定・基礎梁検定・NMQ図）のみが綺麗にPDF出力・印刷されるよう完修。
+
 
 
 

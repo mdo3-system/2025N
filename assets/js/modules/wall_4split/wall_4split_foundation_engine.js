@@ -982,7 +982,7 @@ function generateBeamNMQSvg(beam) {
         const xStart = toX(currentPosM);
         const xEnd = toX(currentPosM + spanL);
         const fs = s.fdStress;
-        if (!fs) { currentPosM += spanL; return; }
+        if (!fs || !fs.stressData) { currentPosM += spanL; return; }
 
         const mScale = (hSection * 0.4) / (maxM || 1);
         const qScale = (hSection * 0.4) / (maxQ || 1);
@@ -997,9 +997,9 @@ function generateBeamNMQSvg(beam) {
         }
 
         // 2. M図 (包絡線)
-        const mL_mid = (fs.stressData.M_long_mid_Nmm || 0) / 1e6;
-        const mS_mid = (fs.stressData.M_short_end_Nmm || 0) / 2 / 1e6;
-        const mS_end = (fs.stressData.M_short_end_Nmm || 0) / 1e6;
+        const mL_mid = (fs.stressData?.M_long_mid_Nmm || 0) / 1e6;
+        const mS_mid = (fs.stressData?.M_short_end_Nmm || 0) / 2 / 1e6;
+        const mS_end = (fs.stressData?.M_short_end_Nmm || 0) / 1e6;
         
         let mPathTotal = `M ${xStart} ${mY + mS_end * mScale}`; // 端部負モーメント
         for (let i = 1; i <= 20; i++) {
@@ -1017,8 +1017,8 @@ function generateBeamNMQSvg(beam) {
         svg += `<text x="${xEnd}" y="${mY - mS_end * mScale - 5}" font-size="9" text-anchor="end" fill="#2980b9">-${fmt(mS_end)}</text>`;
 
         // 3. Q図 (階段状/直線)
-        const qL = (fs.stressData.Q_long_N || 0) / 1e3;
-        const qS = (fs.stressData.Qe_N || 0) / 1e3;
+        const qL = (fs.stressData?.Q_long_N || 0) / 1e3;
+        const qS = (fs.stressData?.Qe_N || 0) / 1e3;
         const qTotal = qL + qS;
         const qH1 = qTotal * qScale;
         const qH2 = -qTotal * qScale;

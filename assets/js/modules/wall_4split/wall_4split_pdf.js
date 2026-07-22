@@ -1442,7 +1442,7 @@ async function generateDoc() {
             window.print();
         };
 
-        let h = `<div style="margin-bottom:25px; border:2px solid ${isTotalOk ? '#27ae60' : '#c0392b'}; border-radius:4px; padding:15px; background:#fdfdfd;">
+        let h = `<div id="sec-summary" class="doc-section" style="margin-bottom:25px; border:2px solid ${isTotalOk ? '#27ae60' : '#c0392b'}; border-radius:4px; padding:15px; background:#fdfdfd;">
             <h3 style="margin:0 0 10px 0; color:#333; font-size:16px;">📄 構造計算 検定結果サマリー</h3>
             <table class="report-table" style="width:100%; margin:0; font-size:14px;">
                 <tr><th style="width:15%;">階</th><th>壁量検定 (X/Y)</th><th>4分割 壁釣り合い</th><th>有効細長比</th><th>柱の最大負担面積(㎡)</th><th style="width:20%;">総合判定</th></tr>`;
