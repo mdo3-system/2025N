@@ -286,12 +286,17 @@ window.MitsukeEngine = {
             }
             
             if (zTop1F_mid > -Infinity) {
-                let zTL_raw = maxTop1F ? getZ(maxTop1F, uA) : (inWall2F_local ? lvl.cut2 : lvl.FL2);
-                let zTR_raw = maxTop1F ? getZ(maxTop1F, uB) : (inWall2F_local ? lvl.cut2 : lvl.FL2);
+                let zTL_raw = lvl.FL2;
+                let zTR_raw = lvl.FL2;
 
-                if (inWall2F_local && !maxTop1F) {
-                    zTL_raw = Math.max(zTL_raw, lvl.cut2);
-                    zTR_raw = Math.max(zTR_raw, lvl.cut2);
+                if (inWall2F_local) {
+                    // 2F直下エリアでは1F壁は 2Fカットライン(lvl.cut2)まで平坦に満たし、内部の山型屋根線の侵入・削れを排除
+                    zTL_raw = lvl.cut2;
+                    zTR_raw = lvl.cut2;
+                } else if (maxTop1F) {
+                    // 2Fが存在しない 1F下屋はみ出しエリアでのみ、1F下屋根の斜め勾配ラインを適用
+                    zTL_raw = getZ(maxTop1F, uA);
+                    zTR_raw = getZ(maxTop1F, uB);
                 }
                 
                 // 2FのcutBot (lvl.cut2) で頭打ちにする (1F見附は cut1 ~ cut2)

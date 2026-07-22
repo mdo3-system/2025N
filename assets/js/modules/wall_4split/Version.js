@@ -1,4 +1,4 @@
 /**
  * Version.js - Centralized Version Management
  */
-window.APP_VERSION = "v3.0.17"; // Enforce strict Z-axis clamping at cut2 for 2F/1F mitsuke boundary to eliminate overlapping lines in Y elevation
+window.APP_VERSION = "v3.0.18"; // Fix 1F roof line intrusion in 2F-under region in MitsukeEngine.js to clean Y elevation outline
