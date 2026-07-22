@@ -416,8 +416,190 @@ window.FoundationRenderer = {
         table3 += `</tbody></table>`;
         html += table3;
 
-        html += `<div style="font-size:12px; font-weight:bold; color:#2c3e50; border-left:4px solid #34495e; padding-left:8px; margin:15px 0 6px 0;">④ 断面判定 (検定比)</div>`;
-        let table4 = `<table style="width:100%; border-collapse:collapse; font-size:10px; border:2px solid #34495e; text-align:center; background:#fff;">
+        // 5. (4) 許容耐力の算定（1 - 曲げ）
+        html += `<div style="font-size:12px; font-weight:bold; color:#2c3e50; border-left:4px solid #34495e; padding-left:8px; margin:15px 0 6px 0;">④ 許容耐力の算定（1 - 曲げ）</div>`;
+        
+        const parseRebarInput = (str) => {
+            const m = (str || '1-D13').match(/^(\d+)-D([A-Za-z0-9]+)/i);
+            if (!m) return { count: 1, type: 'D13' };
+            return { count: parseInt(m[1]) || 1, type: 'D' + m[2].toUpperCase() };
+        };
+
+        const parseStirrupInput = (str) => {
+            const m = (str || '1-D10@200').match(/^(\d+)-D(\d+)@(\d+)/i);
+            if (!m) return { count: 1, type: 'D10', pitch: '200' };
+            return { count: parseInt(m[1]) || 1, type: 'D' + m[2], pitch: m[3] };
+        };
+
+        let table4 = `<table style="width:100%; border-collapse:collapse; font-size:10px; margin-bottom:15px; border:1px solid #bdc3c7;">
+            <thead>
+                <tr style="background:#34495e; color:#fff; border-bottom:1px solid #bdc3c7;">
+                    <th rowspan="2" style="border:1px solid #bdc3c7; padding:4px;">柱間</th>
+                    <th rowspan="2" style="border:1px solid #bdc3c7; padding:4px; width:45px;">成 D(mm)</th>
+                    <th rowspan="2" style="border:1px solid #bdc3c7; padding:4px; width:45px;">根入れ h(mm)</th>
+                    <th colspan="4" style="border:1px solid #bdc3c7; padding:4px; text-align:center; background:#ebf5fb; color:#1b4f72;">上端主筋</th>
+                    <th colspan="4" style="border:1px solid #bdc3c7; padding:4px; text-align:center; background:#fdf2e9; color:#7e5109;">下端主筋</th>
+                </tr>
+                <tr style="background:#f2f4f4; color:#2c3e50; border-bottom:1px solid #bdc3c7;">
+                    <th style="border:1px solid #bdc3c7; padding:3px;">鉄筋</th>
+                    <th style="border:1px solid #bdc3c7; padding:3px;">at(㎟)</th>
+                    <th style="border:1px solid #bdc3c7; padding:3px;">lMa(長期)</th>
+                    <th style="border:1px solid #bdc3c7; padding:3px;">sMa(短期)</th>
+                    <th style="border:1px solid #bdc3c7; padding:3px;">鉄筋</th>
+                    <th style="border:1px solid #bdc3c7; padding:3px;">at(㎟)</th>
+                    <th style="border:1px solid #bdc3c7; padding:3px;">lMa(長期)</th>
+                    <th style="border:1px solid #bdc3c7; padding:3px;">sMa(短期)</th>
+                </tr>
+            </thead>
+            <tbody>`;
+
+        spans.forEach((span, sIdx) => {
+            const sTopRebar = span.props?.topRebar || bp.topRebar || '1-D13';
+            const sBottomRebar = span.props?.bottomRebar || bp.bottomRebar || '1-D13';
+            const currentTop = parseRebarInput(sTopRebar);
+            const currentBot = parseRebarInput(sBottomRebar);
+
+            const topCountId = `top-count-${beam.id}-${sIdx}`;
+            const topTypeId = `top-type-${beam.id}-${sIdx}`;
+            const botCountId = `bot-count-${beam.id}-${sIdx}`;
+            const botTypeId = `bot-type-${beam.id}-${sIdx}`;
+
+            const topArea = (window.FoundationEngine && window.FoundationEngine.parseRebar) ? window.FoundationEngine.parseRebar(sTopRebar).area : 127;
+            const botArea = (window.FoundationEngine && window.FoundationEngine.parseRebar) ? window.FoundationEngine.parseRebar(sBottomRebar).area : 127;
+
+            const topControlHtml = options.showInputs ? `
+                <input type="number" id="${topCountId}" min="1" value="${currentTop.count}" onchange="const typeVal = document.getElementById('${topTypeId}').value; window.PropertyController.updateFdProp('beam_span', ${beam.id}, 'topRebar', this.value + '-' + typeVal, ${sIdx})" style="width:30px; padding:2px; font-size:9px; border:1px solid #ccc; border-radius:3px; text-align:right;">-
+                <select id="${topTypeId}" onchange="const countVal = document.getElementById('${topCountId}').value; window.PropertyController.updateFdProp('beam_span', ${beam.id}, 'topRebar', countVal + '-' + this.value, ${sIdx})" style="padding:2px; font-size:9px; border:1px solid #ccc; border-radius:3px; background:#fff; max-width:65px;">
+                    <option value="D13" ${currentTop.type === 'D13' ? 'selected' : ''}>D13</option>
+                    <option value="D16" ${currentTop.type === 'D16' ? 'selected' : ''}>D16</option>
+                    <option value="D19" ${currentTop.type === 'D19' ? 'selected' : ''}>D19</option>
+                    <option value="D13D16" ${currentTop.type === 'D13D16' ? 'selected' : ''}>D13D16</option>
+                    <option value="D13D19" ${currentTop.type === 'D13D19' ? 'selected' : ''}>D13D19</option>
+                    <option value="D16D19" ${currentTop.type === 'D16D19' ? 'selected' : ''}>D16D19</option>
+                </select>` : `${sTopRebar}`;
+
+            const botControlHtml = options.showInputs ? `
+                <input type="number" id="${botCountId}" min="1" value="${currentBot.count}" onchange="const typeVal = document.getElementById('${botTypeId}').value; window.PropertyController.updateFdProp('beam_span', ${beam.id}, 'bottomRebar', this.value + '-' + typeVal, ${sIdx})" style="width:30px; padding:2px; font-size:9px; border:1px solid #ccc; border-radius:3px; text-align:right;">-
+                <select id="${botTypeId}" onchange="const countVal = document.getElementById('${botCountId}').value; window.PropertyController.updateFdProp('beam_span', ${beam.id}, 'bottomRebar', countVal + '-' + this.value, ${sIdx})" style="padding:2px; font-size:9px; border:1px solid #ccc; border-radius:3px; background:#fff; max-width:65px;">
+                    <option value="D13" ${currentBot.type === 'D13' ? 'selected' : ''}>D13</option>
+                    <option value="D16" ${currentBot.type === 'D16' ? 'selected' : ''}>D16</option>
+                    <option value="D19" ${currentBot.type === 'D19' ? 'selected' : ''}>D19</option>
+                    <option value="D13D16" ${currentBot.type === 'D13D16' ? 'selected' : ''}>D13D16</option>
+                    <option value="D13D19" ${currentBot.type === 'D13D19' ? 'selected' : ''}>D13D19</option>
+                    <option value="D16D19" ${currentBot.type === 'D16D19' ? 'selected' : ''}>D16D19</option>
+                </select>` : `${sBottomRebar}`;
+
+            const heightInputHtml = options.showInputs ? `
+                <input type="number" step="10" value="${span.props?.height || bp.height || 640}" onchange="window.PropertyController.updateFdProp('beam_span', ${beam.id}, 'height', this.value, ${sIdx})" style="width:40px; padding:2px; font-size:9px; border:1px solid #ccc; border-radius:3px; text-align:right;">` : `${span.props?.height || bp.height || 640}`;
+
+            const embedInputHtml = options.showInputs ? `
+                <input type="number" step="10" value="${span.props?.embedDepth !== undefined ? span.props.embedDepth : (bp.embedDepth !== undefined ? bp.embedDepth : 250)}" onchange="window.PropertyController.updateFdProp('beam_span', ${beam.id}, 'embedDepth', this.value, ${sIdx})" style="width:40px; padding:2px; font-size:9px; border:1px solid #ccc; border-radius:3px; text-align:right;">` : `${span.props?.embedDepth !== undefined ? span.props.embedDepth : (bp.embedDepth !== undefined ? bp.embedDepth : 250)}`;
+
+            table4 += `<tr>
+                <td style="border:1px solid #bdc3c7; padding:4px; font-weight:bold; text-align:center;">${getFreshSpanName(span)}</td>
+                <td style="border:1px solid #bdc3c7; padding:4px; text-align:center;">${heightInputHtml}</td>
+                <td style="border:1px solid #bdc3c7; padding:4px; text-align:center;">${embedInputHtml}</td>
+                <td style="border:1px solid #bdc3c7; padding:4px; text-align:center; white-space:nowrap;">${topControlHtml}</td>
+                <td style="border:1px solid #bdc3c7; padding:4px; text-align:right;">${topArea.toFixed(1)}</td>
+                <td style="border:1px solid #bdc3c7; padding:4px; text-align:right; font-weight:bold; color:#27ae60;">${(span.cap?.lMa_top ?? 0).toFixed(3)}</td>
+                <td style="border:1px solid #bdc3c7; padding:4px; text-align:right; font-weight:bold; color:#16a085;">${(span.cap?.sMa_top ?? 0).toFixed(3)}</td>
+                <td style="border:1px solid #bdc3c7; padding:4px; text-align:center; white-space:nowrap;">${botControlHtml}</td>
+                <td style="border:1px solid #bdc3c7; padding:4px; text-align:right;">${botArea.toFixed(1)}</td>
+                <td style="border:1px solid #bdc3c7; padding:4px; text-align:right; font-weight:bold; color:#2980b9;">${(span.cap?.lMa_bot ?? 0).toFixed(3)}</td>
+                <td style="border:1px solid #bdc3c7; padding:4px; text-align:right; font-weight:bold; color:#2e4053;">${(span.cap?.sMa_bot ?? 0).toFixed(3)}</td>
+            </tr>`;
+        });
+        table4 += `</tbody></table>`;
+        html += table4;
+
+        // 6. (5) 許容耐力の算定（2 - せん断）
+        html += `<div style="font-size:12px; font-weight:bold; color:#2c3e50; border-left:4px solid #34495e; padding-left:8px; margin:15px 0 6px 0;">⑤ 許容耐力の算定（2 - せん断）</div>`;
+        let table5 = `<table style="width:100%; border-collapse:collapse; font-size:10px; margin-bottom:15px; border:1px solid #bdc3c7;">
+            <thead>
+                <tr style="background:#34495e; color:#fff; border-bottom:1px solid #bdc3c7;">
+                    <th rowspan="2" style="border:1px solid #bdc3c7; padding:4px;">柱間</th>
+                    <th rowspan="2" style="border:1px solid #bdc3c7; padding:4px; width:45px;">幅 b(mm)</th>
+                    <th colspan="3" style="border:1px solid #bdc3c7; padding:4px; text-align:center; background:#ebf5fb; color:#1b4f72;">スターラップ筋 (あばら筋)</th>
+                    <th rowspan="2" style="border:1px solid #bdc3c7; padding:4px;">pw</th>
+                    <th colspan="2" style="border:1px solid #bdc3c7; padding:4px; text-align:center; background:#e8f8f5; color:#117a65;">せん断長期</th>
+                    <th colspan="4" style="border:1px solid #bdc3c7; padding:4px; text-align:center; background:#fef9e7; color:#7e5109;">せん断短期</th>
+                </tr>
+                <tr style="background:#f2f4f4; color:#2c3e50; border-bottom:1px solid #bdc3c7;">
+                    <th style="border:1px solid #bdc3c7; padding:3px;">鉄筋</th>
+                    <th style="border:1px solid #bdc3c7; padding:3px;">at(㎟)</th>
+                    <th style="border:1px solid #bdc3c7; padding:3px;">ピッチ(mm)</th>
+                    <th style="border:1px solid #bdc3c7; padding:3px;">α</th>
+                    <th style="border:1px solid #bdc3c7; padding:3px;">lQa (kN)</th>
+                    <th style="border:1px solid #bdc3c7; padding:3px;">α(左)</th>
+                    <th style="border:1px solid #bdc3c7; padding:3px;">sQa_L (kN)</th>
+                    <th style="border:1px solid #bdc3c7; padding:3px;">α(右)</th>
+                    <th style="border:1px solid #bdc3c7; padding:3px;">sQa_R (kN)</th>
+                </tr>
+            </thead>
+            <tbody>`;
+
+        spans.forEach((span, sIdx) => {
+            const sStirrup = span.props?.stirrup || bp.stirrup || '1-D10@200';
+            const currentSt = parseStirrupInput(sStirrup);
+
+            const stCountId = `st-count-${beam.id}-${sIdx}`;
+            const stTypeId = `st-type-${beam.id}-${sIdx}`;
+            const stPitchId = `st-pitch-${beam.id}-${sIdx}`;
+
+            const stArea = (window.FoundationEngine && window.FoundationEngine.parseStirrups) ? window.FoundationEngine.parseStirrups(sStirrup).area : 71;
+
+            const alpha_L = span.cap?.alpha_L != null ? span.cap.alpha_L.toFixed(3) : '--';
+            const alpha_S_L = span.cap?.alpha_S_L != null ? span.cap.alpha_S_L.toFixed(3) : '--';
+            const alpha_S_R = span.cap?.alpha_S_R != null ? span.cap.alpha_S_R.toFixed(3) : '--';
+
+            const pwValue = span.cap?.pw ?? 0;
+            const pwWarning = pwValue < 0.002 ? 'background:#fff9c4; color:#d32f2f; font-weight:bold;' : '';
+
+            const widthInputHtml = options.showInputs ? `
+                <input type="number" step="10" value="${span.props?.width || bp.width || 150}" onchange="window.PropertyController.updateFdProp('beam_span', ${beam.id}, 'width', this.value, ${sIdx})" style="width:40px; padding:2px; font-size:9px; border:1px solid #ccc; border-radius:3px; text-align:right;">` : `${span.props?.width || bp.width || 150}`;
+
+            const stirrupControlHtml = options.showInputs ? `
+                <input type="number" id="${stCountId}" min="1" value="${currentSt.count}" onchange="const typeVal = document.getElementById('${stTypeId}').value; const pitchVal = document.getElementById('${stPitchId}').value; window.PropertyController.updateFdProp('beam_span', ${beam.id}, 'stirrup', this.value + '-' + typeVal + '@' + pitchVal, ${sIdx})" style="width:30px; padding:2px; font-size:9px; border:1px solid #ccc; border-radius:3px; text-align:right;">-
+                <select id="${stTypeId}" onchange="const countVal = document.getElementById('${stCountId}').value; const pitchVal = document.getElementById('${stPitchId}').value; window.PropertyController.updateFdProp('beam_span', ${beam.id}, 'stirrup', countVal + '-' + this.value + '@' + pitchVal, ${sIdx})" style="padding:2px; font-size:9px; border:1px solid #ccc; border-radius:3px; background:#fff; max-width:60px;">
+                    <option value="D10" ${currentSt.type === 'D10' ? 'selected' : ''}>D10</option>
+                    <option value="D13" ${currentSt.type === 'D13' ? 'selected' : ''}>D13</option>
+                </select>` : `${currentSt.count}-${currentSt.type}`;
+
+            const pitchControlHtml = options.showInputs ? `
+                <select id="${stPitchId}" onchange="const countVal = document.getElementById('${stCountId}').value; const typeVal = document.getElementById('${stTypeId}').value; window.PropertyController.updateFdProp('beam_span', ${beam.id}, 'stirrup', countVal + '-' + typeVal + '@' + this.value, ${sIdx})" style="padding:2px; font-size:9px; border:1px solid #ccc; border-radius:3px; background:#fff; max-width:70px;">
+                    <option value="300" ${currentSt.pitch === '300' ? 'selected' : ''}>@300</option>
+                    <option value="200" ${currentSt.pitch === '200' ? 'selected' : ''}>@200</option>
+                    <option value="150" ${currentSt.pitch === '150' ? 'selected' : ''}>@150</option>
+                    <option value="100" ${currentSt.pitch === '100' ? 'selected' : ''}>@100</option>
+                </select>` : `@${currentSt.pitch}`;
+
+            table5 += `<tr>
+                <td style="border:1px solid #bdc3c7; padding:4px; font-weight:bold; text-align:center;">${getFreshSpanName(span)}</td>
+                <td style="border:1px solid #bdc3c7; padding:4px; text-align:center;">${widthInputHtml}</td>
+                <td style="border:1px solid #bdc3c7; padding:4px; text-align:center; white-space:nowrap;">${stirrupControlHtml}</td>
+                <td style="border:1px solid #bdc3c7; padding:4px; text-align:right;">${stArea.toFixed(1)}</td>
+                <td style="border:1px solid #bdc3c7; padding:4px; text-align:center;">${pitchControlHtml}</td>
+                <td style="border:1px solid #bdc3c7; padding:4px; text-align:right; ${pwWarning}">${pwValue.toFixed(5)}</td>
+                <td style="border:1px solid #bdc3c7; padding:4px; text-align:right; font-weight:bold; color:#117a65;">${alpha_L}</td>
+                <td style="border:1px solid #bdc3c7; padding:4px; text-align:right; font-weight:bold; color:#27ae60;">${(span.cap?.lQa ?? 0).toFixed(3)}</td>
+                <td style="border:1px solid #bdc3c7; padding:4px; text-align:right; font-weight:bold; color:#117a65;">${alpha_S_L}</td>
+                <td style="border:1px solid #bdc3c7; padding:4px; text-align:right; font-weight:bold; color:#2980b9;">${(span.cap?.sQa_L ?? 0).toFixed(3)}</td>
+                <td style="border:1px solid #bdc3c7; padding:4px; text-align:right; font-weight:bold; color:#117a65;">${alpha_S_R}</td>
+                <td style="border:1px solid #bdc3c7; padding:4px; text-align:right; font-weight:bold; color:#7d3c98;">${(span.cap?.sQa_R ?? 0).toFixed(3)}</td>
+            </tr>`;
+        });
+        table5 += `</tbody></table>`;
+
+        if (spans.some(s => (s.cap?.pw ?? 0) < 0.002)) {
+            html += `<div style="background:#fff9c4; border-left:4px solid #fbc02d; padding:8px; margin-bottom:12px; font-size:10px; color:#856404; font-weight:bold;">
+                ⚠️ せん断補強筋比(pw)が0.002を下回っています。鉄筋の本数・径を増やすか、ピッチを細かく(例:@100)修正してください。
+            </div>`;
+        }
+        html += table5;
+
+        // 7. (6) 総合判定表 (検定比)
+        html += `<div style="font-size:12px; font-weight:bold; color:#2c3e50; border-left:4px solid #34495e; padding-left:8px; margin:15px 0 6px 0;">⑥ 総合判定 (検定比)</div>`;
+        let table6 = `<table style="width:100%; border-collapse:collapse; font-size:10px; border:2px solid #34495e; text-align:center; background:#fff;">
             <thead>
                 <tr style="background:#34495e; color:#fff;">
                     <th style="border:1px solid #bdc3c7; padding:6px;">スパン No.</th>
@@ -431,7 +613,7 @@ window.FoundationRenderer = {
             <tbody>`;
         
         spans.forEach((span, i) => {
-            table4 += `
+            table6 += `
             <tr style="${span.isNG ? 'background:#fef5f5;' : ''}">
                 <td style="border:1px solid #bdc3c7; padding:6px; font-weight:bold;">${getFreshSpanName(span)}</td>
                 <td style="border:1px solid #bdc3c7; padding:6px;">${this.fmtRatio(span.ratioM_L)}</td>
@@ -445,8 +627,8 @@ window.FoundationRenderer = {
                 </td>
             </tr>`;
         });
-        table4 += `</tbody></table>`;
-        html += table4;
+        table6 += `</tbody></table>`;
+        html += table6;
 
         html += `</div>`;
         return html;

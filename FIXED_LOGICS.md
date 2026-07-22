@@ -841,6 +841,9 @@ $$R_i = A + B \cdot x_i$$
 ### ㊸ 旧計算エンジン内の孤立コード整理による SyntaxError 100%根絶 (v3.0.40)
 - **旧SVG生成コード残滓の物理的全削去**: `wall_4split_foundation_engine.js` 内に残留していた旧 `generateBeamNMQSvg` の孤立コード断片を物理削去。関数外の `return svg;` に起因する `SyntaxError: Illegal return statement` を100%根絶し、JSスクリプト全体の正常なパース・動作を復元完了。
 
+### ㊹ 個別要素プロパティモーダル内での基礎梁鉄筋・断面寸法インタラクティブ入力テーブルの完全復元 (v3.0.41)
+- **許容耐力算定テーブル(1-曲げ)および(2-せん断)の完全復元**: 単一描画モジュール `FoundationRenderer.js` の `generateBeamReportHtml` 内に `options.showInputs` フラグによる条件分岐を追加。プロパティモーダル表示時（`showInputs: true`）に、各スパンごとの `成 D(mm)`, `根入れ h(mm)`, `上端主筋 (本数-径)`, `下端主筋 (本数-径)`, `幅 b(mm)`, `スターラップ筋 (本数-径@ピッチ)` のフォーム入力コントロール（`input`/`select`）を完全復元。モーダルから直感的に断面寸法や配筋をリアルタイム変更・再計算できるUIを完全修復完了。
+
 
 
 

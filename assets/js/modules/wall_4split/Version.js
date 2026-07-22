@@ -1,4 +1,4 @@
 /**
  * Version.js - Centralized Version Management
  */
-window.APP_VERSION = "v3.0.40"; // Fix SyntaxError illegal return statement in wall_4split_foundation_engine.js
+window.APP_VERSION = "v3.0.41"; // Restore interactive capacity tables (top/bottom rebar, stirrup, width, height) in property modal
