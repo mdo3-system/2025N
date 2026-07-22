@@ -772,6 +772,12 @@ $$R_i = A + B \cdot x_i$$
 - **一括計算書における「見附面積算定図」および「見附求積表」の統合出力**: 一括出力モーダル（1章）の見附風圧力必要壁量セクションにて、X/Y方向見附算定図画像（`iAutoEX`, `iAutoEY`）および大括り幾何（`A1, B1...`）算定式入りの見附面積求積表 (`generateElevationAreaTableHtml`) を全自動でHTML本文内に埋め込み出力する仕様に更新。
 - **基礎計算書のみ出力時の表示修復**: 印刷範囲選択「基礎計算書を出力 (`fd_only`)」指定時に、基礎スラブ構造検定 (`sec-fd-slab`) および基礎梁構造検定 (`sec-fd-beam`) が正しく可視化されてA4判に印刷・PDF保存できるよう連動修復。
 
+### ㉘ 基礎スラブデータバインディング(fdStress)修復 ＆ 床面積図背景線オーバーレイ復元 ＆ 見附求積表自動再計算挿入 ＆ PDF印刷切替完全追従 (v3.0.25)
+- **基礎スラブ構造検定表のデータバインディング完全修復**: `wall_4split_pdf.js` の `sec-fd-slab` レポート生成処理にて、`FoundationEngine` の正規解析プロパティ `s.fdStress` （`lx`, `ly`, `qTotal`, `Mx_center`, `Mx_end`）から数値を読み出すデータバインディングへ修正。スラブの $l_x, l_y$, 平均接地圧 $w$, 設計曲げ $M$, せん断 $V$ のゼロ化を100%完全解消。
+- **床面積図への柱・壁・DXF下絵線のオーバーレイ背景線描画**: `DocumentRenderer.renderLayerFilteredImage` 内にて `state.bgLinesOriginal` （手動線・壁・柱・DXF要素）の背景線描画パスを追加。DXF読み込みの有無を問わず床面積図キャンバス上に柱・壁・間取り線を100%確実に高画質描画。
+- **見附求積表（算定式表）の自動算定・自己復元挿入**: `ElevationRenderer.generateElevationAreaTableHtml` の呼び出し冒頭で `MitsukeEngine.updateProjectedAreas()` を自動事前実行。未生成時にも自己復元して画面モーダルおよび一括計算書に「見附面積 求積表」を100%全自動挿入表示。
+- **PDF印刷範囲選択の動的DOM切り替え完全同期**: `window.printDocSection()` の印刷制御を `#doc-container` 内のすべての `.doc-section` へ動的クエリ適用。「基礎計算書を出力 (`fd_only`)」選択時に壁量計算書セクションを隠し、基礎スラブ・基礎梁検定書のみをA4判構造計算書としてPDF保存・印刷できるよう完修。
+
 
 
 

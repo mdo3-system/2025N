@@ -1418,17 +1418,20 @@ async function generateDoc() {
             const sel = document.getElementById('doc-print-range-select');
             const mode = sel ? sel.value : 'all';
             
-            const wallSecs = ['sec-area', 'sec-wall', 'sec-div4', 'sec-nval', 'sec-pillar'];
-            const fdSecs = ['sec-fd-slab', 'sec-fd-beam'];
+            const dc = document.getElementById('doc-container');
+            if (!dc) { window.print(); return; }
+
+            const wallSecs = Array.from(dc.querySelectorAll('.doc-section:not(#sec-fd-slab):not(#sec-fd-beam)'));
+            const fdSecs = Array.from(dc.querySelectorAll('#sec-fd-slab, #sec-fd-beam'));
             
             if (mode === 'wall_only') {
-                wallSecs.forEach(id => { const el = document.getElementById(id); if (el) el.classList.remove('print-hide'); });
-                fdSecs.forEach(id => { const el = document.getElementById(id); if (el) el.classList.add('print-hide'); });
+                wallSecs.forEach(el => el.classList.remove('print-hide'));
+                fdSecs.forEach(el => el.classList.add('print-hide'));
             } else if (mode === 'fd_only') {
-                wallSecs.forEach(id => { const el = document.getElementById(id); if (el) el.classList.add('print-hide'); });
-                fdSecs.forEach(id => { const el = document.getElementById(id); if (el) el.classList.remove('print-hide'); });
+                wallSecs.forEach(el => el.classList.add('print-hide'));
+                fdSecs.forEach(el => el.classList.remove('print-hide'));
             } else {
-                [...wallSecs, ...fdSecs].forEach(id => { const el = document.getElementById(id); if (el) el?.classList.remove('print-hide'); });
+                [...wallSecs, ...fdSecs].forEach(el => el.classList.remove('print-hide'));
             }
             
             window.print();
@@ -1984,18 +1987,28 @@ async function generateDoc() {
                 </thead>
                 <tbody>`;
             slabs.forEach((s, idx) => {
-                const isOk = s.isOk !== false;
+                const fs = s.fdStress || {};
+                const props = s.props || {};
+                const isOk = fs.isNG !== true;
                 const okStr = isOk ? '<span style="color:#27ae60;font-weight:bold;">OK</span>' : '<span style="color:#c0392b;font-weight:bold;">NG</span>';
-                const lx = (s.lx || 0)/1000, ly = (s.ly || 0)/1000;
-                const mMax = Math.max(s.mx || 0, s.my || 0);
+                
+                const lx = fs.lx || 0;
+                const ly = fs.ly || 0;
+                const w = fs.qTotal || (s.w || 0);
+                const mx = Math.max(fs.Mx_center || 0, fs.Mx_end || 0);
+                const my = Math.max(fs.My_center || 0, fs.My_end || 0);
+                const mMax = Math.max(mx, my);
+                const thick = props.slabThickness || 150;
+                const fixType = props.support || '4辺固定';
+                
                 h += `<tr>
                     <td style="font-weight:bold;">No.${idx+1}</td>
-                    <td>${s.fixType || '4辺固定'}</td>
-                    <td>${s.d || 150}</td>
+                    <td>${fixType}</td>
+                    <td>${thick}</td>
                     <td>${lx.toFixed(2)} × ${ly.toFixed(2)}</td>
-                    <td>${(s.w || 0).toFixed(2)}</td>
+                    <td>${w.toFixed(2)}</td>
                     <td>${mMax.toFixed(2)}</td>
-                    <td>${(s.v || 0).toFixed(2)}</td>
+                    <td>${(w * lx / 2).toFixed(2)}</td>
                     <td>D13@200 (同等)</td>
                     <td>${okStr}</td>
                 </tr>`;

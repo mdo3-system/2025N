@@ -59,10 +59,32 @@ window.DocumentRenderer = {
             cy: cH - ((y - adjustedBbox.minY) * sfFinal)
         });
 
-        // Draw Background
+        // Draw Background CAD & DXF Underlay Lines (State bgLinesOriginal fallback)
         const bgEnts = filteredEnts.filter(e => e.isBg);
         if (bgEnts.length > 0 && typeof _drawCADEntities === 'function') {
             _drawCADEntities(ctx, bgEnts, toC, true, sfFinal, true);
+        }
+        
+        // Ensure manual DXF & AppState background underlay lines (walls, pillars, floor grids) are always rendered
+        if (state.bgLinesOriginal && state.bgLinesOriginal.length > 0) {
+            ctx.save();
+            ctx.lineWidth = 1.2;
+            ctx.strokeStyle = '#cccccc';
+            state.bgLinesOriginal.filter(e => e.floor === floorStr || e.floor === 'ALL' || (e.layer && e.layer.includes(floorStr))).forEach(e => {
+                ctx.beginPath();
+                if (e.type === 'LINE' && e.vertices && e.vertices.length >= 2) {
+                    let p1 = toC(e.vertices[0].x, e.vertices[0].y), p2 = toC(e.vertices[1].x, e.vertices[1].y);
+                    ctx.moveTo(p1.cx, p1.cy); ctx.lineTo(p2.cx, p2.cy);
+                } else if (['LWPOLYLINE', 'POLYLINE'].includes(e.type) && e.vertices) {
+                    e.vertices.forEach((v, i) => {
+                        let p = toC(v.x, v.y);
+                        i === 0 ? ctx.moveTo(p.cx, p.cy) : ctx.lineTo(p.cx, p.cy);
+                    });
+                    if (e.closed) ctx.closePath();
+                }
+                ctx.stroke();
+            });
+            ctx.restore();
         }
 
         // Draw Area Lines

@@ -476,10 +476,13 @@ window.ElevationRenderer = {
      */
     generateElevationAreaTableHtml: function(state) {
         const s = state || window.AppState;
+        if (window.MitsukeEngine && typeof window.MitsukeEngine.updateProjectedAreas === 'function') {
+            window.MitsukeEngine.updateProjectedAreas(s);
+        }
         const c = s.config || {};
         const formulaAreas = c.elevationFormulaAreas;
         
-        if (!formulaAreas) return `<div style="padding:20px; color:#666;">見附面積データがありません。3Dプレビューを開いて再計算してください。</div>`;
+        if (!formulaAreas) return `<div style="padding:20px; color:#666;">※ 見附面積データを自動算定中...</div>`;
 
         const fl1 = (c.baseHeight || 400) + (c.basePack || 20) + (c.baseSill || 105);
         const fl2 = fl1 + (c.floorHeight1F || 2.7) * 1000;
