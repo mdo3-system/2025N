@@ -1440,6 +1440,10 @@ async function generateDoc() {
             }
             
             window.print();
+            setTimeout(() => {
+                document.body.classList.remove('print-mode-wall-only', 'print-mode-fd-only');
+                document.querySelectorAll('.print-hide').forEach(el => el.classList.remove('print-hide'));
+            }, 500);
         };
 
         let h = `<div id="sec-summary" class="doc-section" style="margin-bottom:25px; border:2px solid ${isTotalOk ? '#27ae60' : '#c0392b'}; border-radius:4px; padding:15px; background:#fdfdfd;">
@@ -2036,7 +2040,7 @@ async function generateDoc() {
                 if (window.FoundationEngine && (!beam.spans || beam.spans.length === 0)) {
                     window.FoundationEngine.runAnalysis(window.AppState);
                 }
-                const fnBeamReport = window.getFoundationBeamReportHtml || (typeof getFoundationBeamReportHtml === 'function' ? getFoundationBeamReportHtml : null);
+                const fnBeamReport = window.generateContinuousBeamReportHtml || window.getFoundationBeamReportHtml || (typeof generateContinuousBeamReportHtml === 'function' ? generateContinuousBeamReportHtml : (typeof getFoundationBeamReportHtml === 'function' ? getFoundationBeamReportHtml : null));
                 const fnNmqSvg = window.generateBeamNMQSvg || (typeof generateBeamNMQSvg === 'function' ? generateBeamNMQSvg : null);
                 
                 const beamHtml = fnBeamReport ? fnBeamReport(beam) : '';

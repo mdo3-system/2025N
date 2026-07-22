@@ -796,6 +796,11 @@ $$R_i = A + B \cdot x_i$$
 - **一括計算書サマリー枠への ID (sec-summary) 付与**: `wall_4split_pdf.js` の最上部サマリー枠 `<div>` に `id="sec-summary"` および `class="doc-section"` を明示付与。
 - **基礎計算書単独PDF印刷時 (print-mode-fd-only) の非基礎要素一括消去CSS補正**: `index.html` の `@media print` 内に、最優先絶対消去ルール `body.print-mode-fd-only #sec-summary, body.print-mode-fd-only #doc-container > *:not(#sec-fd-slab):not(#sec-fd-beam) { display: none !important; }` を適用。「基礎計算書を出力」選択時に壁量サマリー表・1〜5章の文章・画像・表が1文字たりとも残らず100%消去され、A4判1ページ目から純粋な基礎計算書（スラブ検定・基礎梁検定・NMQ図）のみが綺麗にPDF出力・印刷されるよう完修。
 
+### ㉝ generateBeamNMQSvg データバインディング完全修復 ＆ generateContinuousBeamReportHtml 連携 ＆ 印刷状態クリーンアップ (v3.0.30)
+- **generateBeamNMQSvg のデータバインディング全面改修**: `FoundationEngine.js`（新構造）が生成する `spans` 内の `M_mid`, `M_end`, `Q_L`, `leftward`, `rightward` を安全に直接取得できるよう改修。`fs.stressData` 未生成時でも NMQ（軸力 N・曲げ M・せん断 Q）のカラー SVG 線図が 100% 確実に描画・表示されるよう修復。
+- **generateContinuousBeamReportHtml のグローバル公開 ＆ wall_4split_pdf.js 連携**: `wall_4split_foundation_engine.js` 内の `generateContinuousBeamReportHtml` を `window.generateContinuousBeamReportHtml` として公開。`wall_4split_pdf.js` から優先的に呼び出すことで、基礎梁の柱間節点応力・スパン応力・断面定数・総合判定表を新構造データに基づき 100% 完全かつ正確に出力・表示されるよう修復。
+- **印刷（PDF出力）後のクラス自動クリーンアップ**: `wall_4split_pdf.js` の `printDocSection()` 内にて `window.print()` 実行後に `setTimeout` で `print-mode-*` および `.print-hide` クラスを完全にリセット。次回表示時や別モード選択時にも表示が崩れないよう完修。
+
 
 
 

@@ -915,7 +915,7 @@ function generateBeamNMQSvg(beam) {
     if (!beam || !beam.spans || beam.spans.length === 0) return '';
     
     // 全スパンの合計長さを算出
-    const totalL_mm = beam.spans.reduce((sum, s) => sum + (s.spanLength || 0), 0);
+    const totalL_mm = beam.spans.reduce((sum, s) => sum + (s.spanLength || (s.L * 1000) || 0), 0);
     const totalL_m = totalL_mm / 1000;
     if (totalL_m <= 0) return '';
     
@@ -935,18 +935,29 @@ function generateBeamNMQSvg(beam) {
     // 最大応力の取得 (全体のスケーリング用)
     let maxM = 1.0, maxQ = 1.0, maxN = 10.0;
     beam.spans.forEach(s => {
-        const fs = s.fdStress;
-        if (fs && fs.stressData) {
-            const mC_Long = fs.stressData.M_long_mid_Nmm / 1e6;
-            const mC_Short = (fs.stressData.M_short_end_Nmm || 0) / 2; // 山形のピーク想定
-            const mE_Short = (fs.stressData.M_short_end_Nmm || 0) / 1e6;
-            maxM = Math.max(maxM, mC_Long + mC_Short, mE_Short);
-            maxQ = Math.max(maxQ, (fs.stressData.Q_long_N + fs.stressData.Qe_N) / 1e3);
-            maxN = Math.max(maxN, (fs.leftPat?.Td_kN || 0), (fs.rightPat?.Td_kN || 0));
-        }
+        const mL_mid = s.M_mid || (s.fdStress?.stressData?.M_long_mid_Nmm / 1e6) || 0;
+        const mL_end = s.M_end || (s.fdStress?.stressData?.M_long_end_Nmm / 1e6) || 0;
+        const mS_max = Math.max(
+            s.leftward?.M_left || 0, s.leftward?.M_right || 0,
+            s.rightward?.M_left || 0, s.rightward?.M_right || 0,
+            ((s.fdStress?.stressData?.M_short_end_Nmm || 0) / 1e6)
+        );
+        const q_max = Math.max(
+            s.Q_L || 0,
+            s.leftward?.Q || 0, s.rightward?.Q || 0,
+            (((s.fdStress?.stressData?.Q_long_N || 0) + (s.fdStress?.stressData?.Qe_N || 0)) / 1e3)
+        );
+        const n_max = Math.max(
+            Math.abs(s.leftward?.Td || 0), Math.abs(s.rightward?.Td || 0),
+            (s.fdStress?.leftPat?.Td_kN || 0), (s.fdStress?.rightPat?.Td_kN || 0)
+        );
+
+        maxM = Math.max(maxM, mL_mid + mS_max, mL_end + mS_max);
+        maxQ = Math.max(maxQ, q_max);
+        maxN = Math.max(maxN, n_max);
     });
 
-    const fmt = (v) => (typeof v === 'number' && isFinite(v)) ? v.toFixed(2) : '0';
+    const fmt = (v) => (typeof v === 'number' && isFinite(v)) ? v.toFixed(2) : '0.00';
     let svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${viewBox}" width="100%" style="background:#fff; font-family:'Meiryo',sans-serif;">`;
     
     // 背景グリッドライン (各図のベースライン)
@@ -969,7 +980,7 @@ function generateBeamNMQSvg(beam) {
     svg += `<g stroke="#bdc3c7" stroke-width="1" stroke-dasharray="5,3">`;
     svg += `<line x1="${toX(0)}" y1="${pad}" x2="${toX(0)}" y2="${hTotal - pad}" />`; // 開始点
     beam.spans.forEach(s => {
-        currentPosM += (s.spanLength || 0) / 1000;
+        currentPosM += s.L || (s.spanLength || 0) / 1000;
         const x = toX(currentPosM);
         svg += `<line x1="${x}" y1="${pad}" x2="${x}" y2="${hTotal - pad}" />`;
     });
@@ -978,18 +989,17 @@ function generateBeamNMQSvg(beam) {
     // --- スパンごとの応力図描画 ---
     currentPosM = 0;
     beam.spans.forEach((s, idx) => {
-        const spanL = (s.spanLength || 0) / 1000;
+        const spanL = s.L || (s.spanLength || 0) / 1000;
+        if (spanL <= 0) return;
         const xStart = toX(currentPosM);
         const xEnd = toX(currentPosM + spanL);
-        const fs = s.fdStress;
-        if (!fs || !fs.stressData) { currentPosM += spanL; return; }
 
         const mScale = (hSection * 0.4) / (maxM || 1);
         const qScale = (hSection * 0.4) / (maxQ || 1);
         const nScale = (hSection * 0.3) / (maxN || 1);
 
         // 1. N図 (矩形)
-        const nVal = fs.cap?.N_kN || 0;
+        const nVal = Math.max(Math.abs(s.leftward?.Td || 0), Math.abs(s.rightward?.Td || 0), s.fdStress?.cap?.N_kN || 0);
         if (nVal > 0) {
             const nH = nVal * nScale;
             svg += `<rect x="${xStart}" y="${nY - nH}" width="${xEnd - xStart}" height="${nH}" fill="rgba(231, 76, 60, 0.15)" stroke="#e74c3c" stroke-width="1" />`;
@@ -997,9 +1007,9 @@ function generateBeamNMQSvg(beam) {
         }
 
         // 2. M図 (包絡線)
-        const mL_mid = (fs.stressData?.M_long_mid_Nmm || 0) / 1e6;
-        const mS_mid = (fs.stressData?.M_short_end_Nmm || 0) / 2 / 1e6;
-        const mS_end = (fs.stressData?.M_short_end_Nmm || 0) / 1e6;
+        const mL_mid = s.M_mid || (s.fdStress?.stressData?.M_long_mid_Nmm / 1e6) || 0;
+        const mS_mid = (Math.max(s.leftward?.M_left || 0, s.rightward?.M_left || 0) / 2) || ((s.fdStress?.stressData?.M_short_end_Nmm || 0) / 2 / 1e6);
+        const mS_end = Math.max(s.leftward?.M_right || s.leftward?.M_left || 0, s.rightward?.M_right || s.rightward?.M_left || 0) || ((s.fdStress?.stressData?.M_short_end_Nmm || 0) / 1e6);
         
         let mPathTotal = `M ${xStart} ${mY + mS_end * mScale}`; // 端部負モーメント
         for (let i = 1; i <= 20; i++) {
@@ -1017,9 +1027,7 @@ function generateBeamNMQSvg(beam) {
         svg += `<text x="${xEnd}" y="${mY - mS_end * mScale - 5}" font-size="9" text-anchor="end" fill="#2980b9">-${fmt(mS_end)}</text>`;
 
         // 3. Q図 (階段状/直線)
-        const qL = (fs.stressData?.Q_long_N || 0) / 1e3;
-        const qS = (fs.stressData?.Qe_N || 0) / 1e3;
-        const qTotal = qL + qS;
+        const qTotal = Math.max(s.Q_L || 0, s.leftward?.Q || 0, s.rightward?.Q || 0, (((s.fdStress?.stressData?.Q_long_N || 0) + (s.fdStress?.stressData?.Qe_N || 0)) / 1e3));
         const qH1 = qTotal * qScale;
         const qH2 = -qTotal * qScale;
         svg += `<path d="M ${xStart} ${qY} L ${xStart} ${qY - qH1} L ${xEnd} ${qY - qH2} L ${xEnd} ${qY} Z" fill="rgba(155, 89, 182, 0.15)" stroke="#8e44ad" stroke-width="1.5" />`;
@@ -1460,5 +1468,6 @@ function generateContinuousBeamReportHtml(beam) {
 }
 
 window.generateBeamNMQSvg = generateBeamNMQSvg;
+if (typeof generateContinuousBeamReportHtml === 'function') window.generateContinuousBeamReportHtml = generateContinuousBeamReportHtml;
 if (typeof getFoundationBeamReportHtml === 'function') window.getFoundationBeamReportHtml = getFoundationBeamReportHtml;
 if (typeof getFoundationSlabReportHtml === 'function') window.getFoundationSlabReportHtml = getFoundationSlabReportHtml;
