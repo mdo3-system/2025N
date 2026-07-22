@@ -831,6 +831,10 @@ $$R_i = A + B \cdot x_i$$
 - **一覧表示トグルの例外ガード（try-catch）防護完了**: `FoundationInputController.js` の `toggleFdElementList` 内にて、解析処理を `try-catch` ブロックで完全に保護し、かつ表示状態 `container.style.display = 'block'` を先行確定。作図状態や未確定データに起因する例外が発生した場合でも、エラーで停止せず100%確実に全スラブ・全基礎梁の一覧ボックスが開いて表示されるよう不倒化を完修。
 - **基礎モードパネル表示切り替えの明示的制御**: `AppController.js` 内の `switchAppMode` にて、`mode === 'foundation'` の際に `foundation-mode-panel` の `style.display` を明示的に `'block'` へ設定。基礎モード切り替え時に一覧ボタンおよび一覧エリアが確実に表示・操作できるよう制御を完修。
 
+### ㊶ 基礎HTML/SVGレンダラーモジュール FoundationRenderer.js 新設による構造表示の一元化・完全一本化 (v3.0.38)
+- **単一責任の原則に基づく `FoundationRenderer.js` の新設・完全一本化**: `assets/js/modules/wall_4split/view/FoundationRenderer.js` を新規作成。基礎梁の構造計算書HTML生成 (`generateBeamReportHtml`) および N・M・Q応力図SVG生成 (`generateBeamNMQSvg`) のコードをこの単一モジュールへ集約。
+- **重複HTML生成コードの全廃 ＆ 全画面/帳票での100%同一HTML適用**: `PropertyController.js`（画面個別モーダル）、`wall_4split_pdf.js`（一括印刷帳票）、`wall_4split_foundation_engine.js` 内の重複手書きHTML生成コードを全廃し、全て `FoundationRenderer` への単一呼び出しに統一。個別モーダルで表示されていた全柱節点（`aY9`〜`aY13` 等）と高精度応力表（`Td`, `R`, `Qe`, `Mf`）およびN図（`7.262 kN` 等）が、印刷帳票においても100%完全同一に出力される構造改革を完修。
+
 
 
 

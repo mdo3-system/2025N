@@ -2040,11 +2040,9 @@ async function generateDoc() {
                 if (window.FoundationEngine && (!beam.spans || beam.spans.length === 0)) {
                     window.FoundationEngine.runAnalysis(window.AppState);
                 }
-                const fnBeamReport = window.generateContinuousBeamReportHtml || window.getFoundationBeamReportHtml || (typeof generateContinuousBeamReportHtml === 'function' ? generateContinuousBeamReportHtml : (typeof getFoundationBeamReportHtml === 'function' ? getFoundationBeamReportHtml : null));
-                const fnNmqSvg = window.generateBeamNMQSvg || (typeof generateBeamNMQSvg === 'function' ? generateBeamNMQSvg : null);
-                
-                const beamHtml = fnBeamReport ? fnBeamReport(beam) : '';
-                const nmqSvg = fnNmqSvg ? fnNmqSvg(beam) : '';
+                const beamHtml = (window.FoundationRenderer && typeof window.FoundationRenderer.generateBeamReportHtml === 'function')
+                    ? window.FoundationRenderer.generateBeamReportHtml(beam)
+                    : (window.generateContinuousBeamReportHtml ? window.generateContinuousBeamReportHtml(beam) : '');
                 
                 h += `<div style="margin-bottom:25px; border:1px solid #ccc; padding:15px; border-radius:8px; page-break-inside: avoid; break-inside: avoid;">
                         <div style="font-weight:bold; font-size:14px; margin-bottom:10px; border-bottom:2px solid #2c3e50; padding-bottom:5px;">

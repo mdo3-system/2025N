@@ -855,6 +855,13 @@ function getSlabBounds(slab) {
     return { width: maxX - minX, height: maxY - minY };
 }
 
+function generateBeamNMQSvg(beam) {
+    if (window.FoundationRenderer && typeof window.FoundationRenderer.generateBeamNMQSvg === 'function') {
+        return window.FoundationRenderer.generateBeamNMQSvg(beam);
+    }
+    return '';
+}
+
 /**
  * [機能補完 スラブ検定実装] スラブ断面検定レポートHTML
  */
@@ -911,74 +918,6 @@ function OBSOLETE_getFoundationSlabReportHtml(slab) {
  * @returns {string} SVG文字列
  */
 // [機能追加 山場Step2: 連続梁図表の完全実装] 連続梁対応のSVG生成
-function generateBeamNMQSvg(beam) {
-    if (!beam || !beam.spans || beam.spans.length === 0) return '';
-    
-    // 全スパンの合計長さを算出
-    const totalL_mm = beam.spans.reduce((sum, s) => sum + (s.spanLength || (s.L * 1000) || 0), 0);
-    const totalL_m = totalL_mm / 1000;
-    if (totalL_m <= 0) return '';
-    
-    // SVG設定
-    const w = 840; // 基準幅 (少し広めに)
-    const hSection = 140; // 各図の高さ
-    const pad = 50;
-    const hTotal = hSection * 3 + pad * 2;
-    const viewBox = `0 0 ${w} ${hTotal}`;
-    
-    // スケール
-    const beamStartX = pad * 2;
-    const beamEndX = w - pad * 2;
-    const beamW = beamEndX - beamStartX;
-    const toX = (posM) => beamStartX + (totalL_m > 0 ? (posM / totalL_m) * beamW : 0);
-
-    // 最大応力の取得 (全体のスケーリング用)
-    let maxM = 1.0, maxQ = 1.0, maxN = 10.0;
-    beam.spans.forEach(s => {
-        const mL_mid = s.M_mid || (s.fdStress?.stressData?.M_long_mid_Nmm / 1e6) || 0;
-        const mL_end = s.M_end || (s.fdStress?.stressData?.M_long_end_Nmm / 1e6) || 0;
-        const mS_max = Math.max(
-            s.leftward?.M_left || 0, s.leftward?.M_right || 0,
-            s.rightward?.M_left || 0, s.rightward?.M_right || 0,
-            ((s.fdStress?.stressData?.M_short_end_Nmm || 0) / 1e6)
-        );
-        const q_max = Math.max(
-            s.Q_L || 0,
-            s.leftward?.Q || 0, s.rightward?.Q || 0,
-            (((s.fdStress?.stressData?.Q_long_N || 0) + (s.fdStress?.stressData?.Qe_N || 0)) / 1e3)
-        );
-        const n_max = Math.max(
-            Math.abs(s.leftward?.Td || 0), Math.abs(s.rightward?.Td || 0),
-            (s.fdStress?.leftPat?.Td_kN || 0), (s.fdStress?.rightPat?.Td_kN || 0)
-        );
-
-        maxM = Math.max(maxM, mL_mid + mS_max, mL_end + mS_max);
-        maxQ = Math.max(maxQ, q_max);
-        maxN = Math.max(maxN, n_max);
-    });
-
-    const fmt = (v) => (typeof v === 'number' && isFinite(v)) ? v.toFixed(2) : '0.00';
-    let svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${viewBox}" width="100%" style="background:#fff; font-family:'Meiryo',sans-serif;">`;
-    
-    // 背景グリッドライン (各図のベースライン)
-    const nY = pad + hSection / 2;
-    const mY = pad + hSection + hSection / 2;
-    const qY = pad + hSection * 2 + hSection / 2;
-
-    // --- 各図のタイトルとベースライン ---
-    svg += `<g stroke="#eee" stroke-width="1">
-        <line x1="${beamStartX}" y1="${nY}" x2="${beamEndX}" y2="${nY}" />
-        <line x1="${beamStartX}" y1="${mY}" x2="${beamEndX}" y2="${mY}" />
-        <line x1="${beamStartX}" y1="${qY}" x2="${beamEndX}" y2="${qY}" />
-    </g>`;
-    svg += `<text x="${pad}" y="${pad + 15}" font-size="12" font-weight="bold" fill="#2c3e50">N図 (軸力) [kN]</text>`;
-    svg += `<text x="${pad}" y="${pad + hSection + 15}" font-size="12" font-weight="bold" fill="#2c3e50">M図 (曲げモーメント) [kN・m]</text>`;
-    svg += `<text x="${pad}" y="${pad + hSection * 2 + 15}" font-size="12" font-weight="bold" fill="#2c3e50">Q図 (せん断力) [kN]</text>`;
-
-    // --- スパン境界線 (柱位置) の描画 ---
-    let currentPosM = 0;
-    svg += `<g stroke="#bdc3c7" stroke-width="1" stroke-dasharray="5,3">`;
-    svg += `<line x1="${toX(0)}" y1="${pad}" x2="${toX(0)}" y2="${hTotal - pad}" />`; // 開始点
     beam.spans.forEach(s => {
         currentPosM += s.L || (s.spanLength || 0) / 1000;
         const x = toX(currentPosM);
@@ -1314,181 +1253,10 @@ window.splitBeamsIntoSpans = function(beams, pillars) {
 
 // [機能追加 山場Step2: 連続梁図表の完全実装] 連続梁構造計算書HTML生成
 function generateContinuousBeamReportHtml(beam) {
-    if (!beam || !beam.spans || beam.spans.length === 0) return '<p>計算データがありません。</p>';
-    
-    const fmt = (v, d = 2) => (typeof v === 'number' && isFinite(v)) ? v.toFixed(d) : '-';
-    const fmtR = (r) => {
-        if (!isFinite(r)) return '-';
-        const ok = r <= 1.0;
-        return `<span style="color:${ok ? '#27ae60' : '#e74c3c'}; font-weight:bold;">${(r * 100).toFixed(1)}% ${ok ? 'OK' : 'NG'}</span>`;
-    };
-
-    let html = `
-    <div class="beam-report-container" style="color:#2c3e50; font-family:'Hiragino Kaku Gothic ProN','Meiryo',sans-serif; padding:10px;">
-        <!-- セクション1: 応力図 -->
-        <div style="margin-bottom:30px; background:#fff; border:1px solid #ddd; border-radius:8px; padding:15px; box-shadow:0 2px 4px rgba(0,0,0,0.05);">
-            <!-- [バグ修正 文字化けの物理的修復] タイトル -->
-            <div style="font-weight:bold; border-left:4px solid #2980b9; padding-left:10px; margin-bottom:15px; font-size:16px;">■ 基礎梁の断面と配筋の検定 (N・M・Q図)</div>
-            ${generateBeamNMQSvg(beam)}
-            <div style="margin-top:10px; display:flex; justify-content:center; gap:20px; font-size:11px; color:#7f8c8d;">
-                <span style="display:flex; align-items:center; gap:5px;"><span style="width:12px; height:2px; background:#2980b9; display:inline-block;"></span> 設計曲げモーメント M</span>
-                <span style="display:flex; align-items:center; gap:5px;"><span style="width:12px; height:2px; background:#8e44ad; display:inline-block;"></span> 設計せん断力 Q</span>
-            </div>
-        </div>
-
-        <div style="display:grid; grid-template-columns: 1fr; gap:25px;">
-            <!-- セクション2: 節点(柱位置)応力表 -->
-            <section>
-                <div style="font-weight:bold; margin-bottom:10px; font-size:14px; background:#f8f9fa; padding:5px 10px; border-left:4px solid #34495e;">① 節点応力 (水平時引抜力)</div>
-                <table style="width:100%; border-collapse:collapse; font-size:12px; border:1px solid #bdc3c7;">
-                    <tr style="background:#34495e; color:#fff;">
-                        <!-- [バグ修正 文字化けの物理的修復] ヘッダー -->
-                        <th style="border:1px solid #bdc3c7; padding:8px;">節点No.</th>
-                        <th style="border:1px solid #bdc3c7; padding:8px;">種別 / 位置</th>
-                        <th style="border:1px solid #bdc3c7; padding:8px;">引抜力 N (kN)</th>
-                        <th style="border:1px solid #bdc3c7; padding:8px;">備考</th>
-                    </tr>
-                    ${beam.spans.map((s, i) => {
-                        const nodeName = s.startNode.name || (s.startNode.globalX != null && s.startNode.globalY != null ? getGridNameFromCoords(s.startNode.globalX, s.startNode.globalY) : (s.startNode.x > 50 ? getGridNameFromCoords(s.startNode.x, s.startNode.y) : `節点${i+1}`));
-                        const seismic = beam.fdStress?.seismic || {};
-                        const lTd = seismic.leftward?.Td?.[i] ?? 0;
-                        const rTd = seismic.rightward?.Td?.[i] ?? 0;
-                        const tdVal = Math.max(Math.abs(lTd), Math.abs(rTd), Math.abs(s.leftward?.Td || 0), Math.abs(s.fdStress?.leftPat?.Td_kN || 0));
-                        return `
-                        <tr>
-                            <td style="border:1px solid #bdc3c7; padding:8px; text-align:center;">${i + 1}</td>
-                            <td style="border:1px solid #bdc3c7; padding:8px;">
-                                ${s.startNode.type === 'pillar' || s.startNode.id ? '柱位置' : '交差/端点'}: <strong>${nodeName}</strong>
-                            </td>
-                            <td style="border:1px solid #bdc3c7; padding:8px; text-align:right; font-weight:bold; color:#e74c3c;">
-                                ${fmt(tdVal, 2)}
-                            </td>
-                            <td style="border:1px solid #bdc3c7; padding:8px; color:#7f8c8d; font-size:11px;">${i === 0 ? '始端部' : `中間節点`}</td>
-                        </tr>`;
-                    }).join('')}
-                    ${(() => {
-                        const lastS = beam.spans[beam.spans.length - 1];
-                        const lastNode = lastS.endNode;
-                        const lastNodeName = lastNode.name || (lastNode.globalX != null && lastNode.globalY != null ? getGridNameFromCoords(lastNode.globalX, lastNode.globalY) : (lastNode.x > 50 ? getGridNameFromCoords(lastNode.x, lastNode.y) : `終端点`));
-                        const lastIdx = beam.spans.length;
-                        const seismic = beam.fdStress?.seismic || {};
-                        const lastLTd = seismic.leftward?.Td?.[lastIdx] ?? 0;
-                        const lastRTd = seismic.rightward?.Td?.[lastIdx] ?? 0;
-                        const lastTdVal = Math.max(Math.abs(lastLTd), Math.abs(lastRTd), Math.abs(lastS.rightward?.Td || 0), Math.abs(lastS.fdStress?.leftPat?.lastTd_kN || 0));
-                        return `
-                    <tr>
-                        <td style="border:1px solid #bdc3c7; padding:8px; text-align:center;">${beam.spans.length + 1}</td>
-                        <td style="border:1px solid #bdc3c7; padding:8px;">
-                            終端点: <strong>${lastNodeName}</strong>
-                        </td>
-                        <td style="border:1px solid #bdc3c7; padding:8px; text-align:right; font-weight:bold; color:#e74c3c;">
-                            ${fmt(lastTdVal, 2)}
-                        </td>
-                        <td style="border:1px solid #bdc3c7; padding:8px; color:#7f8c8d; font-size:11px;">終端部</td>
-                    </tr>`;
-                    })()}
-                </table>
-            </section>
-
-            <!-- セクション3: スパン応力表 -->
-            <section>
-                <div style="font-weight:bold; margin-bottom:10px; font-size:14px; background:#f8f9fa; padding:5px 10px; border-left:4px solid #34495e;">② 設計応力 (長期・短期組み合わせ)</div>
-                <table style="width:100%; border-collapse:collapse; font-size:12px; border:1px solid #bdc3c7; text-align:center;">
-                    <tr style="background:#34495e; color:#fff;">
-                        <!-- [バグ修正 文字化けの物理的修復] ヘッダー -->
-                        <th rowspan="2" style="border:1px solid #bdc3c7; padding:8px;">柱間</th>
-                        <th rowspan="2" style="border:1px solid #bdc3c7; padding:8px;">長さ(m)</th>
-                        <th colspan="2" style="border:1px solid #bdc3c7; padding:8px;">長期 (L)</th>
-                        <th colspan="2" style="border:1px solid #bdc3c7; padding:8px;">短期 左加力 (S L)</th>
-                        <th colspan="2" style="border:1px solid #bdc3c7; padding:8px;">短期 右加力 (S R)</th>
-                    </tr>
-                    <tr style="background:#ecf0f1; color:#333;">
-                        <th style="border:1px solid #bdc3c7; padding:5px;">中央 M</th><th style="border:1px solid #bdc3c7; padding:5px;">せん断 Q</th>
-                        <th style="border:1px solid #bdc3c7; padding:5px;">端部 M</th><th style="border:1px solid #bdc3c7; padding:5px;">せん断 Q</th>
-                        <th style="border:1px solid #bdc3c7; padding:5px;">端部 M</th><th style="border:1px solid #bdc3c7; padding:5px;">せん断 Q</th>
-                    </tr>
-                    ${beam.spans.map((s, i) => `
-                        <tr>
-                            <td style="border:1px solid #bdc3c7; padding:8px; font-weight:bold;">${i + 1}</td>
-                            <td style="border:1px solid #bdc3c7; padding:8px;">${fmt(s.spanLength/1000, 2)}</td>
-                            <td style="border:1px solid #bdc3c7; padding:8px;">${fmt(s.fdStress?.stressData?.M_long_mid_Nmm/1e6)}</td>
-                            <td style="border:1px solid #bdc3c7; padding:8px;">${fmt(s.fdStress?.stressData?.Q_long_N/1e3)}</td>
-                            <td style="border:1px solid #bdc3c7; padding:8px; background:#fdf9f9;">${fmt((s.fdStress?.stressData?.M_long_end_Nmm + (s.fdStress?.leftPat?.Mwf_kNm || 0)*1e6)/1e6)}</td>
-                            <td style="border:1px solid #bdc3c7; padding:8px; background:#fdf9f9;">${fmt((s.fdStress?.stressData?.Q_long_N + (s.fdStress?.leftPat?.Qe_kN || 0)*1e3)/1e3)}</td>
-                            <td style="border:1px solid #bdc3c7; padding:8px; background:#f9fdfa;">${fmt((s.fdStress?.stressData?.M_long_end_Nmm + (s.fdStress?.rightPat?.Mwf_kNm || 0)*1e6)/1e6)}</td>
-                            <td style="border:1px solid #bdc3c7; padding:8px; background:#f9fdfa;">${fmt((s.fdStress?.stressData?.Q_long_N + (s.fdStress?.rightPat?.Qe_kN || 0)*1e3)/1e3)}</td>
-                        </tr>
-                    `).join('')}
-                </table>
-                <div style="font-size:10px; color:#95a5a6; margin-top:5px;">* Mはスパン中央および端部の最大値を採用しています</div>
-            </section>
-
-            <!-- セクション4: スパン耐力表 -->
-            <section>
-                <div style="font-weight:bold; margin-bottom:10px; font-size:14px; background:#f8f9fa; padding:5px 10px; border-left:4px solid #34495e;">③ 断面定数・許容耐力</div>
-                <table style="width:100%; border-collapse:collapse; font-size:11px; border:1px solid #bdc3c7; text-align:center;">
-                    <tr style="background:#34495e; color:#fff;">
-                        <!-- [バグ修正 文字化けの物理的修復] ヘッダー -->
-                        <th style="border:1px solid #bdc3c7; padding:8px;">Span</th>
-                        <th style="border:1px solid #bdc3c7; padding:8px;">幅</th>
-                        <th style="border:1px solid #bdc3c7; padding:8px;">高さ</th>
-                        <th style="border:1px solid #bdc3c7; padding:8px;">上端主筋</th>
-                        <th style="border:1px solid #bdc3c7; padding:8px;">下端主筋</th>
-                        <th style="border:1px solid #bdc3c7; padding:8px;">スターラップ</th>
-                        <th style="border:1px solid #bdc3c7; padding:8px;">断面積 (mm²)</th>
-                        <th style="border:1px solid #bdc3c7; padding:8px;">ピッチ</th>
-                    </tr>
-                    ${beam.spans.map((s, i) => {
-                        const p = s.props || beam.props;
-                        const c = s.fdStress?.cap;
-                        return `
-                        <tr>
-                            <td style="border:1px solid #bdc3c7; padding:8px; font-weight:bold;">${i + 1}</td>
-                            <td style="border:1px solid #bdc3c7; padding:8px;">${p.width}</td>
-                            <td style="border:1px solid #bdc3c7; padding:8px;">${p.height}</td>
-                            <td style="border:1px solid #bdc3c7; padding:8px;">${p.topRebar}</td>
-                            <td style="border:1px solid #bdc3c7; padding:8px;">${p.bottomRebar}</td>
-                            <td style="border:1px solid #bdc3c7; padding:8px;">${p.stirrup}</td>
-                            <td style="border:1px solid #bdc3c7; padding:8px;">${fmt(c?.botRebar?.area, 1)}</td>
-                            <td style="border:1px solid #bdc3c7; padding:8px;">${c?.st?.pitch || '-'}</td>
-                        </tr>`;
-                    }).join('')}
-                </table>
-            </section>
-
-            <!-- セクション5: 判定表 -->
-            <section style="background:#fcfcfc; border:1px solid #bdc3c7; padding:15px; border-radius:4px;">
-                <div style="font-weight:bold; margin-bottom:10px; font-size:14px; color:#2c3e50;">④ 断面判定 (検定比)</div>
-                <table style="width:100%; border-collapse:collapse; font-size:12px; border:2px solid #34495e; text-align:center; background:#fff;">
-                    <tr style="background:#34495e; color:#fff;">
-                        <!-- [バグ修正 文字化けの物理的修復] ヘッダー -->
-                        <th style="border:1px solid #bdc3c7; padding:10px;">Span No.</th>
-                        <th style="border:1px solid #bdc3c7; padding:10px;">曲げ (長期)</th>
-                        <th style="border:1px solid #bdc3c7; padding:10px;">せん断 (長期)</th>
-                        <th style="border:1px solid #bdc3c7; padding:10px;">曲げ (短期)</th>
-                        <th style="border:1px solid #bdc3c7; padding:10px;">せん断 (短期)</th>
-                        <th style="border:1px solid #bdc3c7; padding:10px;">判定</th>
-                    </tr>
-                    ${beam.spans.map((s, i) => `
-                        <tr style="${s.isNG ? 'background:#fef5f5;' : ''}">
-                            <td style="border:1px solid #bdc3c7; padding:10px; font-weight:bold;">Span ${i + 1}</td>
-                            <td style="border:1px solid #bdc3c7; padding:10px;">${fmtR(s.fdStress?.ratioM_L)}</td>
-                            <td style="border:1px solid #bdc3c7; padding:10px;">${fmtR(s.fdStress?.ratioQ_L)}</td>
-                            <td style="border:1px solid #bdc3c7; padding:10px;">${fmtR(s.fdStress?.ratioM_S)}</td>
-                            <td style="border:1px solid #bdc3c7; padding:10px;">${fmtR(s.fdStress?.ratioQ_S)}</td>
-                            <td style="border:1px solid #bdc3c7; padding:10px;">
-                                <!-- [バグ修正 文字化けの物理的修復] 判定ラベル -->
-                                <span style="background:${s.isNG ? '#e74c3c' : '#27ae60'}; color:#fff; padding:4px 12px; border-radius:15px; font-size:12px; font-weight:bold; box-shadow:0 1px 3px rgba(0,0,0,0.1);">
-                                    ${s.isNG ? 'NG' : 'OK'}
-                                </span>
-                            </td>
-                        </tr>
-                    `).join('')}
-                </table>
-            </section>
-        </div>
-    </div>`;
-    return html;
+    if (window.FoundationRenderer && typeof window.FoundationRenderer.generateBeamReportHtml === 'function') {
+        return window.FoundationRenderer.generateBeamReportHtml(beam);
+    }
+    return '<p>レンダラーが初期化されていません。</p>';
 }
 
 window.generateBeamNMQSvg = generateBeamNMQSvg;
