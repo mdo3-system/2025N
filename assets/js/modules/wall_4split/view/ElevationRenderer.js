@@ -486,55 +486,33 @@ window.ElevationRenderer = {
         const wallThick = c.wallThickness || 150;
 
         let html = `<div style="margin-top:20px; font-family:sans-serif; font-size:11px;">
-            <h3 style="font-size:14px; margin-bottom:10px; color:#2c3e50; border-bottom:2px solid #bdc3c7; padding-bottom:5px;">見附面積 求積表 (風圧力用)</h3>
+            <h3 style="font-size:14px; margin-bottom:10px; color:#2c3e50; border-bottom:2px solid #bdc3c7; padding-bottom:5px;">見附面積 求積表 (審査提出・構造計算用)</h3>
             <div style="background:#f8f9fa; border:1px solid #ddd; padding:8px; border-radius:4px; margin-bottom:15px; color:#555; line-height:1.4;">
-                <strong style="color:#2c3e50;">【計算の前提条件】</strong><br>
-                ・<b>1F床高:</b> GL+${fl1}mm (基礎高+パッキン+土台)<br>
-                ・<b>2F床高:</b> GL+${fl2}mm (1F床高+階高)<br>
-                ・<b>外壁厚:</b> ${wallThick}mm (投影時に加算)<br>
-                <span style="color:#7f8c8d; font-size:10px;">※ 1F見附下端 = 1F床高 + 1.35m, 2F見附下端 = 2F床高 + 1.35m</span>
+                <strong style="color:#2c3e50;">【計算前提条件】</strong><br>
+                ・<b>1F床高:</b> GL+${fl1}mm | <b>2F床高:</b> GL+${fl2}mm | <b>外壁厚:</b> ${wallThick}mm (柱芯オフセット)<br>
+                <span style="color:#d35400; font-size:10px;">※ 1F見附下端 = 1FL+1.35m, 2F見附下端 = 2FL+1.35m | 棟線を持つ屋根は頂部を台形(水平上辺)として分解算定</span>
             </div>
-        `;
+            <table style="width:100%; border-collapse:collapse; border:1px solid #2c3e50; font-size:11px; text-align:center;">
+                <thead>
+                    <tr style="background:#eaf2f8; color:#1b4f72; border-bottom:2px solid #2c3e50;">
+                        <th style="border:1px solid #bdc3c7; padding:5px; width:45px;">方向</th>
+                        <th style="border:1px solid #bdc3c7; padding:5px; width:35px;">階</th>
+                        <th style="border:1px solid #bdc3c7; padding:5px; width:50px;">図形</th>
+                        <th style="border:1px solid #bdc3c7; padding:5px; text-align:left;">面積算定式 (m)</th>
+                        <th style="border:1px solid #bdc3c7; padding:5px; text-align:right; width:85px;">面積(㎡)</th>
+                        <th style="border:1px solid #bdc3c7; padding:5px; text-align:right; width:75px;">階計(㎡)</th>
+                        <th style="border:1px solid #bdc3c7; padding:5px; text-align:right; width:75px;">累計(㎡)</th>
+                    </tr>
+                </thead>
+                <tbody>`;
 
-        const renderTableForDirection = (title, floorDataX, floorDataY) => {
-            let tableHtml = `<h4 style="font-size:12px; margin:15px 0 5px; color:#34495e;">${title}</h4>
-                <table style="width:100%; border-collapse:collapse; border:1px solid #ddd; text-align:right;">
-                    <thead>
-                        <tr style="background:#f1f5f9; border-bottom:1px solid #cbd5e1;">
-                            <th style="border:1px solid #ddd; padding:4px; text-align:left;">部位</th>
-                            <th style="border:1px solid #ddd; padding:4px;">底辺(m)</th>
-                            <th style="border:1px solid #ddd; padding:4px;">高さ(m)</th>
-                            <th style="border:1px solid #ddd; padding:4px; text-align:left;">計算式</th>
-                            <th style="border:1px solid #ddd; padding:4px;">面積(㎡)</th>
-                        </tr>
-                    </thead>
-                    <tbody>`;
-            
-            const floors = ['2F', '1F'];
-            floors.forEach(f => {
-                const data = f === '2F' ? floorDataX : floorDataY; // For loop iteration target
-                const items = f === '2F' ? formulaAreas['2F'] : formulaAreas['1F'];
-                const targetItems = items ? items[floorDataX] : []; // floorDataX variable here is actually used as key 'x' or 'y'
-                
-                // Let's rewrite loop cleanly
-            });
-            // End placeholder
-            return tableHtml;
-        };
+        let cumTotal = 0;
 
-        const renderTable = (title, dirKey) => {
-            let tableHtml = `<h4 style="font-size:13px; margin:15px 0 5px; color:#34495e;">${title}</h4>
-                <table style="width:100%; border-collapse:collapse; border:1px solid #ddd; text-align:right;">
-                    <thead>
-                        <tr style="background:#f1f5f9; border-bottom:1px solid #cbd5e1;">
-                            <th style="border:1px solid #ddd; padding:4px; text-align:center; width:40px;">階</th>
-                            <th style="border:1px solid #ddd; padding:4px; text-align:center; width:40px;">番号</th>
-                            <th style="border:1px solid #ddd; padding:4px; text-align:left;">計算式(m)</th>
-                            <th style="border:1px solid #ddd; padding:4px; font-weight:bold; width:80px;">面積(㎡)</th>
-                        </tr>
-                    </thead>
-                    <tbody>`;
-            
+        ['X', 'Y'].forEach(dir => {
+            const dirKey = dir.toLowerCase();
+            const dirLabel = dir;
+            let dirRows = [];
+
             ['2F', '1F'].forEach(f => {
                 const items = formulaAreas[f][dirKey] || [];
                 let fTotal = 0;

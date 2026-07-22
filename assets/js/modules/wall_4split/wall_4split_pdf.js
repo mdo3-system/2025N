@@ -657,16 +657,17 @@ function generateAutoMitsukeCanvas(direction, commonScale) {
             ctx.textBaseline = 'middle';
 
             flrItems.forEach(item => {
-                if (!item.shape) return;
-                const sh = item.shape;
-                const uL = sh.uStart;
-                const uR = sh.uStart + sh.w;
-                const zBL = sh.zBL !== undefined ? sh.zBL : sh.zBot;
-                const zBR = sh.zBR !== undefined ? sh.zBR : sh.zBot;
-                const zTL = sh.zTL !== undefined ? sh.zTL : (sh.zBot + sh.hL);
-                const zTR = sh.zTR !== undefined ? sh.zTR : (sh.zBot + sh.hR);
+                const uL = item.uStart;
+                const uR = item.uStart + item.w;
+                const zBL = item.zBL !== undefined ? item.zBL : item.zBot;
+                const zBR = item.zBR !== undefined ? item.zBR : item.zBot;
+                const zTL = item.zTL !== undefined ? item.zTL : (item.zBot + (item.hL || 0));
+                const zTR = item.zTR !== undefined ? item.zTR : (item.zBot + (item.hR || 0));
 
-                // 領域の枠線を描画
+                // 領域の境界線 (点線) を描画
+                ctx.setLineDash([4, 3]);
+                ctx.strokeStyle = accentColor;
+                ctx.lineWidth = 1;
                 ctx.beginPath();
                 ctx.moveTo(toX(uL), toY(zBL));
                 ctx.lineTo(toX(uR), toY(zBR));
@@ -674,26 +675,28 @@ function generateAutoMitsukeCanvas(direction, commonScale) {
                 ctx.lineTo(toX(uL), toY(zTL));
                 ctx.closePath();
                 ctx.stroke();
+                ctx.setLineDash([]);
 
-                // 番号ラベルを描画
-                const cx = toX(uL + sh.w / 2);
+                // 丸番号ラベル (A1, B1...) を描画
+                const cx = toX(uL + item.w / 2);
                 let centerZ = (zBL + zBR + zTL + zTR) / 4;
-                if (sh.type === 'tri') {
-                    // 三角形の重心の近似 (1つは同じ点)
+                if (item.type === 'tri') {
                     centerZ = (zBL + Math.max(zTL, zTR) + Math.min(zTL, zTR)) / 3;
                 }
                 const cz = toY(centerZ);
 
+                const codeStr = item.code || (item.name || 'A');
                 ctx.beginPath();
-                ctx.arc(cx, cz, 10, 0, Math.PI * 2);
+                ctx.arc(cx, cz, 12, 0, Math.PI * 2);
                 ctx.fillStyle = '#ffffff';
                 ctx.fill();
                 ctx.strokeStyle = accentColor;
-                ctx.lineWidth = 1;
+                ctx.lineWidth = 1.5;
                 ctx.stroke();
 
-                ctx.fillStyle = '#1a252f';
-                ctx.fillText(item.name, cx, cz);
+                ctx.fillStyle = '#2c3e50';
+                ctx.font = 'bold 11px sans-serif';
+                ctx.fillText(codeStr, cx, cz);
             });
         });
     }
@@ -1380,9 +1383,13 @@ async function generateDoc() {
             <button class="close-btn-nav btn-close-modal">✖ 閉じる</button>
         </div>`;
 
-        document.getElementById('doc-nav-container').innerHTML = navHtml;
-        document.querySelectorAll('#doc-nav-container .btn-close-modal').forEach(btn => {
-            btn.addEventListener('click', function () { document.getElementById('modal-doc').style.display = 'none'; });
+        const navEl = document.getElementById('doc-nav-container');
+        if (navEl) navEl.innerHTML = navHtml;
+        document.querySelectorAll('#doc-nav-container .btn-close-modal, #modal-doc .btn-close-modal').forEach(btn => {
+            btn.addEventListener('click', function () { 
+                const mDoc = document.getElementById('modal-doc');
+                if (mDoc) mDoc.style.display = 'none'; 
+            });
         });
 
         let h = `<div style="margin-bottom:25px; border:2px solid ${isTotalOk ? '#27ae60' : '#c0392b'}; border-radius:4px; padding:15px; background:#fdfdfd;">

@@ -318,22 +318,109 @@ window.MitsukeEngine = {
             }
         }
         
+        const merged2F = this.mergeAdjacentShapes(decomposition2F, '2F');
+        const merged1F = this.mergeAdjacentShapes(decomposition1F, '1F');
+
         let finalAreas = {
             '2F': { x: direction === 'X' ? totalArea2F : 0, y: direction === 'Y' ? totalArea2F : 0 },
             '1F': { x: direction === 'X' ? totalArea1F : 0, y: direction === 'Y' ? totalArea1F : 0 }
         };
         
         return {
-            primitives: primitivesForRender, // 新描画エンジン用のクリーンなポリゴンリスト
+            primitives: primitivesForRender,
             formulaAreas: {
-                '2F': { [direction === 'X' ? 'x' : 'y']: decomposition2F },
-                '1F': { [direction === 'X' ? 'x' : 'y']: decomposition1F }
+                '2F': { [direction === 'X' ? 'x' : 'y']: merged2F },
+                '1F': { [direction === 'X' ? 'x' : 'y']: merged1F }
             },
             areas: finalAreas,
             eavesZ2F: eavesZ2F,
             uMinAll: uArr.length > 0 ? Math.min(...uArr) : 0,
             uMaxAll: uArr.length > 0 ? Math.max(...uArr) : 10000
         };
+    },
+
+    /**
+     * 隣接する細切れの図形を建築申請用の大きな図形（A1, A2... B1, B2...）へマージする
+     */
+    mergeAdjacentShapes: function(shapes, floorName) {
+        if (!shapes || shapes.length === 0) return [];
+        let merged = [];
+        let current = null;
+
+        shapes.forEach(s => {
+            if (!current) {
+                current = JSON.parse(JSON.stringify(s));
+                return;
+            }
+
+            // 隣接判定 (uStart + w == s.uStart かつ 同じ種類・高さ構造)
+            const isAdjacent = Math.abs((current.uStart + current.w) - s.uStart) < 2;
+            const isSameHeightRect = (current.type === 'rect' && s.type === 'rect' && Math.abs(current.zBL - s.zBL) < 2 && Math.abs(current.zTL - s.zTL) < 2);
+            
+            if (isAdjacent && isSameHeightRect) {
+                // 矩形同士をマージ
+                current.w += s.w;
+                const w_m = current.w / 1000;
+                const h_m = (current.zTL - current.zBL) / 1000;
+                current.area = w_m * h_m;
+                current.formula = `${w_m.toFixed(3)} × ${h_m.toFixed(3)}`;
+            } else {
+                merged.push(current);
+                current = JSON.parse(JSON.stringify(s));
+            }
+        });
+        if (current) merged.push(current);
+
+        // 頂部三角形の対（左右の傾斜）のマージ処理
+        let finalShapes = [];
+        let triLeft = null;
+
+        merged.forEach((sh, idx) => {
+            if (sh.type === 'tri') {
+                if (!triLeft) {
+                    triLeft = sh;
+                } else {
+                    // 左右の三角形が隣接し、かつ高さ構造が同じであれば1つの大屋根三角形（底辺 × 高さ / 2）にマージ
+                    const isAdjacentTri = Math.abs((triLeft.uStart + triLeft.w) - sh.uStart) < 2;
+                    const isSameBaseZ = Math.abs(triLeft.zBL - sh.zBL) < 2;
+                    const isPeakSame = Math.abs(Math.max(triLeft.zTL, triLeft.zTR) - Math.max(sh.zTL, sh.zTR)) < 2;
+
+                    if (isAdjacentTri && isSameBaseZ && isPeakSame) {
+                        const totalW_mm = triLeft.w + sh.w;
+                        const totalW_m = totalW_mm / 1000;
+                        const peakZ = Math.max(triLeft.zTL, triLeft.zTR);
+                        const h_m = (peakZ - triLeft.zBL) / 1000;
+                        
+                        const mergedTri = {
+                            name: `屋根(大三角)`, floor: floorName, type: 'tri',
+                            uStart: triLeft.uStart, w: totalW_mm,
+                            zBL: triLeft.zBL, zBR: sh.zBR,
+                            zTL: peakZ, zTR: peakZ,
+                            area: (totalW_m * h_m) / 2,
+                            formula: `${totalW_m.toFixed(3)} × ${h_m.toFixed(3)} ÷ 2.0`
+                        };
+                        finalShapes.push(mergedTri);
+                        triLeft = null;
+                    } else {
+                        finalShapes.push(triLeft);
+                        triLeft = sh;
+                    }
+                }
+            } else {
+                if (triLeft) { finalShapes.push(triLeft); triLeft = null; }
+                finalShapes.push(sh);
+            }
+        });
+        if (triLeft) finalShapes.push(triLeft);
+
+        // 丸番号 (2F: B1, B2..., 1F: A1, A2...) を割り振り
+        const prefix = floorName === '2F' ? 'B' : 'A';
+        finalShapes.forEach((sh, i) => {
+            sh.code = `${prefix}${i + 1}`;
+            sh.label = `(${sh.code})`;
+        });
+
+        return finalShapes;
     },
 
     decomposeShape: function(u1, u2, zTL, zTR, zBL, zBR, floorName) {
