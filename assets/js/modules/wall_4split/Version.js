@@ -1,4 +1,4 @@
 /**
  * Version.js - Centralized Version Management
  */
-window.APP_VERSION = "v3.0.26"; // Fix ElevationRenderer syntax error, bind foundation beam report/SVG functions to window, and fix PDF print range for foundation report
+window.APP_VERSION = "v3.0.27"; // Synchronize mitsuke calculation table with diagram area, fix window.generateBeamNMQSvg rendering in PDF module, and strictly isolate foundation report PDF print CSS

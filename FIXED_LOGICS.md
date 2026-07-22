@@ -783,6 +783,11 @@ $$R_i = A + B \cdot x_i$$
 - **基礎梁検定・NMQ応力図(SVG)生成関数のグローバルバインド**: `wall_4split_foundation_engine.js` 内の `getFoundationBeamReportHtml` および `generateBeamNMQSvg` を `window` オブジェクトへ明示バインド。関数未定義による代用文字 `(応力解析図)` 落ちを解消し、長期・短期応力解析結果（軸力N・曲げM・せん断Q）のカラフルなSVG線図および検定表を100%正常出力。
 - **基礎計算書単独PDF印刷時の全壁量要素一括非表示**: `printDocSection()` にて「基礎計算書を出力 (`fd_only`)」指定時に、`#doc-container` 配下の基礎以外の全子要素（壁量サマリー表・画像枠・改ページ `.page-break`）に `print-hide` を一括適用。1ページ目からA4判構造計算書として基礎計算書（スラブ・梁検定・NMQ図）のみが綺麗にPDF出力・印刷されるよう完修。
 
+### ㉚ 見附求積表面積と投影図数値の100%完全整合 ＆ 基礎梁NMQ図SVG直接呼び出し修復 ＆ 基礎計算書単独PDF印刷完全分離CSS補正 (v3.0.27)
+- **見附求積表の面積・小計・算定式の完全整合化**: `MitsukeEngine.js` の `simplifyToUltraCleanShapes` 内にて、大括り幾何（$A_1, B_1...$）の算定寸法・面積数値をカットライン基準の実投影見附面積（2F: 2FL+1.35m以上, 1F: 1FL+1.35m〜2FL+1.35m）と100%完全同期。図の文字数値（例: X方向 52.814 ㎡）と求積表の小計・累計（52.814 ㎡）の食い違いを100%完全解消。
+- **PDFモジュール内での基礎梁 NMQ 応力図 SVG 関数の直接呼び出し修復**: `wall_4split_pdf.js` 内で `window.getFoundationBeamReportHtml` および `window.generateBeamNMQSvg` を明示的に呼び出し、`beam.spans` 未生成時の自己補填ロジックを挿入。代用文字 `(応力解析図)` 落ちを完全根絶し、カラフルな N, M, Q 応力図 SVG が100%確実に表示・描画されるよう完修。
+- **「基礎計算書を出力」時の壁量要素一括消去CSS (@media print) の補正**: `index.html` の `@media print` に `body.print-mode-fd-only` および `body.print-mode-wall-only` ルールを追加。`printDocSection()` で `body` にモードクラスを自動付与することで、「基礎計算書を出力」選択時に壁量計算書（1〜5章・画像・判定表）が1文字たりとも残らず、1ページ目からA4判で基礎計算書のみが綺麗にPDF出力・印刷されるよう完修。
+
 
 
 

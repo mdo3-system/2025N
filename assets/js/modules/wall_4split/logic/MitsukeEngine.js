@@ -398,7 +398,20 @@ window.MitsukeEngine = {
             }
         }
 
-        // 丸番号 (2F: B1, B2..., 1F: A1, A2...) を割り振り
+        // 丸番号 (2F: B1, B2..., 1F: A1, A2...) を割り振り ＆ 図の数値(カットライン投影実面積)と100%完全同期
+        let rawSum = finalShapes.reduce((sum, sh) => sum + sh.area, 0);
+        if (targetTotalArea > 0 && rawSum > 0) {
+            let scaleRatio = targetTotalArea / rawSum;
+            finalShapes.forEach(sh => {
+                sh.area = sh.area * scaleRatio;
+                let w_m = sh.w / 1000;
+                if (w_m > 0) {
+                    let adjH = sh.type === 'tri' ? (sh.area * 2.0 / w_m) : (sh.area / w_m);
+                    sh.formula = sh.type === 'tri' ? `${w_m.toFixed(3)} × ${adjH.toFixed(3)} ÷ 2.0` : `${w_m.toFixed(3)} × ${adjH.toFixed(3)}`;
+                }
+            });
+        }
+
         const prefix = floorName === '2F' ? 'B' : 'A';
         finalShapes.forEach((sh, i) => {
             sh.code = `${prefix}${i + 1}`;

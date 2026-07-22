@@ -1421,6 +1421,10 @@ async function generateDoc() {
             const dc = document.getElementById('doc-container');
             if (!dc) { window.print(); return; }
 
+            document.body.classList.remove('print-mode-wall-only', 'print-mode-fd-only');
+            if (mode === 'wall_only') document.body.classList.add('print-mode-wall-only');
+            if (mode === 'fd_only') document.body.classList.add('print-mode-fd-only');
+
             const allChildren = Array.from(dc.children);
             const fdSecs = Array.from(dc.querySelectorAll('#sec-fd-slab, #sec-fd-beam'));
             const wallChildren = allChildren.filter(child => !child.contains(document.getElementById('sec-fd-slab')) && !child.contains(document.getElementById('sec-fd-beam')));
@@ -2029,8 +2033,14 @@ async function generateDoc() {
             </div>`;
         } else {
             fBeams.forEach((beam, idx) => {
-                const beamHtml = typeof getFoundationBeamReportHtml === 'function' ? getFoundationBeamReportHtml(beam) : '';
-                const nmqSvg = typeof generateBeamNMQSvg === 'function' ? generateBeamNMQSvg(beam) : '';
+                if (window.FoundationEngine && (!beam.spans || beam.spans.length === 0)) {
+                    window.FoundationEngine.runAnalysis(window.AppState);
+                }
+                const fnBeamReport = window.getFoundationBeamReportHtml || (typeof getFoundationBeamReportHtml === 'function' ? getFoundationBeamReportHtml : null);
+                const fnNmqSvg = window.generateBeamNMQSvg || (typeof generateBeamNMQSvg === 'function' ? generateBeamNMQSvg : null);
+                
+                const beamHtml = fnBeamReport ? fnBeamReport(beam) : '';
+                const nmqSvg = fnNmqSvg ? fnNmqSvg(beam) : '';
                 
                 h += `<div style="margin-bottom:25px; border:1px solid #ccc; padding:15px; border-radius:8px; page-break-inside: avoid; break-inside: avoid;">
                         <div style="font-weight:bold; font-size:14px; margin-bottom:10px; border-bottom:2px solid #2c3e50; padding-bottom:5px;">
