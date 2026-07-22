@@ -233,13 +233,9 @@ function getAreaRowsHtml(area, i) {
 
         bgLinesOriginal.filter(e => {
             if (!e.isUnderlay) return false;
-            if (isPrint) {
-                let targetBG = 'BG_' + f;
-                let L = (e.layer || "").toUpperCase().trim();
-                return L.includes(targetBG);
-            } else {
-                return (e.floor === f || e.floor === 'ALL');
-            }
+            let L = (e.layer || "").toUpperCase().trim();
+            let targetBG = 'BG_' + f;
+            return (e.floor === f || e.floor === 'ALL' || L.includes(targetBG) || L.includes('BG_ALL') || L.startsWith('BG_'));
         }).forEach(e => {
             if (!isPrint && layerVisibility[e.layer] === false) return;
             if (e.isGridLine) return; // 二重線防止
@@ -1339,6 +1335,17 @@ async function generateDoc() {
 
         await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
 
+        // 単一責任の原則に従い、解析・計算エンジンを事前実行してデータオブジェクトに充填
+        if (window.StructuralEngine && typeof window.StructuralEngine.runAnalysis === 'function') {
+            window.StructuralEngine.runAnalysis(s);
+        }
+        if (window.FoundationEngine && typeof window.FoundationEngine.runAnalysis === 'function') {
+            window.FoundationEngine.runAnalysis(s);
+        }
+        if (window.MitsukeEngine && typeof window.MitsukeEngine.updateProjectedAreas === 'function') {
+            window.MitsukeEngine.updateProjectedAreas(s);
+        }
+
         const fields = { 'out-prj': 'info-prj', 'out-office': 'info-office', 'out-license': 'info-license', 'out-name': 'info-name' };
         Object.entries(fields).forEach(([outId, srcId]) => { const el = document.getElementById(outId); if (el) el.innerText = getStr(srcId); });
         const datEl = document.getElementById('out-date'); if (datEl) { const d = new Date(); datEl.innerText = `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日`; }
@@ -1655,6 +1662,20 @@ async function generateDoc() {
             let awy = raw_wy.toFixed(2), qY_base = (raw_wy * getVal(`c-w${f[0]}`)).toFixed(2);
             let max_x = reqWall[f].qX.toFixed(2), max_y = reqWall[f].qY.toFixed(2);
             let ext = getVal(`e-x-t${f[0]}`), exb = getVal(`e-x-b${f[0]}`), eyl = getVal(`e-y-l${f[0]}`), eyr = getVal(`e-y-r${f[0]}`);
+
+            // 【見附面積 算定図 ＆ 見附面積求積表】の全自動出力
+            const mitsukeTableHtml = window.ElevationRenderer && window.ElevationRenderer.generateElevationAreaTableHtml ? window.ElevationRenderer.generateElevationAreaTableHtml(s) : '';
+            const iAutoEX = generateAutoMitsukeCanvas('X');
+            const iAutoEY = generateAutoMitsukeCanvas('Y');
+
+            h += `<div style="margin-top:20px; margin-bottom:20px; page-break-inside: avoid; break-inside: avoid;">
+                    <div style="font-weight:bold; font-size:13px; color:#2c3e50; margin-bottom:10px; border-bottom:2px solid #2980b9; padding-bottom:4px;">【X/Y方向 見附面積算定図 ＆ 風圧力用 見附面積求積表】</div>
+                    <div style="display:flex; flex-wrap:wrap; gap:15px; justify-content:center; margin-bottom:15px;">
+                        ${iAutoEX ? `<div style="flex:1; min-width:320px; text-align:center;"><div style="font-size:11px; font-weight:bold; color:#0056b3; margin-bottom:4px;">X方向 見附面積算定図</div><img src="${iAutoEX.img}" style="width:100%; border:1px solid #ccc; padding:4px;"></div>` : ''}
+                        ${iAutoEY ? `<div style="flex:1; min-width:320px; text-align:center;"><div style="font-size:11px; font-weight:bold; color:#0056b3; margin-bottom:4px;">Y方向 見附面積算定図</div><img src="${iAutoEY.img}" style="width:100%; border:1px solid #ccc; padding:4px;"></div>` : ''}
+                    </div>
+                    ${mitsukeTableHtml}
+                  </div>`;
 
             h += `<h4>【${f} 階 必要壁量 算定】</h4>
                 <table class="report-table" style="margin-bottom:10px;">
