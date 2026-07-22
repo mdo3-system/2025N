@@ -998,8 +998,18 @@ function generateBeamNMQSvg(beam) {
         const qScale = (hSection * 0.4) / (maxQ || 1);
         const nScale = (hSection * 0.3) / (maxN || 1);
 
-        // 1. N図 (矩形)
-        const nVal = Math.max(Math.abs(s.leftward?.Td || 0), Math.abs(s.rightward?.Td || 0), s.fdStress?.cap?.N_kN || 0);
+        // 1. N図 (矩形) - 単一データソース (beam.fdStress.seismic) から節点インデックスで正確に参照
+        const seismic = beam.fdStress?.seismic || {};
+        const lTd_start = seismic.leftward?.Td?.[idx] ?? 0;
+        const rTd_start = seismic.rightward?.Td?.[idx] ?? 0;
+        const lTd_end = seismic.leftward?.Td?.[idx + 1] ?? 0;
+        const rTd_end = seismic.rightward?.Td?.[idx + 1] ?? 0;
+        const nVal = Math.max(
+            Math.abs(lTd_start), Math.abs(rTd_start),
+            Math.abs(lTd_end), Math.abs(rTd_end),
+            Math.abs(s.leftward?.Td || 0), Math.abs(s.rightward?.Td || 0),
+            s.fdStress?.cap?.N_kN || 0
+        );
         if (nVal > 0) {
             const nH = nVal * nScale;
             svg += `<rect x="${xStart}" y="${nY - nH}" width="${xEnd - xStart}" height="${nH}" fill="rgba(231, 76, 60, 0.15)" stroke="#e74c3c" stroke-width="1" />`;
@@ -1340,7 +1350,10 @@ function generateContinuousBeamReportHtml(beam) {
                     </tr>
                     ${beam.spans.map((s, i) => {
                         const nodeName = s.startNode.name || (s.startNode.globalX != null && s.startNode.globalY != null ? getGridNameFromCoords(s.startNode.globalX, s.startNode.globalY) : (s.startNode.x > 50 ? getGridNameFromCoords(s.startNode.x, s.startNode.y) : `節点${i+1}`));
-                        const tdVal = Math.max(Math.abs(s.leftward?.Td || 0), Math.abs(s.rightward?.Td || 0), Math.abs(s.fdStress?.leftPat?.Td_kN || 0));
+                        const seismic = beam.fdStress?.seismic || {};
+                        const lTd = seismic.leftward?.Td?.[i] ?? 0;
+                        const rTd = seismic.rightward?.Td?.[i] ?? 0;
+                        const tdVal = Math.max(Math.abs(lTd), Math.abs(rTd), Math.abs(s.leftward?.Td || 0), Math.abs(s.fdStress?.leftPat?.Td_kN || 0));
                         return `
                         <tr>
                             <td style="border:1px solid #bdc3c7; padding:8px; text-align:center;">${i + 1}</td>
@@ -1357,7 +1370,11 @@ function generateContinuousBeamReportHtml(beam) {
                         const lastS = beam.spans[beam.spans.length - 1];
                         const lastNode = lastS.endNode;
                         const lastNodeName = lastNode.name || (lastNode.globalX != null && lastNode.globalY != null ? getGridNameFromCoords(lastNode.globalX, lastNode.globalY) : (lastNode.x > 50 ? getGridNameFromCoords(lastNode.x, lastNode.y) : `終端点`));
-                        const lastTdVal = Math.max(Math.abs(lastS.leftward?.Td || 0), Math.abs(lastS.rightward?.Td || 0), Math.abs(lastS.fdStress?.leftPat?.lastTd_kN || 0));
+                        const lastIdx = beam.spans.length;
+                        const seismic = beam.fdStress?.seismic || {};
+                        const lastLTd = seismic.leftward?.Td?.[lastIdx] ?? 0;
+                        const lastRTd = seismic.rightward?.Td?.[lastIdx] ?? 0;
+                        const lastTdVal = Math.max(Math.abs(lastLTd), Math.abs(lastRTd), Math.abs(lastS.rightward?.Td || 0), Math.abs(lastS.fdStress?.leftPat?.lastTd_kN || 0));
                         return `
                     <tr>
                         <td style="border:1px solid #bdc3c7; padding:8px; text-align:center;">${beam.spans.length + 1}</td>

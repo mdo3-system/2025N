@@ -819,6 +819,10 @@ $$R_i = A + B \cdot x_i$$
 - **見附面積求積表への「審査機関向け安全側算定注記」明記**: `ElevationRenderer.js` の求積表ヘッダーに「※【安全側算定注記】本求積は審査機関の要求に基づき、立体外形を外接分解して一部重なり（被り）を許容した安全側（大きめ）の算定式として出力しています。」との注記を明示追加。
 - **見附図記号・求積表名称のシンプル統一化**: `MitsukeEngine.js` 内で分解生成される名称を「① A1 1F壁(大矩形)」のようにシンプルかつ一致する表記に整理完了。
 
+### ㊳ 帳票・SVG応力図における地震時引抜力(Td)単一データソース化 ＆ 左パネル一覧縦長化 (v3.0.35)
+- **帳票・SVG応力図における地震時引抜力 (Td) の単一データソース化 (Single Source of Truth)**: `wall_4split_foundation_engine.js` の `generateBeamNMQSvg` および `generateContinuousBeamReportHtml` にて、間違った `span.leftward?.Td` 参照を完全に撤廃し、個別モーダル（`PropertyController.js`）と同じ正解データ `beam.fdStress.seismic.leftward/rightward.Td[idx]` を直に節点インデックスで参照するよう統合。これにより、個別のプロパティモーダルと一括出力帳票・応力図の解が 100% 同一（完全一致）となる構造的修正を完修。
+- **画面左パネル一覧ボックスの縦長表示 ＆ 画面全体スクロールの適用**: `index.html` 内の `#fd-element-list-container` の固定上限（`max-height: 180px` および小枠スクロール）を撤廃し、画面全体のスクロール領域を活用して全ての要素を一覧表示できるUIへ改善。
+
 
 
 
