@@ -838,6 +838,9 @@ $$R_i = A + B \cdot x_i$$
 ### ㊷ Canvas要素描画エンジンとHTML/SVG帳票エンジンのFoundationRenderer完全融合 (v3.0.39)
 - **Canvas描画関数群の完全復元・統合防護**: `FoundationRenderer.js` に元々存在していた2Dキャンバス要素描画関数 (`drawExteriorWalls`, `drawSlabs`, `drawBeams`, `drawManholes`, `drawPreviews`) と、v3.0.38で新設した帳票HTML/SVG描画関数 (`generateBeamReportHtml`, `generateBeamNMQSvg`, `fmt`, `fmtRatio`) を `window.FoundationRenderer` 内で完全融合。初期化時の `window.FoundationRenderer.drawExteriorWalls is not a function` エラーを100%根絶し、作図画面のキャンバス描画と帳票HTML出力の双方を完璧に完修。
 
+### ㊸ 旧計算エンジン内の孤立コード整理による SyntaxError 100%根絶 (v3.0.40)
+- **旧SVG生成コード残滓の物理的全削去**: `wall_4split_foundation_engine.js` 内に残留していた旧 `generateBeamNMQSvg` の孤立コード断片を物理削去。関数外の `return svg;` に起因する `SyntaxError: Illegal return statement` を100%根絶し、JSスクリプト全体の正常なパース・動作を復元完了。
+
 
 
 
