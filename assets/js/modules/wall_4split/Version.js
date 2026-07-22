@@ -1,4 +1,4 @@
 /**
  * Version.js - Centralized Version Management
  */
-window.APP_VERSION = "v3.0.30"; // Fix generateBeamNMQSvg data bindings, export generateContinuousBeamReportHtml, and fix foundation pdf print isolation
+window.APP_VERSION = "v3.0.31"; // Strict version increment to v3.0.31 and cache buster standardization per cursorrules directive

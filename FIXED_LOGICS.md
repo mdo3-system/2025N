@@ -801,6 +801,9 @@ $$R_i = A + B \cdot x_i$$
 - **generateContinuousBeamReportHtml のグローバル公開 ＆ wall_4split_pdf.js 連携**: `wall_4split_foundation_engine.js` 内の `generateContinuousBeamReportHtml` を `window.generateContinuousBeamReportHtml` として公開。`wall_4split_pdf.js` から優先的に呼び出すことで、基礎梁の柱間節点応力・スパン応力・断面定数・総合判定表を新構造データに基づき 100% 完全かつ正確に出力・表示されるよう修復。
 - **印刷（PDF出力）後のクラス自動クリーンアップ**: `wall_4split_pdf.js` の `printDocSection()` 内にて `window.print()` 実行後に `setTimeout` で `print-mode-*` および `.print-hide` クラスを完全にリセット。次回表示時や別モード選択時にも表示が崩れないよう完修。
 
+### ㉞ バージョンインクリメント規約厳守・キャッシュバスター標準化 (v3.0.31)
+- **バージョン番号の v3.0.31 への繰り上げ・全ファイル同期**: `.cursorrules` のバージョンインクリメント規約に基づき、`Version.js` および `index.html` 内のすべてのスクリプト・CSSキャッシュバスターを一括して `v3.0.31` に統一更新し、最新本番サーバーへデプロイ完了。
+
 
 
 
