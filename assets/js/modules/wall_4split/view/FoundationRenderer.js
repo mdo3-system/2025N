@@ -1,31 +1,241 @@
 /**
- * view/FoundationRenderer.js - Single Source of Truth for Foundation HTML/SVG Rendering
- * Centralized rendering engine for foundation beams, slabs, and stress diagrams.
+ * view/FoundationRenderer.js - Single Source of Truth for Foundation Canvas, HTML & SVG Rendering
+ * Centralized rendering engine for foundation canvas elements, beams, slabs, and stress diagrams.
  */
 
 window.FoundationRenderer = {
-    /**
-     * Format helper for numeric values
-     */
+    // ==========================================
+    // 1. Canvas Rendering Engine (キャンバス描画機能)
+    // ==========================================
+
+    drawSlabs: function(state, toCanvas, fdSel) {
+        if (!state.elementVisibility || state.elementVisibility.f_slabs === false) return;
+        const ctx = state.ctx;
+        const hFd = state.hoveredFdElement || { type: null, item: null };
+        (state.foundationSlabs || []).forEach(slab => {
+            if (!slab.polygon || slab.polygon.length < 3) return;
+            const isSelected = fdSel.type === 'slab' && fdSel.item?.id === slab.id;
+            const isHovered = hFd.type === 'slab' && hFd.item?.id === slab.id;
+            
+            ctx.save();
+            ctx.beginPath();
+            slab.polygon.forEach((v, i) => {
+                const p = toCanvas(v, null);
+                if (p.cx != null) i === 0 ? ctx.moveTo(p.cx, p.cy) : ctx.lineTo(p.cx, p.cy);
+            });
+            ctx.closePath();
+            
+            if (isSelected) {
+                ctx.fillStyle = 'rgba(231, 76, 60, 0.45)';
+                ctx.strokeStyle = '#c0392b';
+                ctx.lineWidth = 3;
+            } else if (isHovered) {
+                ctx.fillStyle = 'rgba(243, 156, 18, 0.4)'; // ホバー時はオレンジ黄色
+                ctx.strokeStyle = '#d35400';
+                ctx.lineWidth = 3;
+            } else {
+                ctx.fillStyle = 'rgba(52, 152, 219, 0.25)';
+                ctx.strokeStyle = '#2980b9';
+                ctx.lineWidth = 1.5;
+            }
+            ctx.fill();
+            ctx.stroke();
+
+            // Label
+            const poly = slab.polygon;
+            const cxM = poly.reduce((sum, p) => sum + p.x, 0) / poly.length;
+            const cyM = poly.reduce((sum, p) => sum + p.y, 0) / poly.length;
+            const pC = toCanvas({ x: cxM, y: cyM }, null);
+            
+            if (pC.cx != null) {
+                ctx.font = 'bold 11px sans-serif';
+                const sp = slab.props || {};
+                const labelA = `${sp.name || 'スラブ'}`;
+                const labelB = `t=${sp.thickness || 150} / D${sp.rebarDiameter || 13}@${sp.rebarPitch || 200}`;
+                const wA = ctx.measureText(labelA).width;
+                const wB = ctx.measureText(labelB).width;
+                const boxW = Math.max(wA, wB) + 16;
+                const boxH = 32;
+                const rx = pC.cx - boxW / 2;
+                const ry = pC.cy - boxH / 2;
+
+                const isTarget = isSelected || isHovered;
+                ctx.fillStyle = isTarget ? 'rgba(255, 243, 224, 0.95)' : 'rgba(255, 255, 255, 0.9)';
+                ctx.fillRect(rx, ry, boxW, boxH);
+
+                ctx.strokeStyle = isTarget ? '#d35400' : '#7f8c8d';
+                ctx.lineWidth = isTarget ? 2 : 1;
+                ctx.strokeRect(rx, ry, boxW, boxH);
+
+                ctx.fillStyle = isTarget ? '#d35400' : '#2c3e50';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+
+                if (labelB) {
+                    ctx.fillText(labelA, pC.cx, pC.cy - 6);
+                    ctx.fillText(labelB, pC.cx, pC.cy + 6);
+                } else {
+                    ctx.fillText(labelA, pC.cx, pC.cy);
+                }
+            }
+            ctx.restore();
+        });
+    },
+
+    drawExteriorWalls: function(state, toCanvas, fdSel) {
+        if (!state.elementVisibility || !state.elementVisibility.f_ext_walls) return;
+        const ctx = state.ctx;
+        (state.exteriorWalls || []).filter(ew => ew.floor === state.currentFloor).forEach(ew => {
+            if (!ew.vertices || ew.vertices.length < 2) return;
+            ctx.save();
+            const isSelected = fdSel.type === 'ext_wall' && fdSel.item?.id === ew.id;
+            ctx.strokeStyle = isSelected ? '#ff00ff' : '#0044ff';
+            ctx.lineWidth = isSelected ? 8 : 5;
+            ctx.setLineDash(isSelected ? [] : [8, 4]);
+            ctx.beginPath();
+            ew.vertices.forEach((v, i) => {
+                const p = toCanvas(v, null);
+                if (p.cx != null) i === 0 ? ctx.moveTo(p.cx, p.cy) : ctx.lineTo(p.cx, p.cy);
+            });
+            if (ew.closed) ctx.closePath();
+            ctx.stroke();
+            ctx.restore();
+        });
+    },
+
+    drawBeams: function(state, toCanvas, fdSel) {
+        if (!state.elementVisibility || state.elementVisibility.f_beams === false) return;
+        const ctx = state.ctx;
+        const hFd = state.hoveredFdElement || { type: null, item: null };
+        (state.foundationBeams || []).forEach(b => {
+            const bp = b.props || {};
+            if (b.spans && b.spans.length > 0) {
+                b.spans.forEach((span, idx) => {
+                    if (!span || !span.startNode || !span.endNode) return;
+                    const isSelected = fdSel.type === 'beam_span' && fdSel.item?.id === b.id && fdSel.spanIndex === idx;
+                    const isHovered = hFd.type === 'beam_span' && hFd.item?.id === b.id && hFd.spanIndex === idx;
+                    const effectiveProps = { ...bp, ...(span.props || {}) };
+                    this.drawBeamSegment(ctx, span.startNode, span.endNode, effectiveProps, isSelected, isHovered, span.isNG, toCanvas);
+                });
+            } else {
+                if (!b.p1 || !b.p2) return;
+                const isSelected = fdSel.type === 'beam' && fdSel.item?.id === b.id;
+                const isHovered = hFd.type === 'beam' && hFd.item?.id === b.id;
+                this.drawBeamSegment(ctx, b.p1, b.p2, bp, isSelected, isHovered, b.isNG, toCanvas);
+            }
+        });
+    },
+
+    drawBeamSegment: function(ctx, p1Obj, p2Obj, props, isSelected, isHovered, isNG, toCanvas) {
+        const p1 = toCanvas(p1Obj, null), p2 = toCanvas(p2Obj, null);
+        if (p1.cx == null) return;
+
+        ctx.save();
+        ctx.beginPath(); ctx.moveTo(p1.cx, p1.cy); ctx.lineTo(p2.cx, p2.cy);
+        ctx.globalAlpha = 1.0;
+        
+        if (isSelected) {
+            ctx.strokeStyle = '#ff00ff';
+            ctx.lineWidth = 8;
+        } else if (isHovered) {
+            ctx.strokeStyle = '#f39c12'; // ホバー時はオレンジ黄色
+            ctx.lineWidth = 7.5;
+        } else {
+            ctx.strokeStyle = '#ff33aa';
+            ctx.lineWidth = 7;
+        }
+        ctx.lineCap = 'round';
+        ctx.stroke();
+
+        const mx = (p1.cx + p2.cx) / 2, my = (p1.cy + p2.cy) / 2;
+        const lstr = `${props?.width || 150}x${props?.height || 640}`;
+        ctx.font = 'bold 11px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillStyle = isSelected ? '#ff00ff' : (isHovered ? '#d35400' : '#2c3e50');
+        ctx.fillText(lstr, mx, my);
+
+        if (isNG) {
+            ctx.fillStyle = '#e74c3c'; ctx.fillText('判定 NG', mx, my - 14);
+        }
+        ctx.restore();
+    },
+
+    drawManholes: function(state, toCanvas, fdSel) {
+        if (!state.elementVisibility || !state.elementVisibility.f_manholes) return;
+        const ctx = state.ctx;
+        (state.manholes || []).forEach(mh => {
+            const mp = toCanvas(mh, null);
+            if (mp.cx == null) return;
+            const beam = (state.foundationBeams || []).find(b => b.id === mh.parentBeamId);
+            const beamWidthPx = Math.max(8, (beam?.props?.width || 150) * state.scale);
+            const mhHalfW = (mh.width / 2) * state.scale;
+            const mhHalfH = beamWidthPx / 2;
+            
+            ctx.save();
+            ctx.fillStyle = 'rgba(255,255,255,0.9)';
+            ctx.fillRect(mp.cx - mhHalfW, mp.cy - mhHalfH, mhHalfW * 2, mhHalfH * 2);
+            ctx.strokeStyle = '#e74c3c'; ctx.lineWidth = 2;
+            ctx.strokeRect(mp.cx - mhHalfW, mp.cy - mhHalfH, mhHalfW * 2, mhHalfH * 2);
+            ctx.beginPath();
+            ctx.moveTo(mp.cx - mhHalfW, mp.cy - mhHalfH); ctx.lineTo(mp.cx + mhHalfW, mp.cy + mhHalfH);
+            ctx.moveTo(mp.cx + mhHalfW, mp.cy - mhHalfH); ctx.lineTo(mp.cx - mhHalfW, mp.cy + mhHalfH);
+            ctx.stroke();
+            
+            const isSelected = fdSel.type === 'manhole' && fdSel.item?.id === mh.id;
+            if (isSelected) {
+                ctx.strokeStyle = '#00ffff'; ctx.lineWidth = 3;
+                ctx.beginPath(); ctx.arc(mp.cx, mp.cy, mhHalfW + 10, 0, Math.PI * 2); ctx.stroke();
+            }
+            ctx.restore();
+        });
+    },
+
+    drawPreviews: function(state, toCanvas) {
+        const fm = state.foundationMode || 'f_beam';
+        const fdPts = state.fdDrawPoints || [];
+        const fdSel = state.fdSelectedPillarLike;
+        const ctx = state.ctx;
+
+        if (fm === 'f_beam' && fdSel) {
+            const sp = toCanvas(fdSel, null);
+            if (sp.cx != null) {
+                ctx.save(); ctx.fillStyle = '#f39c12';
+                ctx.beginPath(); ctx.arc(sp.cx, sp.cy, 8, 0, Math.PI * 2); ctx.fill();
+                let previewEp = state.snapPoint ? { x: state.snapPoint.x, y: state.snapPoint.y } : { x: (state.mouseX - state.offsetX) / state.scale, y: (state.canvas.height - state.mouseY - state.offsetY) / state.scale };
+                const ep = toCanvas(previewEp, null);
+                ctx.strokeStyle = '#f39c12'; ctx.lineWidth = 3; ctx.setLineDash([6, 4]);
+                ctx.beginPath(); ctx.moveTo(sp.cx, sp.cy); ctx.lineTo(ep.cx, ep.cy); ctx.stroke();
+                ctx.restore();
+            }
+        }
+        if ((fm === 'f_ext_wall' || fm === 'f_slab') && fdPts.length > 0) {
+            ctx.save(); ctx.strokeStyle = fm === 'f_ext_wall' ? '#0044ff' : '#2980b9';
+            ctx.lineWidth = fm === 'f_ext_wall' ? 4 : 2; ctx.setLineDash(fm === 'f_ext_wall' ? [8, 4] : [5, 5]);
+            ctx.beginPath();
+            fdPts.forEach((pt, i) => {
+                const p = toCanvas(pt, null);
+                if (p.cx != null) i === 0 ? ctx.moveTo(p.cx, p.cy) : ctx.lineTo(p.cx, p.cy);
+            });
+            const ep = state.snapPoint ? toCanvas(state.snapPoint, null) : { cx: state.mouseX, cy: state.mouseY };
+            ctx.lineTo(ep.cx, ep.cy); ctx.stroke();
+            ctx.restore();
+        }
+    },
+
+    // ==========================================
+    // 2. HTML & SVG Structural Report Engine (構造計算書・応力図生成機能)
+    // ==========================================
+
     fmt: function(val, digits = 2) {
         if (typeof val !== 'number' || !isFinite(val)) return '-';
         return val.toFixed(digits);
     },
 
-    /**
-     * Format helper for ratio check status
-     */
     fmtRatio: function(r) {
         if (!isFinite(r)) return '-';
         const ok = r <= 1.0;
         return `<span style="color:${ok ? '#27ae60' : '#e74c3c'}; font-weight:bold;">${(r * 100).toFixed(1)}% ${ok ? 'OK' : 'NG'}</span>`;
     },
 
-    /**
-     * Generate complete Foundation Beam Report HTML (Used in both property modal and print report)
-     * @param {Object} beam - Foundation beam object with fdStress
-     * @param {Object} options - Optional rendering flags (e.g. isPrintModal, showInputs)
-     */
     generateBeamReportHtml: function(beam, options = {}) {
         if (!beam || !beam.fdStress || !beam.fdStress.pillars || beam.fdStress.pillars.length === 0) {
             return '<div style="padding:15px; color:#7f8c8d; background:#f8f9fa; border:1px dashed #ccc; border-radius:6px; font-family:sans-serif;">※ 基礎梁の計算データがありません。基礎モードで配置後、解析を実行してください。</div>';
@@ -58,7 +268,6 @@ window.FoundationRenderer = {
 
         let html = `<div class="foundation-beam-report" style="color:#2c3e50; font-family:'Hiragino Kaku Gothic ProN','Meiryo',sans-serif; padding:5px; box-sizing:border-box;">`;
 
-        // 1. 基本プロパティヘッダー (オプションで入力制御可)
         if (options.showInputs) {
             html += `
             <div style="font-size:12px; font-weight:bold; color:#2c3e50; border-bottom:2px solid #8e44ad; margin-bottom:10px; padding-bottom:5px;">🏗️ 基礎梁 計算条件</div>
@@ -81,11 +290,9 @@ window.FoundationRenderer = {
             </div>`;
         }
 
-        // 2. 応力分布図 (N・M・Q図)
         html += `<div style="font-size:12px; font-weight:bold; color:#2c3e50; border-left:4px solid #8e44ad; padding-left:8px; margin:15px 0 10px 0;">■ 基礎梁の断面と配筋の検定 (N・M・Q図)</div>`;
         html += this.generateBeamNMQSvg(beam);
 
-        // 3. (1) 応力の算定 (水平荷重時) - 全節点の高精度テーブル
         html += `<div style="font-size:12px; font-weight:bold; color:#2c3e50; border-left:4px solid #34495e; padding-left:8px; margin:15px 0 6px 0;">① 節点応力 (水平時引抜力・反力・せん断・曲げ)</div>`;
         const B_val = bp.B_val !== undefined ? parseFloat(bp.B_val) : 0.5;
         const modelType = bp.modelType || 'both_ends';
@@ -142,7 +349,6 @@ window.FoundationRenderer = {
         table1 += `</tbody></table>`;
         html += table1;
 
-        // 4. (2) 応力の算定 (長期)
         html += `<div style="font-size:12px; font-weight:bold; color:#2c3e50; border-left:4px solid #34495e; padding-left:8px; margin:15px 0 6px 0;">② 応力の算定 (長期)</div>`;
         let table2 = `<table style="width:100%; border-collapse:collapse; font-size:10px; margin-bottom:15px; border:1px solid #bdc3c7; text-align:center;">
             <thead>
@@ -177,7 +383,6 @@ window.FoundationRenderer = {
         table2 += `</tbody></table>`;
         html += table2;
 
-        // 5. (3) 応力の算定 (短期)
         html += `<div style="font-size:12px; font-weight:bold; color:#2c3e50; border-left:4px solid #34495e; padding-left:8px; margin:15px 0 6px 0;">③ 応力の算定 (短期組み合わせ)</div>`;
         let table3 = `<table style="width:100%; border-collapse:collapse; font-size:10px; margin-bottom:15px; border:1px solid #bdc3c7; text-align:center;">
             <thead>
@@ -211,7 +416,6 @@ window.FoundationRenderer = {
         table3 += `</tbody></table>`;
         html += table3;
 
-        // 6. (4) 判定表 (検定比)
         html += `<div style="font-size:12px; font-weight:bold; color:#2c3e50; border-left:4px solid #34495e; padding-left:8px; margin:15px 0 6px 0;">④ 断面判定 (検定比)</div>`;
         let table4 = `<table style="width:100%; border-collapse:collapse; font-size:10px; border:2px solid #34495e; text-align:center; background:#fff;">
             <thead>
@@ -248,9 +452,6 @@ window.FoundationRenderer = {
         return html;
     },
 
-    /**
-     * Centralized SVG renderer for Foundation Beam N-M-Q diagrams
-     */
     generateBeamNMQSvg: function(beam) {
         if (!beam || !beam.spans || beam.spans.length === 0) return '';
         

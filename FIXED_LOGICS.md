@@ -835,6 +835,9 @@ $$R_i = A + B \cdot x_i$$
 - **単一責任の原則に基づく `FoundationRenderer.js` の新設・完全一本化**: `assets/js/modules/wall_4split/view/FoundationRenderer.js` を新規作成。基礎梁の構造計算書HTML生成 (`generateBeamReportHtml`) および N・M・Q応力図SVG生成 (`generateBeamNMQSvg`) のコードをこの単一モジュールへ集約。
 - **重複HTML生成コードの全廃 ＆ 全画面/帳票での100%同一HTML適用**: `PropertyController.js`（画面個別モーダル）、`wall_4split_pdf.js`（一括印刷帳票）、`wall_4split_foundation_engine.js` 内の重複手書きHTML生成コードを全廃し、全て `FoundationRenderer` への単一呼び出しに統一。個別モーダルで表示されていた全柱節点（`aY9`〜`aY13` 等）と高精度応力表（`Td`, `R`, `Qe`, `Mf`）およびN図（`7.262 kN` 等）が、印刷帳票においても100%完全同一に出力される構造改革を完修。
 
+### ㊷ Canvas要素描画エンジンとHTML/SVG帳票エンジンのFoundationRenderer完全融合 (v3.0.39)
+- **Canvas描画関数群の完全復元・統合防護**: `FoundationRenderer.js` に元々存在していた2Dキャンバス要素描画関数 (`drawExteriorWalls`, `drawSlabs`, `drawBeams`, `drawManholes`, `drawPreviews`) と、v3.0.38で新設した帳票HTML/SVG描画関数 (`generateBeamReportHtml`, `generateBeamNMQSvg`, `fmt`, `fmtRatio`) を `window.FoundationRenderer` 内で完全融合。初期化時の `window.FoundationRenderer.drawExteriorWalls is not a function` エラーを100%根絶し、作図画面のキャンバス描画と帳票HTML出力の双方を完璧に完修。
+
 
 
 
