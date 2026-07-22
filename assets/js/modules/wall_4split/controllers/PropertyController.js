@@ -15,17 +15,17 @@ window.PropertyController = {
         if (my !== undefined) this.lastPopupMy = my;
 
         if (!type && !item) {
-            type = window.AppState.fdSelection.type;
-            item = window.AppState.fdSelection.item;
+            type = window.AppState.fdSelection ? window.AppState.fdSelection.type : null;
+            item = window.AppState.fdSelection ? window.AppState.fdSelection.item : null;
         }
         if (!type || !item) return;
 
         if (item && item.id !== undefined) {
             if (type === 'beam' || type === 'beam_span') {
-                const freshItem = window.AppState.foundationBeams.find(b => b.id === item.id);
+                const freshItem = (window.AppState.foundationBeams || []).find(b => b.id === item.id);
                 if (freshItem) item = freshItem;
             } else if (type === 'slab') {
-                const freshItem = window.AppState.foundationSlabs.find(s => s.id === item.id);
+                const freshItem = (window.AppState.foundationSlabs || []).find(s => s.id === item.id);
                 if (freshItem) item = freshItem;
             }
         }
@@ -38,9 +38,6 @@ window.PropertyController = {
 
         // すでに表示されている場合はウィンドウ位置を維持
         if (popup.style.display !== 'block') {
-            if ((type === 'beam' || type === 'beam_span') && item && item.fdStress && item.fdStress.isNG) {
-                alert("🚨 この基礎梁には断面検定がNGのスパンがあります！判定表をご確認ください。");
-            }
             const cp = document.getElementById('center-panel');
             let width = 750; 
             if (cp) {
@@ -94,15 +91,10 @@ window.PropertyController = {
     },
 
     hideFdPopup: function() {
-        const type = window.AppState.fdSelection.type;
-        const item = window.AppState.fdSelection.item;
-        if ((type === 'beam' || type === 'beam_span') && item && item.fdStress && item.fdStress.isNG) {
-            alert("⚠️ 断面検定にNGがある状態です。配筋や断面寸法を再調整してください。");
-        }
-        window.AppState.fdSelection = { type: null, item: null };
         const popup = document.getElementById('fd-property-popup');
         if (popup) popup.style.display = 'none';
-        window.triggerUpdate();
+        if (window.AppState) window.AppState.fdSelection = { type: null, item: null };
+        if (typeof window.triggerUpdate === 'function') window.triggerUpdate();
     },
 
     /**

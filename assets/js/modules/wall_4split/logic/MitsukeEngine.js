@@ -410,9 +410,12 @@ window.MitsukeEngine = {
         }
 
         const prefix = floorName === '2F' ? 'B' : 'A';
+        const circleNums = ['①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧', '⑨', '⑩'];
         finalShapes.forEach((sh, i) => {
             sh.code = `${prefix}${i + 1}`;
-            sh.label = `(${sh.code})`;
+            sh.circleNo = circleNums[i] || `(${i + 1})`;
+            sh.label = `${sh.circleNo}[${sh.code}]`;
+            sh.name = `${sh.circleNo} [${sh.code}] ${sh.name}`;
         });
 
         return finalShapes;

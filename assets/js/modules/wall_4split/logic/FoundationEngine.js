@@ -438,28 +438,31 @@ window.FoundationEngine = {
         
         const calculateDir = (isLeft) => {
             const Td = pillars.map(p => {
-                // [根本修正2] IDで検索（s1/s2の仮IDは実在しないので必ず0）
-                // → globalX/Y 座標で近傍の実柱を探して荷重を取得する
-                const op = s.pillars.find(o =>
+                // globalX/Y 座標で近傍の実柱を探して荷重を取得する (許容誤差 250mm)
+                const op = (s.pillars || []).find(o =>
                     !o.isDeleted && (o.floor === '1F' || o.floor === 'ALL') &&
-                    Math.hypot(o.x - p.globalX, o.y - p.globalY) < 10
+                    Math.hypot(Number(o.x) - Number(p.globalX), Number(o.y) - Number(p.globalY)) < 250
                 );
-                if (!op || !op.axisSeismicAxial) return 0;
-
+                
                 let val = 0;
-                const axisKeys = Object.keys(op.axisSeismicAxial);
-                const targetKey = axisName.replace(/[^a-zA-Z0-9]/g, '');
+                if (op && op.axisSeismicAxial) {
+                    const axisKeys = Object.keys(op.axisSeismicAxial);
+                    const targetKey = axisName.replace(/[^a-zA-Z0-9]/g, '');
 
-                if (op.axisSeismicAxial[axisName] !== undefined) {
-                    val = op.axisSeismicAxial[axisName];
-                } else {
-                    const matchKey = axisKeys.find(k =>
-                        k.replace(/[^a-zA-Z0-9]/g, '') === targetKey ||
-                        k === targetKey ||
-                        targetKey.endsWith(k) ||
-                        k.endsWith(targetKey)
-                    );
-                    if (matchKey) val = op.axisSeismicAxial[matchKey];
+                    if (op.axisSeismicAxial[axisName] !== undefined) {
+                        val = op.axisSeismicAxial[axisName];
+                    } else {
+                        const matchKey = axisKeys.find(k =>
+                            k.replace(/[^a-zA-Z0-9]/g, '') === targetKey ||
+                            k === targetKey ||
+                            targetKey.endsWith(k) ||
+                            k.endsWith(targetKey)
+                        );
+                        if (matchKey) val = op.axisSeismicAxial[matchKey];
+                    }
+                }
+                if (!val) {
+                    val = (op?.seismicAxial) || (p.seismicAxial * 1000) || 0;
                 }
                 return (isLeft ? val : -val) * (bp.modelType === 'pillar_supported' ? 1.0 : (bp.B_val || 0.5)) / 1000;
             });
