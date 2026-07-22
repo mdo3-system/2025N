@@ -1120,6 +1120,9 @@ function showAreaPreview() {
 
     const mitsukeTableContainer = document.getElementById('mitsuke-table-container');
     if (mitsukeTableContainer && window.ElevationRenderer && window.ElevationRenderer.generateElevationAreaTableHtml) {
+        if (window.MitsukeEngine && typeof window.MitsukeEngine.updateProjectedAreas === 'function') {
+            window.MitsukeEngine.updateProjectedAreas(window.AppState);
+        }
         mitsukeTableContainer.innerHTML = window.ElevationRenderer.generateElevationAreaTableHtml(window.AppState);
     }
 

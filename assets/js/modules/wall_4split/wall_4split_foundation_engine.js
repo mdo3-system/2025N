@@ -1458,3 +1458,5 @@ function generateContinuousBeamReportHtml(beam) {
     </div>`;
     return html;
 }
+
+window.generateBeamNMQSvg = generateBeamNMQSvg;
