@@ -2050,15 +2050,16 @@ async function generateDoc() {
                         <div style="font-weight:bold; font-size:14px; margin-bottom:10px; border-bottom:2px solid #2c3e50; padding-bottom:5px;">
                             基礎梁 No.${idx + 1}（ID: ${beam.id}）
                         </div>
+                        ${beamHtml || `
                         <div style="display:flex; flex-wrap:wrap; gap:20px;">
                             <div style="flex: 1; min-width: 300px;">
-                                ${beamHtml || `<div style="font-size:12px; color:#555;">基礎梁幅: ${beam.width || 150}mm / 基礎高さ: ${beam.height || 450}mm<br>長期・短期曲げ応力検定: <strong style="color:#27ae60;">適合 OK</strong></div>`}
+                                <div style="font-size:12px; color:#555;">基礎梁幅: ${beam.width || 150}mm / 基礎高さ: ${beam.height || 450}mm<br>長期・短期曲げ応力検定: <strong style="color:#27ae60;">適合 OK</strong></div>
                             </div>
                             <div style="flex: 1.2; min-width: 350px; background:#fff;">
                                 <div style="font-size:11px; font-weight:bold; margin-bottom:5px; color:#555; text-align:center;">応力図（N・M・Q図）</div>
                                 ${nmqSvg || `<div style="font-size:11px; color:#888; text-align:center; padding:30px;">(応力解析図)</div>`}
                             </div>
-                        </div>
+                        </div>`}
                       </div>`;
             });
         }

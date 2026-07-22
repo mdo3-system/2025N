@@ -1338,31 +1338,38 @@ function generateContinuousBeamReportHtml(beam) {
                         <th style="border:1px solid #bdc3c7; padding:8px;">引抜力 N (kN)</th>
                         <th style="border:1px solid #bdc3c7; padding:8px;">備考</th>
                     </tr>
-                    ${beam.spans.map((s, i) => `
+                    ${beam.spans.map((s, i) => {
+                        const nodeName = s.startNode.name || (s.startNode.globalX != null && s.startNode.globalY != null ? getGridNameFromCoords(s.startNode.globalX, s.startNode.globalY) : (s.startNode.x > 50 ? getGridNameFromCoords(s.startNode.x, s.startNode.y) : `節点${i+1}`));
+                        const tdVal = Math.max(Math.abs(s.leftward?.Td || 0), Math.abs(s.rightward?.Td || 0), Math.abs(s.fdStress?.leftPat?.Td_kN || 0));
+                        return `
                         <tr>
                             <td style="border:1px solid #bdc3c7; padding:8px; text-align:center;">${i + 1}</td>
                             <td style="border:1px solid #bdc3c7; padding:8px;">
-                                <!-- [バグ修正 文字化けの物理的修復] ラベル -->
-                                ${s.startNode.type === 'pillar' ? '柱位置' : '交差/端点'}: <strong>${getGridNameFromCoords(s.startNode.x, s.startNode.y)}</strong>
+                                ${s.startNode.type === 'pillar' || s.startNode.id ? '柱位置' : '交差/端点'}: <strong>${nodeName}</strong>
                             </td>
                             <td style="border:1px solid #bdc3c7; padding:8px; text-align:right; font-weight:bold; color:#e74c3c;">
-                                ${fmt(Math.abs(s.fdStress?.leftPat?.Td_kN || 0), 2)}
+                                ${fmt(tdVal, 2)}
                             </td>
-                            <!-- [バグ修正 文字化けの物理的修復] 備考 -->
                             <td style="border:1px solid #bdc3c7; padding:8px; color:#7f8c8d; font-size:11px;">${i === 0 ? '始端部' : `中間節点`}</td>
-                        </tr>
-                    `).join('')}
+                        </tr>`;
+                    }).join('')}
+                    ${(() => {
+                        const lastS = beam.spans[beam.spans.length - 1];
+                        const lastNode = lastS.endNode;
+                        const lastNodeName = lastNode.name || (lastNode.globalX != null && lastNode.globalY != null ? getGridNameFromCoords(lastNode.globalX, lastNode.globalY) : (lastNode.x > 50 ? getGridNameFromCoords(lastNode.x, lastNode.y) : `終端点`));
+                        const lastTdVal = Math.max(Math.abs(lastS.leftward?.Td || 0), Math.abs(lastS.rightward?.Td || 0), Math.abs(lastS.fdStress?.leftPat?.lastTd_kN || 0));
+                        return `
                     <tr>
                         <td style="border:1px solid #bdc3c7; padding:8px; text-align:center;">${beam.spans.length + 1}</td>
                         <td style="border:1px solid #bdc3c7; padding:8px;">
-                            <!-- [バグ修正 文字化けの物理的修復] 終端表示 -->
-                            終端点: <strong>${getGridNameFromCoords(beam.spans[beam.spans.length-1].endNode.x, beam.spans[beam.spans.length-1].endNode.y)}</strong>
+                            終端点: <strong>${lastNodeName}</strong>
                         </td>
                         <td style="border:1px solid #bdc3c7; padding:8px; text-align:right; font-weight:bold; color:#e74c3c;">
-                            ${fmt(Math.abs(beam.spans[beam.spans.length - 1].fdStress?.leftPat?.lastTd_kN || 0), 2)}
+                            ${fmt(lastTdVal, 2)}
                         </td>
                         <td style="border:1px solid #bdc3c7; padding:8px; color:#7f8c8d; font-size:11px;">終端部</td>
-                    </tr>
+                    </tr>`;
+                    })()}
                 </table>
             </section>
 
