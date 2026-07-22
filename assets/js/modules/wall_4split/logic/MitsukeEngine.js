@@ -415,6 +415,16 @@ window.MitsukeEngine = {
             '2F': { x: projX.formulaAreas['2F'].x, y: projY.formulaAreas['2F'].y },
             '1F': { x: projX.formulaAreas['1F'].x, y: projY.formulaAreas['1F'].y }
         };
+
+        // 右パネル DOM フォーム (readonly) への自動転記・連動同期
+        const syncVal = (id, val) => {
+            const el = document.getElementById(id);
+            if (el) el.value = (val || 0).toFixed(2);
+        };
+        syncVal('a-wx1', projX.areas['1F'].x);
+        syncVal('a-wy1', projY.areas['1F'].y);
+        syncVal('a-wx2', projX.areas['2F'].x);
+        syncVal('a-wy2', projY.areas['2F'].y);
         
         if (window.StructuralEngine && window.StructuralEngine.updateAverageGroundPressure) {
             window.StructuralEngine.updateAverageGroundPressure();

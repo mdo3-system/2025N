@@ -858,9 +858,11 @@ function generateAutoMitsukeCanvas(direction, commonScale) {
     const areaTotal = areaShown2F + areaShown1F_add;
 
     ctx.fillStyle = '#2c3e50'; ctx.font = 'bold 15px sans-serif'; ctx.textAlign = 'left';
-    ctx.fillText(`${direction}方向 見付面積図 (GL基準・スキャンライン法)`, textL, textY); textY += 24;
+    ctx.fillText(`${direction}方向 見付面積図 (GL基準・スキャンライン法)`, textL, textY); textY += 20;
     ctx.fillStyle = '#7f8c8d'; ctx.font = '10px sans-serif';
-    ctx.fillText(`外壁: 柱芯±壁厚${wallThick}mm オフセット済`, textL, textY); textY += 30;
+    ctx.fillText(`外壁: 柱芯±壁厚${wallThick}mm オフセット済`, textL, textY); textY += 14;
+    ctx.fillStyle = '#d35400'; ctx.font = '9px sans-serif';
+    ctx.fillText(`※棟線(水平主棟)を持つ屋根のため頂部は台形(水平上辺)として投影・求積`, textL, textY); textY += 24;
 
     const box = (title, val, color) => {
         ctx.fillStyle = '#2c3e50'; ctx.font = 'bold 12px sans-serif'; ctx.fillText(title, textL, textY); textY += 18;
