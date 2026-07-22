@@ -8,23 +8,52 @@ window.FoundationRenderer = {
     // 1. Canvas Rendering Engine (キャンバス描画機能)
     // ==========================================
 
+    /**
+     * 基礎レイヤーの描画 (MainRendererから呼び出されるエントリーポイント)
+     * @param {Object} state - アプリケーション状態
+     * @param {Function} toCanvas - 座標変換関数
+     */
+    render: function(state, toCanvas) {
+        const ctx = state.ctx;
+        if (!ctx) return;
+
+        const fdSel = state.fdSelection || { type: null, item: null };
+
+        // 1. スラブ描画
+        this.drawSlabs(state, toCanvas, fdSel);
+
+        // 2. 負荷エリア (Tributary)
+        this.drawTributary(state, toCanvas);
+
+        // 3. 外壁線
+        this.drawExteriorWalls(state, toCanvas, fdSel);
+
+        // 4. 基礎梁
+        this.drawBeams(state, toCanvas, fdSel);
+
+        // 5. 人通口
+        this.drawManholes(state, toCanvas, fdSel);
+
+        // 6. プレビュー
+        this.drawPreviews(state, toCanvas);
+    },
+
     drawSlabs: function(state, toCanvas, fdSel) {
-        if (!state.elementVisibility || state.elementVisibility.f_slabs === false) return;
         const ctx = state.ctx;
         const hFd = state.hoveredFdElement || { type: null, item: null };
-        (state.foundationSlabs || []).forEach(slab => {
-            if (!slab.polygon || slab.polygon.length < 3) return;
-            const isSelected = fdSel.type === 'slab' && fdSel.item?.id === slab.id;
-            const isHovered = hFd.type === 'slab' && hFd.item?.id === slab.id;
-            
+        (state.foundationSlabs || []).filter(s => !state.elementVisibility || state.elementVisibility.f_slabs !== false).forEach((slab, si) => {
+            if (!slab.vertices || slab.vertices.length < 3) return;
             ctx.save();
+            const isSelected = (fdSel.type === 'slab' && fdSel.item?.id === slab.id) || (window.highlightedSlabIndex === si);
+            const isHovered = hFd.type === 'slab' && hFd.item?.id === slab.id;
+
             ctx.beginPath();
-            slab.polygon.forEach((v, i) => {
+            slab.vertices.forEach((v, i) => {
                 const p = toCanvas(v, null);
                 if (p.cx != null) i === 0 ? ctx.moveTo(p.cx, p.cy) : ctx.lineTo(p.cx, p.cy);
             });
             ctx.closePath();
-            
+
             if (isSelected) {
                 ctx.fillStyle = 'rgba(231, 76, 60, 0.45)';
                 ctx.strokeStyle = '#c0392b';
@@ -42,7 +71,7 @@ window.FoundationRenderer = {
             ctx.stroke();
 
             // Label
-            const poly = slab.polygon;
+            const poly = slab.vertices;
             const cxM = poly.reduce((sum, p) => sum + p.x, 0) / poly.length;
             const cyM = poly.reduce((sum, p) => sum + p.y, 0) / poly.length;
             const pC = toCanvas({ x: cxM, y: cyM }, null);
@@ -79,6 +108,27 @@ window.FoundationRenderer = {
                 }
             }
             ctx.restore();
+        });
+    },
+
+    drawTributary: function(state, toCanvas) {
+        if (!state.elementVisibility || !state.elementVisibility.f_tributary) return;
+        const ctx = state.ctx;
+        (state.foundationBeams || []).forEach(b => {
+            if (!b.spans) return;
+            b.spans.forEach(s => {
+                if (!s.tributaryPolygon || s.tributaryPolygon.length < 3) return;
+                ctx.save();
+                ctx.fillStyle = 'rgba(46, 204, 113, 0.15)';
+                ctx.strokeStyle = '#27ae60'; ctx.lineWidth = 1; ctx.setLineDash([3, 3]);
+                ctx.beginPath();
+                s.tributaryPolygon.forEach((v, i) => {
+                    const p = toCanvas(v, null);
+                    if (p.cx != null) i === 0 ? ctx.moveTo(p.cx, p.cy) : ctx.lineTo(p.cx, p.cy);
+                });
+                ctx.closePath(); ctx.fill(); ctx.stroke();
+                ctx.restore();
+            });
         });
     },
 
@@ -416,7 +466,6 @@ window.FoundationRenderer = {
         table3 += `</tbody></table>`;
         html += table3;
 
-        // 5. (4) 許容耐力の算定（1 - 曲げ）
         html += `<div style="font-size:12px; font-weight:bold; color:#2c3e50; border-left:4px solid #34495e; padding-left:8px; margin:15px 0 6px 0;">④ 許容耐力の算定（1 - 曲げ）</div>`;
         
         const parseRebarInput = (str) => {
@@ -512,7 +561,6 @@ window.FoundationRenderer = {
         table4 += `</tbody></table>`;
         html += table4;
 
-        // 6. (5) 許容耐力の算定（2 - せん断）
         html += `<div style="font-size:12px; font-weight:bold; color:#2c3e50; border-left:4px solid #34495e; padding-left:8px; margin:15px 0 6px 0;">⑤ 許容耐力の算定（2 - せん断）</div>`;
         let table5 = `<table style="width:100%; border-collapse:collapse; font-size:10px; margin-bottom:15px; border:1px solid #bdc3c7;">
             <thead>
@@ -597,7 +645,6 @@ window.FoundationRenderer = {
         }
         html += table5;
 
-        // 7. (6) 総合判定表 (検定比)
         html += `<div style="font-size:12px; font-weight:bold; color:#2c3e50; border-left:4px solid #34495e; padding-left:8px; margin:15px 0 6px 0;">⑥ 総合判定 (検定比)</div>`;
         let table6 = `<table style="width:100%; border-collapse:collapse; font-size:10px; border:2px solid #34495e; text-align:center; background:#fff;">
             <thead>

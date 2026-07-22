@@ -844,6 +844,9 @@ $$R_i = A + B \cdot x_i$$
 ### ㊹ 個別要素プロパティモーダル内での基礎梁鉄筋・断面寸法インタラクティブ入力テーブルの完全復元 (v3.0.41)
 - **許容耐力算定テーブル(1-曲げ)および(2-せん断)の完全復元**: 単一描画モジュール `FoundationRenderer.js` の `generateBeamReportHtml` 内に `options.showInputs` フラグによる条件分岐を追加。プロパティモーダル表示時（`showInputs: true`）に、各スパンごとの `成 D(mm)`, `根入れ h(mm)`, `上端主筋 (本数-径)`, `下端主筋 (本数-径)`, `幅 b(mm)`, `スターラップ筋 (本数-径@ピッチ)` のフォーム入力コントロール（`input`/`select`）を完全復元。モーダルから直感的に断面寸法や配筋をリアルタイム変更・再計算できるUIを完全修復完了。
 
+### ㊺ キャンバス描画メインエントリーポイント FoundationRenderer.render の完全復元・統合 (v3.0.42)
+- **キャンバス全体描画関数 render の復元**: `FoundationRenderer.js` に `render(state, toCanvas)` メソッドおよび全従属描画関数（`drawSlabs`, `drawTributary`, `drawExteriorWalls`, `drawBeams`, `drawManholes`, `drawPreviews`）を完全に合体・統合。`MainRenderer.js` の `drawFoundationLayer` 呼び出し時の `window.FoundationRenderer.render is not a function` エラーを100%根本から根絶し、作図画面上での全基礎スラブ・全基礎梁・外壁線の表示・描画を完全復活修復。
+
 
 
 
