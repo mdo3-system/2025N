@@ -1,4 +1,4 @@
 /**
  * Version.js - Centralized Version Management
  */
-window.APP_VERSION = "v3.0.25"; // Fix foundation slab/beam report data binding (fdStress), N,M,Q SVG diagrams, floor plan underlay graphics, mitsuke calculation table, and PDF print range CSS
+window.APP_VERSION = "v3.0.26"; // Fix ElevationRenderer syntax error, bind foundation beam report/SVG functions to window, and fix PDF print range for foundation report

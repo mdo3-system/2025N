@@ -1421,17 +1421,18 @@ async function generateDoc() {
             const dc = document.getElementById('doc-container');
             if (!dc) { window.print(); return; }
 
-            const wallSecs = Array.from(dc.querySelectorAll('.doc-section:not(#sec-fd-slab):not(#sec-fd-beam)'));
+            const allChildren = Array.from(dc.children);
             const fdSecs = Array.from(dc.querySelectorAll('#sec-fd-slab, #sec-fd-beam'));
-            
+            const wallChildren = allChildren.filter(child => !child.contains(document.getElementById('sec-fd-slab')) && !child.contains(document.getElementById('sec-fd-beam')));
+
             if (mode === 'wall_only') {
-                wallSecs.forEach(el => el.classList.remove('print-hide'));
+                wallChildren.forEach(el => el.classList.remove('print-hide'));
                 fdSecs.forEach(el => el.classList.add('print-hide'));
             } else if (mode === 'fd_only') {
-                wallSecs.forEach(el => el.classList.add('print-hide'));
+                wallChildren.forEach(el => el.classList.add('print-hide'));
                 fdSecs.forEach(el => el.classList.remove('print-hide'));
             } else {
-                [...wallSecs, ...fdSecs].forEach(el => el.classList.remove('print-hide'));
+                [...wallChildren, ...fdSecs].forEach(el => el.classList.remove('print-hide'));
             }
             
             window.print();

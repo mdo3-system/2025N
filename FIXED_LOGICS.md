@@ -778,6 +778,11 @@ $$R_i = A + B \cdot x_i$$
 - **見附求積表（算定式表）の自動算定・自己復元挿入**: `ElevationRenderer.generateElevationAreaTableHtml` の呼び出し冒頭で `MitsukeEngine.updateProjectedAreas()` を自動事前実行。未生成時にも自己復元して画面モーダルおよび一括計算書に「見附面積 求積表」を100%全自動挿入表示。
 - **PDF印刷範囲選択の動的DOM切り替え完全同期**: `window.printDocSection()` の印刷制御を `#doc-container` 内のすべての `.doc-section` へ動的クエリ適用。「基礎計算書を出力 (`fd_only`)」選択時に壁量計算書セクションを隠し、基礎スラブ・基礎梁検定書のみをA4判構造計算書としてPDF保存・印刷できるよう完修。
 
+### ㉙ ElevationRenderer未定義変数エラー修復 ＆ 基礎梁検定・NMQ応力図(SVG)関数グローバル開示 ＆ 基礎計算書単独PDF印刷完全分離 (v3.0.26)
+- **ElevationRenderer の JavaScript 構文・未定義変数エラーの解消**: `view/ElevationRenderer.js` の `generateElevationAreaTableHtml` 関数内で発生していた `ReferenceError: tableHtml is not defined` 構文エラーを修正し、X/Y方向の見附求積表（大括り幾何 $A_1, B_1...$ の算定式・面積・累計表）がクラッシュせず100%画面モーダルおよび一括計算書に確実描画出力されるよう完修。
+- **基礎梁検定・NMQ応力図(SVG)生成関数のグローバルバインド**: `wall_4split_foundation_engine.js` 内の `getFoundationBeamReportHtml` および `generateBeamNMQSvg` を `window` オブジェクトへ明示バインド。関数未定義による代用文字 `(応力解析図)` 落ちを解消し、長期・短期応力解析結果（軸力N・曲げM・せん断Q）のカラフルなSVG線図および検定表を100%正常出力。
+- **基礎計算書単独PDF印刷時の全壁量要素一括非表示**: `printDocSection()` にて「基礎計算書を出力 (`fd_only`)」指定時に、`#doc-container` 配下の基礎以外の全子要素（壁量サマリー表・画像枠・改ページ `.page-break`）に `print-hide` を一括適用。1ページ目からA4判構造計算書として基礎計算書（スラブ・梁検定・NMQ図）のみが綺麗にPDF出力・印刷されるよう完修。
+
 
 
 

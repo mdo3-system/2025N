@@ -1460,3 +1460,5 @@ function generateContinuousBeamReportHtml(beam) {
 }
 
 window.generateBeamNMQSvg = generateBeamNMQSvg;
+if (typeof getFoundationBeamReportHtml === 'function') window.getFoundationBeamReportHtml = getFoundationBeamReportHtml;
+if (typeof getFoundationSlabReportHtml === 'function') window.getFoundationSlabReportHtml = getFoundationSlabReportHtml;

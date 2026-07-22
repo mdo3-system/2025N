@@ -513,45 +513,38 @@ window.ElevationRenderer = {
 
         ['X', 'Y'].forEach(dir => {
             const dirKey = dir.toLowerCase();
-            const dirLabel = dir;
-            let dirRows = [];
+            let dirTotal = 0;
 
             ['2F', '1F'].forEach(f => {
-                const items = formulaAreas[f][dirKey] || [];
-                let fTotal = 0;
-                
-                if (items.length === 0) {
-                    tableHtml += `<tr>
-                        <td style="border:1px solid #ddd; padding:4px; text-align:center; background:#f8fafc;">${f}</td>
-                        <td colspan="3" style="border:1px solid #ddd; padding:4px; text-align:center; color:#999;">データなし</td>
-                    </tr>`;
-                } else {
-                    items.forEach((item, idx) => {
-                        fTotal += item.area;
-                        const isDeduction = item.area < 0;
+                const items = (formulaAreas[f] && formulaAreas[f][dirKey]) ? formulaAreas[f][dirKey] : [];
+                if (items.length > 0) {
+                    items.forEach((item) => {
+                        const areaVal = item.area || 0;
+                        dirTotal += areaVal;
+                        cumTotal += areaVal;
+                        const isDeduction = areaVal < 0;
                         const colorStyle = isDeduction ? 'color:#e74c3c;' : '';
-                        
-                        tableHtml += `<tr style="${isDeduction ? 'background:#fff5f5;' : ''}">
-                            ${idx === 0 ? `<td rowspan="${items.length + 1}" style="border:1px solid #ddd; padding:4px; text-align:center; background:#f8fafc; font-weight:bold;">${f}</td>` : ''}
-                            <td style="border:1px solid #ddd; padding:4px; text-align:center; ${colorStyle}">${item.name}</td>
-                            <td style="border:1px solid #ddd; padding:4px; text-align:left; font-size:11px; ${colorStyle}">${item.formula} =</td>
-                            <td style="border:1px solid #ddd; padding:4px; ${colorStyle}">${item.area.toFixed(3)}</td>
+
+                        html += `<tr style="${isDeduction ? 'background:#fff5f5;' : ''}">
+                            <td style="border:1px solid #bdc3c7; padding:4px; font-weight:bold;">${dir}</td>
+                            <td style="border:1px solid #bdc3c7; padding:4px;">${f}</td>
+                            <td style="border:1px solid #bdc3c7; padding:4px; font-weight:bold; ${colorStyle}">${item.name || '図形'}</td>
+                            <td style="border:1px solid #bdc3c7; padding:4px; text-align:left; font-family:monospace; font-size:11px; ${colorStyle}">${item.formula || '0.00'}</td>
+                            <td style="border:1px solid #bdc3c7; padding:4px; text-align:right; font-weight:bold; ${colorStyle}">${areaVal.toFixed(3)}</td>
+                            <td style="border:1px solid #bdc3c7; padding:4px; text-align:right;">-</td>
+                            <td style="border:1px solid #bdc3c7; padding:4px; text-align:right; font-weight:bold; color:#2980b9;">${cumTotal.toFixed(3)}</td>
                         </tr>`;
                     });
-                    tableHtml += `<tr style="background:#fffaf0; font-weight:bold;">
-                        <td colspan="2" style="border:1px solid #ddd; padding:4px; text-align:center;">合計</td>
-                        <td style="border:1px solid #ddd; padding:4px; color:#d35400;">${fTotal.toFixed(3)}</td>
-                    </tr>`;
                 }
             });
-            tableHtml += `</tbody></table>`;
-            return tableHtml;
-        };
+            html += `<tr style="background:#e8f4f8; font-weight:bold;">
+                <td colspan="4" style="border:1px solid #2c3e50; padding:5px; text-align:right;">${dir}方向 見附面積 小計：</td>
+                <td style="border:1px solid #2c3e50; padding:5px; text-align:right; color:#d35400; font-size:12px;">${dirTotal.toFixed(3)} ㎡</td>
+                <td colspan="2" style="border:1px solid #2c3e50; padding:5px; text-align:right; color:#2980b9; font-size:12px;">累計: ${cumTotal.toFixed(3)} ㎡</td>
+            </tr>`;
+        });
 
-        html += renderTable('【 X方向加力 】 (見附面: Y方向に広がる面)', 'x');
-        html += renderTable('【 Y方向加力 】 (見附面: X方向に広がる面)', 'y');
-
-        html += `</div>`;
+        html += `</tbody></table></div>`;
         return html;
     }
 };
