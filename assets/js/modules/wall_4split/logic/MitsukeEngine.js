@@ -256,10 +256,15 @@ window.MitsukeEngine = {
                 }
             });
             let inWall1F = wallBounds['1F'] && (uMid >= wallBounds['1F'].uMin && uMid <= wallBounds['1F'].uMax);
+            let inWall2F_local = wallBounds['2F'] && (uMid >= wallBounds['2F'].uMin && uMid <= wallBounds['2F'].uMax);
             let hasWallTop1F = false;
-            // 1F外壁があれば、カットライン上限(lvl.cut2)まで壁が存在して2F見附と隙間なく連続する
-            if (inWall1F && zTop1F_mid < lvl.cut2) {
+            
+            // 2F直下の1Fエリアでは壁が 2Fカットライン(lvl.cut2)まで連続して2F見附と接続。1F下屋はみ出しエリアでは下屋根勾配/2FLに従う
+            if (inWall2F_local && zTop1F_mid < lvl.cut2) {
                 zTop1F_mid = lvl.cut2; 
+                hasWallTop1F = true;
+            } else if (inWall1F && zTop1F_mid < lvl.FL2) {
+                zTop1F_mid = lvl.FL2;
                 hasWallTop1F = true;
             }
 
@@ -281,8 +286,13 @@ window.MitsukeEngine = {
             }
             
             if (zTop1F_mid > -Infinity) {
-                let zTL_raw = (hasWallTop1F && maxTop1F) ? Math.max(lvl.cut2, getZ(maxTop1F, uA)) : (hasWallTop1F ? lvl.cut2 : getZ(maxTop1F, uA));
-                let zTR_raw = (hasWallTop1F && maxTop1F) ? Math.max(lvl.cut2, getZ(maxTop1F, uB)) : (hasWallTop1F ? lvl.cut2 : getZ(maxTop1F, uB));
+                let zTL_raw = maxTop1F ? getZ(maxTop1F, uA) : (inWall2F_local ? lvl.cut2 : lvl.FL2);
+                let zTR_raw = maxTop1F ? getZ(maxTop1F, uB) : (inWall2F_local ? lvl.cut2 : lvl.FL2);
+
+                if (inWall2F_local && !maxTop1F) {
+                    zTL_raw = Math.max(zTL_raw, lvl.cut2);
+                    zTR_raw = Math.max(zTR_raw, lvl.cut2);
+                }
                 
                 // 2FのcutBot (lvl.cut2) で頭打ちにする (1F見附は cut1 ~ cut2)
                 let zTL = Math.min(lvl.cut2, Math.max(zBot1F_effective_A, zTL_raw));
