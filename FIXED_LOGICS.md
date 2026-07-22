@@ -827,6 +827,10 @@ $$R_i = A + B \cdot x_i$$
 - **左パネル基礎要素一覧表示の基礎モード限定制御**: `index.html` 内の `#fd-element-list-panel` を新設した `<div id="foundation-mode-panel">` の内部へ格納。作図モードや屋根伏図モードでは完全非表示とし、「基礎モード」選択時のみ左パネルに自動表示されるよう制御を完修。
 - **基礎梁一覧表示時の連続梁事前自動同期**: `FoundationInputController.js` の `toggleFdElementList` 関数冒頭で `FoundationEngine.runAnalysis` を自動実行するよう修正。リストから選択した梁（No.1）と一括出力帳票の梁（No.1）が確実に100%同一の連続基礎梁（全5スパン等）となり、節点表とN図の引抜力数値（7.262 kN 等）が完全一致するよう完修。
 
+### ㊵ 一覧表示トグルの例外ガード補強 ＆ 基礎モードパネル明示的表示制御完修 (v3.0.37)
+- **一覧表示トグルの例外ガード（try-catch）防護完了**: `FoundationInputController.js` の `toggleFdElementList` 内にて、解析処理を `try-catch` ブロックで完全に保護し、かつ表示状態 `container.style.display = 'block'` を先行確定。作図状態や未確定データに起因する例外が発生した場合でも、エラーで停止せず100%確実に全スラブ・全基礎梁の一覧ボックスが開いて表示されるよう不倒化を完修。
+- **基礎モードパネル表示切り替えの明示的制御**: `AppController.js` 内の `switchAppMode` にて、`mode === 'foundation'` の際に `foundation-mode-panel` の `style.display` を明示的に `'block'` へ設定。基礎モード切り替え時に一覧ボタンおよび一覧エリアが確実に表示・操作できるよう制御を完修。
+
 
 
 

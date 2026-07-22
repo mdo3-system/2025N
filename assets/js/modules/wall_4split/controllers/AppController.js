@@ -261,7 +261,7 @@ window.AppController = {
         const roofPanel = document.getElementById('roof-mode-panel');
         
         if (wallPanel) wallPanel.style.display = (mode === 'wall') ? 'block' : 'none';
-        if (foundPanel) foundPanel.style.display = (mode === 'foundation') ? '' : 'none';
+        if (foundPanel) foundPanel.style.display = (mode === 'foundation') ? 'block' : 'none';
         if (roofPanel) roofPanel.style.display = (mode === 'roof') ? 'block' : 'none';
 
         if (mode === 'foundation') {

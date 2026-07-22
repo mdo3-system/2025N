@@ -385,9 +385,16 @@ window.toggleFdElementList = function(type) {
         return;
     }
     
-    // 連続梁を自動解析・結合して帳票と100%同期させる
-    if (window.FoundationEngine && typeof window.FoundationEngine.runAnalysis === 'function') {
-        window.FoundationEngine.runAnalysis(window.AppState);
+    container.setAttribute('data-current-type', type);
+    container.style.display = 'block';
+
+    // 連続梁を自動解析・結合して帳票と100%同期させる (例外で停止しないよう保護)
+    try {
+        if (window.FoundationEngine && typeof window.FoundationEngine.runAnalysis === 'function') {
+            window.FoundationEngine.runAnalysis(window.AppState);
+        }
+    } catch (err) {
+        console.warn("Foundation analysis warning during list toggle:", err);
     }
 
     const s = window.AppState;
