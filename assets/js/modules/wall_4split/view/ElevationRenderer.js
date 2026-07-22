@@ -490,10 +490,11 @@ window.ElevationRenderer = {
 
         let html = `<div style="margin-top:20px; font-family:sans-serif; font-size:11px;">
             <h3 style="font-size:14px; margin-bottom:10px; color:#2c3e50; border-bottom:2px solid #bdc3c7; padding-bottom:5px;">見附面積 求積表 (審査提出・構造計算用)</h3>
-            <div style="background:#f8f9fa; border:1px solid #ddd; padding:8px; border-radius:4px; margin-bottom:15px; color:#555; line-height:1.4;">
+            <div style="background:#f8f9fa; border:1px solid #ddd; padding:8px; border-radius:4px; margin-bottom:15px; color:#555; line-height:1.5;">
                 <strong style="color:#2c3e50;">【計算前提条件】</strong><br>
                 ・<b>1F床高:</b> GL+${fl1}mm | <b>2F床高:</b> GL+${fl2}mm | <b>外壁厚:</b> ${wallThick}mm (柱芯オフセット)<br>
-                <span style="color:#d35400; font-size:10px;">※ 1F見附下端 = 1FL+1.35m, 2F見附下端 = 2FL+1.35m | 棟線を持つ屋根は頂部を台形(水平上辺)として分解算定</span>
+                <span style="color:#d35400; font-size:10px;">※ 1F見附下端 = 1FL+1.35m, 2F見附下端 = 2FL+1.35m | 棟線を持つ屋根は頂部を台形(水平上辺)として分解算定</span><br>
+                <span style="color:#c0392b; font-size:10px; font-weight:bold;">※【安全側算定注記】本求積は審査機関の要求に基づき、立体外形を外接分解して一部重なり（被り）を許容した安全側（大きめ）の算定式として出力しています。</span>
             </div>
             <table style="width:100%; border-collapse:collapse; border:1px solid #2c3e50; font-size:11px; text-align:center;">
                 <thead>

@@ -375,3 +375,80 @@ window.FoundationInputController = {
         return { x: Math.round(wp.x), y: Math.round(wp.y) };
     }
 };
+
+window.toggleFdElementList = function(type) {
+    const container = document.getElementById('fd-element-list-container');
+    if (!container) return;
+    
+    if (container.style.display === 'block' && container.getAttribute('data-current-type') === type) {
+        container.style.display = 'none';
+        return;
+    }
+    
+    container.setAttribute('data-current-type', type);
+    container.style.display = 'block';
+    
+    const s = window.AppState;
+    let html = '';
+    
+    if (type === 'beam') {
+        const beams = s.foundationBeams || [];
+        if (beams.length === 0) {
+            html = '<div style="padding:5px; color:#7f8c8d;">※ 基礎梁が配置されていません</div>';
+        } else {
+            html = `<div style="font-weight:bold; margin-bottom:4px; color:#2980b9;">🧱 登録済み基礎梁 一覧 (${beams.length}件)</div>`;
+            beams.forEach((beam, idx) => {
+                const isNG = beam.fdStress?.isNG;
+                const statusStr = isNG ? '<span style="color:#e74c3c; font-weight:bold;">[NG]</span>' : '<span style="color:#27ae60; font-weight:bold;">[OK]</span>';
+                const label = beam.props?.beamName || `FG${idx+1}`;
+                const spansCount = beam.spans ? beam.spans.length : 1;
+                html += `
+                <div class="fd-list-item" onclick="window.selectFdElementFromList('beam', '${beam.id}')" style="padding:5px 8px; margin-bottom:3px; background:#fff; border:1px solid #cbd5e1; border-radius:4px; cursor:pointer; display:flex; justify-content:space-between; align-items:center;">
+                    <div>
+                        <strong style="color:#2c3e50;">基礎梁 No.${idx+1}</strong> <span style="color:#555;">(符号: ${label})</span>
+                        <div style="font-size:10px; color:#7f8c8d;">幅: ${beam.props?.width||150}mm / 高: ${beam.props?.height||640}mm / スパン: ${spansCount}</div>
+                    </div>
+                    <div>${statusStr}</div>
+                </div>`;
+            });
+        }
+    } else if (type === 'slab') {
+        const slabs = s.foundationSlabs || [];
+        if (slabs.length === 0) {
+            html = '<div style="padding:5px; color:#7f8c8d;">※ 基礎スラブが配置されていません</div>';
+        } else {
+            html = `<div style="font-weight:bold; margin-bottom:4px; color:#8e44ad;">🏗️ 登録済み基礎スラブ 一覧 (${slabs.length}件)</div>`;
+            slabs.forEach((slab, idx) => {
+                const isNG = slab.fdStress?.isNG;
+                const statusStr = isNG ? '<span style="color:#e74c3c; font-weight:bold;">[NG]</span>' : '<span style="color:#27ae60; font-weight:bold;">[OK]</span>';
+                const thick = slab.props?.slabThickness || 150;
+                const fixType = slab.props?.support || '4辺固定';
+                html += `
+                <div class="fd-list-item" onclick="window.selectFdElementFromList('slab', '${slab.id}')" style="padding:5px 8px; margin-bottom:3px; background:#fff; border:1px solid #cbd5e1; border-radius:4px; cursor:pointer; display:flex; justify-content:space-between; align-items:center;">
+                    <div>
+                        <strong style="color:#2c3e50;">スラブ No.${idx+1}</strong> <span style="color:#555;">(${fixType})</span>
+                        <div style="font-size:10px; color:#7f8c8d;">厚さ: ${thick}mm / 接地圧: ${(slab.fdStress?.qTotal||0).toFixed(2)} kN/㎡</div>
+                    </div>
+                    <div>${statusStr}</div>
+                </div>`;
+            });
+        }
+    }
+    
+    container.innerHTML = html;
+};
+
+window.selectFdElementFromList = function(type, id) {
+    const s = window.AppState;
+    let target = null;
+    if (type === 'beam') {
+        target = (s.foundationBeams || []).find(b => String(b.id) === String(id));
+    } else if (type === 'slab') {
+        target = (s.foundationSlabs || []).find(sl => String(sl.id) === String(id));
+    }
+    if (!target) return;
+    
+    s.fdSelection = { type, item: target };
+    if (typeof window.triggerUpdate === 'function') window.triggerUpdate();
+    if (window.PropertyController) window.PropertyController.showFdPopup(type, target);
+};
