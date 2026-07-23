@@ -2029,7 +2029,21 @@ async function generateDoc() {
         // --- 7. 基礎梁構造検定 ＆ 応力図 ---
         h += `<div class="doc-section" id="sec-fd-beam" style="margin-bottom:30px; page-break-before:always;">
             <h3 style="color:#2c3e50; border-bottom:2px solid #8e44ad; padding-bottom:5px; margin-bottom:15px;">■ 7. 基礎梁 構造検定 ＆ 応力（N・M・Q）図</h3>`;
-        
+
+        // 7-1. 基礎梁負担図（べた基礎接地圧分担域）を最初に1枚出力
+        if (window.FoundationRenderer && typeof window.FoundationRenderer.generateFoundationTributarySvg === 'function') {
+            const firstBeamWithSpans = (window.AppState.foundationBeams || []).find(b => b.spans && b.spans.length > 0);
+            const tributarySvgGlobal = window.FoundationRenderer.generateFoundationTributarySvg(firstBeamWithSpans, window.AppState);
+            if (tributarySvgGlobal) {
+                h += `<div style="margin-bottom:25px; border:1px solid #ccc; padding:15px; border-radius:8px; page-break-inside:avoid; break-inside:avoid;">
+                    <div style="font-size:13px; font-weight:bold; margin-bottom:10px; border-bottom:2px solid #27ae60; padding-bottom:5px; color:#1a5276;">
+                        7-1. 基礎梁 負担図（べた基礎 接地圧分担域）
+                    </div>
+                    ${tributarySvgGlobal}
+                </div>`;
+            }
+        }
+
         const fBeams = window.AppState.foundationBeams || [];
         if (fBeams.length === 0) {
             h += `<div style="padding:15px; background:#f8f9fa; border:1px dashed #bdc3c7; border-radius:4px; color:#7f8c8d; font-size:12px; margin-bottom:15px;">
