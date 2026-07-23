@@ -1,4 +1,4 @@
 /**
  * Version.js - Centralized Version Management
  */
-window.APP_VERSION = "v3.0.44"; // Restore slab tributary division lines (dashed polygons & A/B labels) in canvas, modal, and PDF report
+window.APP_VERSION = "v3.0.45"; // Fix SyntaxError in FoundationRenderer.js to restore foundation slabs and beams rendering

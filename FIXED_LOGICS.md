@@ -869,6 +869,9 @@ $$R_i = A + B \cdot x_i$$
 - **キャンバス描画の復元**: `FoundationRenderer.js` の `drawTributary` メソッドを改修し、`state.foundationSlabs` の `slab.tributaryPolygons` 配列を直接巡回して描画。破線（`[5, 3]`）で各亀甲分割境界を描画し、選択中の基礎梁に属する負担領域（`tribEntry.beamId === selectedBeamId`）を緑色透明（`rgba(46, 204, 113, 0.25)`）でハイライト。重心位置に `A = X.XX ㎡` および `B = X.XX m` の二段ラベルを完璧に描画復元。
 - **負担図SVGへの組み込み**: `generateFoundationTributarySvg` 内でも `slab.tributaryPolygons` の多角形群を破線および色分けポリゴンとして出力し、各区画の `A=X.XX㎡`・`B=X.XXm` ラベルをSVG化。作図画面、基礎梁モーダル、印刷帳票の全てで一貫した亀甲分割線表示を達成。
 
+### ㊽ FoundationRenderer.js の構文エラー根絶と基礎要素描画復元 (v3.0.45)
+- **SyntaxError の緊急修復**: `FoundationRenderer.js` の `generateFoundationTributarySvg` 付近のJSDocコメント閉じ記号（`*/`）の欠落およびコード残滓を物理削除修復。スクリプト読み込み時の `SyntaxError` を100%根本解決し、全基礎スラブ・全基礎梁・亀甲分割線のキャンバス表示を即座に完全復元。
+
 
 
 

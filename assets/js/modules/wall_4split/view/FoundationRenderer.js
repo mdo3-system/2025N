@@ -982,40 +982,6 @@ window.FoundationRenderer = {
         if (!isFinite(minX)) return '';
 
         const padSvg = 40;
-        const svgW = 700, svgH = 480;
-        const rangeX = maxX - minX || 1;
-        const rangeY = maxY - minY || 1;
-        const scaleS = Math.min((svgW - padSvg * 2) / rangeX, (svgH - padSvg * 2) / rangeY);
-        const toSx = (x) => padSvg + (x - minX) * scaleS;
-        const toSy = (y) => svgH - padSvg - (y - minY) * scaleS; // Y軸反転
-
-        let svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${svgW} ${svgH}" width="100%" style="background:#fff; border:1px solid #bdc3c7; border-radius:4px; display:block;">\n`;
-        svg += `<text x="${svgW/2}" y="16" font-size="12" font-weight="bold" fill="#2c3e50" text-anchor="middle">基礎梁 負担図（べた基礎 接地圧分担域）</text>\n`;
-
-    generateFoundationTributarySvg: function(beam, state) {
-        const s = state || window.AppState;
-        const slabs = s?.foundationSlabs || [];
-        const beams = s?.foundationBeams || [];
-        if (slabs.length === 0 && beams.length === 0) return '';
-
-        // 全頂点のバウンディングボックスを算出
-        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-        slabs.forEach(sl => {
-            (sl.vertices || []).forEach(v => {
-                minX = Math.min(minX, v.x); minY = Math.min(minY, v.y);
-                maxX = Math.max(maxX, v.x); maxY = Math.max(maxY, v.y);
-            });
-        });
-        beams.forEach(b => {
-            [b.p1, b.p2].forEach(p => {
-                if (!p) return;
-                minX = Math.min(minX, p.x); minY = Math.min(minY, p.y);
-                maxX = Math.max(maxX, p.x); maxY = Math.max(maxY, p.y);
-            });
-        });
-        if (!isFinite(minX)) return '';
-
-        const padSvg = 40;
         const svgW = 750, svgH = 500;
         const rangeX = maxX - minX || 1;
         const rangeY = maxY - minY || 1;
