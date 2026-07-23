@@ -112,21 +112,64 @@ window.FoundationRenderer = {
     },
 
     drawTributary: function(state, toCanvas) {
-        if (!state.elementVisibility || !state.elementVisibility.f_tributary) return;
+        if (state.elementVisibility && state.elementVisibility.f_tributary === false) return;
         const ctx = state.ctx;
-        (state.foundationBeams || []).forEach(b => {
-            if (!b.spans) return;
-            b.spans.forEach(s => {
-                if (!s.tributaryPolygon || s.tributaryPolygon.length < 3) return;
+        const fdSel = state.fdSelection || { type: null, item: null };
+        const selectedBeamId = (fdSel.type === 'beam' || fdSel.type === 'beam_span') ? fdSel.item?.id : null;
+
+        (state.foundationSlabs || []).forEach(slab => {
+            if (!slab.tributaryPolygons) return;
+            slab.tributaryPolygons.forEach((tribEntry) => {
+                const poly = tribEntry.polygon;
+                if (!poly || poly.length < 3) return;
+                
+                const isTarget = selectedBeamId && (selectedBeamId === tribEntry.beamId);
+
                 ctx.save();
-                ctx.fillStyle = 'rgba(46, 204, 113, 0.15)';
-                ctx.strokeStyle = '#27ae60'; ctx.lineWidth = 1; ctx.setLineDash([3, 3]);
+                if (isTarget) {
+                    ctx.fillStyle = 'rgba(46, 204, 113, 0.25)'; // 選択対象の梁の負担領域を緑色ハイライト
+                    ctx.beginPath();
+                    poly.forEach((v, idx) => {
+                        const p = toCanvas(v, null);
+                        if (p.cx != null) idx === 0 ? ctx.moveTo(p.cx, p.cy) : ctx.lineTo(p.cx, p.cy);
+                    });
+                    ctx.closePath(); ctx.fill();
+                }
+
+                ctx.setLineDash([5, 3]); 
+                ctx.strokeStyle = isTarget ? '#27ae60' : '#7f8c8d'; 
+                ctx.lineWidth = isTarget ? 2 : 1;
+                
                 ctx.beginPath();
-                s.tributaryPolygon.forEach((v, i) => {
+                poly.forEach((v, idx) => {
                     const p = toCanvas(v, null);
-                    if (p.cx != null) i === 0 ? ctx.moveTo(p.cx, p.cy) : ctx.lineTo(p.cx, p.cy);
+                    if (p.cx != null) idx === 0 ? ctx.moveTo(p.cx, p.cy) : ctx.lineTo(p.cx, p.cy);
                 });
-                ctx.closePath(); ctx.fill(); ctx.stroke();
+                ctx.closePath(); ctx.stroke();
+
+                // 面積 A (㎡) および 負担幅 B (m) ラベル描画
+                let cxSum = poly.reduce((s, v) => s + v.x, 0) / poly.length;
+                let cySum = poly.reduce((s, v) => s + v.y, 0) / poly.length;
+                const pC = toCanvas({ x: cxSum, y: cySum }, null);
+                if (pC.cx != null) {
+                    let areaA = tribEntry.area / 1e6 || 0;
+                    let widthB = tribEntry.width || 0;
+                    ctx.font = isTarget ? 'bold 11px sans-serif' : '9px sans-serif'; 
+                    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                    ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 3;
+                    
+                    const labelA = `A = ${areaA.toFixed(2)} ㎡`;
+                    const labelB = widthB > 0 ? `B = ${widthB.toFixed(2)} m` : '';
+
+                    ctx.strokeText(labelA, pC.cx, pC.cy - (labelB ? 6 : 0));
+                    ctx.fillStyle = isTarget ? '#1e8449' : '#555555';
+                    ctx.fillText(labelA, pC.cx, pC.cy - (labelB ? 6 : 0));
+                    
+                    if (labelB) {
+                        ctx.strokeText(labelB, pC.cx, pC.cy + 6);
+                        ctx.fillText(labelB, pC.cx, pC.cy + 6);
+                    }
+                }
                 ctx.restore();
             });
         });
@@ -949,66 +992,98 @@ window.FoundationRenderer = {
         let svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${svgW} ${svgH}" width="100%" style="background:#fff; border:1px solid #bdc3c7; border-radius:4px; display:block;">\n`;
         svg += `<text x="${svgW/2}" y="16" font-size="12" font-weight="bold" fill="#2c3e50" text-anchor="middle">基礎梁 負担図（べた基礎 接地圧分担域）</text>\n`;
 
-        // スラブ描画
-        const slabColors = ['rgba(52,152,219,0.15)', 'rgba(46,204,113,0.15)', 'rgba(155,89,182,0.15)', 'rgba(241,196,15,0.15)', 'rgba(231,76,60,0.15)'];
+    generateFoundationTributarySvg: function(beam, state) {
+        const s = state || window.AppState;
+        const slabs = s?.foundationSlabs || [];
+        const beams = s?.foundationBeams || [];
+        if (slabs.length === 0 && beams.length === 0) return '';
+
+        // 全頂点のバウンディングボックスを算出
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+        slabs.forEach(sl => {
+            (sl.vertices || []).forEach(v => {
+                minX = Math.min(minX, v.x); minY = Math.min(minY, v.y);
+                maxX = Math.max(maxX, v.x); maxY = Math.max(maxY, v.y);
+            });
+        });
+        beams.forEach(b => {
+            [b.p1, b.p2].forEach(p => {
+                if (!p) return;
+                minX = Math.min(minX, p.x); minY = Math.min(minY, p.y);
+                maxX = Math.max(maxX, p.x); maxY = Math.max(maxY, p.y);
+            });
+        });
+        if (!isFinite(minX)) return '';
+
+        const padSvg = 40;
+        const svgW = 750, svgH = 500;
+        const rangeX = maxX - minX || 1;
+        const rangeY = maxY - minY || 1;
+        const scaleS = Math.min((svgW - padSvg * 2) / rangeX, (svgH - padSvg * 2) / rangeY);
+        const toSx = (x) => padSvg + (x - minX) * scaleS;
+        const toSy = (y) => svgH - padSvg - (y - minY) * scaleS; // Y軸反転
+
+        let svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${svgW} ${svgH}" width="100%" style="background:#fff; border:1px solid #bdc3c7; border-radius:4px; display:block;">\n`;
+        svg += `<text x="${svgW/2}" y="18" font-size="13" font-weight="bold" fill="#2c3e50" text-anchor="middle">基礎梁 負担図（スラブ亀甲分割・接地圧分担域）</text>\n`;
+
+        // 1. スラブ本体の外郭線
         slabs.forEach((slab, si) => {
             if (!slab.vertices || slab.vertices.length < 3) return;
             const pts = slab.vertices.map(v => `${toSx(v.x).toFixed(1)},${toSy(v.y).toFixed(1)}`).join(' ');
-            const color = slabColors[si % slabColors.length];
-            svg += `<polygon points="${pts}" fill="${color}" stroke="#2980b9" stroke-width="1.5" stroke-dasharray="6,3" />\n`;
-
-            // スラブ重心にラベル
-            const cx = slab.vertices.reduce((s, v) => s + v.x, 0) / slab.vertices.length;
-            const cy = slab.vertices.reduce((s, v) => s + v.y, 0) / slab.vertices.length;
-            const fs = slab.fdStress || {};
-            const lbl1 = slab.props?.name || `S${si+1}`;
-            const lbl2 = `σ=${(fs.qTotal ?? 0).toFixed(1)}kN/㎡`;
-            svg += `<text x="${toSx(cx).toFixed(1)}" y="${toSy(cy).toFixed(1)}" font-size="10" text-anchor="middle" fill="#1b4f72" font-weight="bold">${lbl1}</text>\n`;
-            svg += `<text x="${toSx(cx).toFixed(1)}" y="${(toSy(cy) + 13).toFixed(1)}" font-size="9" text-anchor="middle" fill="#2980b9">${lbl2}</text>\n`;
+            svg += `<polygon points="${pts}" fill="rgba(245,247,250,0.5)" stroke="#34495e" stroke-width="2" />\n`;
         });
 
-        // 基礎梁描画（全梁）
+        // 2. 亀甲分割ポリゴン（tributaryPolygons）の描画（破線＋分担領域＋A/Bラベル）
+        const slabColors = ['rgba(52,152,219,0.12)', 'rgba(46,204,113,0.12)', 'rgba(155,89,182,0.12)', 'rgba(241,196,15,0.12)', 'rgba(231,76,60,0.12)'];
+        slabs.forEach((slab, si) => {
+            if (!slab.tributaryPolygons) return;
+            slab.tributaryPolygons.forEach((tp, ti) => {
+                if (!tp.polygon || tp.polygon.length < 3) return;
+                const pts = tp.polygon.map(v => `${toSx(v.x).toFixed(1)},${toSy(v.y).toFixed(1)}`).join(' ');
+                const isTarget = beam && (tp.beamId === beam.id);
+                const fillColor = isTarget ? 'rgba(46,204,113,0.3)' : slabColors[(si + ti) % slabColors.length];
+                const strokeColor = isTarget ? '#27ae60' : '#7f8c8d';
+                const strokeWidth = isTarget ? '2' : '1';
+
+                svg += `<polygon points="${pts}" fill="${fillColor}" stroke="${strokeColor}" stroke-width="${strokeWidth}" stroke-dasharray="4,3" />\n`;
+
+                // 分割ポリゴンの重心に A (㎡) / B (m) ラベルを描画
+                const cx = tp.polygon.reduce((s, v) => s + v.x, 0) / tp.polygon.length;
+                const cy = tp.polygon.reduce((s, v) => s + v.y, 0) / tp.polygon.length;
+                const areaA = (tp.area / 1e6) || 0;
+                const widthB = tp.width || 0;
+                const sx = toSx(cx).toFixed(1);
+                const sy = toSy(cy).toFixed(1);
+
+                svg += `<text x="${sx}" y="${(sy - 5)}" font-size="9" text-anchor="middle" font-weight="${isTarget ? 'bold' : 'normal'}" fill="${isTarget ? '#1e8449' : '#444'}">A=${areaA.toFixed(2)}㎡</text>\n`;
+                if (widthB > 0) {
+                    svg += `<text x="${sx}" y="${(parseFloat(sy) + 7).toFixed(1)}" font-size="8" text-anchor="middle" fill="${isTarget ? '#1e8449' : '#666'}">B=${widthB.toFixed(2)}m</text>\n`;
+                }
+            });
+        });
+
+        // 3. 基礎梁描画（全梁）
         beams.forEach(b => {
             if (!b.p1 || !b.p2) return;
-            const isTarget = b.id === beam?.id;
-            const color = isTarget ? '#8e44ad' : '#7f8c8d';
-            const lw = isTarget ? 3 : 1.5;
+            const isTarget = beam && b.id === beam.id;
+            const color = isTarget ? '#8e44ad' : '#34495e';
+            const lw = isTarget ? 3.5 : 2;
             svg += `<line x1="${toSx(b.p1.x).toFixed(1)}" y1="${toSy(b.p1.y).toFixed(1)}" x2="${toSx(b.p2.x).toFixed(1)}" y2="${toSy(b.p2.y).toFixed(1)}" stroke="${color}" stroke-width="${lw}" />\n`;
-
-            // スパンごとの負担幅Bラベル
-            if (isTarget && b.spans) {
-                b.spans.forEach(sp => {
-                    if (!sp.startNode || !sp.endNode) return;
-                    const mx = (sp.startNode.globalX + sp.endNode.globalX) / 2;
-                    const my = (sp.startNode.globalY + sp.endNode.globalY) / 2;
-                    const dx = sp.endNode.globalX - sp.startNode.globalX;
-                    const dy = sp.endNode.globalY - sp.startNode.globalY;
-                    const len = Math.hypot(dx, dy) || 1;
-                    // 梁の法線方向にオフセット（右側）
-                    const offX = (-dy / len) * 25;
-                    const offY = (dx / len) * 25;
-                    const B = sp.B_trib ?? 0;
-                    svg += `<text x="${(toSx(mx) + offX).toFixed(1)}" y="${(toSy(my) - offY).toFixed(1)}" font-size="10" text-anchor="middle" fill="#8e44ad" font-weight="bold">B=${B.toFixed(2)}m</text>\n`;
-
-                    // スパン長ラベル
-                    svg += `<text x="${toSx(mx).toFixed(1)}" y="${(toSy(my) + 14).toFixed(1)}" font-size="9" text-anchor="middle" fill="#555">L=${(sp.L ?? 0).toFixed(2)}m</text>\n`;
-                });
-            }
         });
 
-        // 柱・支点描画（ピラー）
+        // 4. 柱・支点描画（ピラー）
         if (beam && beam.fdStress?.pillars) {
             beam.fdStress.pillars.forEach(p => {
                 if (p.globalX == null) return;
                 const px = toSx(p.globalX);
                 const py = toSy(p.globalY);
                 svg += `<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="5" fill="#e74c3c" stroke="#c0392b" stroke-width="1" />\n`;
-                svg += `<text x="${px.toFixed(1)}" y="${(py - 8).toFixed(1)}" font-size="9" text-anchor="middle" fill="#c0392b">${p.name || ''}</text>\n`;
+                svg += `<text x="${px.toFixed(1)}" y="${(py - 8).toFixed(1)}" font-size="9" text-anchor="middle" fill="#c0392b" font-weight="bold">${p.name || ''}</text>\n`;
             });
         }
 
-        // スケールバー
-        const scale1m = scaleS; // 1000mm = 1m のピクセル
+        // 5. スケールバー
+        const scale1m = scaleS * 1000; // 1000mm = 1m のピクセル
         const sbX = padSvg;
         const sbY = svgH - 12;
         svg += `<line x1="${sbX}" y1="${sbY}" x2="${sbX + scale1m}" y2="${sbY}" stroke="#2c3e50" stroke-width="2" />\n`;
