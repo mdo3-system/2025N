@@ -847,6 +847,24 @@ $$R_i = A + B \cdot x_i$$
 ### ㊺ キャンバス描画メインエントリーポイント FoundationRenderer.render の完全復元・統合 (v3.0.42)
 - **キャンバス全体描画関数 render の復元**: `FoundationRenderer.js` に `render(state, toCanvas)` メソッドおよび全従属描画関数（`drawSlabs`, `drawTributary`, `drawExteriorWalls`, `drawBeams`, `drawManholes`, `drawPreviews`）を完全に合体・統合。`MainRenderer.js` の `drawFoundationLayer` 呼び出し時の `window.FoundationRenderer.render is not a function` エラーを100%根本から根絶し、作図画面上での全基礎スラブ・全基礎梁・外壁線の表示・描画を完全復活修復。
 
+### ㊻ 基礎梁NMQ図の完全リライトと基礎梁負担図SVGの新規実装 (v3.0.43)
+
+#### 変更概要
+- **デフォルトモデルの明確化**: `FoundationRenderer.js` のモデル選択UIにおける `both_ends`（両端支点連続梁）をデフォルトとして明示的に条件式を修正（`!bp.modelType || bp.modelType === 'both_ends'`）。ユーザー確認に基づき `both_ends` がデフォルト。
+- **NMQ図の完全リライト**: `generateBeamNMQSvg` を参照計算書（添付画像）仕様に完全準拠して再実装：
+  - **N図（引抜力）**: 各スパンの最大 Td[i] を棒グラフで表示、各柱位置の Td 数値ラベル付き
+  - **M図（曲げモーメント）**: 長期M放物線（青・塗り）＋短期M折れ線（左加力：赤破線・右加力：橙破線）を重ね合わせ表示。節点 Mf 値を緑ドット＋数値ラベルで表示
+  - **Q図（せん断力）**: 長期Q台形（紫・塗り・両端数値ラベル）＋短期Q包絡（左加力：赤破線・右加力：橙破線）を両方向表示。節点 Qe 値を赤ドット＋数値ラベルで表示
+  - 各柱位置に縦グリッド線と柱名ラベルを表示
+  - 凡例（N/M/Q・長期/短期・加力方向）を図の下端に追記
+- **基礎梁負担図SVG新規実装**: `generateFoundationTributarySvg` を新規追加：
+  - 全スラブを亀甲分割ポリゴンとして色分け描画、各スラブ重心に名称と接地圧 σ(kN/㎡) を表示
+  - 全基礎梁を灰線で描画、対象梁を紫太線で強調
+  - 対象梁の各スパンに法線方向オフセットで「B=X.XXm」（負担幅）と「L=X.XXm」（スパン長）を表示
+  - 柱・支点を赤丸＋名前ラベルで表示
+  - スケールバー（1m）を左下に表示
+- **組み込み**: モーダル（`generateBeamReportHtml` の冒頭）および印刷帳票（`wall_4split_pdf.js` Section 7 冒頭の 7-1. 基礎梁負担図）の両方に自動表示
+
 
 
 
