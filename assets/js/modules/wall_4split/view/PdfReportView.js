@@ -57,7 +57,9 @@ window.PdfReportView = {
         allChildren.forEach(el => {
             const isFdSlab = el.id === 'sec-fd-slab' || Boolean(el.querySelector && el.querySelector('#sec-fd-slab'));
             const isFdBeam = el.id === 'sec-fd-beam' || Boolean(el.querySelector && el.querySelector('#sec-fd-beam'));
-            const isFd = isFdSlab || isFdBeam;
+            // 基礎セクション間の page-break (pb-before-fd, pb-between-fd) も基礎セクション扱い
+            const isFdPageBreak = el.id === 'pb-before-fd' || el.id === 'pb-between-fd';
+            const isFd = isFdSlab || isFdBeam || isFdPageBreak;
 
             if (mode === 'wall_only') {
                 if (isFd) {
@@ -67,16 +69,17 @@ window.PdfReportView = {
                 }
             } else if (mode === 'fd_only') {
                 if (isFd) {
-                    el.style.removeProperty('display');
-                    // 基礎スラブの冒頭の空ページ（改ページ）除去
-                    if (isFdSlab) {
-                        el.style.setProperty('page-break-before', 'avoid', 'important');
-                        el.style.setProperty('break-before', 'avoid', 'important');
+                    // fd_only の場合、pb-before-fd（基礎セクション手前の page-break）は非表示にして空白ページを防ぐ
+                    if (el.id === 'pb-before-fd') {
+                        el.style.setProperty('display', 'none', 'important');
+                    } else {
+                        el.style.removeProperty('display');
                     }
                 } else {
                     el.style.setProperty('display', 'none', 'important');
                 }
             } else {
+                // 全表示（all）
                 el.style.removeProperty('display');
                 el.style.removeProperty('page-break-before');
                 el.style.removeProperty('break-before');

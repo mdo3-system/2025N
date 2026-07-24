@@ -1952,10 +1952,10 @@ async function generateDoc() {
             if (hasNg) h += `<div style="color:#c0392b;font-weight:bold;font-size:11px;margin-bottom:10px;">⚠️ 有効細長比が150を超える柱が存在します（令第43条6項）</div>`;
             h += `<br>`;
         });
-        h += `</div><div class="page-break"></div>`;
+        h += `</div><div class="page-break" id="pb-before-fd"></div>`;
 
         // --- 6. 基礎スラブ構造検定 ---
-        h += `<div class="doc-section" id="sec-fd-slab" style="margin-bottom:30px; page-break-before:always;">
+        h += `<div class="doc-section" id="sec-fd-slab" style="margin-bottom:30px;">
             <h3 style="color:#2c3e50; border-bottom:2px solid #8e44ad; padding-bottom:5px; margin-bottom:15px;">■ 6. 基礎スラブ 構造検定</h3>`;
         
         const slabs = window.AppState.foundationSlabs || [];
@@ -2003,7 +2003,8 @@ async function generateDoc() {
         h += `</div>`;
 
         // --- 7. 基礎梁構造検定 ＆ 応力図 ---
-        h += `<div class="doc-section" id="sec-fd-beam" style="margin-bottom:30px; page-break-before:always;">
+        h += `<div class="page-break" id="pb-between-fd"></div>`;
+        h += `<div class="doc-section" id="sec-fd-beam" style="margin-bottom:30px;">
             <h3 style="color:#2c3e50; border-bottom:2px solid #8e44ad; padding-bottom:5px; margin-bottom:15px;">■ 7. 基礎梁 構造検定 ＆ 応力（N・M・Q）図</h3>`;
 
         // 7-1. 基礎梁負担図（べた基礎接地圧分担域）を最初に1枚出力
