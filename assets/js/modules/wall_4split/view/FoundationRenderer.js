@@ -732,225 +732,214 @@ window.FoundationRenderer = {
     },
 
     generateBeamNMQSvg: function(beam) {
-        if (!beam || !beam.spans || beam.spans.length === 0) return '';
+        if (!beam || !beam.fdStress || !beam.fdStress.pillars || beam.fdStress.pillars.length === 0) return '';
+        const pillars = beam.fdStress.pillars;
+        const spans = beam.fdStress.spans || [];
+        
+        const xMin = pillars[0].x;
+        const xMax = pillars[pillars.length - 1].x;
+        const totalLength = xMax - xMin;
+        if (totalLength <= 0) return '';
 
-        const spans = beam.spans;
-        const seismic = beam.fdStress?.seismic || {};
-        const pillars = beam.fdStress?.pillars || [];
+        const width = 700;
+        const padX = 60;
+        const chartW = width - padX * 2;
+        
+        const getX = (x) => padX + ((x - xMin) / totalLength) * chartW;
 
-        // ── スパン全長（m）を計算
-        const totalL_m = spans.reduce((s, sp) => s + (sp.L || 0), 0);
-        if (totalL_m <= 0) return '';
+        let maxTd = 1;
+        let maxM = 1;
+        let maxQ = 1;
 
-        // ── SVGレイアウト定数
-        const W = 880;          // SVG全幅
-        const padL = 55;        // 左余白（軸ラベル用）
-        const padR = 20;        // 右余白
-        const padTop = 20;      // 上余白
-        const secH = 150;       // 1セクション高さ(N/M/Q各々)
-        const secGap = 30;      // セクション間ギャップ
-        const labelH = 20;      // 各セクションのラベル高さ
-        const beamH = 16;       // 梁の基線バー高さ
-        const hTotal = padTop + (secH + secGap) * 3 + beamH + 30;
-        const drawW = W - padL - padR;
-        const toX = (xM) => padL + (xM / totalL_m) * drawW;
-
-        // ── 各セクション基準Y（ゼロ線）
-        const nZeroY = padTop + labelH + secH;                    // N図（下向きが引抜き）
-        const mZeroY = padTop + labelH + secH + secGap + labelH + secH; // M図（下向きが正）
-        const qZeroY = padTop + labelH + secH + secGap + labelH + secH + secGap + labelH + secH; // Q図
-        const beamY  = qZeroY + secGap;
-
-        // ── スケール算出
-        let maxN = 1, maxM_L = 1, maxM_S = 1, maxQ_L = 1, maxQ_S = 1;
-        spans.forEach((sp, i) => {
-            const lTd = Math.abs(seismic.leftward?.Td?.[i] ?? 0);
-            const rTd = Math.abs(seismic.rightward?.Td?.[i] ?? 0);
-            maxN = Math.max(maxN, lTd, rTd);
-            maxM_L = Math.max(maxM_L, sp.M_mid ?? 0, sp.M_end ?? 0);
-            maxM_S = Math.max(maxM_S,
-                sp.leftward?.M_left ?? 0, sp.leftward?.M_right ?? 0,
-                sp.rightward?.M_left ?? 0, sp.rightward?.M_right ?? 0
-            );
-            maxQ_L = Math.max(maxQ_L, sp.Q_L ?? 0);
-            maxQ_S = Math.max(maxQ_S, sp.leftward?.Q ?? 0, sp.rightward?.Q ?? 0);
-        });
-        // 最後の柱のTdも含める
-        maxN = Math.max(maxN,
-            Math.abs(seismic.leftward?.Td?.[spans.length] ?? 0),
-            Math.abs(seismic.rightward?.Td?.[spans.length] ?? 0)
-        );
-        const maxM = maxM_L + maxM_S;
-        const maxQ = maxQ_L + maxQ_S;
-        const nScale = (secH - labelH) / maxN;
-        const mScale = (secH - labelH) / (maxM || 1);
-        const qScale = (secH - labelH) / (maxQ || 1);
-
-        let svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${hTotal}" width="100%" style="background:#fafafa; border:1px solid #ddd; border-radius:4px; font-family:'Meiryo',sans-serif; display:block;">\n`;
-
-        // ── 背景ストライプ（セクション区切り）
-        const sections = [
-            { y: padTop, label: 'N図 (軸力) [kN]', color: '#fef9f9', border: '#e74c3c' },
-            { y: padTop + labelH + secH + secGap, label: 'M図 (曲げモーメント) [kN・m]', color: '#f0f8ff', border: '#2980b9' },
-            { y: padTop + (labelH + secH + secGap) * 2, label: 'Q図 (せん断力) [kN]', color: '#fdf8ff', border: '#8e44ad' }
-        ];
-        sections.forEach(sec => {
-            svg += `<rect x="0" y="${sec.y}" width="${W}" height="${secH + labelH}" fill="${sec.color}" />\n`;
-            svg += `<text x="${padL - 2}" y="${sec.y + 14}" font-size="11" font-weight="bold" fill="${sec.border}" text-anchor="end">${sec.label}</text>\n`;
-            svg += `<line x1="${padL}" y1="${sec.y + labelH}" x2="${W - padR}" y2="${sec.y + labelH}" stroke="#ccc" stroke-width="0.5" />\n`;
+        const seismic = beam.fdStress.seismic || { leftward: { Td:[], Qe:[], Mf:[] }, rightward: { Td:[], Qe:[], Mf:[] } };
+        pillars.forEach((p, idx) => {
+            const l_Td = Math.abs(seismic.leftward?.Td?.[idx] || 0);
+            const r_Td = Math.abs(seismic.rightward?.Td?.[idx] || 0);
+            maxTd = Math.max(maxTd, l_Td, r_Td);
         });
 
-        // ── ゼロ基線
-        svg += `<line x1="${padL}" y1="${nZeroY}" x2="${W - padR}" y2="${nZeroY}" stroke="#999" stroke-width="1" stroke-dasharray="3,2" />\n`;
-        svg += `<line x1="${padL}" y1="${mZeroY}" x2="${W - padR}" y2="${mZeroY}" stroke="#999" stroke-width="1" stroke-dasharray="3,2" />\n`;
-        svg += `<line x1="${padL}" y1="${qZeroY}" x2="${W - padR}" y2="${qZeroY}" stroke="#999" stroke-width="1" stroke-dasharray="3,2" />\n`;
+        spans.forEach(s => {
+            const l_M = Math.max(Math.abs(s.leftward?.M_left || 0), Math.abs(s.leftward?.M_right || 0));
+            const r_M = Math.max(Math.abs(s.rightward?.M_left || 0), Math.abs(s.rightward?.M_right || 0));
+            const lt_M = Math.max(Math.abs(s.M_mid || 0), Math.abs(s.M_end || 0));
+            maxM = Math.max(maxM, l_M, r_M, lt_M);
 
-        // ── 柱位置グリッド縦線 & 柱名ラベル
-        const pillarXs = [];
-        let cumPos = 0;
-        spans.forEach((sp, i) => {
-            pillarXs.push(cumPos);
-            cumPos += sp.L;
-        });
-        pillarXs.push(cumPos); // 最終柱
-        pillarXs.forEach((xM, i) => {
-            const px = toX(xM);
-            svg += `<line x1="${px}" y1="${padTop}" x2="${px}" y2="${beamY + beamH}" stroke="#bdc3c7" stroke-width="1" stroke-dasharray="4,3" />\n`;
-            const pname = pillars[i] ? (pillars[i].name || `P${i+1}`) : `P${i+1}`;
-            svg += `<text x="${px}" y="${beamY + beamH + 14}" font-size="10" text-anchor="middle" fill="#2c3e50">${pname}</text>\n`;
+            const l_Q = Math.abs(s.leftward?.Q || 0);
+            const r_Q = Math.abs(s.rightward?.Q || 0);
+            const lt_Q = Math.abs(s.Q_L || 0);
+            maxQ = Math.max(maxQ, l_Q, r_Q, lt_Q);
         });
 
-        // ── 梁の基線バー
-        svg += `<rect x="${toX(0)}" y="${beamY}" width="${toX(totalL_m) - toX(0)}" height="${beamH}" fill="#95a5a6" rx="2" />\n`;
+        const h = 100;
+        const spacing = 45;
+        const svgHeight = (h + spacing) * 3 + 25;
 
-        // ══════════ N図：各スパンの最大引抜力Td棒グラフ ══════════
-        cumPos = 0;
-        spans.forEach((sp, i) => {
-            const xS = toX(cumPos);
-            const xE = toX(cumPos + sp.L);
-            const lTd = Math.abs(seismic.leftward?.Td?.[i] ?? 0);
-            const rTd = Math.abs(seismic.rightward?.Td?.[i] ?? 0);
-            const nMax = Math.max(lTd, rTd);
-            if (nMax > 0.001) {
-                const barH = Math.min(nMax * nScale, secH - labelH - 2);
-                svg += `<rect x="${xS + 1}" y="${nZeroY - barH}" width="${Math.max(1, xE - xS - 2)}" height="${barH}" fill="rgba(231,76,60,0.25)" stroke="#e74c3c" stroke-width="1" />\n`;
-                svg += `<text x="${(xS + xE) / 2}" y="${nZeroY - barH - 3}" font-size="9" text-anchor="middle" fill="#c0392b">${nMax.toFixed(2)}</text>\n`;
+        const getFreshPillarName = (p) => {
+            if (!p) return '支点';
+            const px = p.globalX ?? (p.x * 1000) ?? 0;
+            const py = p.globalY ?? (p.y * 1000) ?? 0;
+            const gridName = window.getGridNameAt ? window.getGridNameAt(px, py) : null;
+            const isDefault = !p.name || /^(P|M)_?(P|M)?\d+$/i.test(p.name) || p.name.toLowerCase().startsWith('pillar') || p.name === `P_${p.id}` || p.name === p.id || p.name.startsWith('支点') || (p.id && String(p.id).startsWith('support'));
+            return isDefault ? (gridName || p.name || `P_${p.id}`) : p.name;
+        };
+
+        let svg = `<svg viewBox="0 0 ${width} ${svgHeight}" style="background:#fdfdfd; border:1px solid #cbd5e1; border-radius:8px; margin:15px 0; width:100%; max-width:700px; font-family:sans-serif; box-shadow:0 1px 3px rgba(0,0,0,0.05);">`;
+
+        // 1. 短期軸力図 Td (kN)
+        let y1 = 60;
+        svg += `<g class="chart-axial">
+            <text x="${padX}" y="${y1 - 35}" font-size="11" font-weight="bold" fill="#1e293b">■ 短期軸力図 Td (kN)</text>
+            <line x1="${padX - 10}" y1="${y1}" x2="${width - padX + 10}" y2="${y1}" stroke="#94a3b8" stroke-width="1.5" />
+        `;
+        pillars.forEach((p, idx) => {
+            const px = getX(p.x);
+            const l_val = seismic.leftward?.Td?.[idx] || 0;
+            const r_val = seismic.rightward?.Td?.[idx] || 0;
+            
+            const ly = y1 - (l_val / maxTd) * 35;
+            const ry = y1 - (r_val / maxTd) * 35;
+            const pname = getFreshPillarName(p);
+
+            svg += `<line x1="${px}" y1="${y1 - 5}" x2="${px}" y2="${y1 + 5}" stroke="#cbd5e1" stroke-width="1" />`;
+            svg += `<text x="${px}" y="${y1 + 15}" font-size="8" text-anchor="middle" fill="#64748b" font-weight="bold">${pname}</text>`;
+
+            svg += `<line x1="${px - 3.5}" y1="${y1}" x2="${px - 3.5}" y2="${ly}" stroke="#3b82f6" stroke-width="3" />`;
+            svg += `<line x1="${px + 3.5}" y1="${y1}" x2="${px + 3.5}" y2="${ry}" stroke="#f97316" stroke-width="3" />`;
+
+            // 【案5】短スパン重なり回避: 偶数奇数インデックスでラベルY位置を交互シフト
+            const yShiftL = (idx % 2 === 0) ? (l_val >= 0 ? -4 : 8) : (l_val >= 0 ? -12 : 16);
+            const yShiftR = (idx % 2 === 0) ? (r_val >= 0 ? -4 : 8) : (r_val >= 0 ? -12 : 16);
+
+            if (Math.abs(l_val) > 0.001) {
+                svg += `<text x="${px - 6}" y="${ly + yShiftL}" font-size="8" text-anchor="end" fill="#1d4ed8" font-weight="bold">${l_val.toFixed(3)}</text>`;
             }
-            cumPos += sp.L;
-        });
-        // 各柱Td数値（左加力）
-        pillarXs.forEach((xM, i) => {
-            const lTd = seismic.leftward?.Td?.[i] ?? 0;
-            if (Math.abs(lTd) > 0.001) {
-                const px = toX(xM);
-                const barH = Math.min(Math.abs(lTd) * nScale, secH - labelH - 2);
-                svg += `<text x="${px}" y="${nZeroY - barH - 3}" font-size="8" text-anchor="middle" fill="#c0392b">[L:${lTd.toFixed(2)}]</text>\n`;
+            if (Math.abs(r_val) > 0.001) {
+                svg += `<text x="${px + 6}" y="${ry + yShiftR}" font-size="8" text-anchor="start" fill="#c2410c" font-weight="bold">${r_val.toFixed(3)}</text>`;
             }
         });
+        svg += `</g>`;
 
-        // ══════════ M図：長期放物線 + 短期折れ線 ══════════
-        cumPos = 0;
-        spans.forEach((sp, i) => {
-            const xS = toX(cumPos);
-            const xE = toX(cumPos + sp.L);
-            const M_mid = sp.M_mid ?? 0;
-            const M_end = sp.M_end ?? 0;
-
-            // 長期M放物線（下向きが正：中央で最大、端部で端モーメント）
-            if (M_mid > 0 || M_end > 0) {
-                let mPath = `M ${xS} ${mZeroY - M_end * mScale}`;
-                for (let k = 1; k <= 20; k++) {
-                    const t = k / 20;
-                    const xLocal = sp.L * t;
-                    const factor = 4 * t * (1 - t);
-                    const mVal = M_mid * factor + M_end * (1 - factor);
-                    mPath += ` L ${toX(cumPos + xLocal)} ${mZeroY - mVal * mScale}`;
-                }
-                // 閉じる
-                mPath += ` L ${xE} ${mZeroY - M_end * mScale} L ${xE} ${mZeroY} L ${xS} ${mZeroY} Z`;
-                svg += `<path d="${mPath}" fill="rgba(41,128,185,0.15)" stroke="#2980b9" stroke-width="1.5" />\n`;
-                svg += `<text x="${(xS + xE) / 2}" y="${mZeroY - (M_mid + M_end) * 0.5 * mScale - 4}" font-size="10" text-anchor="middle" fill="#2980b9">${M_mid.toFixed(2)}</text>\n`;
-            }
-
-            // 短期M折れ線（左加力：赤、右加力：橙）
-            const lML = sp.leftward?.M_left ?? 0;
-            const lMR = sp.leftward?.M_right ?? 0;
-            const rML = sp.rightward?.M_left ?? 0;
-            const rMR = sp.rightward?.M_right ?? 0;
-            if (Math.max(lML, lMR, rML, rMR) > 0.001) {
-                const xMid = (xS + xE) / 2;
-                svg += `<polyline points="${xS},${mZeroY - lML * mScale} ${xMid},${mZeroY} ${xE},${mZeroY - lMR * mScale}" fill="none" stroke="#e74c3c" stroke-width="1.5" stroke-dasharray="5,3" />\n`;
-                svg += `<polyline points="${xS},${mZeroY - rML * mScale} ${xMid},${mZeroY} ${xE},${mZeroY - rMR * mScale}" fill="none" stroke="#e67e22" stroke-width="1.5" stroke-dasharray="5,3" />\n`;
-                svg += `<text x="${xS + 4}" y="${mZeroY - Math.max(lML,rML) * mScale - 3}" font-size="8" fill="#e74c3c">${Math.max(lML,rML).toFixed(2)}</text>\n`;
-                svg += `<text x="${xE - 4}" y="${mZeroY - Math.max(lMR,rMR) * mScale - 3}" font-size="8" text-anchor="end" fill="#e67e22">${Math.max(lMR,rMR).toFixed(2)}</text>\n`;
-            }
-
-            cumPos += sp.L;
+        // 2. 曲げモーメント図 M (kNm)
+        let y2 = y1 + h + spacing;
+        svg += `<g class="chart-moment">
+            <text x="${padX}" y="${y2 - 35}" font-size="11" font-weight="bold" fill="#1e293b">■ 曲げモーメント図 M (kNm)</text>
+            <line x1="${padX - 10}" y1="${y2}" x2="${width - padX + 10}" y2="${y2}" stroke="#94a3b8" stroke-width="1.5" />
+        `;
+        pillars.forEach((p) => {
+            const px = getX(p.x);
+            svg += `<line x1="${px}" y1="${y2 - 5}" x2="${px}" y2="${y2 + 5}" stroke="#cbd5e1" stroke-width="1" />`;
         });
-        // M図：端部Mf（節点曲げ：左加力・右加力）
-        pillarXs.forEach((xM, i) => {
-            const lMf = seismic.leftward?.Mf?.[i] ?? 0;
-            const rMf = seismic.rightward?.Mf?.[i] ?? 0;
-            if (Math.abs(lMf) > 0.001 || Math.abs(rMf) > 0.001) {
-                const px = toX(xM);
-                const mfMax = Math.max(Math.abs(lMf), Math.abs(rMf));
-                const mfY = mZeroY - mfMax * mScale;
-                svg += `<circle cx="${px}" cy="${mfY}" r="3" fill="#27ae60" />\n`;
-                svg += `<text x="${px}" y="${mfY - 5}" font-size="8" text-anchor="middle" fill="#27ae60">${mfMax.toFixed(2)}</text>\n`;
+        spans.forEach((span, sIdx) => {
+            const pLeft = pillars[sIdx];
+            const pRight = pillars[sIdx + 1];
+            if (!pLeft || !pRight) return;
+
+            const xL = getX(pLeft.x);
+            const xR = getX(pRight.x);
+            const xMid = (xL + xR) / 2;
+
+            const mE_left = span.M_end_left !== undefined ? span.M_end_left : (span.M_end || 0);
+            const mE_right = span.M_end_right !== undefined ? span.M_end_right : (span.M_end || 0);
+            const mM = span.M_mid || 0;
+            const lt_yLeft = y2 + (mE_left / maxM) * 35;
+            const lt_yRight = y2 + (mE_right / maxM) * 35;
+            const lt_yMid = y2 + (mM / maxM) * 35;
+            svg += `<path d="M ${xL} ${lt_yLeft} Q ${xMid} ${lt_yMid} ${xR} ${lt_yRight}" fill="none" stroke="#10b981" stroke-width="1.5" stroke-dasharray="2,2" />`;
+
+            const l_mL = span.leftward?.M_left || 0;
+            const l_mR = span.leftward?.M_right || 0;
+            const l_yL = y2 + (l_mL / maxM) * 35;
+            const l_yR = y2 + (l_mR / maxM) * 35;
+            svg += `<line x1="${xL}" y1="${l_yL}" x2="${xR}" y2="${l_yR}" stroke="#3b82f6" stroke-width="1.5" />`;
+
+            const r_mL = span.rightward?.M_left || 0;
+            const r_mR = span.rightward?.M_right || 0;
+            const r_yL = y2 + (r_mL / maxM) * 35;
+            const r_yR = y2 + (r_mR / maxM) * 35;
+            svg += `<line x1="${xL}" y1="${r_yL}" x2="${xR}" y2="${r_yR}" stroke="#f97316" stroke-width="1.5" />`;
+
+            // 【案5】短スパン・同一節点テキスト重なり回避オフセット
+            const shiftL_blue = (sIdx % 2 === 0) ? -6 : -14;
+            const shiftL_orange = (sIdx % 2 === 0) ? 12 : 18;
+
+            if (sIdx === 0) {
+                svg += `<text x="${xL}" y="${l_yL + shiftL_blue}" font-size="8" text-anchor="middle" fill="#1d4ed8" font-weight="bold">${l_mL.toFixed(3)}</text>`;
+                svg += `<text x="${xL}" y="${r_yL + shiftL_orange}" font-size="8" text-anchor="middle" fill="#c2410c" font-weight="bold">${r_mL.toFixed(3)}</text>`;
+            }
+            svg += `<text x="${xR}" y="${l_yR + shiftL_blue}" font-size="8" text-anchor="middle" fill="#1d4ed8" font-weight="bold">${l_mR.toFixed(3)}</text>`;
+            svg += `<text x="${xR}" y="${r_yR + shiftL_orange}" font-size="8" text-anchor="middle" fill="#c2410c" font-weight="bold">${r_mR.toFixed(3)}</text>`;
+        });
+        svg += `</g>`;
+
+        // 3. Q図 (せん断力図)
+        let y3 = y2 + h + spacing;
+        svg += `<g class="chart-shear">
+            <text x="${padX}" y="${y3 - 35}" font-size="11" font-weight="bold" fill="#1e293b">■ せん断力図 Q (kN)</text>
+            <line x1="${padX - 10}" y1="${y3}" x2="${width - padX + 10}" y2="${y3}" stroke="#94a3b8" stroke-width="1.5" />
+        `;
+        pillars.forEach((p) => {
+            const px = getX(p.x);
+            svg += `<line x1="${px}" y1="${y3 - 5}" x2="${px}" y2="${y3 + 5}" stroke="#cbd5e1" stroke-width="1" />`;
+        });
+        spans.forEach((span, sIdx) => {
+            const pLeft = pillars[sIdx];
+            const pRight = pillars[sIdx + 1];
+            if (!pLeft || !pRight) return;
+
+            const xL = getX(pLeft.x);
+            const xR = getX(pRight.x);
+            const xMid = (xL + xR) / 2;
+
+            const q_L = span.Q_L || 0;
+            const lt_y1 = y3 - (q_L / maxQ) * 35;
+            const lt_y2 = y3 + (q_L / maxQ) * 35;
+            svg += `<line x1="${xL}" y1="${lt_y1}" x2="${xMid}" y2="${lt_y1}" stroke="#10b981" stroke-width="1" stroke-dasharray="2,2" />`;
+            svg += `<line x1="${xMid}" y1="${lt_y1}" x2="${xMid}" y2="${lt_y2}" stroke="#10b981" stroke-width="1" stroke-dasharray="2,2" />`;
+            svg += `<line x1="${xMid}" y1="${lt_y2}" x2="${xR}" y2="${lt_y2}" stroke="#10b981" stroke-width="1" stroke-dasharray="2,2" />`;
+
+            const l_q = span.leftward?.Q || 0;
+            const l_y = y3 - (l_q / maxQ) * 35;
+            svg += `<line x1="${xL}" y1="${l_y}" x2="${xR}" y2="${l_y}" stroke="#3b82f6" stroke-width="1.5" />`;
+            if (sIdx > 0) {
+                const prev_l_q = spans[sIdx - 1].leftward?.Q || 0;
+                const prev_l_y = y3 - (prev_l_q / maxQ) * 35;
+                svg += `<line x1="${xL}" y1="${prev_l_y}" x2="${xL}" y2="${l_y}" stroke="#3b82f6" stroke-width="1.5" />`;
+            }
+
+            const r_q = span.rightward?.Q || 0;
+            const r_y = y3 - (r_q / maxQ) * 35;
+            svg += `<line x1="${xL}" y1="${r_y}" x2="${xR}" y2="${r_y}" stroke="#f97316" stroke-width="1.5" />`;
+            if (sIdx > 0) {
+                const prev_r_q = spans[sIdx - 1].rightward?.Q || 0;
+                const prev_r_y = y3 - (prev_r_q / maxQ) * 35;
+                svg += `<line x1="${xL}" y1="${prev_r_y}" x2="${xL}" y2="${r_y}" stroke="#f97316" stroke-width="1.5" />`;
+            }
+
+            const yShiftQ_blue = (sIdx % 2 === 0) ? -4 : -12;
+            const yShiftQ_orange = (sIdx % 2 === 0) ? 12 : 18;
+
+            if (Math.abs(l_q) > 0.001) {
+                svg += `<text x="${xMid}" y="${l_y + yShiftQ_blue}" font-size="8" text-anchor="middle" fill="#1d4ed8" font-weight="bold">${l_q.toFixed(3)}</text>`;
+            }
+            if (Math.abs(r_q) > 0.001) {
+                svg += `<text x="${xMid}" y="${r_y + yShiftQ_orange}" font-size="8" text-anchor="middle" fill="#c2410c" font-weight="bold">${r_q.toFixed(3)}</text>`;
             }
         });
+        svg += `</g>`;
 
-        // ══════════ Q図：長期三角形 + 短期包絡（両加力方向） ══════════
-        cumPos = 0;
-        spans.forEach((sp, i) => {
-            const xS = toX(cumPos);
-            const xE = toX(cumPos + sp.L);
-            const QL = sp.Q_L ?? 0;
-            const lQ = sp.leftward?.Q ?? 0;
-            const rQ = sp.rightward?.Q ?? 0;
+        // 凡例
+        svg += `<g class="legend" transform="translate(${padX}, ${svgHeight - 15})">
+            <line x1="0" y1="0" x2="15" y2="0" stroke="#3b82f6" stroke-width="2" />
+            <text x="20" y="3" font-size="9" fill="#1e293b">左加力(下加力)</text>
+            
+            <line x1="100" y1="0" x2="115" y2="0" stroke="#f97316" stroke-width="2" />
+            <text x="120" y="3" font-size="9" fill="#1e293b">右加力(上加力)</text>
+            
+            <line x1="200" y1="0" x2="215" y2="0" stroke="#10b981" stroke-width="1.5" stroke-dasharray="2,2" />
+            <text x="220" y="3" font-size="9" fill="#1e293b">長期荷重</text>
+        </g>`;
 
-            // 長期Q：台形（左端+QL/2, 右端-QL/2）
-            if (QL > 0.001) {
-                const qH = Math.min(QL * qScale, secH - labelH - 2);
-                // 台形: 左端が上、右端が下
-                svg += `<polygon points="${xS},${qZeroY - qH} ${xE},${qZeroY + qH} ${xE},${qZeroY} ${xS},${qZeroY}" fill="rgba(142,68,173,0.15)" stroke="#8e44ad" stroke-width="1.5" />\n`;
-                svg += `<text x="${xS + 5}" y="${qZeroY - qH - 3}" font-size="9" fill="#8e44ad">+${QL.toFixed(2)}</text>\n`;
-                svg += `<text x="${xE - 5}" y="${qZeroY + qH + 12}" font-size="9" text-anchor="end" fill="#8e44ad">-${QL.toFixed(2)}</text>\n`;
-            }
-            // 短期Q包絡（左加力：赤破線）
-            if (lQ > 0.001) {
-                const qH = Math.min(lQ * qScale, secH - labelH - 2);
-                svg += `<line x1="${xS}" y1="${qZeroY - qH}" x2="${xE}" y2="${qZeroY - qH}" stroke="#e74c3c" stroke-width="1" stroke-dasharray="4,3" />\n`;
-                svg += `<text x="${(xS+xE)/2}" y="${qZeroY - qH - 3}" font-size="8" text-anchor="middle" fill="#e74c3c">L:${lQ.toFixed(2)}</text>\n`;
-            }
-            // 短期Q包絡（右加力：橙破線）
-            if (rQ > 0.001) {
-                const qH = Math.min(rQ * qScale, secH - labelH - 2);
-                svg += `<line x1="${xS}" y1="${qZeroY + qH}" x2="${xE}" y2="${qZeroY + qH}" stroke="#e67e22" stroke-width="1" stroke-dasharray="4,3" />\n`;
-                svg += `<text x="${(xS+xE)/2}" y="${qZeroY + qH + 12}" font-size="8" text-anchor="middle" fill="#e67e22">R:${rQ.toFixed(2)}</text>\n`;
-            }
-            cumPos += sp.L;
-        });
-        // Q図：節点せん断Qe（左加力・右加力）
-        pillarXs.forEach((xM, i) => {
-            const lQe = seismic.leftward?.Qe?.[i] ?? 0;
-            const rQe = seismic.rightward?.Qe?.[i] ?? 0;
-            if (Math.abs(lQe) > 0.001) {
-                const px = toX(xM);
-                const qeH = Math.min(Math.abs(lQe) * qScale, secH - labelH - 2);
-                const qeY = lQe >= 0 ? qZeroY - qeH : qZeroY + qeH;
-                svg += `<circle cx="${px}" cy="${qeY}" r="3" fill="#e74c3c" />\n`;
-                svg += `<text x="${px}" y="${qeY - 5}" font-size="8" text-anchor="middle" fill="#e74c3c">${lQe.toFixed(2)}</text>\n`;
-            }
-        });
-
-        // ── 凡例
-        svg += `<text x="${padL}" y="${hTotal - 5}" font-size="9" fill="#2980b9">━━ 長期M(青)</text>\n`;
-        svg += `<text x="${padL + 80}" y="${hTotal - 5}" font-size="9" fill="#e74c3c">- - 短期M左加力(赤)</text>\n`;
-        svg += `<text x="${padL + 180}" y="${hTotal - 5}" font-size="9" fill="#e67e22">- - 短期M右加力(橙)</text>\n`;
-        svg += `<text x="${padL + 295}" y="${hTotal - 5}" font-size="9" fill="#8e44ad">━━ 長期Q(紫)</text>\n`;
-
-        svg += `</svg>\n`;
+        svg += `</svg>`;
         return svg;
     },
 
