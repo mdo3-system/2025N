@@ -1413,37 +1413,13 @@ async function generateDoc() {
             });
         });
 
-        // 印刷範囲コントロール関数のグローバル登録
+        // 印刷範囲コントロール関数のグローバル登録（PdfReportView 委譲）
         window.printDocSection = function() {
-            const sel = document.getElementById('doc-print-range-select');
-            const mode = sel ? sel.value : 'all';
-            
-            const dc = document.getElementById('doc-container');
-            if (!dc) { window.print(); return; }
-
-            document.body.classList.remove('print-mode-wall-only', 'print-mode-fd-only');
-            if (mode === 'wall_only') document.body.classList.add('print-mode-wall-only');
-            if (mode === 'fd_only') document.body.classList.add('print-mode-fd-only');
-
-            const allChildren = Array.from(dc.children);
-            const fdSecs = Array.from(dc.querySelectorAll('#sec-fd-slab, #sec-fd-beam'));
-            const wallChildren = allChildren.filter(child => !child.contains(document.getElementById('sec-fd-slab')) && !child.contains(document.getElementById('sec-fd-beam')));
-
-            if (mode === 'wall_only') {
-                wallChildren.forEach(el => el.classList.remove('print-hide'));
-                fdSecs.forEach(el => el.classList.add('print-hide'));
-            } else if (mode === 'fd_only') {
-                wallChildren.forEach(el => el.classList.add('print-hide'));
-                fdSecs.forEach(el => el.classList.remove('print-hide'));
+            if (window.PdfReportView && typeof window.PdfReportView.printDocSection === 'function') {
+                window.PdfReportView.printDocSection();
             } else {
-                [...wallChildren, ...fdSecs].forEach(el => el.classList.remove('print-hide'));
+                window.print();
             }
-            
-            window.print();
-            setTimeout(() => {
-                document.body.classList.remove('print-mode-wall-only', 'print-mode-fd-only');
-                document.querySelectorAll('.print-hide').forEach(el => el.classList.remove('print-hide'));
-            }, 500);
         };
 
         let h = `<div id="sec-summary" class="doc-section" style="margin-bottom:25px; border:2px solid ${isTotalOk ? '#27ae60' : '#c0392b'}; border-radius:4px; padding:15px; background:#fdfdfd;">
