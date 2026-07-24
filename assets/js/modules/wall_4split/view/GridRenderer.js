@@ -1,110 +1,188 @@
 /**
  * view/GridRenderer.js - Pure CAD Grid & Axis Renderer
- * v3.2.1 Refactoring: Single Responsibility Principle & Pure View Component
+ * v3.2.3 Refactoring: Restored Original Viewport Grid & Staggered Label Rendering
  */
 
 window.GridRenderer = {
     /**
-     * グリッドと通り芯を描画
+     * グリッドと通り芯を描画（メインエントリーポイント）
      */
     drawGrids: function(state) {
-        const ctx = state.ctx;
-        const isPrintMode = state.isPrintMode;
-        const grids = state.grids || [];
-        const floorPillars = (state.pillars || []).filter(p => !p.isDeleted && !p.isInvalidPos && (p.floor === state.currentFloor || p.floor === 'ALL'));
+        const hasStandardGrids = state.gridXCoords && state.gridYCoords && (state.gridXCoords.length > 0 || state.gridYCoords.length > 0);
         
-        let activeX = new Set(), activeY = new Set();
-        floorPillars.forEach(p => {
-            if (p.gx) activeX.add(p.gx);
-            if (p.gy) activeY.add(p.gy);
-        });
+        // 1. 標準グリッドの描画
+        if (state.elementVisibility && state.elementVisibility.grids && hasStandardGrids) {
+            if (state.currentAppMode === 'roof') {
+                const ctx = state.ctx;
+                ctx.save();
+                ctx.globalAlpha = 0.25;
+                this.drawStandardGrids(state);
+                ctx.restore();
+            } else {
+                this.drawStandardGrids(state);
+            }
+        }
+        
+        // 2. 屋根グリッドの描画
+        if (state.currentAppMode === 'roof' && typeof window.drawRoofGrids === 'function') {
+            window.drawRoofGrids(state);
+        }
+    },
 
-        const gxCoords = (state.gridXCoords && state.gridXCoords.length > 0) 
-            ? state.gridXCoords 
-            : [...new Set(grids.map(g => g.x))].sort((a, b) => a - b);
-        const gyCoords = (state.gridYCoords && state.gridYCoords.length > 0) 
-            ? state.gridYCoords 
-            : [...new Set(grids.map(g => g.y))].sort((a, b) => a - b);
+    /**
+     * 標準通り芯（X/Y軸線・端部ラベル）の描画
+     */
+    drawStandardGrids: function(state) {
+        const ctx = state.ctx;
+        if (!ctx || !state.canvas) return;
 
-        const xMin = gxCoords.length > 0 ? gxCoords[0] : 0;
-        const xMax = gxCoords.length > 0 ? gxCoords[gxCoords.length - 1] : 10000;
-        const yMin = gyCoords.length > 0 ? gyCoords[0] : 0;
-        const yMax = gyCoords.length > 0 ? gyCoords[gyCoords.length - 1] : 10000;
+        ctx.save();
+        ctx.strokeStyle = state.isPrintMode ? '#555' : '#8e44ad';
+        ctx.setLineDash([5, 5]);
+        
+        const hasY = state.gridYCoords && state.gridYCoords.length > 0;
+        const hasX = state.gridXCoords && state.gridXCoords.length > 0;
+
+        const gMinY = hasY ? Math.min(...state.gridYCoords) : 0;
+        const gMaxY = hasY ? Math.max(...state.gridYCoords) : 0;
+        const gMinX = hasX ? Math.min(...state.gridXCoords) : 0;
+        const gMaxX = hasX ? Math.max(...state.gridXCoords) : 0;
 
         const toCanvas = (x, y) => {
             const p = window.toCanvasPixel ? window.toCanvasPixel(x, y) : { cx: x, cy: y };
             return { cx: p.cx, cy: p.cy };
         };
 
-        // 1. X方向通り芯
-        gxCoords.forEach((xVal, idx) => {
-            const name = state.gridXNames?.[idx] || (window.GridEngine ? window.GridEngine.getGridXName(idx) : `X${idx+1}`);
-            const isActive = activeX.has(name);
-            const p1 = toCanvas(xVal, yMin - 1500);
-            const p2 = toCanvas(xVal, yMax + 1500);
-            if (p1.cx == null) return;
+        const pTop = hasY ? toCanvas(0, gMaxY) : { cy: 0 };
+        const pBot = hasY ? toCanvas(0, gMinY) : { cy: state.canvas.height };
+        const pLeft = hasX ? toCanvas(gMinX, 0) : { cx: 0 };
+        const pRight = hasX ? toCanvas(gMaxX, 0) : { cx: state.canvas.width };
 
-            ctx.save();
-            ctx.beginPath();
-            ctx.moveTo(p1.cx, p1.cy);
-            ctx.lineTo(p2.cx, p2.cy);
-            ctx.strokeStyle = isPrintMode ? (isActive ? '#333' : '#ccc') : (isActive ? '#4b6584' : '#2f3640');
-            ctx.lineWidth = isActive ? 1.5 : 1;
-            if (!isActive) ctx.setLineDash([4, 4]);
-            ctx.stroke();
-            ctx.restore();
+        const botY = hasY ? pBot.cy + 30 : state.canvas.height;
+        const rightX = hasX ? pRight.cx + 30 : state.canvas.width;
 
-            // 通り芯名バッジ
-            ctx.save();
-            ctx.fillStyle = isActive ? (isPrintMode ? '#2c3e50' : '#4b6584') : (isPrintMode ? '#95a5a6' : '#718093');
-            ctx.beginPath();
-            ctx.arc(p1.cx, p1.cy - 12, 10, 0, Math.PI * 2);
-            ctx.arc(p2.cx, p2.cy + 12, 10, 0, Math.PI * 2);
-            ctx.fill();
+        const visibleLeft = -state.offsetX / state.scale;
+        const visibleTop = (state.canvas.height - state.offsetY) / state.scale;
+        const labelFontSize = Math.max(10, Math.min(20, 14 / state.scale));
+        const labelPad = 10 / state.scale;
 
-            ctx.fillStyle = '#ffffff';
-            ctx.font = 'bold 10px sans-serif';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(name, p1.cx, p1.cy - 12);
-            ctx.fillText(name, p2.cx, p2.cy + 12);
-            ctx.restore();
+        // X方向通り芯描画（上端端部ラベル＋グリッド線）
+        let lastCx = -Infinity;
+        let staggerLevelX = 0;
+        const sortedXIndices = state.gridXCoords.map((v, i) => i).sort((a, b) => state.gridXCoords[a] - state.gridXCoords[b]);
+
+        sortedXIndices.forEach(i => {
+            const x = state.gridXCoords[i];
+            const cx = toCanvas(x, 0).cx;
+            if (cx != null) {
+                const baseLabelY = Math.max(toCanvas(0, visibleTop - labelPad).cy, 15);
+                const textEstWidth = labelFontSize * 1.8;
+                if (cx - lastCx < textEstWidth) {
+                    staggerLevelX = (staggerLevelX + 1) % 3;
+                } else {
+                    staggerLevelX = 0;
+                }
+                lastCx = cx;
+                
+                const labelY = baseLabelY + staggerLevelX * (labelFontSize + 4);
+
+                ctx.save();
+                ctx.font = `bold ${labelFontSize}px sans-serif`;
+                
+                const lineTopY = labelY + 6; 
+                ctx.beginPath(); 
+                ctx.moveTo(cx, lineTopY); 
+                ctx.lineTo(cx, botY); 
+                ctx.stroke();
+
+                const txt = state.gridXNames?.[i] || `X${i+1}`;
+                ctx.textAlign = "center";
+                ctx.strokeStyle = state.isPrintMode ? '#fff' : 'rgba(30,30,30,0.7)'; 
+                ctx.lineWidth = 3;
+                ctx.strokeText(txt, cx, labelY);
+                ctx.fillStyle = state.isPrintMode ? '#2c3e50' : '#2ecc71';
+                ctx.fillText(txt, cx, labelY);
+                ctx.restore();
+            }
         });
 
-        // 2. Y方向通り芯
-        gyCoords.forEach((yVal, idx) => {
-            const name = state.gridYNames?.[idx] || (window.GridEngine ? window.GridEngine.getGridYName(idx) : `Y${idx+1}`);
-            const isActive = activeY.has(name);
-            const p1 = toCanvas(xMin - 1500, yVal);
-            const p2 = toCanvas(xMax + 1500, yVal);
-            if (p1.cx == null) return;
-
-            ctx.save();
-            ctx.beginPath();
-            ctx.moveTo(p1.cx, p1.cy);
-            ctx.lineTo(p2.cx, p2.cy);
-            ctx.strokeStyle = isPrintMode ? (isActive ? '#333' : '#ccc') : (isActive ? '#4b6584' : '#2f3640');
-            ctx.lineWidth = isActive ? 1.5 : 1;
-            if (!isActive) ctx.setLineDash([4, 4]);
-            ctx.stroke();
-            ctx.restore();
-
-            // 通り芯名バッジ
-            ctx.save();
-            ctx.fillStyle = isActive ? (isPrintMode ? '#2c3e50' : '#4b6584') : (isPrintMode ? '#95a5a6' : '#718093');
-            ctx.beginPath();
-            ctx.arc(p1.cx - 12, p1.cy, 10, 0, Math.PI * 2);
-            ctx.arc(p2.cx + 12, p2.cy, 10, 0, Math.PI * 2);
-            ctx.fill();
-
-            ctx.fillStyle = '#ffffff';
-            ctx.font = 'bold 10px sans-serif';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(name, p1.cx - 12, p1.cy);
-            ctx.fillText(name, p2.cx + 12, p2.cy);
-            ctx.restore();
+        // Y方向通り芯描画（左端端部ラベル＋グリッド線）
+        let lastCy = -Infinity;
+        let staggerLevelY = 0;
+        const sortedYIndices = state.gridYCoords.map((v, i) => i).sort((a, b) => {
+            const cyA = toCanvas(0, state.gridYCoords[a]).cy;
+            const cyB = toCanvas(0, state.gridYCoords[b]).cy;
+            return cyA - cyB;
         });
+
+        sortedYIndices.forEach(i => {
+            const y = state.gridYCoords[i];
+            const cy = toCanvas(0, y).cy;
+            if (cy != null) {
+                const baseLabelX = Math.max(toCanvas(visibleLeft + labelPad, 0).cx, 5);
+                const textEstHeight = labelFontSize * 1.2;
+                if (cy - lastCy < textEstHeight) {
+                    staggerLevelY = (staggerLevelY + 1) % 3;
+                } else {
+                    staggerLevelY = 0;
+                }
+                lastCy = cy;
+
+                const labelX = baseLabelX + staggerLevelY * (labelFontSize * 2);
+
+                ctx.save();
+                ctx.font = `bold ${labelFontSize}px sans-serif`;
+                
+                const txt = state.gridYNames?.[i] || `Y${i+1}`;
+                const tw = ctx.measureText(txt).width;
+                const lineStartX = labelX + tw + 6;
+
+                ctx.beginPath(); 
+                ctx.moveTo(lineStartX, cy); 
+                ctx.lineTo(rightX, cy); 
+                ctx.stroke();
+
+                ctx.textAlign = "left";
+                ctx.strokeStyle = state.isPrintMode ? '#fff' : 'rgba(30,30,30,0.7)'; 
+                ctx.lineWidth = 3;
+                ctx.strokeText(txt, labelX, cy + 5);
+                ctx.fillStyle = state.isPrintMode ? '#2c3e50' : '#2ecc71';
+                ctx.fillText(txt, labelX, cy + 5);
+                ctx.restore();
+            }
+        });
+
+        // 斜め通り芯描画
+        if (state.manualGridAngle && state.manualGridAngle.length > 0) {
+            state.manualGridAngle.forEach(g => {
+                const c1 = toCanvas(g.p1.x, g.p1.y);
+                const c2 = toCanvas(g.p2.x, g.p2.y);
+                if (!c1 || !c2) return;
+
+                const dx = c2.cx - c1.cx, dy = c2.cy - c1.cy;
+                const len = Math.hypot(dx, dy);
+                if (len < 5) return; 
+
+                const ux = dx / len, uy = dy / len;
+                const extension = 10000;
+                const startX = c1.cx - ux * extension;
+                const startY = c1.cy - uy * extension;
+                const endX = c2.cx + ux * extension;
+                const endY = c2.cy + uy * extension;
+
+                ctx.save();
+                ctx.beginPath();
+                ctx.moveTo(startX, startY);
+                ctx.lineTo(endX, endY);
+                ctx.strokeStyle = state.isPrintMode ? '#e74c3c' : '#f1c40f';
+                ctx.lineWidth = 1.5;
+                ctx.setLineDash([6, 4]);
+                ctx.stroke();
+                ctx.restore();
+            });
+        }
+
+        ctx.restore();
     }
 };
 
