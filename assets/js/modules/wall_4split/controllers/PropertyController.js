@@ -101,54 +101,8 @@ window.PropertyController = {
      * 基礎プロパティ更新
      */
     updateFdProp: function(type, id, keyPath, val, spanIndex = null) {
-        const state = window.AppState;
-        let item = null;
-        if (type === 'slab') item = state.foundationSlabs.find(s => s.id === id);
-        if (type === 'manhole') item = state.manholes.find(m => m.id === id);
-        if (type === 'beam' || type === 'beam_span') item = state.foundationBeams.find(b => b.id === id);
-        if (!item) return;
-
-        let finalVal = (isNaN(val) || val === '' || keyPath.includes('name') || keyPath.includes('symbol') || keyPath.includes('type') || keyPath.includes('support') || keyPath.includes('Rebar') || keyPath.includes('stirrup')) ? val : parseFloat(val);
-
-        if ((type === 'beam' || type === 'beam_span') && spanIndex !== null) {
-            const span = item.spans[spanIndex];
-            if (span) {
-                if (!span.props) span.props = JSON.parse(JSON.stringify(item.props));
-                span.props[keyPath] = finalVal;
-            }
-        } else {
-            if (!item.props) item.props = {};
-            const keys = keyPath.split('.');
-            let target = (type === 'slab' || type === 'beam' || type === 'beam_span') ? item.props : item;
-            for (let i = 0; i < keys.length - 1; i++) {
-                if (!target[keys[i]]) target[keys[i]] = {};
-                target = target[keys[i]];
-            }
-            target[keys[keys.length - 1]] = finalVal;
-        }
-
-        // スラブ特有の再計算
-        if (type === 'slab' && keyPath.includes('rebar')) {
-            const p = item.props;
-            if (window.WallEngine && window.WallEngine.calculateSlabAt) {
-                 p.rebarShort.at = window.WallEngine.calculateSlabAt(p.rebarShort.type, p.rebarShort.pitch);
-                 p.rebarLong.at = window.WallEngine.calculateSlabAt(p.rebarLong.type, p.rebarLong.pitch);
-            }
-        }
-
-        window.AppController.refreshAll();
-        
-        // UI更新（スラブの場合はポップアップ内も更新）
-        if (type === 'slab') {
-            const freshSlab = state.foundationSlabs.find(s => s.id === id) || item;
-            const reportCont = document.getElementById('slab-calc-result-container');
-            if (reportCont && typeof getFoundationSlabReportHtml === 'function') {
-                reportCont.innerHTML = getFoundationSlabReportHtml(freshSlab);
-            }
-        } else {
-            const popupType = (type === 'beam_span') ? 'beam' : type;
-            const freshBeam = state.foundationBeams.find(b => b.id === id) || item;
-            setTimeout(() => this.showFdPopup(popupType, freshBeam, this.lastPopupMx, this.lastPopupMy), 0);
+        if (window.FoundationPropertyHandler && typeof window.FoundationPropertyHandler.updateFdProp === 'function') {
+            return window.FoundationPropertyHandler.updateFdProp(type, id, keyPath, val, spanIndex);
         }
     },
 

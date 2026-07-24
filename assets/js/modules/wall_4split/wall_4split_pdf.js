@@ -1238,88 +1238,10 @@ async function generateDoc() {
 
         // --- 全検定エラー（NG）の集計・警告ダイアログ表示 ---
         {
-            const errors = [];
+            const errors = (window.ReportEngine && typeof window.ReportEngine.collectAllErrors === 'function') 
+                ? window.ReportEngine.collectAllErrors(s) 
+                : [];
 
-            // 1. 壁量検定 (Wall Quantity Checks)
-            ['1F', '2F'].forEach(f => {
-                const sd_state = s.reqWall[f];
-                if (sd_state) {
-                    const rX = sd_state.qX || 0;
-                    const rY = sd_state.qY || 0;
-                    let totalKxt = 0, totalKyt = 0;
-                    walls.filter(w => w.floor === f).forEach(w => {
-                        const dx = Math.abs(w.p2.x - w.p1.x) / 1000;
-                        const dy = Math.abs(w.p2.y - w.p1.y) / 1000;
-                        const tv = window.WallEngine.getTotalMultiplier(w);
-                        totalKxt += dx * tv;
-                        totalKyt += dy * tv;
-                    });
-                    if (totalKxt < rX) {
-                        errors.push(`❌ 【壁量計算】${f} X方向：存在壁量 (${totalKxt.toFixed(2)}m) が必要壁量 (${rX.toFixed(2)}m) 未満です。`);
-                    }
-                    if (totalKyt < rY) {
-                        errors.push(`❌ 【壁量計算】${f} Y方向：存在壁量 (${totalKyt.toFixed(2)}m) が必要壁量 (${rY.toFixed(2)}m) 未満です。`);
-                    }
-                }
-            });
-
-            // 2. 4分割検定 (4-Division Wall Balance Checks)
-            ['1F', '2F'].forEach(f => {
-                const sd_state = s.reqWall[f];
-                if (sd_state && sd_state.div4) {
-                    const d4 = sd_state.div4;
-                    if (!d4.isXOk) {
-                        errors.push(`❌ 【4分割法】${f} X方向：側端部の壁比率または充足率がNGです。`);
-                    }
-                    if (!d4.isYOk) {
-                        errors.push(`❌ 【4分割法】${f} Y方向：側端部の壁比率または充足率がNGです。`);
-                    }
-                }
-            });
-
-            // 3. 有効細長比 (Slenderness Ratio Checks)
-            pillars.filter(p => !p.isDeleted && !p.isInvalidPos).forEach(p => {
-                if (p.lambda != null && !p.lambdaOK) {
-                    const pillarName = window.getPillarName ? window.getPillarName(p) || `(${p.gx}-${p.gy})` : `(${p.gx}-${p.gy})`;
-                    errors.push(`❌ 【細長比】${p.floor}の柱 ${pillarName}：有効細長比 (${p.lambda.toFixed(1)}) が150を超えています。`);
-                }
-            });
-
-            // 4. 金物選定・N値検定 (N-Value / Hardware Checks)
-            pillars.filter(p => !p.isDeleted && !p.isInvalidPos).forEach(p => {
-                const hwList = typeof getHardwareList === 'function' ? getHardwareList() : [];
-                const hw = hwList.find(h => h.name === p.nMark);
-                const isNg = (p.manualMark && hw && p.nValue > hw.n) || p.nMark === '別途検討';
-                if (isNg) {
-                    const pillarName = window.getPillarName ? window.getPillarName(p) || `(${p.gx}-${p.gy})` : `(${p.gx}-${p.gy})`;
-                    if (p.nMark === '別途検討') {
-                        errors.push(`❌ 【金物選定】${p.floor}の柱 ${pillarName}：引抜力 (${p.nValue.toFixed(2)}kN) が標準金物の許容耐力を超えているため、別途検討が必要です。`);
-                    } else {
-                        const limitN = hw ? hw.n : 0;
-                        errors.push(`❌ 【金物選定】${p.floor}の柱 ${pillarName}：引抜力 (${p.nValue.toFixed(2)}kN) が指定金物 (${p.nMark}) の許容耐力 (${limitN.toFixed(2)}kN) を超えています。`);
-                    }
-                }
-            });
-
-            // 5. 基礎スラブの断面検定 (Foundation Slab Checks)
-            const checkSlabs = s.foundationSlabs || [];
-            checkSlabs.forEach((slab, idx) => {
-                if (slab.fdStress && slab.fdStress.isNG) {
-                    const slabName = slab.props ? slab.props.name : `FS${idx + 1}`;
-                    errors.push(`❌ 【基礎スラブ】No.${idx + 1} スラブ (${slabName})：断面検定がNGです。`);
-                }
-            });
-
-            // 6. 基礎梁の断面検定 (Foundation Beam Checks)
-            const checkBeams = s.foundationBeams || [];
-            checkBeams.forEach((beam, idx) => {
-                if (beam.fdStress && beam.fdStress.isNG) {
-                    const beamName = beam.props ? beam.props.symbol : `FG${idx + 1}`;
-                    errors.push(`❌ 【基礎梁】No.${idx + 1} 基礎梁 (${beamName})：断面検定がNGのスパンがあります。`);
-                }
-            });
-
-            // エラー（NG）の一覧がある場合、ダイアログを表示する
             if (errors.length > 0) {
                 const errMsg = "⚠️ 計算書に検定エラー（NG）があります。エラー一覧を確認してください。\n\n" + 
                                errors.join("\n") + 

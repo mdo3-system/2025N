@@ -1,11 +1,106 @@
 /**
- * logic/ReportEngine.js - DOM Report Generation Engine
- * v2.3.21 Refactoring
+ * logic/ReportEngine.js - DOM Report Generation & Error Diagnostics Engine
+ * v3.2.0 Refactoring: Single Responsibility Principle & Pure Calculation
  */
 
 window.ReportEngine = {
     /**
-     * 左パネルの壁量計算レポートを更新します
+     * 建物全体の全検定項目からエラー（NG）を集計・集約（FIXED_LOGICS.md Section 11準拠）
+     */
+    collectAllErrors: function(state) {
+        const s = state || window.AppState;
+        const errors = [];
+        if (!s) return errors;
+
+        const walls = s.walls || [];
+        const pillars = s.pillars || [];
+        const getPillarName = window.getPillarName || ((p) => `(${p.gx}-${p.gy})`);
+        const getHardwareList = window.getHardwareList || (() => []);
+
+        // 1. 壁量検定 (Wall Quantity Checks)
+        ['1F', '2F'].forEach(f => {
+            const sd_state = s.reqWall ? s.reqWall[f] : null;
+            if (sd_state) {
+                const rX = sd_state.qX || 0;
+                const rY = sd_state.qY || 0;
+                let totalKxt = 0, totalKyt = 0;
+                walls.filter(w => w.floor === f).forEach(w => {
+                    const dx = Math.abs(w.p2.x - w.p1.x) / 1000;
+                    const dy = Math.abs(w.p2.y - w.p1.y) / 1000;
+                    const tv = window.WallEngine ? window.WallEngine.getTotalMultiplier(w) : 0;
+                    totalKxt += dx * tv;
+                    totalKyt += dy * tv;
+                });
+                if (totalKxt < rX) {
+                    errors.push(`❌ 【壁量計算】${f} X方向：存在壁量 (${totalKxt.toFixed(2)}m) が必要壁量 (${rX.toFixed(2)}m) 未満です。`);
+                }
+                if (totalKyt < rY) {
+                    errors.push(`❌ 【壁量計算】${f} Y方向：存在壁量 (${totalKyt.toFixed(2)}m) が必要壁量 (${rY.toFixed(2)}m) 未満です。`);
+                }
+            }
+        });
+
+        // 2. 4分割検定 (4-Division Wall Balance Checks)
+        ['1F', '2F'].forEach(f => {
+            const sd_state = s.reqWall ? s.reqWall[f] : null;
+            if (sd_state && sd_state.div4) {
+                const d4 = sd_state.div4;
+                if (!d4.isXOk) {
+                    errors.push(`❌ 【4分割法】${f} X方向：側端部の壁比率または充足率がNGです。`);
+                }
+                if (!d4.isYOk) {
+                    errors.push(`❌ 【4分割法】${f} Y方向：側端部の壁比率または充足率がNGです。`);
+                }
+            }
+        });
+
+        // 3. 有効細長比 (Slenderness Ratio Checks)
+        pillars.filter(p => !p.isDeleted && !p.isInvalidPos).forEach(p => {
+            if (p.lambda != null && !p.lambdaOK) {
+                const pillarName = getPillarName(p) || `(${p.gx}-${p.gy})`;
+                errors.push(`❌ 【細長比】${p.floor}の柱 ${pillarName}：有効細長比 (${p.lambda.toFixed(1)}) が150を超えています。`);
+            }
+        });
+
+        // 4. 金物選定・N値検定 (N-Value / Hardware Checks)
+        pillars.filter(p => !p.isDeleted && !p.isInvalidPos).forEach(p => {
+            const hwList = getHardwareList();
+            const hw = hwList.find(h => h.name === p.nMark);
+            const isNg = (p.manualMark && hw && p.nValue > hw.n) || p.nMark === '別途検討';
+            if (isNg) {
+                const pillarName = getPillarName(p) || `(${p.gx}-${p.gy})`;
+                if (p.nMark === '別途検討') {
+                    errors.push(`❌ 【金物選定】${p.floor}の柱 ${pillarName}：引抜力 (${p.nValue.toFixed(2)}kN) が標準金物の許容耐力を超えているため、別途検討が必要です。`);
+                } else {
+                    const limitN = hw ? hw.n : 0;
+                    errors.push(`❌ 【金物選定】${p.floor}の柱 ${pillarName}：引抜力 (${p.nValue.toFixed(2)}kN) が指定金物 (${p.nMark}) の許容耐力 (${limitN.toFixed(2)}kN) を超えています。`);
+                }
+            }
+        });
+
+        // 5. 基礎スラブの断面検定 (Foundation Slab Checks)
+        const checkSlabs = s.foundationSlabs || [];
+        checkSlabs.forEach((slab, idx) => {
+            if (slab.fdStress && slab.fdStress.isNG) {
+                const slabName = slab.props ? slab.props.name : `FS${idx + 1}`;
+                errors.push(`❌ 【基礎スラブ】No.${idx + 1} スラブ (${slabName})：断面検定がNGです。`);
+            }
+        });
+
+        // 6. 基礎梁の断面検定 (Foundation Beam Checks)
+        const checkBeams = s.foundationBeams || [];
+        checkBeams.forEach((beam, idx) => {
+            if (beam.fdStress && beam.fdStress.isNG) {
+                const beamName = beam.props ? beam.props.symbol : `FG${idx + 1}`;
+                errors.push(`❌ 【基礎梁】No.${idx + 1} 基礎梁 (${beamName})：断面検定がNGのスパンがあります。`);
+            }
+        });
+
+        return errors;
+    },
+
+    /**
+     * 左パネルの壁量計算レポートを更新
      */
     updateReport: function(state) {
         const s = state || window.AppState;
@@ -15,14 +110,13 @@ window.ReportEngine = {
         const walls = s.walls;
         const areaLines = s.areaLines;
         const getVal = window.MathUtils.getVal || ((id) => parseFloat(document.getElementById(id)?.value) || 0);
-        const fw = window.MathUtils.formatValue;
 
         let h1 = '', h2 = '';
         s.currentG = null;
         s.currentC = null;
 
         ['2F', '1F'].forEach(f => {
-            if (!reqWall[f]) return;
+            if (!reqWall || !reqWall[f]) return;
             
             const rX = reqWall[f].qX || 0;
             const rY = reqWall[f].qY || 0;
@@ -30,14 +124,13 @@ window.ReportEngine = {
             const cq = getVal(`c-q${suffix}`);
             const ext = getVal(`e-x-t${suffix}`), exb = getVal(`e-x-b${suffix}`), eyl = getVal(`e-y-l${suffix}`), eyr = getVal(`e-y-r${suffix}`);
             
-            const b = window.GridEngine.get4DivisionBounds ? window.GridEngine.get4DivisionBounds(f, s) : null;
             const d4 = s.reqWall[f].div4 || { vxt: 0, vxb: 0, vyl: 0, vyr: 0, rxt: 0, rxb: 0, ryl: 0, ryr: 0, isXOk: true, isYOk: true };
             let kxt = 0, kyt = 0, sx = 0, sy = 0;
 
             walls.filter(w => w.floor === f).forEach(w => {
                 const dx = Math.abs(w.p2.x - w.p1.x) / 1000;
                 const dy = Math.abs(w.p2.y - w.p1.y) / 1000;
-                const tv = window.WallEngine.getTotalMultiplier(w);
+                const tv = window.WallEngine ? window.WallEngine.getTotalMultiplier(w) : 0;
 
                 const cx = (w.p1.x + w.p2.x) / 2;
                 const cy = (w.p1.y + w.p2.y) / 2;
@@ -93,7 +186,7 @@ window.ReportEngine = {
         let lambdaNgRows = '';
         ['2F', '1F'].forEach(f => {
             pillars.filter(p => !p.isDeleted && !p.isInvalidPos && p.floor === f && p.lambda != null && !p.lambdaOK).forEach(p => {
-                const pName = window.GridEngine.getPillarName(p, s);
+                const pName = window.GridEngine ? window.GridEngine.getPillarName(p, s) : `(${p.gx}-${p.gy})`;
                 lambdaNgRows += `<tr><td>${f[0]}</td><td>${pName || '-'}</td><td>${p.d != null ? p.d : '—'}</td><td class="bg-ng" style="font-weight:bold;">${p.lambda.toFixed(1)}</td></tr>`;
             });
         });
@@ -103,7 +196,6 @@ window.ReportEngine = {
                <table class="report-table"><tr><th>階</th><th>位置</th><th>小径</th><th>λ</th></tr>${lambdaNgRows}</table>`
             : '';
 
-        // Alignment Ratio Summary (v2.3.33)
         let ratioBlock = '';
         if (window.StructuralEngine && window.StructuralEngine.calculateDirectSupportRatio) {
             const r = window.StructuralEngine.calculateDirectSupportRatio(s);
@@ -138,9 +230,6 @@ window.ReportEngine = {
         return { panelDic };
     },
 
-    /**
-     * 4分割の検定表をHTML文字列で生成して返します（プレビューモーダル用）
-     */
     generateDiv4TableHtml: function(state) {
         const s = state || window.AppState;
         if (!s || !s.reqWall) return '';
@@ -205,3 +294,7 @@ window.ReportEngine = {
         return html;
     }
 };
+
+if (window.ServiceContainer) {
+    window.ServiceContainer.register('ReportEngine', window.ReportEngine);
+}

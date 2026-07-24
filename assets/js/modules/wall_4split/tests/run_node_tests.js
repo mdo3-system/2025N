@@ -39,6 +39,8 @@ const filesToLoad = [
     '../logic/FoundationEngine.js',
     '../logic/SlabBeamSynchronizer.js',
     '../logic/RoofEngine.js',
+    '../logic/ReportEngine.js',
+    '../view/FoundationSvgGenerator.js',
     'TestRunner.js'
 ];
 
@@ -53,7 +55,9 @@ const testFiles = [
     'StructuralEngine.test.js',
     'SlabBeamSynchronizer.test.js',
     'FoundationEngine.test.js',
-    'RoofEngine.test.js'
+    'RoofEngine.test.js',
+    'ReportEngine.test.js',
+    'FoundationSvgGenerator.test.js'
 ];
 
 testFiles.forEach(f => {
