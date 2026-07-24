@@ -846,17 +846,17 @@ window.FoundationRenderer = {
             const lt_yMid = y2 + (mM / maxM) * 35;
             svg += `<path d="M ${xL} ${lt_yLeft} Q ${xMid} ${lt_yMid} ${xR} ${lt_yRight}" fill="none" stroke="#10b981" stroke-width="1.5" stroke-dasharray="2,2" />`;
 
-            const l_mL = span.leftward?.M_left || 0;
-            const l_mR = span.leftward?.M_right || 0;
+            const l_mL = seismic.leftward?.Mf?.[sIdx] || 0;
+            const l_mR = seismic.leftward?.Mf?.[sIdx + 1] || 0;
             const l_yL = y2 + (l_mL / maxM) * 35;
             const l_yR = y2 + (l_mR / maxM) * 35;
-            svg += `<line x1="${xL}" y1="${l_yL}" x2="${xR}" y2="${l_yR}" stroke="#3b82f6" stroke-width="1.5" />`;
+            svg += `<line x1="${xL}" y1="${l_yL}" x2="${xR}" y2="${l_yR}" stroke="#3b82f6" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />`;
 
-            const r_mL = span.rightward?.M_left || 0;
-            const r_mR = span.rightward?.M_right || 0;
+            const r_mL = seismic.rightward?.Mf?.[sIdx] || 0;
+            const r_mR = seismic.rightward?.Mf?.[sIdx + 1] || 0;
             const r_yL = y2 + (r_mL / maxM) * 35;
             const r_yR = y2 + (r_mR / maxM) * 35;
-            svg += `<line x1="${xL}" y1="${r_yL}" x2="${xR}" y2="${r_yR}" stroke="#f97316" stroke-width="1.5" />`;
+            svg += `<line x1="${xL}" y1="${r_yL}" x2="${xR}" y2="${r_yR}" stroke="#f97316" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />`;
 
             // 【案5】短スパン・同一節点テキスト重なり回避オフセット
             const shiftL_blue = (sIdx % 2 === 0) ? -6 : -14;
