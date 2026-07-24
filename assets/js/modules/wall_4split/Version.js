@@ -1,4 +1,4 @@
 /**
  * Version.js - Centralized Version Management
  */
-window.APP_VERSION = "v3.2.0"; // Major Refactoring: Layered Architecture, Component Separation (Report/Foundation/Property), TDD & DI Support
+window.APP_VERSION = "v3.2.1"; // Refactoring 1000+ line files: GridRenderer, WallCadRenderer, PillarCadRenderer, ReportViews, PropertyHandlers

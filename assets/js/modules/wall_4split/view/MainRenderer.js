@@ -45,7 +45,11 @@ window.MainRenderer = {
         }
 
         // 4. グリッドと通り芯
-        this.drawGrids(state);
+        if (window.GridRenderer && typeof window.GridRenderer.drawGrids === 'function') {
+            window.GridRenderer.drawGrids(state);
+        } else {
+            this.drawGrids(state);
+        }
 
         // 5. 文字要素
         this.drawTexts(state);
@@ -58,7 +62,11 @@ window.MainRenderer = {
         ctx.globalAlpha = existingAlpha;
         if (!isAreaMode) {
             this.drawWindows(state);
-            this.drawWalls(state);
+            if (window.WallCadRenderer && typeof window.WallCadRenderer.drawWalls === 'function') {
+                window.WallCadRenderer.drawWalls(state);
+            } else {
+                this.drawWalls(state);
+            }
         }
         this.drawPillars(state);
         ctx.restore();

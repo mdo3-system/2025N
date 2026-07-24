@@ -41,6 +41,11 @@ const filesToLoad = [
     '../logic/RoofEngine.js',
     '../logic/ReportEngine.js',
     '../view/FoundationSvgGenerator.js',
+    '../view/GridRenderer.js',
+    '../view/WallCadRenderer.js',
+    '../view/ReportAreaView.js',
+    '../view/ReportWallView.js',
+    '../view/ReportNValueView.js',
     'TestRunner.js'
 ];
 
