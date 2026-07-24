@@ -888,6 +888,12 @@ $$R_i = A + B \cdot x_i$$
   - 最肥大モジュール `wall_4split_pdf.js`（2,089行）から Presentation Layer として `view/PdfReportView.js`（印刷範囲フィルタリング制御・目次ナビゲーションUI）を分離抽出。
   - `ServiceContainer` への DI 登録を実施し、単一責任の原則（SRP）および高凝集・疎結合設計を徹底。
 
+### 52. 基礎計算書のみ個別印刷（6～7項目）での白紙画面・空改ページの完全根絶 (v3.1.1)
+- **真っ白画面・空改ページの発生原因**: 「基礎計算書を出力(6〜7項目)」を選択した際、`doc-container` 直下の非基礎要素（`.page-break` や 1〜5項目のセクション外余白）が隠蔽漏れとなっていたこと、および `#sec-fd-slab` 冒頭に設定された `page-break-before: always;` が起因して1ページ目に空の改ページ（白紙画面）が挿入されていた。
+- **改ページ解除 ＆ 直下全要素完全隠蔽処理**:
+  - `PdfReportView.js` の `printDocSection` において、`doc-container` の直下の全子要素（`dc.children`）を対象とし、非基礎要素すべてに `display: none !important;` を適用。
+  - さらに `mode === 'fd_only'` 実行時には `#sec-fd-slab` 冒頭の `page-break-before` スタイルを一時的に `avoid` へ上書き除去。これにより、無駄な白紙が100%根絶され、1ページ目最上部から「■ 6. 基礎スラブ 構造検定」および「■ 7. 基礎梁（負担図・NMQ図）」が即座に表示・PDF印刷プレビューされるよう完全修復。
+
 
 
 

@@ -1,6 +1,6 @@
 /**
  * view/PdfReportView.js - 帳票ダイアログ・印刷範囲制御モジュール
- * v3.1.0 Refactoring (Layered Architecture & Single Responsibility)
+ * v3.1.1 Refactoring & Fix Blank Page on Foundation Only Print Mode
  */
 
 window.PdfReportView = {
@@ -51,24 +51,35 @@ window.PdfReportView = {
         if (mode === 'wall_only') document.body.classList.add('print-mode-wall-only');
         if (mode === 'fd_only') document.body.classList.add('print-mode-fd-only');
 
-        const allSections = Array.from(dc.querySelectorAll('.doc-section, #sec-summary'));
+        // doc-container 直下の全子要素（page-breakや各doc-section）を取得
+        const allChildren = Array.from(dc.children);
         
-        allSections.forEach(sec => {
-            const isFd = sec.id === 'sec-fd-slab' || sec.id === 'sec-fd-beam';
+        allChildren.forEach(el => {
+            const isFdSlab = el.id === 'sec-fd-slab' || Boolean(el.querySelector && el.querySelector('#sec-fd-slab'));
+            const isFdBeam = el.id === 'sec-fd-beam' || Boolean(el.querySelector && el.querySelector('#sec-fd-beam'));
+            const isFd = isFdSlab || isFdBeam;
+
             if (mode === 'wall_only') {
                 if (isFd) {
-                    sec.style.setProperty('display', 'none', 'important');
+                    el.style.setProperty('display', 'none', 'important');
                 } else {
-                    sec.style.removeProperty('display');
+                    el.style.removeProperty('display');
                 }
             } else if (mode === 'fd_only') {
                 if (isFd) {
-                    sec.style.removeProperty('display');
+                    el.style.removeProperty('display');
+                    // 基礎スラブの冒頭の空ページ（改ページ）除去
+                    if (isFdSlab) {
+                        el.style.setProperty('page-break-before', 'avoid', 'important');
+                        el.style.setProperty('break-before', 'avoid', 'important');
+                    }
                 } else {
-                    sec.style.setProperty('display', 'none', 'important');
+                    el.style.setProperty('display', 'none', 'important');
                 }
             } else {
-                sec.style.removeProperty('display');
+                el.style.removeProperty('display');
+                el.style.removeProperty('page-break-before');
+                el.style.removeProperty('break-before');
             }
         });
 
@@ -76,7 +87,11 @@ window.PdfReportView = {
             window.print();
             setTimeout(() => {
                 document.body.classList.remove('print-mode-wall-only', 'print-mode-fd-only');
-                allSections.forEach(sec => sec.style.removeProperty('display'));
+                allChildren.forEach(el => {
+                    el.style.removeProperty('display');
+                    el.style.removeProperty('page-break-before');
+                    el.style.removeProperty('break-before');
+                });
             }, 800);
         }, 150);
     }
