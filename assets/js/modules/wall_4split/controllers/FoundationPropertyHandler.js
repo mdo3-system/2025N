@@ -65,5 +65,5 @@ window.FoundationPropertyHandler = {
 };
 
 if (window.ServiceContainer) {
-    window.ServiceContainer.register('FoundationPropertyHandler', window.FoundationFoundationPropertyHandler);
+    window.ServiceContainer.register('FoundationPropertyHandler', window.FoundationPropertyHandler);
 }
