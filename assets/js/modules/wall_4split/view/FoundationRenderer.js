@@ -384,7 +384,8 @@ window.FoundationRenderer = {
         }
 
         // 基礎梁負担図（亀甲分割図）
-        const tributarySvg = this.generateFoundationTributarySvg(beam, s);
+        const appState = (options && options.state) ? options.state : window.AppState;
+        const tributarySvg = this.generateFoundationTributarySvg(beam, appState);
         if (tributarySvg) {
             html += `<div style="font-size:12px; font-weight:bold; color:#2c3e50; border-left:4px solid #27ae60; padding-left:8px; margin:15px 0 6px 0;">■ 基礎梁 負担図（べた基礎接地圧分担域）</div>`;
             html += tributarySvg;

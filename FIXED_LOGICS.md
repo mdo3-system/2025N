@@ -887,12 +887,20 @@ $$R_i = A + B \cdot x_i$$
 - **レイヤードアーキテクチャ ＆ DI（依存性の注入）に基づくモジュール化**:
   - 最肥大モジュール `wall_4split_pdf.js`（2,089行）から Presentation Layer として `view/PdfReportView.js`（印刷範囲フィルタリング制御・目次ナビゲーションUI）を分離抽出。
   - `ServiceContainer` への DI 登録を実施し、単一責任の原則（SRP）および高凝集・疎結合設計を徹底。
-
 ### 52. 基礎計算書のみ個別印刷（6～7項目）での白紙画面・空改ページの完全根絶 (v3.1.1)
 - **真っ白画面・空改ページの発生原因**: 「基礎計算書を出力(6〜7項目)」を選択した際、`doc-container` 直下の非基礎要素（`.page-break` や 1〜5項目のセクション外余白）が隠蔽漏れとなっていたこと、および `#sec-fd-slab` 冒頭に設定された `page-break-before: always;` が起因して1ページ目に空の改ページ（白紙画面）が挿入されていた。
 - **改ページ解除 ＆ 直下全要素完全隠蔽処理**:
   - `PdfReportView.js` の `printDocSection` において、`doc-container` の直下の全子要素（`dc.children`）を対象とし、非基礎要素すべてに `display: none !important;` を適用。
   - さらに `mode === 'fd_only'` 実行時には `#sec-fd-slab` 冒頭の `page-break-before` スタイルを一時的に `avoid` へ上書き除去。これにより、無駄な白紙が100%根絶され、1ページ目最上部から「■ 6. 基礎スラブ 構造検定」および「■ 7. 基礎梁（負担図・NMQ図）」が即座に表示・PDF印刷プレビューされるよう完全修復。
+
+### 53. 一括出力・基礎計算書表示における ReferenceError 例外クラッシュの完全根本根絶 (v3.1.2)
+- **真っ白画面の真の根本原因解明**:
+  1. **`wall_4split_pdf.js` L2048**: `generateCombinedPrintReportHtml` 内のフォールバックHTML部にて、JavaScriptスコープに存在しない未定義変数 `${nmqSvg}` が直に参照されていたため、ブラウザ側で `Uncaught ReferenceError: nmqSvg is not defined` が発生。モーダル表示およびHTML生成処理全体が物理的にクラッシュし、画面が真っ白になっていた。
+  2. **`FoundationRenderer.js` L387**: `generateBeamReportHtml` 内の `generateFoundationTributarySvg` 呼び出しで、第二引数に未定義変数 `s` が渡されていたため `ReferenceError: s is not defined` が発生していた。
+- **安全な関数呼び出しとスコープバグの修復**:
+  - `FoundationRenderer.js` L387 の引数を `(beam, window.AppState)` / `options.state` へ安全修正。
+  - `wall_4split_pdf.js` L2048 の `${nmqSvg}` を `FoundationRenderer.generateBeamNMQSvg(beam)` の安全なメソッド呼出へ完全置換。
+  - これにより、「基礎計算書を出力（6〜7項目）」選択時や基礎梁レポート生成時に一切の例外エラーが発生しなくなり、100%確実に基礎計算書・負担図・NMQ図が表示・印刷PDF出力されることを確認。
 
 
 

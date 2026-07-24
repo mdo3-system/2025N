@@ -2045,7 +2045,7 @@ async function generateDoc() {
                             </div>
                             <div style="flex: 1.2; min-width: 350px; background:#fff;">
                                 <div style="font-size:11px; font-weight:bold; margin-bottom:5px; color:#555; text-align:center;">応力図（N・M・Q図）</div>
-                                ${nmqSvg || `<div style="font-size:11px; color:#888; text-align:center; padding:30px;">(応力解析図)</div>`}
+                                ${(window.FoundationRenderer && typeof window.FoundationRenderer.generateBeamNMQSvg === 'function') ? window.FoundationRenderer.generateBeamNMQSvg(beam) : `<div style="font-size:11px; color:#888; text-align:center; padding:30px;">(応力解析図)</div>`}
                             </div>
                         </div>`}
                       </div>`;
