@@ -11,6 +11,7 @@
             --blue: #2980b9;
             --warning: #d35400;
             --purple: #8e44ad;
+            --danger: #c0392b;
             --bg-light: #f8fafc;
             --border: #cbd5e1;
         }
@@ -46,11 +47,12 @@
         .badge-paid {
             background: #e74c3c;
             color: white;
-            padding: 2px 6px;
+            padding: 3px 8px;
             border-radius: 4px;
             font-size: 11px;
             font-weight: bold;
-            margin-left: 4px;
+            display: inline-block;
+            margin-top: 4px;
         }
         .toc {
             background: white;
@@ -110,6 +112,11 @@
             background: #eff6ff;
             border-left: 6px solid #3b82f6;
             color: #1e40af;
+        }
+        .alert-danger {
+            background: #fdfaf9;
+            border-left: 6px solid var(--danger);
+            color: #7f1d1d;
         }
 
         /* スクリーンショット画像コンテナ */
@@ -199,6 +206,33 @@
         <p>木造軸組工法における「壁量計算・N値金物計算・風力用見附面積求積・基礎構造計算（スラブ/基礎梁）」統合WEBアプリケーション実務ガイド</p>
     </div>
 
+    <!-- 契約・免責・同時ログイン規約 -->
+    <div class="section" style="border-top: 6px solid #27ae60;">
+        <h2>🔄 ご契約と解約について</h2>
+        <p>本ツールは、必要な時に必要な期間だけ安心してご利用いただけるよう、非常にシンプルで分かりやすい解約システムを採用しています。</p>
+        <ul>
+            <li><strong>引き止めや複雑な手続きは一切ありません。</strong> 設定画面（ポータル画面）の「解約ボタン」を1クリックするだけで即座に解約手続きが完了します。</li>
+            <li>解約手続きを行った後も、<strong>現在ご契約いただいている期間の最終日時までは、引き続きすべての機能（計算書のPDF出力など）をご利用いただけます。</strong></li>
+            <li>単発のプロジェクトでのご利用など、1ヶ月だけ使ってすぐに解約する、といった使い方も大歓迎です。</li>
+        </ul>
+
+        <div class="alert alert-danger" style="margin-top: 25px;">
+            <strong style="font-size:16px;">⚠️ ご利用前の重要同意事項（免責事項）</strong>
+            <p style="margin-top: 8px;">本プログラムを起動すると、初回に「免責事項および利用条件」の同意モーダルが表示されます。</p>
+            <ul style="margin-bottom: 0;">
+                <li>本ツールは法適合性を確認する補助ツールです。画面上の計算は無償ですが、計算書を出力（確認申請にそのまま出しても使えるPDF形式等）する際は有償となります。</li>
+                <li>出力結果を用いた申請等に関するすべての責任は利用者（設計者ご自身）に帰属します。</li>
+                <li>操作や結果に対する個別サポートは行っておりません（ユーザー専用BBSをご利用ください）。</li>
+            </ul>
+        </div>
+
+        <div class="alert alert-important" style="margin-top: 20px; border-left-color: #34495e; background: #f8fafc; color: #1e293b;">
+            <strong style="font-size:16px; color:#1e293b;">🚫 1アカウントの複数人利用（同時ログイン）の禁止</strong>
+            <p style="margin-top: 8px; margin-bottom: 0;">本ツールはセキュリティ保護およびデータ破損防止のため、<strong>同じアカウントで複数の端末（またはブラウザ）から同時に利用することはできません。</strong><br>
+            別の端末からログインが行われた場合、先の端末は自動的に強制ログアウトされ、保存前の作業データは失われます。必ず「1人1アカウント」でご契約・ご利用ください。</p>
+        </div>
+    </div>
+
     <div class="toc">
         <h2>📌 目次</h2>
         <ul>
@@ -207,9 +241,9 @@
             <li><a href="#sec3">3. マウス操作 ＆ 画面ナビゲーション（全体表示）</a></li>
             <li><a href="#sec4">4. 画面レイアウト構成 ＆ 各部機能図解</a></li>
             <li><a href="#sec5">5. 左パネルの各ボタン機能解説 (一括出力[有料]等)</a></li>
-            <li><a href="#sec6">6. 右パネルの各ツール解説 (操作モード・柱プロパティ[有料])</a></li>
+            <li><a href="#sec6">6. 右パネルの各ツール解説 (操作モード・柱プロパティ)</a></li>
             <li><a href="#sec7">7. 耐力壁・柱の作図フロー ＆ リアルタイムOK/NG目視確認</a></li>
-            <li><a href="#sec8">8. 屋根伏図の作図 ＆ 見附面積・風力計算</a></li>
+            <li><a href="#sec8">8. 屋根伏図の作図 ＆ 母屋下げ/母屋上げの見附面積・風力計算</a></li>
             <li><a href="#sec9">9. 基礎計算（スラブ・基礎梁・NMQ応力図）完全ガイド</a></li>
             <li><a href="#sec10">10. 構造計算理論（グレー本2025準拠 斜め壁＆金物計算）</a></li>
         </ul>
@@ -224,41 +258,41 @@
             本システムで構造計算を行うにあたり、<strong>「柱・耐力壁・スラブ端部・床面積端部が通る位置には、必ず通り芯（グリッド）が存在すること」</strong> が絶対条件です。CADで作図する段階で、通り芯（グリッド）を 1mm 単位で綺麗に配置しておくことが、読み込み後の入力を圧倒的に楽にする最大の鍵となります。
         </div>
 
-        <h3>📐 CADレイヤーの分割ルール（最重要）</h3>
-        <p>CADソフトでDXFを出力する際、<strong>通り芯レイヤー（GRID/GLID）と柱レイヤー（COL/COLUMN）を明確に分けること</strong>が極めて大切です。</p>
+        <h3>📐 CADレイヤーの分割ルール ＆ 下絵（背景）取り込み</h3>
+        <p>CADソフトで平面図を作成・DXF出力する際、<strong>`GLID` / `GRID` (通り芯) と `COL_1F` / `COL_2F` (柱) 以外のすべてのレイヤー（`BG_1F`, `BG_2F`, `BG_RF` 等の下絵レイヤー含む）は、すべてキャンバス上に「下絵（背景）」として自動的に読み込まれます。</strong></p>
 
         <div class="screenshot-card">
-            <img src="img_dxf_upload.png" alt="DXFファイルの読み込みと通り芯・柱の自動配置画面">
-            <div class="screenshot-caption">🖼️ 図1. DXF読み込み時のダイアログ画面。GRIDレイヤー（通り芯）とCOLレイヤー（柱）が自動認識されて読み込まれます。</div>
+            <img src="img_dxf_upload.png" alt="DXFファイルの読み込みと通り芯・柱・下絵背景の認識">
+            <div class="screenshot-caption">🖼️ 図1. DXF読み込みパネル。GLID(通り芯)とCOL(柱)が自動認識されて構造化され、それ以外の線分・文字はすべて下絵（背景）として表示されます。</div>
         </div>
 
         <table>
             <thead>
                 <tr>
-                    <th>読み込み対象</th>
+                    <th>読み込み種別</th>
                     <th>CADレイヤー名（判定キーワード）</th>
-                    <th>抽出されるエンティティ</th>
+                    <th>抽出エンティティ</th>
                     <th>取り込みと動作仕様</th>
                 </tr>
             </thead>
             <tbody>
                 <tr>
                     <td><strong>通り芯・文字</strong></td>
-                    <td><code>GRID</code> または <code>GLID</code></td>
+                    <td><code>GLID</code> または <code>GRID</code></td>
                     <td>LINE, TEXT, MTEXT</td>
-                    <td>直線を「通り芯座標」、文字を「通り芯名（X1, Y1等）」として自動読み込みます。</td>
+                    <td>直線を「通り芯座標」、文字を「通り芯名（X1, Y1等）」として構造データ化します。</td>
                 </tr>
                 <tr>
                     <td><strong>柱</strong></td>
-                    <td><code>COL</code> または <code>COLUMN</code></td>
-                    <td>POINT, CIRCLE, CLOSED POLYGON</td>
-                    <td>点・円・ポリゴンの中心座標を「柱」として通り芯交点へ配置します。</td>
+                    <td><code>COL_1F</code>, <code>COL_2F</code>, <code>COL</code></td>
+                    <td>POINT, CIRCLE, POLYGON</td>
+                    <td>点・円・ポリゴンの中心座標を「柱」として通り芯交点へ自動配置します。</td>
                 </tr>
                 <tr>
-                    <td><strong>読み込まない要素</strong></td>
-                    <td><code>AREA</code>, <code>WALL</code> 等その他</td>
-                    <td>すべての図形</td>
-                    <td><strong>※本ツールでは AREA や WALL レイヤーは読み込みません。</strong>（※面積や耐力壁はアプリ上の画面操作モードで入力・描画します）。不要なデータによる誤動作を防ぐため読み込み対象から排除されています。</td>
+                    <td><strong>下絵（背景）</strong></td>
+                    <td><code>GRID</code>/<code>GLID</code>, <code>COL</code> 以外すべて<br>(例: <code>BG_1F</code>, <code>BG_2F</code>, <code>BG_RF</code>)</td>
+                    <td>すべての図形・線分・文字</td>
+                    <td><strong>GLID(通り芯)とCOL(柱)以外はすべて下絵(背景)として読み込まれます。</strong>部屋の間取り・壁位置・窓などを自由な線分として描いておくと、作図時の下絵ガイドとして活用できます。</td>
                 </tr>
             </tbody>
         </table>
@@ -319,8 +353,8 @@
         <p>キャンバス上部のヘッダー右側にある <strong>「🔍 全体表示」</strong> ボタンを押すと、読み込まれた全通り芯（グリッド）および建物全体が、キャンバスの中央に100%ピッタリ一発で拡大フィット表示されます。</p>
 
         <div class="screenshot-card">
-            <img src="img_left_settings.png" alt="キャンバスヘッダーの全体表示ボタンおよびレイアウト設定">
-            <div class="screenshot-caption">🖼️ 図2. キャンバス上部の「🔍 全体表示」ボタンと「👁️ レイヤ設定」ボタン。どんな座標データでも画面真ん中にぴったりジャストフィットします。</div>
+            <img src="img_left_settings.png" alt="全体表示された中央パネルのスクショ">
+            <div class="screenshot-caption">🖼️ 図2. 「🔍 全体表示」ボタン押下後の中央パネル。読み込まれた図面・通り芯全体が中央にピッタリジャストフィットして表示されます。</div>
         </div>
     </div>
 
@@ -388,7 +422,7 @@
             </thead>
             <tbody>
                 <tr>
-                    <td><strong>📑 計算書を一括出力 (PDF)</strong> <span class="badge-paid">有料機能</span></td>
+                    <td><strong>📑 計算書を一括出力 (PDF)</strong><br><span class="badge-paid">有料機能</span></td>
                     <td>確認申請提出用の正式な構造計算書（壁量計算書・4分割バランス表・N値計算書・床面積求積表・サマリー）を1冊のPDF帳票として一括出力します。</td>
                 </tr>
                 <tr>
@@ -397,7 +431,7 @@
                 </tr>
                 <tr>
                     <td><strong>🧱 存在壁量 ＆ 壁量検定</strong></td>
-                    <td>1F/2FのX・Y方向それぞれの必要壁量・存在壁量・充足率・判定結果（OK/NG）の一覧表を表示します。</td>
+                    <td>1F/2FのX・Y方向それぞれの必要壁量・存在壁量・充足率・判定結果（OK/NG）の一覧詳細モーダルを表示します。</td>
                 </tr>
                 <tr>
                     <td><strong>🖼️ 見付面積</strong></td>
@@ -419,14 +453,14 @@
         </table>
 
         <div class="screenshot-card">
-            <img src="img_calc_result.png" alt="計算結果ダイアログおよび壁量判定一覧画面">
-            <div class="screenshot-caption">🖼️ 図4. 「存在壁量 ＆ 壁量検定」ボタンで表示される詳細判定ダイアログ。各階・各方向の充足率が一目で分かります。</div>
+            <img src="img_calc_result.png" alt="存在壁量 ＆ 壁量検定ボタンで表示される詳細判定ダイアログモーダルのスクショ">
+            <div class="screenshot-caption">🖼️ 図4. 「存在壁量 ＆ 壁量検定」ボタン押下時に表示される詳細判定ダイアログ（モーダル画面）。各階・各方向の充足率および壁バランスが一目で分かります。</div>
         </div>
     </div>
 
     <!-- 6. 右パネルの各ツール解説 -->
     <div class="section" id="sec6">
-        <h2>6. 右パネルの各ツール解説 (操作モード・柱プロパティ[有料])</h2>
+        <h2>6. 右パネルの各ツール解説 (操作モード・柱プロパティ)</h2>
 
         <div class="screenshot-card">
             <img src="img_right_tools.png" alt="右パネルの操作モード一覧画面">
@@ -437,7 +471,7 @@
         <p>右パネルの操作モードは、以下の順番に上から順次操作を進めていくのが基本ワークフローとなります：</p>
         <ol>
             <li><strong>🔲 柱負担面積図:</strong> 床面積ポリゴンの入力・表示</li>
-            <li><strong>🔵 柱の追加:</strong> 通り芯交点へ柱を配置</li>
+            <li><strong>🔵 柱の追加:</strong> DXFから読み込めなかった時などでも、グリッド（通り芯）の交点に手動で柱を追加・配置可能です。</li>
             <li><strong>🧱 壁の配置:</strong> 柱間に耐力壁を入力</li>
             <li><strong>🧲 N値計算・金物図:</strong> 金物選定結果の視覚表示</li>
             <li><strong>❌ 削除:</strong> 不要要素の削除</li>
@@ -452,11 +486,11 @@
         </div>
 
         <h3>🔍 柱のプロパティ（算出根拠・計算式表示） <span class="badge-paid">有料機能</span></h3>
-        <p>選択ツールでキャンバス上の柱をクリックすると、プロパティダイアログが開きます。有料版機能として、<strong>その柱の引抜N値の算出根拠・詳細計算式（隣接壁倍率差・低減係数B・階高補正K・押さえ込み荷重L）がリアルタイム表示</strong>されます。</p>
+        <p>選択ツールでキャンバス上の柱をクリックすると、プロパティダイアログが開きます。<strong>※無料版でも計算結果（N値・採用金物）は表示されます。</strong> 有料版機能として、その柱の引抜N値の算出根拠・詳細計算式（隣接壁倍率差・低減係数B・階高補正K・押さえ込み荷重L）がリアルタイム完全表示されます。</p>
 
         <div class="screenshot-card">
             <img src="img_column_prop.png" alt="柱のプロパティダイアログと計算式表示">
-            <div class="screenshot-caption">🖼️ 図7. 【有料機能】柱のプロパティ画面。N値算定の全計算ステップ・係数（B, K, L）が完全開示されます。</div>
+            <div class="screenshot-caption">🖼️ 図7. 柱のプロパティ画面。無料版でも計算結果（N値・金物）が表示され、有料版では全計算ステップ・係数（B, K, L）が詳細開示されます。</div>
         </div>
     </div>
 
@@ -475,10 +509,17 @@
         </ul>
     </div>
 
-    <!-- 8. 屋根伏図の作図 ＆ 見附面積 -->
+    <!-- 8. 屋根伏図の作図 ＆ 母屋下げ/母屋上げ -->
     <div class="section" id="sec8">
-        <h2>8. 屋根伏図の作図 ＆ 見附面積・風力計算</h2>
+        <h2>8. 屋根伏図の作図 ＆ 母屋下げ/母屋上げの見附面積・風力計算</h2>
+        
         <p>「1階屋根」「2階屋根」タブを選択し、屋根ポリゴン（水上・水下・勾配）および外壁線を作図することで、立体形状から風圧力見附投影面積が完全自動計算されます（※カットライン FL + 1.35m）。</p>
+
+        <div class="alert alert-note">
+            <strong>🏠 母屋下げ・母屋上げ・下屋（複雑な屋根形状）の作図ポイント:</strong><br>
+            母屋下げや母屋上げなどの段差がある屋根や、1階下屋がある複雑な建物の場合、<strong>基準線となる位置に「屋根グリッド」を作図し、分割された屋根ポリゴンごとに「桁高オフセット（高度mm）」や「勾配（寸）」を設定</strong>します。<br>
+            これにより、<strong>見附投影面積（カットラインからの垂直スキャン）および 3Dプレビュー画面の両方で、母屋下げ・母屋上げの高低差や段差が正しく計算・描画・反映されます。</strong>
+        </div>
     </div>
 
     <!-- 9. 基礎計算 -->
