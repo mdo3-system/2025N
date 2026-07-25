@@ -40,7 +40,11 @@ window.InputController = {
                         window.AppController.switchAppMode(loadedState.currentAppMode);
                     }
                 }
-                if (typeof initViewForce === 'function') initViewForce();
+                if (window.AppController && typeof window.AppController.zoomFit === 'function') {
+                    window.AppController.zoomFit();
+                } else if (typeof initViewForce === 'function') {
+                    initViewForce();
+                }
                 if (window.AppController) window.AppController.refreshAll();
             };
             reader.readAsText(file);

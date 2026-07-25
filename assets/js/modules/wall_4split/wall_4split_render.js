@@ -28,46 +28,10 @@ function resizeCanvas() {
 }
 
 function initViewForce() {
-    // 既存のズームフィットロジック（そのまま維持、または将来的に MainRenderer へ移動）
-    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-    const accumVtx = (ent) => {
-        if (ent.vertices) ent.vertices.forEach(v => { if (v.x != null && !isNaN(v.x)) { if (v.x < minX) minX = v.x; if (v.x > maxX) maxX = v.x; if (v.y < minY) minY = v.y; if (v.y > maxY) maxY = v.y; } });
-        else if (ent.type === 'CIRCLE' || ent.type === 'ARC') { if (ent.center.x - ent.radius < minX) minX = ent.center.x - ent.radius; if (ent.center.x + ent.radius > maxX) maxX = ent.center.x + ent.radius; if (ent.center.y - ent.radius < minY) minY = ent.center.y - ent.radius; if (ent.center.y + ent.radius > maxY) maxY = ent.center.y + ent.radius; }
-    };
-
-    pillars.filter(p => p.floor === currentFloor && !p.isDeleted).forEach(p => {
-        if (p.x < minX) minX = p.x; if (p.x > maxX) maxX = p.x; if (p.y < minY) minY = p.y; if (p.y > maxY) maxY = p.y;
-    });
-
-    if (minX === Infinity) {
-        bgLinesOriginal.filter(e => e.floor === currentFloor).forEach(accumVtx);
-        areaLines.filter(e => e.floor === currentFloor).forEach(accumVtx);
+    // [v3.5.7] 視点初期化・ズームフィット処理を AppController.zoomFit に統一
+    if (window.AppController && typeof window.AppController.zoomFit === 'function') {
+        window.AppController.zoomFit();
     }
-    if (minX === Infinity) { bgLinesOriginal.filter(e => e.floor === 'ALL').forEach(accumVtx); }
-    if (minX === Infinity) { minX = 0; minY = 0; maxX = 1000; maxY = 1000; }
-
-    let cx = (minX + maxX) / 2;
-    let cy = (minY + maxY) / 2;
-    let dx = maxX - minX; if (dx <= 0) dx = 1000;
-    let dy = maxY - minY; if (dy <= 0) dy = 1000;
-
-    dx *= 1.2; dy *= 1.2;
-    minX = cx - dx / 2;
-    minY = cy - dy / 2;
-
-    const activeCanvas = window.AppState.canvas || document.getElementById('cad-canvas');
-    let cw = activeCanvas ? activeCanvas.width : 800;
-    let ch = activeCanvas ? activeCanvas.height : 600;
-    scale = Math.min((cw - 100) / dx, (ch - 100) / dy) || 1;
-    offsetX = -minX * scale + (cw - dx * scale) / 2;
-    offsetY = -minY * scale + (ch - dy * scale) / 2;
-
-    // AppState への同期
-    window.AppState.scale = scale;
-    window.AppState.offsetX = offsetX;
-    window.AppState.offsetY = offsetY;
-
-    pillars.forEach(p => { p.isCornerAuto = (Math.abs(p.x - minX) < 100 || Math.abs(p.x - maxX) < 100) && (Math.abs(p.y - minY) < 100 || Math.abs(p.y - maxY) < 100); });
 }
 
 function renderLayerPanel() {

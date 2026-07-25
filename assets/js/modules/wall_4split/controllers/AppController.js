@@ -428,7 +428,7 @@ window.AppController = {
     },
 
     /**
-     * [v3.5.6] 全体表示 (Zoom Fit) - 建物構造要素および主要通り芯領域をピンポイント算出しキャンバス中央へ理想描画
+     * [v3.5.7] 全体表示 (Zoom Fit) - 設定された全グリッド(通り芯)および作図要素の幾何学中心を中央パネルの中心へ完璧にフィット配置
      */
     zoomFit: function() {
         const s = window.AppState;
@@ -445,50 +445,44 @@ window.AppController = {
             }
         };
 
-        // 1. 建物実在構造要素 (柱, 壁, 外壁線, 屋根, 面積ポリゴン) の座標を優先集計
+        // 1. 設定された全通り芯（Grid）の座標を集計
+        const validX = (s.gridXCoords || []).concat(s.masterXs || []).concat((s.manualGridX || []).map(m => m.coord));
+        const validY = (s.gridYCoords || []).concat(s.masterYs || []).concat((s.manualGridY || []).map(m => m.coord));
+
+        if (validX.length > 0) {
+            const gMinX = Math.min(...validX);
+            const gMaxX = Math.max(...validX);
+            includePoint(gMinX, 0);
+            includePoint(gMaxX, 0);
+        }
+
+        if (validY.length > 0) {
+            const gMinY = Math.min(...validY);
+            const gMaxY = Math.max(...validY);
+            includePoint(0, gMinY);
+            includePoint(0, gMaxY);
+        }
+
+        // 2. 実在構造要素 (柱, 壁, 外壁線, 屋根, 面積ポリゴン)
         (s.pillars || []).forEach(p => {
             if (!p.isDeleted && !p.isInvalidPos) includePoint(p.x, p.y);
         });
-
         (s.walls || []).forEach(w => {
             if (w.p1) includePoint(w.p1.x, w.p1.y);
             if (w.p2) includePoint(w.p2.x, w.p2.y);
         });
-
         (s.f_ext_walls || []).forEach(w => {
             if (w.p1) includePoint(w.p1.x, w.p1.y);
             if (w.p2) includePoint(w.p2.x, w.p2.y);
         });
-
         (s.roofs || []).forEach(r => {
             (r.polygon || []).forEach(pt => includePoint(pt.x, pt.y));
         });
-
         (s.areaLines || []).forEach(al => {
             (al.points || []).forEach(pt => includePoint(pt.x, pt.y));
         });
 
-        const hasStructuralData = isFinite(minX) && isFinite(maxX) && minX < maxX;
-
-        // 2. 有効な通り芯 (gridXCoords / gridYCoords)
-        // 構造要素が存在する場合はその周囲(±2500mm)の通り芯のみを含め、遠く離れたDXF原点や外側図面枠を除外
-        if (s.gridXCoords && s.gridXCoords.length > 0) {
-            s.gridXCoords.forEach(x => {
-                if (!hasStructuralData || (x >= minX - 2500 && x <= maxX + 2500)) {
-                    includePoint(x, minY === Infinity ? 0 : minY);
-                }
-            });
-        }
-
-        if (s.gridYCoords && s.gridYCoords.length > 0) {
-            s.gridYCoords.forEach(y => {
-                if (!hasStructuralData || (y >= minY - 2500 && y <= maxY + 2500)) {
-                    includePoint(minX === Infinity ? 0 : minX, y);
-                }
-            });
-        }
-
-        // 3. 未設定の場合の安全フォールバック
+        // 3. 安全フォールバック
         if (!isFinite(minX) || !isFinite(maxX) || minX >= maxX) {
             minX = 0; maxX = 9100;
         }
@@ -496,11 +490,11 @@ window.AppController = {
             minY = 0; maxY = 9100;
         }
 
-        const cw = s.canvas.width || 800;
-        const ch = s.canvas.height || 600;
+        const cw = s.canvas.width || s.canvas.clientWidth || 800;
+        const ch = s.canvas.height || s.canvas.clientHeight || 600;
         
-        // 通り芯文字ラベル（X1.. Y1..）が画面端にはみ出さないためのマージン
-        const padding = 70;
+        // 周囲のマージンピクセル (通り芯ラベル X1, Y1 文字の描画余白)
+        const padding = 85;
 
         const bboxW = maxX - minX;
         const bboxH = maxY - minY;
