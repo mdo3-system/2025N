@@ -428,11 +428,13 @@ window.AppController = {
     },
 
     /**
-     * [v3.5.7] 全体表示 (Zoom Fit) - 設定された全グリッド(通り芯)および作図要素の幾何学中心を中央パネルの中心へ完璧にフィット配置
+     * [v3.5.8] 全体表示 (Zoom Fit) - 設定された全グリッド(gxc,gyc,manual)および実在構造要素の中心を中央パネル中心へ完璧に収める
      */
     zoomFit: function() {
         const s = window.AppState;
-        if (!s || !s.canvas) return;
+        if (!s) return;
+        const canvas = s.canvas || document.getElementById('cad-canvas') || document.getElementById('canvas');
+        if (!canvas) return;
 
         let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
 
@@ -445,39 +447,39 @@ window.AppController = {
             }
         };
 
-        // 1. 設定された全通り芯（Grid）の座標を集計
+        // 1. 設定された全通り芯（Grid: gxc, gyc, master, manual）の座標を集計
         const validX = (s.gridXCoords || []).concat(s.masterXs || []).concat((s.manualGridX || []).map(m => m.coord));
         const validY = (s.gridYCoords || []).concat(s.masterYs || []).concat((s.manualGridY || []).map(m => m.coord));
 
         if (validX.length > 0) {
-            const gMinX = Math.min(...validX);
-            const gMaxX = Math.max(...validX);
-            includePoint(gMinX, 0);
-            includePoint(gMaxX, 0);
+            includePoint(Math.min(...validX), 0);
+            includePoint(Math.max(...validX), 0);
         }
 
         if (validY.length > 0) {
-            const gMinY = Math.min(...validY);
-            const gMaxY = Math.max(...validY);
-            includePoint(0, gMinY);
-            includePoint(0, gMaxY);
+            includePoint(0, Math.min(...validY));
+            includePoint(0, Math.max(...validY));
         }
 
         // 2. 実在構造要素 (柱, 壁, 外壁線, 屋根, 面積ポリゴン)
         (s.pillars || []).forEach(p => {
-            if (!p.isDeleted && !p.isInvalidPos) includePoint(p.x, p.y);
+            if (!p.isDeleted) includePoint(p.x, p.y);
         });
+
         (s.walls || []).forEach(w => {
             if (w.p1) includePoint(w.p1.x, w.p1.y);
             if (w.p2) includePoint(w.p2.x, w.p2.y);
         });
-        (s.f_ext_walls || []).forEach(w => {
+
+        (s.exteriorWalls || s.f_ext_walls || []).forEach(w => {
             if (w.p1) includePoint(w.p1.x, w.p1.y);
             if (w.p2) includePoint(w.p2.x, w.p2.y);
         });
-        (s.roofs || []).forEach(r => {
+
+        (s.roofFaces || s.roofs || []).forEach(r => {
             (r.polygon || []).forEach(pt => includePoint(pt.x, pt.y));
         });
+
         (s.areaLines || []).forEach(al => {
             (al.points || []).forEach(pt => includePoint(pt.x, pt.y));
         });
@@ -490,11 +492,12 @@ window.AppController = {
             minY = 0; maxY = 9100;
         }
 
-        const cw = s.canvas.width || s.canvas.clientWidth || 800;
-        const ch = s.canvas.height || s.canvas.clientHeight || 600;
+        // キャンバスの物理・論理サイズを確実に取得
+        const cw = canvas.clientWidth || canvas.width || 800;
+        const ch = canvas.clientHeight || canvas.height || 600;
         
         // 周囲のマージンピクセル (通り芯ラベル X1, Y1 文字の描画余白)
-        const padding = 85;
+        const padding = 80;
 
         const bboxW = maxX - minX;
         const bboxH = maxY - minY;
@@ -504,7 +507,7 @@ window.AppController = {
             const scaleY = (ch - padding * 2) / bboxH;
             const targetScale = Math.min(scaleX, scaleY);
 
-            s.scale = Math.max(0.01, Math.min(2.0, targetScale));
+            s.scale = Math.max(0.001, Math.min(5.0, targetScale));
 
             const midX = (minX + maxX) / 2;
             const midY = (minY + maxY) / 2;
