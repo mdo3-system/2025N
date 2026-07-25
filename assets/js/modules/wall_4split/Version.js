@@ -1,4 +1,4 @@
 /**
  * Version.js - Centralized Version Management
  */
-window.APP_VERSION = "v3.4.1"; // Fix: Restore pillar & drawing area property modals / right panel controls
+window.APP_VERSION = "v3.4.2"; // Fix: Restore wall numbers (W1, W2), brace symbols (tasuki/single), and panel labels in WallCadRenderer
