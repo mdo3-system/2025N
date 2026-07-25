@@ -33,7 +33,7 @@ window.Parsers = {
                     const floor = L.includes('2F') ? '2F' : (L.includes('1F') ? '1F' : 'ALL');
                     
                     if (L.includes('COL') && !isSub) {
-                        // Pillar extraction
+                        // Pillar extraction (COL/COLUMNレイヤーのみ柱として認識)
                         const p = { id: `P${s.pIdCounter++}`, x: 0, y: 0, floor, layer: L, isManual: false, isDeleted: false };
                         if (ent.type === 'POINT') { p.x = ent.position.x; p.y = ent.position.y; }
                         else if (ent.type === 'CIRCLE') { p.x = ent.center.x; p.y = ent.center.y; }
@@ -42,8 +42,6 @@ window.Parsers = {
                             p.y = ent.vertices.reduce((sum, v) => sum + v.y, 0) / ent.vertices.length;
                         }
                         newPillars.push(p);
-                    } else if (L.includes('AREA') && !isSub) {
-                        if (ent.vertices && ent.closed) newAreaLines.push({ ...ent, floor, isManualArea: false, id: Date.now() + Math.random() });
                     } else if (['TEXT', 'MTEXT'].includes(ent.type)) {
                         const txt = ent.text || ent.string || "";
                         const pos = ent.startPoint || ent.position || ent.insertionPoint || {};
@@ -66,7 +64,6 @@ window.Parsers = {
             s.bgTextsOriginal = newBgTexts;
             if (!skipEntities) {
                 s.pillars = [...s.pillars.filter(p => p.isManual), ...newPillars]; // Keep manual pillars
-                s.areaLines = newAreaLines;
             }
             s.docDrawings.floor = docData;
             s.docDrawings.div4 = docData;
