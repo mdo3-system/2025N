@@ -428,7 +428,7 @@ window.AppController = {
     },
 
     /**
-     * [v3.5.1] 全体表示 (Zoom Fit) - 作図全要素のBoundingBoxを正確に計算してキャンバス中央にフィット調整
+     * [v3.5.3] 全体表示 (Zoom Fit) - 作図実データ(柱/壁/面積)のBoundingBoxを優先抽出しキャンバス中央へ最適調整
      */
     zoomFit: function() {
         const s = window.AppState;
@@ -445,37 +445,52 @@ window.AppController = {
             }
         };
 
-        // 1. 標準通り芯（グリッド）の有効範囲
-        if (s.gridXCoords && s.gridXCoords.length > 0 && s.gridYCoords && s.gridYCoords.length > 0) {
-            const gMinX = Math.min(...s.gridXCoords), gMaxX = Math.max(...s.gridXCoords);
-            const gMinY = Math.min(...s.gridYCoords), gMaxY = Math.max(...s.gridYCoords);
-            includePoint(gMinX, gMinY);
-            includePoint(gMaxX, gMaxY);
-        }
-
-        // 2. 柱（実データ）
+        // 1. 実在構造要素 (柱, 壁, 外壁線, 屋根, 面積ポリゴン) の座標を優先抽出
         (s.pillars || []).forEach(p => {
             if (!p.isDeleted && !p.isInvalidPos) includePoint(p.x, p.y);
         });
 
-        // 3. 壁（実データ）
         (s.walls || []).forEach(w => {
             if (w.p1) includePoint(w.p1.x, w.p1.y);
             if (w.p2) includePoint(w.p2.x, w.p2.y);
         });
 
-        // 4. 基礎外壁線
         (s.f_ext_walls || []).forEach(w => {
             if (w.p1) includePoint(w.p1.x, w.p1.y);
             if (w.p2) includePoint(w.p2.x, w.p2.y);
         });
 
-        // 5. 屋根面ポリゴン
         (s.roofs || []).forEach(r => {
             (r.polygon || []).forEach(pt => includePoint(pt.x, pt.y));
         });
 
-        // 有効な境界が取得できない場合の安全デフォルト値
+        (s.areaLines || []).forEach(al => {
+            (al.points || []).forEach(pt => includePoint(pt.x, pt.y));
+        });
+
+        // 2. 実在構造要素が存在しない場合は、通り芯（グリッド）の座標を使用
+        if (!isFinite(minX) || !isFinite(maxX) || minX >= maxX) {
+            if (s.gridXCoords && s.gridXCoords.length > 0 && s.gridYCoords && s.gridYCoords.length > 0) {
+                const gMinX = Math.min(...s.gridXCoords), gMaxX = Math.max(...s.gridXCoords);
+                const gMinY = Math.min(...s.gridYCoords), gMaxY = Math.max(...s.gridYCoords);
+                includePoint(gMinX, gMinY);
+                includePoint(gMaxX, gMaxY);
+            }
+        } else {
+            // 通り芯の文字ラベル分も考慮して近傍の通り芯範囲を含める（遠く離れた原点0等は除外）
+            if (s.gridXCoords && s.gridXCoords.length > 0) {
+                const gMinX = Math.min(...s.gridXCoords), gMaxX = Math.max(...s.gridXCoords);
+                if (gMinX >= minX - 3000) includePoint(gMinX, minY);
+                if (gMaxX <= maxX + 3000) includePoint(gMaxX, maxY);
+            }
+            if (s.gridYCoords && s.gridYCoords.length > 0) {
+                const gMinY = Math.min(...s.gridYCoords), gMaxY = Math.max(...s.gridYCoords);
+                if (gMinY >= minY - 3000) includePoint(minX, gMinY);
+                if (gMaxY <= maxY + 3000) includePoint(maxX, gMaxY);
+            }
+        }
+
+        // 3. 有効な境界が取得できない場合の安全デフォルト値
         if (!isFinite(minX) || !isFinite(maxX) || minX >= maxX) {
             minX = 0; maxX = 9100;
         }
@@ -485,7 +500,7 @@ window.AppController = {
 
         const cw = s.canvas.width || 800;
         const ch = s.canvas.height || 600;
-        const padding = 70; // 画面周りのマージンピクセル
+        const padding = 65; // 周囲の余白ピクセル
 
         const bboxW = maxX - minX;
         const bboxH = maxY - minY;
