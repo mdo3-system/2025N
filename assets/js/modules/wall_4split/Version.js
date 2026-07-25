@@ -1,4 +1,4 @@
 /**
  * Version.js - Centralized Version Management
  */
-window.APP_VERSION = "v3.5.5"; // Fix: Exact Zoom Fit incorporating DXF lines, text, all master grids and active elements with explicit click listener
+window.APP_VERSION = "v3.5.6"; // Fix: Advanced Zoom Fit excluding far-away DXF frame noise to center building & grids perfectly
