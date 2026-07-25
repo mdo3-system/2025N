@@ -1,11 +1,11 @@
 /**
  * view/WallCadRenderer.js - Pure CAD Wall & Brace Renderer
- * v3.4.1 Refactoring: Single Responsibility Principle (SRP)
+ * v3.4.3 Refactoring: Clean Wall Label Display (Restore v3.2.x Style)
  */
 
 window.WallCadRenderer = {
     /**
-     * 耐力壁・筋かい・壁番号・面材記号を描画
+     * 耐力壁・筋かい・壁番号を描画
      * @param {Object} state - AppStateへの参照
      */
     drawWalls: function(state) {
@@ -33,7 +33,6 @@ window.WallCadRenderer = {
             if (p1.cx == null || p2.cx == null) return;
 
             const totalMultiplier = window.WallEngine ? window.WallEngine.getTotalMultiplier(w) : (w.totalVal || 0);
-            const isDiag = (Math.abs(w.p1.x - w.p2.x) > 10 && Math.abs(w.p1.y - w.p2.y) > 10);
 
             // 1. 耐力壁ベースラインの描画
             ctx.save();
@@ -52,13 +51,13 @@ window.WallCadRenderer = {
             ctx.stroke();
             ctx.restore();
 
-            // 2. 筋かい・面材・壁番号記号の描画
+            // 2. 筋かい・壁番号の描画 (v3.2.x スタイル)
             this.drawWallSymbols(ctx, w, p1, p2, totalMultiplier, index + 1, state);
         });
     },
 
     /**
-     * 筋かい・面材マーク・壁番号の記号描画
+     * 筋かいグラフィックおよび壁番号 (W1, W2...) の描画
      */
     drawWallSymbols: function(ctx, w, p1, p2, totalMultiplier, wallNo, state) {
         const mX = (p1.cx + p2.cx) / 2;
@@ -109,34 +108,27 @@ window.WallCadRenderer = {
         if (mark2) marks.push(mark2);
         let mark = marks.join('+');
 
-        if (!mark) {
-            const panelSum = totalMultiplier - braceVal;
-            if (panelSum > 0) {
-                mark = window._currentLegendDic ? window._currentLegendDic[panelSum.toFixed(2)] || '' : '';
-            }
-        }
-
-        // --- C. 壁番号 (W1, W2...) および 面材/倍率ラベルの描画 ---
+        // --- C. 壁番号 (W1, W2...) のシンプル描画 (v3.2.x スタイル: 倍率表記を除外) ---
         const isVertical = Math.abs(p1.cy - p2.cy) > Math.abs(p1.cx - p2.cx);
-        const offX = isVertical ? 18 : 0;
+        const offX = isVertical ? 16 : 0;
         const offY = isVertical ? 0 : -10;
 
-        // 壁番号 (例: W1, W2)
+        // 表示テキスト: 壁番号 (W1, W2) または 面材記号 (なければ W1, W2)
         const wallName = w.name || `W${wallNo}`;
-        const labelText = mark ? `${wallName}[${mark}] ×${totalMultiplier.toFixed(1)}` : `${wallName} ×${totalMultiplier.toFixed(1)}`;
+        const displayText = wallName || mark || `W${wallNo}`;
 
         if (totalMultiplier > 0) {
             ctx.save();
-            ctx.font = 'bold 11px sans-serif';
+            ctx.font = 'bold 12px sans-serif';
             ctx.textAlign = "center";
             ctx.textBaseline = "middle";
 
-            const tw = ctx.measureText(labelText).width;
+            const tw = ctx.measureText(displayText).width;
             ctx.fillStyle = isPrintMode ? 'rgba(255,255,255,0.95)' : 'rgba(30,30,30,0.85)';
-            ctx.fillRect(mX + offX - tw/2 - 4, mY + offY - 8, tw + 8, 16);
+            ctx.fillRect(mX + offX - tw/2 - 3, mY + offY - 8, tw + 6, 16);
 
             ctx.fillStyle = isPrintMode ? '#2c3e50' : '#f1c40f';
-            ctx.fillText(labelText, mX + offX, mY + offY);
+            ctx.fillText(displayText, mX + offX, mY + offY);
             ctx.restore();
         }
     }
