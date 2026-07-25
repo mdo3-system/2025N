@@ -261,9 +261,30 @@
         <h3>📐 CADレイヤーの分割ルール ＆ 下絵（背景）取り込み</h3>
         <p>CADソフトで平面図を作成・DXF出力する際、<strong>`GLID` / `GRID` (通り芯) と `COL_1F` / `COL_2F` (柱) 以外のすべてのレイヤー（`BG_1F`, `BG_2F`, `BG_RF` 等の下絵レイヤー含む）は、すべてキャンバス上に「下絵（背景）」として自動的に読み込まれます。</strong>（※本ツールでは見附面積は屋根伏図作図により描画・算出するため、旧来のような立面DXFの読み込みは一切不要です）。</p>
 
-        <div class="screenshot-card">
-            <img src="img_dxf_panel_v3.png" alt="DXFファイルの読み込みと平面図の作図・レイヤルール画面">
-            <div class="screenshot-caption">🖼️ 図1. 平面図DXF読込パネル。平面図の COL_1F/2F(柱), GRID(芯), BG_1F/2F/RF(背景) の設定ルールが表示され、GLID/COL 以外の線分・文字はすべて下絵（背景）として取り込まれます。</div>
+        <div class="screenshot-card" style="max-width: 480px; margin: 24px auto; text-align: left; background: #fff; border: 2px solid #e67e22; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+            <div style="background: #fdebd0; color: #d35400; font-weight: bold; padding: 10px 14px; border-radius: 6px 6px 0 0; font-size: 14px; display: flex; align-items: center; gap: 6px;">
+                📂 1. DXFデータ読込 (必須)
+            </div>
+            <div style="padding: 14px; background: #fff; font-size: 12px; color: #1e293b;">
+                <div style="margin-bottom: 12px; padding: 10px 12px; background: #fff3cd; border: 1px solid #ffeeba; border-radius: 6px; line-height: 1.6;">
+                    <b style="color: #d35400; font-size: 13px;">【作図・レイヤルール】</b><br>
+                    ・<b>平面図:</b> COL_1F/2F(柱), GRID(芯), BG_1F/2F/RF(背景)<br>
+                    <span style="color: #555; font-size: 11px;">※GLID(通り芯)とCOL(柱)以外はすべて下絵(背景)として自動的に読み込まれます（※見附面積は屋根伏図作図により描画・算定されます）。</span>
+                </div>
+
+                <b style="color: #0056b3; font-size: 13px; display: block; margin-bottom: 6px;">① 平面図 DXF読込 (マスト)</b>
+                <div style="background: #e67e22; color: #ffffff; text-align: center; padding: 10px; font-weight: bold; font-size: 13px; border-radius: 6px; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                    📂 平面図を選択
+                </div>
+
+                <div style="margin-top: 12px; display: flex; align-items: center; gap: 8px; font-size: 12px;">
+                    <label style="margin: 0; color: #334155;">平面図スケール: S=1/</label>
+                    <input type="number" value="100" readonly style="width: 60px; padding: 4px 6px; border: 1px solid #cbd5e1; border-radius: 4px; text-align: center; background: #f8fafc; font-weight: bold;">
+                </div>
+            </div>
+            <div class="screenshot-caption" style="padding: 10px 14px; border-top: 1px solid #f1f5f9; margin-top: 0;">
+                🖼️ 図1. 最新の「1. DXFデータ読込 (必須)」パネル画面。立面・見附の旧項目が除去され、平面図のCOL(柱)・GRID(芯)・背景レイヤーのみが表示されるアプリ実物と100%整合した状態です。
+            </div>
         </div>
 
         <table>
