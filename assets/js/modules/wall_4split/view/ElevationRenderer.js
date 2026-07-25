@@ -66,6 +66,43 @@ window.ElevationRenderer = {
     },
 
     /**
+     * 指定された通り芯上に立面図・軸力図描画用のデータ（耐力壁・柱等）が存在するか確認
+     */
+    hasElevationData: function(axisName, state) {
+        const s = state || window.AppState;
+        if (!s || !axisName) return false;
+        const floorsDesc = ['2F', '1F'];
+        for (let f of floorsDesc) {
+            const wallsOnAxis = (s.walls || []).filter(w => {
+                if (w.floor !== f) return false;
+                if (window.MathUtils && window.MathUtils.isPointOnAxis) {
+                    return window.MathUtils.isPointOnAxis(w.p1, axisName, s) && 
+                           window.MathUtils.isPointOnAxis(w.p2, axisName, s);
+                }
+                const n1 = window.GridEngine ? window.GridEngine.getPillarName(w.p1, s) : null;
+                const n2 = window.GridEngine ? window.GridEngine.getPillarName(w.p2, s) : null;
+                return (n1 && (n1.startsWith(axisName) || n1.endsWith(axisName))) && 
+                       (n2 && (n2.startsWith(axisName) || n2.endsWith(axisName)));
+            });
+
+            const pillarsOnAxis = (s.pillars || []).filter(p => {
+                if (p.floor !== f && p.floor !== 'ALL') return false;
+                if (p.isDeleted) return false;
+                if (window.MathUtils && window.MathUtils.isPointOnAxis) {
+                    return window.MathUtils.isPointOnAxis(p, axisName, s);
+                }
+                const nm = window.GridEngine ? window.GridEngine.getPillarName(p, s) : null;
+                return nm && (nm.startsWith(axisName) || nm.endsWith(axisName));
+            });
+
+            if (wallsOnAxis.length > 0 || pillarsOnAxis.length > 0) {
+                return true;
+            }
+        }
+        return false;
+    },
+
+    /**
      * 特定の通りの拡大軸力図（立面）を SVG で生成する
      */
     generateAxialDiagramSvg: function(axisName, loadDirection = 'left', state, globalScaleParams = null) {

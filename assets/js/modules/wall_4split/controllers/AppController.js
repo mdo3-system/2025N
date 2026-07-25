@@ -402,9 +402,86 @@ window.AppController = {
     /**
      * [v2.7.0] 屋根作図階の切替
      */
-    setRoofFloor: function(floor) {
-        window.AppState.currentFloor = floor;
-        this.switchAppMode('roof');
+    /**
+     * [v3.5.1] 全体表示 (Zoom Fit) - 全要素のBoundingBoxを計算してキャンバス全体へ表示調整
+     */
+    zoomFit: function() {
+        const s = window.AppState;
+        if (!s || !s.canvas) return;
+
+        let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+
+        const includePoint = (x, y) => {
+            if (typeof x === 'number' && !isNaN(x) && typeof y === 'number' && !isNaN(y)) {
+                if (x < minX) minX = x;
+                if (x > maxX) maxX = x;
+                if (y < minY) minY = y;
+                if (y > maxY) maxY = y;
+            }
+        };
+
+        // 1. 通り芯（グリッド）
+        (s.gridXCoords || []).forEach(x => includePoint(x, 0));
+        (s.gridYCoords || []).forEach(y => includePoint(0, y));
+
+        // 2. 柱
+        (s.pillars || []).forEach(p => {
+            if (!p.isDeleted) includePoint(p.x, p.y);
+        });
+
+        // 3. 壁
+        (s.walls || []).forEach(w => {
+            if (w.p1) includePoint(w.p1.x, w.p1.y);
+            if (w.p2) includePoint(w.p2.x, w.p2.y);
+        });
+
+        // 4. 基礎要素
+        (s.f_ext_walls || []).forEach(w => {
+            if (w.p1) includePoint(w.p1.x, w.p1.y);
+            if (w.p2) includePoint(w.p2.x, w.p2.y);
+        });
+
+        // 5. 屋根
+        (s.roofs || []).forEach(r => {
+            (r.polygon || []).forEach(pt => includePoint(pt.x, pt.y));
+        });
+
+        // 有効な境界が取得できない場合の安全デフォルト値
+        if (!isFinite(minX) || !isFinite(maxX) || minX >= maxX) {
+            minX = 0; maxX = 9100;
+        }
+        if (!isFinite(minY) || !isFinite(maxY) || minY >= maxY) {
+            minY = 0; maxY = 9100;
+        }
+
+        const cw = s.canvas.width || 800;
+        const ch = s.canvas.height || 600;
+        const padding = 80;
+
+        const bboxW = maxX - minX;
+        const bboxH = maxY - minY;
+
+        if (bboxW > 0 && bboxH > 0) {
+            const scaleX = (cw - padding * 2) / bboxW;
+            const scaleY = (ch - padding * 2) / bboxH;
+            const targetScale = Math.min(scaleX, scaleY);
+
+            s.scale = Math.max(0.01, Math.min(2.0, targetScale));
+
+            const midX = (minX + maxX) / 2;
+            const midY = (minY + maxY) / 2;
+
+            s.offsetX = (cw / 2) - (midX * s.scale);
+            s.offsetY = (ch / 2) - (midY * s.scale);
+
+            this.refreshAll();
+        }
+    }
+};
+
+window.zoomFit = function() {
+    if (window.AppController && window.AppController.zoomFit) {
+        window.AppController.zoomFit();
     }
 };
 

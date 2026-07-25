@@ -177,29 +177,48 @@ window.openElevationViewer = function() {
         globalElevationDimensions = window.ElevationRenderer.getGlobalDimensions(window.AppState);
     }
 
+    // 有効なデータが存在する通りの一覧を特定
+    const validAxes = axes.filter(axis => {
+        return window.ElevationRenderer && typeof window.ElevationRenderer.hasElevationData === 'function' ?
+            window.ElevationRenderer.hasElevationData(axis, window.AppState) : true;
+    });
+
+    // デフォルト選択設定（データが存在する最初の通りを選択）
+    if (!currentElevationAxis || !validAxes.includes(currentElevationAxis)) {
+        currentElevationAxis = validAxes.length > 0 ? validAxes[0] : (axes.length > 0 ? axes[0] : null);
+    }
+
     // タブの生成
     const tabContainer = document.getElementById('elevation-axis-tabs');
     if (tabContainer) {
         tabContainer.innerHTML = '';
         axes.forEach(axis => {
+            const hasData = window.ElevationRenderer && typeof window.ElevationRenderer.hasElevationData === 'function' ?
+                window.ElevationRenderer.hasElevationData(axis, window.AppState) : true;
+
             const btn = document.createElement('button');
-            btn.innerText = axis;
+            btn.innerText = axis + (hasData ? '' : ' ✖');
             btn.style.padding = "8px 15px";
             btn.style.border = "none";
             btn.style.background = (currentElevationAxis === axis) ? "#fff" : "transparent";
             btn.style.borderBottom = (currentElevationAxis === axis) ? "3px solid #3498db" : "none";
             btn.style.fontWeight = (currentElevationAxis === axis) ? "bold" : "normal";
-            btn.style.cursor = "pointer";
-            btn.onclick = () => {
-                currentElevationAxis = axis;
-                window.updateElevationViewer(); // 内容の更新
-            };
+
+            if (!hasData) {
+                btn.disabled = true;
+                btn.style.cursor = "not-allowed";
+                btn.style.opacity = "0.4";
+                btn.style.color = "#999";
+                btn.title = "この通りには耐力壁・構造データの入力がありません";
+            } else {
+                btn.style.cursor = "pointer";
+                btn.onclick = () => {
+                    currentElevationAxis = axis;
+                    window.updateElevationViewer(); // 内容の更新
+                };
+            }
             tabContainer.appendChild(btn);
         });
-    }
-
-    if (!currentElevationAxis && axes.length > 0) {
-        currentElevationAxis = axes[0];
     }
 
     modal.style.display = 'flex';
@@ -231,7 +250,8 @@ window.updateElevationViewer = function() {
     if (tabContainer) {
         const btns = tabContainer.querySelectorAll('button');
         btns.forEach(btn => {
-            const isActive = btn.innerText === currentElevationAxis;
+            const rawAxis = btn.innerText.replace(' ✖', '').trim();
+            const isActive = rawAxis === currentElevationAxis;
             btn.style.background = isActive ? "#fff" : "transparent";
             btn.style.borderBottom = isActive ? "3px solid #3498db" : "none";
             btn.style.fontWeight = isActive ? "bold" : "normal";
