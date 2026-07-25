@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>上置組水 構造計算WEB 完全操作マニュアル (v3.6.0)</title>
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --accent: #27ae60;
+            --blue: #2980b9;
+            --warning: #d35400;
+            --bg-light: #f8f9fa;
+            --border: #e2e8f0;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.7;
+            color: #333;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f4f6f8;
+        }
+        .header {
+            background: linear-gradient(135deg, #2c3e50 0%, #1a252f 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        .header h1 { margin: 0 0 10px 0; font-size: 26px; }
+        .header p { margin: 0; opacity: 0.9; font-size: 14px; }
+        .badge {
+            background: #27ae60;
+            color: white;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .toc {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            border: 1px solid var(--border);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        .toc h2 { margin-top: 0; font-size: 18px; color: var(--primary); border-bottom: 2px solid var(--accent); padding-bottom: 8px; }
+        .toc ul { list-style: none; padding-left: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 10px; }
+        .toc a { color: var(--blue); text-decoration: none; font-weight: bold; font-size: 14px; }
+        .toc a:hover { text-decoration: underline; }
+        
+        .section {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            border: 1px solid var(--border);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        .section h2 {
+            color: var(--primary);
+            font-size: 20px;
+            border-left: 5px solid var(--accent);
+            padding-left: 12px;
+            margin-top: 0;
+            margin-bottom: 20px;
+        }
+        .section h3 {
+            color: var(--blue);
+            font-size: 16px;
+            margin-top: 25px;
+            border-bottom: 1px dashed var(--border);
+            padding-bottom: 5px;
+        }
+        
+        .alert {
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            font-size: 14px;
+        }
+        .alert-important {
+            background: #fff3cd;
+            border-left: 5px solid #ffc107;
+            color: #856404;
+        }
+        .alert-tip {
+            background: #d4edda;
+            border-left: 5px solid #28a745;
+            color: #155724;
+        }
+        .alert-note {
+            background: #d1ecf1;
+            border-left: 5px solid #17a2b8;
+            color: #0c5460;
+        }
+
+        .img-box {
+            background: #f8f9fa;
+            border: 2px dashed #cbd5e1;
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+            margin: 15px 0;
+            color: #64748b;
+        }
+        .img-box img { max-width: 100%; border-radius: 4px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
+        .img-caption { font-size: 12px; color: #64748b; margin-top: 8px; font-weight: bold; }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+            font-size: 13px;
+        }
+        th, td {
+            border: 1px solid var(--border);
+            padding: 10px 12px;
+            text-align: left;
+        }
+        th { background: #f1f5f9; color: var(--primary); }
+        
+        .shortcut-key {
+            background: #e2e8f0;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>🏠 上置組水 構造計算WEB 完全操作マニュアル <span class="badge">v3.6.0 完全版</span></h1>
+        <p>木造軸組工法における「壁量計算・N値金物計算・風圧力見附面積求積・基礎スラブ/基礎梁構造計算」統合WEBアプリケーションガイド</p>
+    </div>
+
+    <div class="toc">
+        <h2>📌 目次</h2>
+        <ul>
+            <li><a href="#sec1">1. 最重要大原則（CAD作図と通り芯の準備）</a></li>
+            <li><a href="#sec2">2. 確認申請審査に関する重要注意点</a></li>
+            <li><a href="#sec3">3. マウス操作 ＆ 視点ナビゲーション</a></li>
+            <li><a href="#sec4">4. 画面構成 ＆ 階作図モード切替</a></li>
+            <li><a href="#sec5">5. 耐力壁・柱・開口入力 ＆ 壁の仕様設定</a></li>
+            <li><a href="#sec6">6. 屋根伏図の作図 ＆ 見附面積・風力計算</a></li>
+            <li><a href="#sec7">7. 基礎計算（スラブ・基礎梁）完全ガイド</a></li>
+            <li><a href="#sec8">8. 軸力立面図（立面ビューアー）の操作</a></li>
+            <li><a href="#sec9">9. データ保存・復元 ＆ 帳票一括PDF出力</a></li>
+        </ul>
+    </div>
+
+    <!-- 1. 最重要大原則 -->
+    <div class="section" id="sec1">
+        <h2>1. 最重要大原則（CAD作図と通り芯の準備）</h2>
+        
+        <div class="alert alert-important">
+            <strong>⚠️ 本プログラムの肝（最重要ルール）:</strong><br>
+            本システムで構造要素を正しく認識し、壁量や基礎計算を正確に行うためには、<strong>「必ず 柱・耐力壁・スラブ端部・床面積端部 が通る位置に通り芯（グリッド）が存在すること」</strong> が絶対条件となります。
+        </div>
+
+        <h3>💡 DXF/CADデータ準備のコツ（一番のハードルをクリアするために）</h3>
+        <p>アプリ上で後から通り芯を手動追加（<code>グリッド追加(オフセット)</code>）することも可能ですが、<strong>CADで作図する段階で通り芯（グリッド）を1mm単位で綺麗に整えておくこと</strong>が、その後の入力を圧倒的に楽にする最大のポイントです。</p>
+
+        <h3>📋 DXFレイヤー設定と自動抽出仕様</h3>
+        <p>DXFファイルを読み込む際、以下のレイヤー名およびエレメントタイプに基づいて各構造要素が自動抽出されます：</p>
+        <table>
+            <thead>
+                <tr>
+                    <th>対象要素</th>
+                    <th>推論レイヤー名キーワード</th>
+                    <th>有効なCADエンティティ</th>
+                    <th>説明・注意点</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>柱 (Pillar)</strong></td>
+                    <td><code>COL</code>, <code>COLUMN</code></td>
+                    <td>POINT, CIRCLE, CLOSED POLYGON</td>
+                    <td>柱の点・円・ポリゴンの中心座標が通り芯交点にスナップされて配置されます。</td>
+                </tr>
+                <tr>
+                    <td><strong>通り芯 (Grid)</strong></td>
+                    <td><code>GRID</code>, <code>GLID</code></td>
+                    <td>LINE, TEXT, MTEXT</td>
+                    <td>直線から通り芯座標、テキストから通り芯名（X1, Y1等）が自動抽出されます。</td>
+                </tr>
+                <tr>
+                    <td><strong>壁線 (Wall)</strong></td>
+                    <td><code>WALL</code></td>
+                    <td>LINE</td>
+                    <td>通り芯上の柱間に配置されている直線が耐力壁候補として読み込まれます。</td>
+                </tr>
+                <tr>
+                    <td><strong>床面積 (Area)</strong></td>
+                    <td><code>AREA</code></td>
+                    <td>CLOSED POLYGON</td>
+                    <td>閉じたポリゴンが階ごとの床面積領域として取り込まれます。</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- 2. 確認申請審査に関する注意点 -->
+    <div class="section" id="sec2">
+        <h2>2. 確認申請審査に関する重要注意点</h2>
+        
+        <div class="alert alert-tip">
+            <strong>安心してお使いいただくための審査基準の整理:</strong>
+        </div>
+        <ul>
+            <li><strong>🏗️ 基礎の構造計算（基礎スラブ・基礎梁）:</strong><br>
+            木造2階建て等の建築確認申請においては、<strong>基礎の構造計算書は提出不要</strong>です（審査機関への提出用計算書は「壁量計算書のみ」で問題ありません）。本アプリの基礎計算機能は、自社の安全設計確認および施工検討用としてご活用ください。</li>
+            
+            <li><strong>⚖️ 直下率（柱直下率・壁直下率） ＆ 重心・剛心計算:</strong><br>
+            これらも建築確認申請の審査においては<strong>提出不要（審査対象外）</strong>です。壁量充足率および4分割法の壁バランス比が適合していれば、確認申請はクリアとなります。</li>
+        </ul>
+    </div>
+
+    <!-- 3. マウス操作 ＆ 視点ナビゲーション -->
+    <div class="section" id="sec3">
+        <h2>3. マウス操作 ＆ 視点ナビゲーション</h2>
+        
+        <p>本システムは、CADソフト同様の直感的なキャンバス操作に対応しています。OS（Windows / Mac）や入力デバイスに応じて以下の操作を行います：</p>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>操作種別</th>
+                    <th>Windows（物理マウス）</th>
+                    <th>Mac（Trackpad / マウス）</th>
+                    <th>キャンバス上での動作</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>選択・入力・配置</strong></td>
+                    <td><span class="shortcut-key">左ボタン クリック</span></td>
+                    <td><span class="shortcut-key">1本指 タップ / クリック</span></td>
+                    <td>柱・壁・要素の配置、ラジオボタン選択、モーダル選択を行ないます。</td>
+                </tr>
+                <tr>
+                    <td><strong>画面の移動（パン）</strong></td>
+                    <td><span class="shortcut-key">右ボタン ホールド + ドラッグ</span></td>
+                    <td><span class="shortcut-key">2本指スワイプ / 右ドラッグ</span></td>
+                    <td>キャンバス全体を前後左右にスムーズに移動（パンニング）します。</td>
+                </tr>
+                <tr>
+                    <td><strong>拡大・縮小（ズーム）</strong></td>
+                    <td><span class="shortcut-key">マウスホイール 回転</span></td>
+                    <td><span class="shortcut-key">2本指ピンチイン / ピンチアウト</span></td>
+                    <td>カーソル位置を中心として図面を無段階拡大・縮小します。</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h3>🔍 「全体表示」ボタンによる一発ズームフィット</h3>
+        <p>キャンバス上部のヘッダー右側にある <strong>「🔍 全体表示」</strong> ボタンを押すと、読み込まれた全通り芯（グリッド）および建物全体が、キャンバスの中央に100%ピッタリ一発で拡大フィット表示されます。</p>
+        <div class="img-box">
+            <img src="img_dxf_upload.png" alt="全体表示ボタン">
+            <div class="img-caption">ヘッダー右上の「🔍 全体表示」ボタンで、図面全体が画面真ん中に自動フィットします。</div>
+        </div>
+    </div>
+
+    <!-- 4. 画面構成 ＆ 階作図モード切替 -->
+    <div class="section" id="sec4">
+        <h2>4. 画面構成 ＆ 階作図モード切替</h2>
+        
+        <p>画面最上部のメインタブ（<code>基礎</code>, <code>1階 作図</code>, <code>2階 作図</code>, <code>1階 屋根</code>, <code>2階 屋根</code>, <code>3Dプレビュー</code>）を選択することで、作図・解析モードが自動切り替えされます。</p>
+
+        <div class="alert alert-note">
+            <strong>💡 モード連動による表示レイヤー自動連動:</strong>
+            <ul>
+                <li><strong>作図モード（1F/2F作図）:</strong> 柱、耐力壁、開口部、床面積、4分割枠が全ON表示になります。</li>
+                <li><strong>屋根モード（1F/2F屋根）:</strong> 🏠 屋根面、✏️ 外壁線、屋根グリッドが自動ON表示になります。</li>
+                <li><strong>基礎モード（基礎）:</strong> 🏗️ スラブ、基礎梁、人通口、外壁線が自動ON表示になります。</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- 5. 耐力壁・柱・開口入力 ＆ 壁の仕様設定 -->
+    <div class="section" id="sec5">
+        <h2>5. 耐力壁・柱・開口入力 ＆ 壁の仕様設定</h2>
+
+        <h3>🧱 壁の仕様「⚙️ 変更」ボタンと事前設定</h3>
+        <p>右パネルの「🧱 壁の仕様」ヘッダー右側にある **「⚙️ 変更」** ボタンを押すと、配置する耐力壁の構造仕様（外壁面材、内壁筋交い、倍率）を設定・変更できます。</p>
+        
+        <div class="alert alert-tip">
+            <strong>入力の手順:</strong>
+            1. 事前に「⚙️ 変更」ボタンを押して作図したい壁仕様（倍率）を選択します。<br>
+            2. 操作モードで「3. 壁の配置」を選択し、通り芯上の柱間をクリック・ドラッグして入力します。<br>
+            3. 配置後も、選択ツールで壁をクリックしてプロパティモーダルからいつでも仕様を変更できます。
+        </div>
+
+        <div class="img-box">
+            <img src="img_wall_list.png" alt="壁の仕様変更モーダル">
+            <div class="img-caption">「壁の仕様 変更」モーダルで面材・筋交いの倍率を選んで入力・修正します。</div>
+        </div>
+
+        <h3>🏷️ 耐力壁の凡例表示（倍率数値のすっきり表示）</h3>
+        <p>画面中央下部には「凡例（耐力壁）」パネルが表示されます。キャンバス上の耐力壁は混雑を防ぐため、W1, W2などの個別の壁番号表記ではなく、凡例に基づいた仕様表記でスマートに表示されます。</p>
+    </div>
+
+    <!-- 6. 屋根伏図の作図 ＆ 見附面積・風力計算 -->
+    <div class="section" id="sec6">
+        <h2>6. 屋根伏図の作図 ＆ 見附面積・風力計算</h2>
+
+        <h3>🏠 新ツールの仕様（屋根伏図から見附面積を作図）</h3>
+        <p>新ツール（v3.6.0）では、旧ツールのようにCADから見附面を取り込むのではなく、<strong>「1階屋根 / 2階屋根」タブで屋根伏図（屋根ポリゴン・水上・水下・勾配）を作図・定義することで、立体の見附投影面積を完全自動算定</strong>いたします。</p>
+
+        <div class="img-box">
+            <img src="img_right_tools.png" alt="屋根の作図ツール">
+            <div class="img-caption">屋根伏図モードで屋根ポリゴンを作成し、水上・水下・軒出寸法を設定します。</div>
+        </div>
+
+        <h3>🌬️ 風圧力見附面積とカットライン（FL + 1.35m）</h3>
+        <p>風力計算に必要な見附面積は、建築基準法施行令第87条に基づき、床面（FL）から 1.35m 上のカットラインにより自動計算され、見附求積表および風圧力検定へリアルタイム連動します。</p>
+    </div>
+
+    <!-- 7. 基礎計算（スラブ・基礎梁）完全ガイド -->
+    <div class="section" id="sec7">
+        <h2>7. 基礎計算（スラブ・基礎梁）完全ガイド</h2>
+
+        <p>「基礎」タブを選択すると、基礎構造計算モードに切り替わります。</p>
+
+        <h3>亀甲分割線（負担幅 B、面積 A）と連続梁NMQ応力図</h3>
+        <ul>
+            <li><strong>亀甲分割自動生成:</strong> 配置された基礎スラブは45度方向の亀甲分割線により自重・接地圧が自動算出され、基礎梁への負担幅 $B$ (m) および面積 $A$ (㎡) がリアルタイム計算されます。</li>
+            <li><strong>NMQ応力図（軸力 N・曲げ M・せん断 Q）:</strong> 基礎梁を選択すると、連続梁モデルに基づく高精度な軸力N図・曲げモーメントM図・せん断力Q図の3段グラフが表示されます。</li>
+            <li><strong>断面検定 ＆ NG警告:</strong> 許容応力を超過したスパンはNG表示となり、詳細モーダルで成（D）、梁幅（b）、主筋本数（上端/下端）をリアルタイムに変更して再検定を行えます。</li>
+        </ul>
+    </div>
+
+    <!-- 8. 軸力立面図（立面ビューアー） -->
+    <div class="section" id="sec8">
+        <h2>8. 軸力立面図（立面ビューアー）の操作</h2>
+
+        <p>画面左パネルの「📊 耐力壁の軸力図 (立面)」ボタンを押すと、通り芯ごとの立面ビューアーモーダルが起動します。</p>
+        <p>構造データ（柱や耐力壁）が存在しない通り芯については、上部タブに <strong><code>✖ (データなし)</code></strong> と表示され、選択できないよう安全制御されています。</p>
+    </div>
+
+    <!-- 9. データ保存・復元 ＆ 帳票一括PDF出力 -->
+    <div class="section" id="sec9">
+        <h2>9. データ保存・復元 ＆ 帳票一括PDF出力</h2>
+
+        <h3>💾 保存と復元（JSONフォーマット）</h3>
+        <p>ヘッダーの「💾 保存」ボタンで現在の作図データが全保存されます。「📂 復元」ボタンでJSONファイルを選択すると、全データおよび階モードが復元され、<strong>設定された通り芯の中心が画面中央に自動でズームフィット</strong>されます。</p>
+
+        <h3>📄 計算書の一括PDF出力</h3>
+        <p>左パネル上部の「📄 計算書を一括出力 (PDF)」ボタンを押すと、壁量計算書・4分割法バランス表・N値計算表・求積表を含んだ完璧な印刷PDFプレビューが表示されます。（※「存在壁量 ＆ 壁量検定」ボタンから判定一覧も即座に確認できます）。</p>
+
+        <div class="img-box">
+            <img src="img_output_btn.png" alt="計算書一括出力">
+            <div class="img-caption">一括出力ボタンで、確認申請提出用の壁量計算書PDFを生成します。</div>
+        </div>
+    </div>
+
+    <div class="footer" style="text-align: center; margin-top: 40px; padding: 20px; color: #64748b; font-size: 12px;">
+        &copy; 2026 上置組水 構造計算WEB System. All Rights Reserved. (v3.6.0)
+    </div>
+
+</body>
+</html>
