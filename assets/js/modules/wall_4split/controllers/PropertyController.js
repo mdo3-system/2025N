@@ -120,42 +120,14 @@ window.PropertyController = {
 
         if (type === 'pillar') {
             window.AppState.selectedPillar = item;
-            if (typeof window.showPillarProps === 'function') {
+            if (window.PillarPropertyController) {
+                window.PillarPropertyController.showPillarProps(item);
+            } else if (typeof window.showPillarProps === 'function') {
                 window.showPillarProps(item);
             }
-            // 柱編集の右パネル側連動
-            const pMark = document.getElementById("prop-mark");
-            if (pMark) {
-                // 手動指定金物を読み込みセット
-                pMark.value = item.manualMark ? item.manualMark : "";
-                pMark.onchange = function() {
-                    item.manualMark = this.value === "" ? null : this.value;
-                    window.AppController.refreshAll();
-                    if (typeof window.showPillarProps === 'function') window.showPillarProps(item);
-                };
-            }
-            const pCorner = document.getElementById("prop-corner");
-            if (pCorner) {
-                pCorner.checked = item.isManualCorner !== null ? item.isManualCorner : (item.isCornerAuto || false);
-                pCorner.onchange = function() {
-                    item.isManualCorner = this.checked;
-                    window.AppController.refreshAll();
-                    if (typeof window.showPillarProps === 'function') window.showPillarProps(item);
-                };
-            }
-            const pLcalc = document.getElementById("prop-lcalc");
-            if (pLcalc) {
-                pLcalc.value = item.lCalcMode || "auto";
-                pLcalc.onchange = function() {
-                    item.lCalcMode = this.value;
-                    window.AppController.refreshAll();
-                    if (typeof window.showPillarProps === 'function') window.showPillarProps(item);
-                };
-            }
-            return; // 柱はモーダルではなく右パネルの '#pillar-props' を使用するため処理終了
+            return; // 柱はモーダルではなく右パネルを使用
         } else {
             window.AppState.selectedPillar = null;
-            // 柱以外の要素（壁等）が選択された場合は右パネルの柱情報を閉じる
             const pp = document.getElementById('pillar-props');
             if (pp) pp.style.display = 'none';
         }
@@ -179,7 +151,7 @@ window.PropertyController = {
         
         if (type === 'wall' || type === 'window') {
             this.updateWallFields(type, item);
-            this.syncCenterPanel(item); // Sync right panel tool too
+            this.syncCenterPanel(item);
         }
     },
 
@@ -190,57 +162,12 @@ window.PropertyController = {
         const item = hit.item;
 
         if (oldType === "pillar") {
-            item.isManualCorner = document.getElementById("edit-pillar-corner").checked;
-            item.manualMark = document.getElementById("edit-pillar-mark").value || null;
-            item.name = document.getElementById("edit-pillar-name").value || null;
-            
-            const newH = parseFloat(document.getElementById("edit-pillar-h").value);
-            item.h = isNaN(newH) ? null : newH;
-
+            if (window.PillarPropertyController) {
+                window.PillarPropertyController.applyChanges(item);
+            }
         } else if (oldType === "wall" || oldType === "window") {
-            const newType = document.getElementById("edit-element-type").value;
-            
-            // 高連動ロジック
-            if (oldType === "wall" || newType === "wall") {
-                const newH = parseFloat(document.getElementById("edit-wall-h")?.value);
-                if (!isNaN(newH)) {
-                    item.h = newH;
-                    // 取り付く柱の高さも自動修正
-                    if (item.p1) item.p1.h = newH;
-                    if (item.p2) item.p2.h = newH;
-                    
-                    // 同一方向の隣接連動 (簡易実装: 同じ座標を共有する他の壁・柱を探す)
-                    this.propagateHeight(item, newH);
-                }
-            }
-
-            // 壁・開口の切り替えロジック
-            if (oldType !== newType) {
-                if (newType === "window") {
-                    window.AppState.walls = window.AppState.walls.filter(w => w !== item);
-                    window.AppState.windowsArr.push(item);
-                    hit.type = "window";
-                } else {
-                    window.AppState.windowsArr = window.AppState.windowsArr.filter(w => w !== item);
-                    window.AppState.walls.push(item);
-                    hit.type = "wall";
-                }
-            }
-
-            if (newType === "wall") {
-                item.outPanelId = document.getElementById("edit-wall-p1").value;
-                item.inPanelId  = document.getElementById("edit-wall-p2").value;
-                item.braceId    = document.getElementById("edit-wall-b").value;
-                
-                // キャッシュは最小限（totalValのみ、既存ロジックとの互換性のため）
-                item.totalVal = window.WallEngine.getTotalMultiplier(item);
-                
-                // TASUKI判定などのUI/Logic用フラグ
-                const bSpec = window.WallEngine.getBraceSpec(item.braceId);
-                item.isTasuki = bSpec.text.includes('たすき');
-            } else {
-                item.length = parseInt(document.getElementById("edit-win-width").value, 10);
-                item.totalVal = 0;
+            if (window.WallPropertyController) {
+                window.WallPropertyController.applyChanges(hit);
             }
         } else if (oldType === "area") {
             item.areaType = document.getElementById("edit-area-type").value;
