@@ -106,6 +106,8 @@ window.AreaEngine = {
 
     /**
      * 柱ごとの負担面積計算
+     * 基準法モード: 床・小屋裏のみ集計（バルコニー・ポーチ・吹き抜けは完全除外）
+     * 性能表示モード: 1F柱に見上げ要素（ポーチ, バルコニー 0.4倍, 2F吹抜, 2F小屋裏）を含めて集計
      */
     calculatePillarLoadAreas: function(state, overrideMode = null) {
         const s = state || window.AppState;
@@ -116,42 +118,60 @@ window.AreaEngine = {
         // モード決定: 手動指定(overrideMode)がなければ全体設定(calcMode)に従う
         const mode = (overrideMode && overrideMode !== 'auto') ? overrideMode : s.config.calcMode;
         const isSeinou = (mode === 'seinou');
+        const areaLines = s.areaLines || [];
 
         ['1F', '2F'].forEach(f => {
             const ap = s.pillars.filter(p => !p.isDeleted && !p.isInvalidPos && p.floor === f);
             if (ap.length === 0) return;
 
-            // 集計対象の面積種別を定義 (常に自階 f を参照)
-            let targetSpecs = [
-                { type: 'floor',   ratio: 1.0 },
-                { type: 'attic',   ratio: atticRatio }
-            ];
-            
-            if (isSeinou) {
-                // 性能表示(見上げ)の場合は、その階に描かれているすべての領域を合算
-                targetSpecs.push(
-                    { type: 'void',    ratio: 1.0 },
-                    { type: 'porch',   ratio: 1.0 },
-                    { type: 'balcony', ratio: 0.4 }
-                );
-            }
+            // 各階に応じた負担ポリゴンリスト { poly, ratio, type }
+            const targetPolys = [];
 
-            // 各種別のポリゴンを取得
-            const typePolys = targetSpecs.map(spec => ({
-                ...spec,
-                polys: s.areaLines.filter(a => {
-                    if (a.floor !== f || !a.vertices || a.vertices.length < 3) return false;
-                    const aType = a.areaType || 'floor'; // デフォルトはfloor
-                    return aType === spec.type;
-                }).map(a => {
+            const addAreaPolys = (targetFloor, targetType, ratio) => {
+                areaLines.filter(a => {
+                    if (a.floor !== targetFloor || !a.vertices || a.vertices.length < 3) return false;
+                    const aType = a.areaType || 'floor';
+                    return aType === targetType;
+                }).forEach(a => {
                     let p = a.vertices.map(v => ({ x: v.x, y: v.y }));
                     M.ensureCCW(p);
-                    return p;
-                })
-            }));
+                    targetPolys.push({ poly: p, ratio: ratio, type: targetType });
+                });
+            };
+
+            if (!isSeinou) {
+                // 【基準法モード（見下げ）】: バルコニー、ポーチ、吹き抜けは一切除外
+                if (f === '1F') {
+                    addAreaPolys('1F', 'floor', 1.0);
+                    addAreaPolys('1F', 'attic', atticRatio);
+                    addAreaPolys('2F', 'attic', atticRatio);
+                } else { // 2F
+                    addAreaPolys('2F', 'floor', 1.0);
+                    addAreaPolys('2F', 'attic', atticRatio);
+                }
+            } else {
+                // 【性能表示モード（見上げ）】: ポーチ, バルコニー(0.4倍), 吹き抜けを含める
+                if (f === '1F') {
+                    addAreaPolys('1F', 'floor', 1.0);
+                    addAreaPolys('1F', 'attic', atticRatio);
+                    addAreaPolys('2F', 'attic', atticRatio);
+                    addAreaPolys('2F', 'void', 1.0);
+                    addAreaPolys('1F', 'porch', 1.0);
+                    addAreaPolys('1F', 'balcony', 0.4);
+                } else { // 2F
+                    addAreaPolys('2F', 'floor', 1.0);
+                    addAreaPolys('2F', 'attic', atticRatio);
+                    addAreaPolys('2F', 'void', 1.0);
+                }
+            }
 
             ap.forEach(p => {
-                let cell = [{ x: p.x - INF, y: p.y - INF }, { x: p.x + INF, y: p.y - INF }, { x: p.x + INF, y: p.y + INF }, { x: p.x - INF, y: p.y + INF }];
+                let cell = [
+                    { x: p.x - INF, y: p.y - INF },
+                    { x: p.x + INF, y: p.y - INF },
+                    { x: p.x + INF, y: p.y + INF },
+                    { x: p.x - INF, y: p.y + INF }
+                ];
                 M.ensureCCW(cell);
                 ap.forEach(op => { 
                     if (op.id !== p.id && Math.hypot(op.x - p.x, op.y - p.y) >= 1) {
@@ -162,14 +182,12 @@ window.AreaEngine = {
                 let totalAreaVal = 0;
                 let tributaryPolygons = [];
                 
-                typePolys.forEach(tp => {
-                    tp.polys.forEach(poly => {
-                        const intersected = M.clipPolygonByPolygon(cell, poly);
-                        if (intersected.length >= 3) {
-                            totalAreaVal += M.polygonArea(intersected) * tp.ratio;
-                            tributaryPolygons.push(intersected);
-                        }
-                    });
+                targetPolys.forEach(tp => {
+                    const intersected = M.clipPolygonByPolygon(cell, tp.poly);
+                    if (intersected.length >= 3) {
+                        totalAreaVal += M.polygonArea(intersected) * tp.ratio;
+                        tributaryPolygons.push(intersected);
+                    }
                 });
 
                 p.tributaryPolygon = tributaryPolygons; 

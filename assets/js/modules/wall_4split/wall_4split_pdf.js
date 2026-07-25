@@ -326,7 +326,7 @@ function getAreaRowsHtml(area, i) {
         });
 
         if (mode === 'area') {
-            x.lineWidth = 1.5; x.strokeStyle = '#27ae60'; x.setLineDash([5, 5]);
+            x.lineWidth = 2.0; x.strokeStyle = '#27ae60'; x.setLineDash([]);
             pillars.filter(p => !p.isDeleted && !p.isInvalidPos && p.floor === f).forEach(p => {
                 // ★ レイヤ表示判定
                 if (!isPrint && p.layer && layerVisibility[p.layer] === false) return;
@@ -334,7 +334,7 @@ function getAreaRowsHtml(area, i) {
                 const polys = p.tributaryPolygons || (p.tributaryPolygon ? [p.tributaryPolygon] : []);
                 polys.forEach(poly => {
                     if (poly && poly.length >= 3) {
-                        x.fillStyle = 'rgba(46, 204, 113, 0.1)';
+                        x.fillStyle = 'rgba(46, 204, 113, 0.15)';
                         x.beginPath();
                         poly.forEach((v, i) => { let cp = toCanvas(v.x, v.y); if (i === 0) x.moveTo(cp.cx, cp.cy); else x.lineTo(cp.cx, cp.cy); });
                         x.closePath(); x.fill(); x.stroke();

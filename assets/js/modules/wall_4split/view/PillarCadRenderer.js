@@ -87,9 +87,10 @@ window.PillarCadRenderer = {
      */
     drawTributaryAreas: function(state) {
         const ctx = state.ctx;
-        ctx.lineWidth    = 1.5;
+        ctx.save();
+        ctx.lineWidth    = 2.0;
         ctx.strokeStyle  = '#27ae60';
-        ctx.setLineDash([5, 5]);
+        ctx.setLineDash([]); // [v3.3.0] 破線を廃止し、ボロノイ境界分割線をクッキリした実線で可視化
 
         const renderer = window.MainRenderer;
 
@@ -98,7 +99,7 @@ window.PillarCadRenderer = {
             .forEach(p => {
                 if (!p.tributaryPolygon || p.tributaryPolygon.length === 0) return;
 
-                ctx.fillStyle = 'rgba(46, 204, 113, 0.1)';
+                ctx.fillStyle = 'rgba(46, 204, 113, 0.15)';
                 p.tributaryPolygon.forEach(poly => {
                     ctx.beginPath();
                     poly.forEach((v, i) => {
@@ -143,6 +144,7 @@ window.PillarCadRenderer = {
             });
 
         ctx.setLineDash([]);
+        ctx.restore();
     }
 };
 

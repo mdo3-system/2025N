@@ -433,13 +433,13 @@ window.DocumentRenderer = {
     drawAreaTributaries: function(ctx, floor, toC, isPrint) {
         const state = window.AppState;
         ctx.save();
-        ctx.lineWidth = 1.5; ctx.strokeStyle = '#27ae60'; ctx.setLineDash([5, 5]);
+        ctx.lineWidth = 2.0; ctx.strokeStyle = '#27ae60'; ctx.setLineDash([]);
         state.pillars.filter(p => !p.isDeleted && !p.isInvalidPos && p.floor === floor).forEach(p => {
             if (!isPrint && state.layerVisibility[p.layer] === false) return;
             const polys = p.tributaryPolygons || (p.tributaryPolygon ? [p.tributaryPolygon] : []);
             polys.forEach(poly => {
                 if (poly && poly.length >= 3) {
-                    ctx.fillStyle = 'rgba(46, 204, 113, 0.1)';
+                    ctx.fillStyle = 'rgba(46, 204, 113, 0.15)';
                     ctx.beginPath();
                     poly.forEach((v, i) => { let cp = toC(v.x, v.y); if (i === 0) ctx.moveTo(cp.cx, cp.cy); else ctx.lineTo(cp.cx, cp.cy); });
                     ctx.closePath(); ctx.fill(); ctx.stroke();
