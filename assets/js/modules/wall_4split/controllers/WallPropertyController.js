@@ -1,6 +1,6 @@
 /**
  * controllers/WallPropertyController.js - 壁・開口専用プロパティコントローラー
- * v3.4.0 Refactoring: Single Responsibility Principle (SRP)
+ * v3.4.4 Refactoring: Single Responsibility Principle (SRP) & Modal Spec Binding
  */
 
 window.WallPropertyController = {
@@ -15,7 +15,7 @@ window.WallPropertyController = {
         const newTypeEl = document.getElementById("edit-element-type");
         const newType = newTypeEl ? newTypeEl.value : oldType;
 
-        // 高連動ロジック
+        // 1. 軸組階高連動ロジック
         if (oldType === "wall" || newType === "wall") {
             const hEl = document.getElementById("edit-wall-h");
             const newH = hEl ? parseFloat(hEl.value) : NaN;
@@ -24,14 +24,14 @@ window.WallPropertyController = {
                 if (item.p1) item.p1.h = newH;
                 if (item.p2) item.p2.h = newH;
                 
-                // 同一方向の隣接連動
+                // 同一座標・方向の近接部材へ階高伝播
                 if (window.PropertyController && typeof window.PropertyController.propagateHeight === 'function') {
                     window.PropertyController.propagateHeight(item, newH);
                 }
             }
         }
 
-        // 壁・開口の切り替えロジック
+        // 2. 耐力壁・開口部の切り替えロジック
         if (oldType !== newType) {
             if (newType === "window") {
                 window.AppState.walls = window.AppState.walls.filter(w => w !== item);
@@ -44,6 +44,7 @@ window.WallPropertyController = {
             }
         }
 
+        // 3. 壁の仕様（外側パネル・内側パネル・筋かい）更新
         if (newType === "wall") {
             const p1El = document.getElementById("edit-wall-p1");
             const p2El = document.getElementById("edit-wall-p2");
@@ -55,12 +56,24 @@ window.WallPropertyController = {
             if (window.WallEngine) {
                 item.totalVal = window.WallEngine.getTotalMultiplier(item);
                 const bSpec = window.WallEngine.getBraceSpec(item.braceId);
-                item.isTasuki = bSpec.text.includes('たすき');
+                item.isTasuki = bSpec ? (bSpec.text || '').includes('たすき') : false;
             }
         } else {
             const winWEl = document.getElementById("edit-win-width");
             if (winWEl) item.length = parseInt(winWEl.value, 10);
             item.totalVal = 0;
+        }
+
+        // 右パネルの入力デフォルト仕様も最新選択値に同期
+        const p1Main = document.getElementById("wall-p1");
+        const p2Main = document.getElementById("wall-p2");
+        const bMain  = document.getElementById("wall-b");
+        if (p1Main && item.outPanelId) p1Main.value = item.outPanelId;
+        if (p2Main && item.inPanelId)  p2Main.value = item.inPanelId;
+        if (bMain  && item.braceId)    bMain.value  = item.braceId;
+
+        if (window.UIView && typeof window.UIView.updateWallSpecSummary === 'function') {
+            window.UIView.updateWallSpecSummary();
         }
     }
 };
