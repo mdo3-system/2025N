@@ -25,11 +25,9 @@ window.ReportEngine = {
                 const rY = sd_state.qY || 0;
                 let totalKxt = 0, totalKyt = 0;
                 walls.filter(w => w.floor === f).forEach(w => {
-                    const dx = Math.abs(w.p2.x - w.p1.x) / 1000;
-                    const dy = Math.abs(w.p2.y - w.p1.y) / 1000;
-                    const tv = window.WallEngine ? window.WallEngine.getTotalMultiplier(w) : 0;
-                    totalKxt += dx * tv;
-                    totalKyt += dy * tv;
+                    const res = window.WallEngine ? window.WallEngine.calcWallEffectiveLengths(w) : { kx: 0, ky: 0 };
+                    totalKxt += res.kx;
+                    totalKyt += res.ky;
                 });
                 if (totalKxt < rX) {
                     errors.push(`❌ 【壁量計算】${f} X方向：存在壁量 (${totalKxt.toFixed(2)}m) が必要壁量 (${rX.toFixed(2)}m) 未満です。`);

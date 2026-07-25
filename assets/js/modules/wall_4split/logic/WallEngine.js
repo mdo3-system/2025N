@@ -48,6 +48,28 @@ window.WallEngine = {
     },
 
     /**
+     * グレー本2025 (2.4.1.3a/b) 準拠の斜め壁有効壁長計算 (cos^2 θ / sin^2 θ)
+     */
+    calcWallEffectiveLengths: function(w) {
+        if (!w || !w.p1 || !w.p2) return { kx: 0, ky: 0, len: 0, tv: 0, cos2: 0, sin2: 0 };
+        const dx = Math.abs(w.p2.x - w.p1.x);
+        const dy = Math.abs(w.p2.y - w.p1.y);
+        const len = Math.hypot(dx, dy);
+        if (len === 0) return { kx: 0, ky: 0, len: 0, tv: 0, cos2: 0, sin2: 0 };
+
+        const tv = this.getTotalMultiplier(w);
+        const lenM = len / 1000;
+        
+        const cos2 = (dx * dx) / (len * len);
+        const sin2 = (dy * dy) / (len * len);
+
+        const kx = lenM * tv * cos2; // X方向許容せん断耐力・有効壁長 (m)
+        const ky = lenM * tv * sin2; // Y方向許容せん断耐力・有効壁長 (m)
+
+        return { kx, ky, len: lenM, tv, cos2, sin2 };
+    },
+
+    /**
      * Determine if a wall is effectively an opening
      */
     isOpening: function(wall) {

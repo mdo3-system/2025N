@@ -252,15 +252,12 @@ window.StructuralEngine = {
         let xWalls = [], yWalls = [];
         
         state.walls.filter(w => w.floor === floor).forEach(w => {
-            let dx = Math.abs(w.p2.x - w.p1.x) / 1000;
-            let dy = Math.abs(w.p2.y - w.p1.y) / 1000;
-            let tv = (typeof window.getWallTotalVal === 'function') ? window.getWallTotalVal(w) : (w.totalVal || 0);
+            const res = window.WallEngine ? window.WallEngine.calcWallEffectiveLengths(w) : { kx: 0, ky: 0 };
+            const kx = res.kx;
+            const ky = res.ky;
 
             let cx = (w.p1.x + w.p2.x) / 2;
             let cy = (w.p1.y + w.p2.y) / 2;
-
-            let kx = dx * tv;
-            let ky = dy * tv;
 
             kxt += kx; sy += kx * cy; 
             kyt += ky; sx += ky * cx;
@@ -391,15 +388,12 @@ window.StructuralEngine = {
             let vxt = 0, vxb = 0, vyl = 0, vyr = 0;
 
             walls.forEach(w => {
-                const dx = Math.abs(w.p2.x - w.p1.x) / 1000;
-                const dy = Math.abs(w.p2.y - w.p1.y) / 1000;
-                const tv = window.WallEngine.getTotalMultiplier(w);
+                const res = window.WallEngine ? window.WallEngine.calcWallEffectiveLengths(w) : { kx: 0, ky: 0 };
+                const kx = res.kx;
+                const ky = res.ky;
 
                 const cx = (w.p1.x + w.p2.x) / 2;
                 const cy = (w.p1.y + w.p2.y) / 2;
-
-                const kx = dx * tv;
-                const ky = dy * tv;
 
                 if (b) {
                     if (cy >= b.yLineT - 0.5) vxt += kx;

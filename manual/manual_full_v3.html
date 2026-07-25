@@ -495,12 +495,18 @@
             <strong>📖 グレー本2025（木造軸組工法住宅の許容応力度設計）完全準拠仕様:</strong>
         </div>
 
-        <h3>① 斜め耐力壁の壁倍率分解計算</h3>
-        <p>通り芯に対して角度 <strong>θ（シータ）</strong> を持った斜め耐力壁の壁倍率 <strong>α（アルファ）</strong> は、グレー本2025の規定に従い、<strong>X方向およびY方向にベクトル分解（cos θ および sin θ）して地震力・風圧力の耐力計算に使用</strong>されます：</p>
-        <ul>
-            <li><strong>X方向の有効壁長:</strong> <code style="font-size:15px; font-weight:bold; background:#e2e8f0; padding:2px 8px; border-radius:4px;">W<sub>eff,X</sub> = L × cos θ × α</code></li>
-            <li><strong>Y方向の有効壁長:</strong> <code style="font-size:15px; font-weight:bold; background:#e2e8f0; padding:2px 8px; border-radius:4px;">W<sub>eff,Y</sub> = L × sin θ × α</code></li>
-        </ul>
+        <h3>① 斜め耐力壁の剛性と許容せん断耐力（壁倍率分解）</h3>
+        <p>通り芯に対して角度 <strong>θ（シータ）</strong> を持った斜め耐力壁の許容せん断耐力（および有効壁長・剛性）は、グレー本2025（図 2.4.1.1 / 式 2.4.1.3a・b）の規定に従い、<strong>X方向およびY方向に cos²θ および sin²θ を乗じて正しく分解計算</strong>されます：</p>
+        
+        <div style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:8px; padding:15px; margin:15px 0;">
+            <div style="font-weight:bold; color:#1e293b; margin-bottom:8px;">【グレー本2025 (図 2.4.1.1) 確定公式】</div>
+            <ul style="margin:0; padding-left:20px;">
+                <li><strong>斜め壁の全許容せん断耐力:</strong> <code>P<sub>a</sub> [kN] = 壁倍率 × L<sub>θ</sub> × 1.96</code></li>
+                <li><strong>X方向の許容せん断耐力 (壁量・剛性):</strong> <code style="font-size:15px; font-weight:bold; background:#e2e8f0; padding:2px 8px; border-radius:4px;">P<sub>a,X</sub> = P<sub>a</sub> × cos²θ</code></li>
+                <li><strong>Y方向の許容せん断耐力 (壁量・剛性):</strong> <code style="font-size:15px; font-weight:bold; background:#e2e8f0; padding:2px 8px; border-radius:4px;">P<sub>a,Y</sub> = P<sub>a</sub> × sin²θ</code></li>
+            </ul>
+            <div style="font-size:12px; color:#64748b; margin-top:8px;">※有効壁長換算においても同様に <code>W<sub>eff,X</sub> = L<sub>θ</sub> × α × cos²θ</code>, <code>W<sub>eff,Y</sub> = L<sub>θ</sub> × α × sin²θ</code> として計算されます。</div>
+        </div>
 
         <h3>② 斜め耐力壁に接する柱の金物（N値）計算</h3>
         <p>一方、斜め壁の両端に位置する柱の引抜金物（N値計算）においては、<strong>耐力を分解しない元の壁耐力（分解前の壁倍率 α）をそのまま用いて安全側に柱の引抜力を算出</strong>いたします。これにより、実際の地震時における局所的な金物引き抜きに対して絶対的な安全性を担保しています。</p>

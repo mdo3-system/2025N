@@ -87,13 +87,15 @@
    - **2階 (2F)**:
      $$A_{\text{seismic, 2F}} = A_{\text{floor, 2F}} + \left( A_{\text{attic, 2F}} \times 0.67 \right) + A_{\text{void}}$$
 
-### ② 斜め耐力壁のXY方向換算（壁倍率分解）
-通り芯方向に対して角度 $\theta$ を持った「斜め壁」の耐力壁長 $L$、倍率 $\alpha$ は、X軸およびY軸のそれぞれ独立した成分へと余弦・正弦定理に基づいて分解・換算される。
+### ② 斜め耐力壁のXY方向換算（グレー本2025 図 2.4.1.1 / 式 2.4.1.3a・b 許容せん断耐力・剛性分解）
+通り芯方向に対して角度 $\theta$ を持った「斜め壁」の許容せん断耐力 $P_a$（壁長 $L_\theta$、倍率 $\alpha$）は、グレー本2025の規定に従い、変位および力学成分分解に基づく2乗項 $\cos^2 \theta, \sin^2 \theta$ を用いて X軸および Y軸方向へ分解・換算される。
 
-- **X軸方向の有効壁長 $W_{\text{eff, X}}$**:
-  $$W_{\text{eff, X}} = L \times \cos \theta \times \alpha$$
-- **Y軸方向の有効壁長 $W_{\text{eff, Y}}$**:
-  $$W_{\text{eff, Y}} = L \times \sin \theta \times \alpha$$
+- **斜め壁の全許容せん断耐力 $P_a$**:
+  $$P_a\text{ [kN]} = \alpha \times L_\theta \times 1.96$$
+- **X軸方向の許容せん断耐力 $P_{a, X}$ (有効壁長 $W_{\text{eff, X}}$)**:
+  $$P_{a, X} = P_a \times \cos^2 \theta \quad \left( W_{\text{eff, X}} = L_\theta \times \alpha \times \cos^2 \theta \right)$$
+- **Y軸方向の許容せん断耐力 $P_{a, Y}$ (有効壁長 $W_{\text{eff, Y}}$)**:
+  $$P_{a, Y} = P_a \times \sin^2 \theta \quad \left( W_{\text{eff, Y}} = L_\theta \times \alpha \times \sin^2 \theta \right)$$
 
 ### ③ 柱引抜N値計算ロジック
 柱の接合金物（ホールダウン金物等）を選定するための柱頭・柱脚の付加引抜力算定ロジック（N値計算）の確定。
