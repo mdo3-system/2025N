@@ -1,4 +1,4 @@
 /**
  * Version.js - Centralized Version Management
  */
-window.APP_VERSION = "v3.5.1"; // Feature: Add Zoom Fit button & disable empty axis tabs in elevation viewer
+window.APP_VERSION = "v3.5.2"; // Fix: Restore roof mode radio button, exact mode layer visibility sync, and precision Zoom Fit

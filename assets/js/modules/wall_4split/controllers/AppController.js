@@ -349,22 +349,40 @@ window.AppController = {
         const vis = window.AppState.elementVisibility;
         if (vis) {
             if (mode === 'roof') {
-                vis.grids = true; // [v3.0.9] 屋根モード時も通り芯を必ず表示！
-                vis.pillars = true; // 柱も基準として表示
-                vis.f_ext_walls = true;
+                // 屋根モード時: 屋根・外壁線・屋根グリッドはすべてON、作図用・基礎用はOFF (柱はガイド用ON)
+                vis.grids = true;
                 vis.roofGrids = true;
                 vis.roofs = true;
+                vis.f_ext_walls = true;
+
+                vis.pillars = true;
+                vis.pillarNValues = false;
+                vis.walls = false;
+                vis.windows = false;
+                vis.areas = false;
+                vis.div4 = false;
+
+                vis.f_slabs = false;
+                vis.f_beams = false;
+                vis.f_manholes = false;
             } else {
-                // 初回未設定時のみ初期デフォルト値をセットし、ユーザーが個別に変更した設定を保持する
-                if (vis.pillars === undefined) vis.pillars = true;
-                if (vis.walls === undefined) vis.walls = true;
-                if (vis.windows === undefined) vis.windows = true;
-                if (vis.grids === undefined) vis.grids = true;
-                if (vis.areas === undefined) vis.areas = true;
-                if (vis.div4 === undefined) vis.div4 = true;
-                if (vis.pillarNValues === undefined) vis.pillarNValues = true;
+                // 1F/2F作図モード時: 作図モード用(柱・壁・N値・開口・面積・4分割)はすべてON！屋根用・基礎用はOFF
+                vis.grids = true;
                 vis.roofGrids = false;
+
+                vis.pillars = true;
+                vis.pillarNValues = true;
+                vis.walls = true;
+                vis.windows = true;
+                vis.areas = true;
+                vis.div4 = true;
+
                 vis.roofs = false;
+                vis.f_ext_walls = false;
+
+                vis.f_slabs = false;
+                vis.f_beams = false;
+                vis.f_manholes = false;
             }
         }
 
@@ -372,10 +390,10 @@ window.AppController = {
         const domMappings = {
             'v-layer-grids': vis ? vis.grids : true,
             'v-layer-pillars': vis ? vis.pillars : true,
-            'v-layer-pillarNValues': vis ? vis.pillarNValues : true,
-            'vis-wall': vis ? vis.walls : true,
-            'v-layer-windows': vis ? vis.windows : true,
-            'vis-diaph': vis ? vis.areas : true,
+            'v-layer-pillarNValues': vis ? vis.pillarNValues : (mode !== 'roof'),
+            'vis-wall': vis ? vis.walls : (mode !== 'roof'),
+            'v-layer-windows': vis ? vis.windows : (mode !== 'roof'),
+            'vis-diaph': vis ? vis.areas : (mode !== 'roof'),
             'v-layer-f_slabs': false,
             'v-layer-f_beams': false,
             'v-layer-f_manholes': false,
@@ -402,8 +420,15 @@ window.AppController = {
     /**
      * [v2.7.0] 屋根作図階の切替
      */
+    setRoofFloor: function(floor) {
+        window.AppState.currentFloor = floor;
+        this.switchAppMode('roof');
+        const roofRadio = document.querySelector('input[name="mode"][value="draw-roof"]');
+        if (roofRadio) roofRadio.checked = true;
+    },
+
     /**
-     * [v3.5.1] 全体表示 (Zoom Fit) - 全要素のBoundingBoxを計算してキャンバス全体へ表示調整
+     * [v3.5.1] 全体表示 (Zoom Fit) - 作図全要素のBoundingBoxを正確に計算してキャンバス中央にフィット調整
      */
     zoomFit: function() {
         const s = window.AppState;
@@ -412,7 +437,7 @@ window.AppController = {
         let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
 
         const includePoint = (x, y) => {
-            if (typeof x === 'number' && !isNaN(x) && typeof y === 'number' && !isNaN(y)) {
+            if (typeof x === 'number' && !isNaN(x) && isFinite(x) && typeof y === 'number' && !isNaN(y) && isFinite(y)) {
                 if (x < minX) minX = x;
                 if (x > maxX) maxX = x;
                 if (y < minY) minY = y;
@@ -420,28 +445,32 @@ window.AppController = {
             }
         };
 
-        // 1. 通り芯（グリッド）
-        (s.gridXCoords || []).forEach(x => includePoint(x, 0));
-        (s.gridYCoords || []).forEach(y => includePoint(0, y));
+        // 1. 標準通り芯（グリッド）の有効範囲
+        if (s.gridXCoords && s.gridXCoords.length > 0 && s.gridYCoords && s.gridYCoords.length > 0) {
+            const gMinX = Math.min(...s.gridXCoords), gMaxX = Math.max(...s.gridXCoords);
+            const gMinY = Math.min(...s.gridYCoords), gMaxY = Math.max(...s.gridYCoords);
+            includePoint(gMinX, gMinY);
+            includePoint(gMaxX, gMaxY);
+        }
 
-        // 2. 柱
+        // 2. 柱（実データ）
         (s.pillars || []).forEach(p => {
-            if (!p.isDeleted) includePoint(p.x, p.y);
+            if (!p.isDeleted && !p.isInvalidPos) includePoint(p.x, p.y);
         });
 
-        // 3. 壁
+        // 3. 壁（実データ）
         (s.walls || []).forEach(w => {
             if (w.p1) includePoint(w.p1.x, w.p1.y);
             if (w.p2) includePoint(w.p2.x, w.p2.y);
         });
 
-        // 4. 基礎要素
+        // 4. 基礎外壁線
         (s.f_ext_walls || []).forEach(w => {
             if (w.p1) includePoint(w.p1.x, w.p1.y);
             if (w.p2) includePoint(w.p2.x, w.p2.y);
         });
 
-        // 5. 屋根
+        // 5. 屋根面ポリゴン
         (s.roofs || []).forEach(r => {
             (r.polygon || []).forEach(pt => includePoint(pt.x, pt.y));
         });
@@ -456,7 +485,7 @@ window.AppController = {
 
         const cw = s.canvas.width || 800;
         const ch = s.canvas.height || 600;
-        const padding = 80;
+        const padding = 70; // 画面周りのマージンピクセル
 
         const bboxW = maxX - minX;
         const bboxH = maxY - minY;
