@@ -205,6 +205,9 @@ function handleAreaInput(state) {
         const na = { id: Date.now(), vertices: pts.map(p=>({x:p.x,y:p.y})), closed: true, floor: state.currentFloor, areaType: aType };
         state.areaLines.push(na);
         areaDrawPoints = [];
+        if (window.PropertyController && typeof window.PropertyController.openGeneralModal === 'function') {
+            window.PropertyController.openGeneralModal({ type: 'area', item: na });
+        }
     } else {
         pts.push(pt);
     }

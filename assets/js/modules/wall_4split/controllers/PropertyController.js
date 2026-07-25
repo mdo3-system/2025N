@@ -141,6 +141,8 @@ window.PropertyController = {
                 headerTitle.innerText = `耐力壁プロパティ`;
             } else if (type === 'window') {
                 headerTitle.innerText = `開口部プロパティ`;
+            } else if (type === 'area') {
+                headerTitle.innerText = `作図面積プロパティ (${item.floor || ''})`;
             } else {
                 headerTitle.innerText = `要素のプロパティ編集`;
             }
