@@ -43,9 +43,12 @@ const filesToLoad = [
     '../view/FoundationSvgGenerator.js',
     '../view/GridRenderer.js',
     '../view/WallCadRenderer.js',
+    '../view/PillarCadRenderer.js',
     '../view/ReportAreaView.js',
     '../view/ReportWallView.js',
     '../view/ReportNValueView.js',
+    '../view/ReportMitsukeView.js',
+    '../view/FoundationBeamReportView.js',
     'TestRunner.js'
 ];
 
@@ -62,7 +65,10 @@ const testFiles = [
     'FoundationEngine.test.js',
     'RoofEngine.test.js',
     'ReportEngine.test.js',
-    'FoundationSvgGenerator.test.js'
+    'FoundationSvgGenerator.test.js',
+    'FoundationBeamReportView.test.js',
+    'ReportMitsukeView.test.js',
+    'PillarCadRenderer.test.js'
 ];
 
 testFiles.forEach(f => {

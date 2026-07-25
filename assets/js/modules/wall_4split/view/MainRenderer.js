@@ -708,53 +708,18 @@ window.MainRenderer = {
         }
     },
 
+    // [v3.3.0] drawPillars -> delegated to PillarCadRenderer (SRP)
     drawPillars: function(state) {
-        if (!state.elementVisibility.pillars) return;
-        const ctx = state.ctx;
-        state.pillars.filter(p => !p.isDeleted && !p.isInvalidPos && (p.floor === state.currentFloor || p.floor === 'ALL')).forEach(p => {
-            const pt = this.toCanvas(p, null, state);
-            if (pt.cx != null) {
-                const isSelected = state.selectedPillar === p;
-                const isHovered = state.hoveredPillar === p;
-                ctx.fillStyle = state.isPrintMode ? '#333' : (isSelected ? '#e74c3c' : (isHovered ? '#e67e22' : (p.isManual ? '#2ecc71' : '#3498db')));
-                ctx.strokeStyle = state.isPrintMode ? '#000000' : '#ffffff';
-                ctx.lineWidth = 1.5;
-                const isC = p.isManualCorner !== null ? p.isManualCorner : p.isCornerAuto;
-                if (isC) { 
-                    ctx.beginPath(); 
-                    ctx.arc(pt.cx, pt.cy, 8, 0, Math.PI * 2); 
-                    ctx.fill(); 
-                    ctx.stroke();
-                } else { 
-                    ctx.beginPath();
-                    ctx.rect(pt.cx - 7, pt.cy - 7, 14, 14);
-                    ctx.fill();
-                    ctx.stroke();
-                }
-
-                // N値表示
-                if (state.elementVisibility.pillarNValues && (window.getMode() === 'n-value' || window.getMode() === 'select') && p.nValue !== undefined && !['不要', '-'].includes(p.nMark)) {
-                    this.drawPillarNValue(ctx, p, pt, state);
-                }
-
-                // 柱番号表示 (選択モード時)
-                if (window.getMode() === 'select' || window.getMode() === 'add-pillar') {
-                    ctx.fillStyle = isPrintMode ? "#333" : "#aaa";
-                    ctx.font = "9px sans-serif";
-                    ctx.textAlign = "center";
-                    ctx.fillText(p.pId || p.id, pt.cx, pt.cy + 15);
-                }
-            }
-        });
+        if (window.PillarCadRenderer) {
+            window.PillarCadRenderer.drawPillars(state);
+        }
     },
 
+    // [v3.3.0] drawPillarNValue -> delegated to PillarCadRenderer (SRP)
     drawPillarNValue: function(ctx, p, pt, state) {
-        ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.font = "bold 12px sans-serif";
-        const tw = ctx.measureText(p.nMark).width;
-        ctx.fillStyle = state.isPrintMode ? '#fff' : 'rgba(255,255,255,0.9)';
-        ctx.fillRect(pt.cx - tw/2 - 4, pt.cy - 8, tw + 8, 16);
-        ctx.fillStyle = '#c0392b';
-        ctx.fillText(p.nMark, pt.cx, pt.cy);
+        if (window.PillarCadRenderer) {
+            window.PillarCadRenderer.drawPillarNValue(ctx, p, pt, state);
+        }
     },
 
     drawInteractions: function(state) {
@@ -769,58 +734,10 @@ window.MainRenderer = {
             ctx.moveTo(p.cx, p.cy - 10); ctx.lineTo(p.cx, p.cy + 10); ctx.stroke();
         }
 
-        // 柱負担面積図 (m === 'area' の時)
+        // [v3.3.0] 柱負担面積図 -> delegated to PillarCadRenderer (SRP)
         const mode = window.getMode();
-        if (mode === 'area') {
-            ctx.lineWidth = 1.5; ctx.strokeStyle = '#27ae60'; ctx.setLineDash([5, 5]);
-            state.pillars.filter(p => !p.isDeleted && !p.isInvalidPos && p.floor === state.currentFloor).forEach(p => {
-                if (p.tributaryPolygon && p.tributaryPolygon.length > 0) {
-                    ctx.fillStyle = 'rgba(46, 204, 113, 0.1)';
-                    p.tributaryPolygon.forEach(poly => {
-                        ctx.beginPath();
-                        poly.forEach((v, i) => {
-                            const c = this.toCanvas(v, null, state);
-                            i === 0 ? ctx.moveTo(c.cx, c.cy) : ctx.lineTo(c.cx, c.cy);
-                        });
-                        ctx.closePath();
-                        ctx.fill(); ctx.stroke();
-                    });
-
-                    // 負担面積の数値表示
-                    const areaVal = p.loadArea || 0;
-                    if (areaVal > 0) {
-                        const pt = this.toCanvas(p, null, state);
-                        const txt = areaVal.toFixed(2) + " ㎡";
-                        ctx.font = "bold 13px sans-serif";
-                        ctx.textAlign = "center"; ctx.textBaseline = "middle";
-                        
-                        // 背景ボックスの描画
-                        const metrics = ctx.measureText(txt);
-                        const padding = 4;
-                        const rectW = metrics.width + padding * 2;
-                        const rectH = 18;
-                        const rx = pt.cx - rectW / 2;
-                        const ry = pt.cy + 12;
-
-                        ctx.fillStyle = "#ffffff";
-                        ctx.beginPath();
-                        if (ctx.roundRect) ctx.roundRect(rx, ry, rectW, rectH, 4);
-                        else ctx.rect(rx, ry, rectW, rectH);
-                        ctx.fill();
-
-                        // 緑の枠線
-                        ctx.strokeStyle = "#2ecc71";
-                        ctx.lineWidth = 1.5;
-                        ctx.stroke();
-
-                        // 緑のメインテキスト
-                        ctx.fillStyle = "#2ecc71";
-                        ctx.font = "bold 13px sans-serif";
-                        ctx.fillText(txt, pt.cx, ry + rectH / 2);
-                    }
-                }
-            });
-            ctx.setLineDash([]);
+        if (mode === 'area' && window.PillarCadRenderer) {
+            window.PillarCadRenderer.drawTributaryAreas(state);
         }
 
         // 壁・開口のハイライト (選択ツールまたは仕様変更ツール時)
