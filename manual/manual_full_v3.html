@@ -471,7 +471,7 @@
             <li><strong>N値金物の自動算定:</strong> 耐力壁を画面上に入力した瞬間、両端の柱の引抜力（N値）および最適な接合金物が自動でリアルタイム算定されます。</li>
             <li><strong>左パネルのリアルタイムOK/NG判定:</strong> 壁を入力するたびに、左パネルの「必要壁量・充足率」が即座に自動更新されます。<strong>画面上の表示が「NG」から「OK」に変わるのを目視確認しながら直感的に耐力壁を入力・調整可能</strong>です。</li>
             <li><strong>重心・剛心のリアルタイム自動更新:</strong> 耐力壁の配置に応じて重心・剛心・偏心率も自動更新されるため、壁配置の左右・上下バランスを考慮しながら設計を進められます。</li>
-            <li><strong>角柱（出隅柱）の個別設定注意点:</strong> 隅部の柱（出隅柱）は低減係数 $B = 0.8$（中間柱は $B = 0.5$）が適用されます。プロパティ画面で出隅判定チェックが正しく設定されているかご確認ください。</li>
+            <li><strong>角柱（出隅柱）の個別設定注意点:</strong> 隅部の柱（出隅柱）は低減係数 B = 0.8（中間柱は B = 0.5）が適用されます。プロパティ画面で出隅判定チェックが正しく設定されているかご確認ください。</li>
         </ul>
     </div>
 
@@ -496,14 +496,14 @@
         </div>
 
         <h3>① 斜め耐力壁の壁倍率分解計算</h3>
-        <p>通り芯に対して角度 $\theta$ を持った斜め耐力壁の壁倍率 $\alpha$ は、グレー本2025の規定に従い、<strong>X方向およびY方向にベクトル分解（$\cos\theta$ および $\sin\theta$）して地震力・風圧力の耐力計算に使用</strong>されます：</p>
+        <p>通り芯に対して角度 <strong>θ（シータ）</strong> を持った斜め耐力壁の壁倍率 <strong>α（アルファ）</strong> は、グレー本2025の規定に従い、<strong>X方向およびY方向にベクトル分解（cos θ および sin θ）して地震力・風圧力の耐力計算に使用</strong>されます：</p>
         <ul>
-            <li><strong>X方向の有効壁長:</strong> $W_{\text{eff, X}} = L \times \cos\theta \times \alpha$</li>
-            <li><strong>Y方向の有効壁長:</strong> $W_{\text{eff, Y}} = L \times \sin\theta \times \alpha$</li>
+            <li><strong>X方向の有効壁長:</strong> <code style="font-size:15px; font-weight:bold; background:#e2e8f0; padding:2px 8px; border-radius:4px;">W<sub>eff,X</sub> = L × cos θ × α</code></li>
+            <li><strong>Y方向の有効壁長:</strong> <code style="font-size:15px; font-weight:bold; background:#e2e8f0; padding:2px 8px; border-radius:4px;">W<sub>eff,Y</sub> = L × sin θ × α</code></li>
         </ul>
 
         <h3>② 斜め耐力壁に接する柱の金物（N値）計算</h3>
-        <p>一方、斜め壁の両端に位置する柱の引抜金物（N値計算）においては、<strong>耐力を分解しない元の壁耐力（分解前の壁倍率 $\alpha$）をそのまま用いて安全側に柱の引抜力を算出</strong>いたします。これにより、実際の地震時における局所的な金物引き抜きに対して絶対的な安全性を担保しています。</p>
+        <p>一方、斜め壁の両端に位置する柱の引抜金物（N値計算）においては、<strong>耐力を分解しない元の壁耐力（分解前の壁倍率 α）をそのまま用いて安全側に柱の引抜力を算出</strong>いたします。これにより、実際の地震時における局所的な金物引き抜きに対して絶対的な安全性を担保しています。</p>
     </div>
 
     <div style="text-align: center; margin-top: 40px; padding: 20px; color: #64748b; font-size: 13px;">
