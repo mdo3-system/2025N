@@ -216,5 +216,15 @@ window.InputController = {
         };
         if (mainDiv4) mainDiv4.addEventListener('change', e => syncDiv4(e.target.checked));
         if (subDiv4) subDiv4.addEventListener('change', e => syncDiv4(e.target.checked));
+
+        // [v3.5.5] 全体表示 (Zoom Fit) ボタンのバインド
+        const btnZoomFit = document.getElementById('btn-zoom-fit');
+        if (btnZoomFit) {
+            btnZoomFit.addEventListener('click', () => {
+                if (window.AppController && window.AppController.zoomFit) {
+                    window.AppController.zoomFit();
+                }
+            });
+        }
     }
 };
