@@ -894,7 +894,7 @@ window.MainRenderer = {
         // 4KやFHDでも見やすいようスケーリング
         const scaleFactor = 1.2;
         const width = 210 * scaleFactor;
-        const height = 115 * scaleFactor;
+        const height = 95 * scaleFactor;
         const x = 15;
         const y = cssH - height - 15;
         
@@ -922,9 +922,8 @@ window.MainRenderer = {
         ctx.font = `${11 * scaleFactor}px sans-serif`;
         ctx.fillStyle = "#e0e0e0";
         ctx.fillText("緑線: 1F壁 / 橙線: 2F壁", x + 12 * scaleFactor, y + 32 * scaleFactor);
-        ctx.fillText("数字: 壁倍率の合計", x + 12 * scaleFactor, y + 50 * scaleFactor);
-        ctx.fillText("記号: 面材種類(外+内)", x + 12 * scaleFactor, y + 68 * scaleFactor);
-        ctx.fillText("赤三角: 筋交い", x + 12 * scaleFactor, y + 86 * scaleFactor);
+        ctx.fillText("記号: 面材種類(外+内)", x + 12 * scaleFactor, y + 52 * scaleFactor);
+        ctx.fillText("赤三角: 筋交い", x + 12 * scaleFactor, y + 72 * scaleFactor);
         
         ctx.restore();
     },

@@ -104,13 +104,20 @@ window.InputController = {
         bC('tab-1r', () => window.AppController.setRoofFloor('1F'));
         bC('tab-2r', () => window.AppController.setRoofFloor('2F'));
 
-        bC('btn-open-area-settings', () => {
-            const m = document.getElementById('modal-area-settings');
-            if (m) m.style.display = 'flex';
+        // 面積・壁仕様変更モーダルボタン (重複ID・同名クラス要素すべてにイベントを確実に登録)
+        document.querySelectorAll('#btn-open-area-settings, .btn-open-area-settings').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const m = document.getElementById('modal-area-settings');
+                if (m) m.style.display = 'flex';
+            });
         });
 
-        bC('btn-open-wall-settings', () => {
-            if (window.UIView) window.UIView.openWallSettingsModal();
+        document.querySelectorAll('#btn-open-wall-settings, .btn-open-wall-settings').forEach(btn => {
+            btn.addEventListener('click', () => {
+                if (window.UIView && typeof window.UIView.openWallSettingsModal === 'function') {
+                    window.UIView.openWallSettingsModal();
+                }
+            });
         });
 
         bC('btn-apply-wall-settings', () => {
