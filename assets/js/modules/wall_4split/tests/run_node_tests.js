@@ -38,6 +38,7 @@ const filesToLoad = [
     '../logic/StructuralEngine.js',
     '../logic/FoundationEngine.js',
     '../logic/FoundationSlabAnalysisEngine.js',
+    '../logic/FoundationBeamEngine.js',
     '../logic/SlabBeamSynchronizer.js',
     '../logic/RoofEngine.js',
     '../logic/ReportEngine.js',
@@ -52,6 +53,7 @@ const filesToLoad = [
     '../view/ReportWallView.js',
     '../view/ReportWallTableView.js',
     '../view/ReportNValueView.js',
+    '../view/ReportHeaderView.js',
     '../view/ReportMitsukeView.js',
     '../view/FoundationBeamReportView.js',
     'TestRunner.js'
@@ -75,7 +77,9 @@ const testFiles = [
     'ReportMitsukeView.test.js',
     'PillarCadRenderer.test.js',
     'AreaEngine.test.js',
-    'FoundationSlabAnalysisEngine.test.js'
+    'FoundationSlabAnalysisEngine.test.js',
+    'FoundationBeamEngine.test.js',
+    'ReportNValueView.test.js'
 ];
 
 testFiles.forEach(f => {

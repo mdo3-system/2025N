@@ -1342,27 +1342,29 @@ async function generateDoc() {
         h += `<div style="text-align:center;margin-bottom:20px"><b>【1F 金物・N値配置図】</b><br><img src="${n1}" style="width:95%;max-width:800px;border:1px solid #ccc;margin-top:5px"></div>`;
         h += `<div style="text-align:center;margin-bottom:20px"><b>【2F 金物・N値配置図】</b><br><img src="${n2}" style="width:95%;max-width:800px;border:1px solid #ccc;margin-top:5px"></div>`;
 
-        ['1F', '2F'].forEach(f => {
-            h += `<h4>【${f} 柱 N値計算・接合部判定表】</h4>`;
-            h += `<table class="report-table" style="width:100%;">
-                <tr><th rowspan="2">階</th><th colspan="2">柱位置</th><th rowspan="2">出隅</th><th rowspan="2">h1/h2<br>係数</th><th colspan="2">計算式</th><th rowspan="2">N値</th><th colspan="2">金物</th></tr>
-                <tr><th>X</th><th>Y</th><th>X方向</th><th>Y方向</th><th>柱頭</th><th>柱脚</th></tr>`;
-            pillars.filter(p => p.floor === f && !p.isDeleted && !p.isInvalidPos).forEach(p => {
-                if (p.nValue > 0 || p.Ax > 0 || p.Ay > 0) {
-                    const m = p.isC ? "〇" : "×";
-                    const k1s = f === '1F' && p.h1 ? `(${p.h1.toFixed(2)}/2.7)` : "-";
-                    const k2s = p.h2 ? `(${p.h2.toFixed(2)}/2.7)` : `(2.70/2.7)`;
-                    const hCoef = f === '1F' ? k1s : k2s;
-                    const nCalcX = p.nCalcX || 0;
-                    const nCalcY = p.nCalcY || 0;
-                    const nValue = p.nValue || 0;
-                    h += `<tr><td>${f[0]}</td><td>${p.gx}</td><td>${p.gy}</td><td>${m}</td><td>${hCoef}</td><td style="text-align:left;">${p.cStrX || '-'} = ${nCalcX.toFixed(2)}</td><td style="text-align:left;">${p.cStrY || '-'} = ${nCalcY.toFixed(2)}</td><td><b>${nValue.toFixed(2)}</b></td><td class="bg-ok">${p.nMark}</td><td class="bg-ok">${p.nMark}</td></tr>`;
-                }
+        if (window.ReportNValueView && typeof window.ReportNValueView.generateNValueTableSectionHtml === 'function') {
+            h += window.ReportNValueView.generateNValueTableSectionHtml(window.AppState);
+        } else {
+            ['1F', '2F'].forEach(f => {
+                h += `<h4>【${f} 柱 N値計算・接合部判定表】</h4>`;
+                h += `<table class="report-table" style="width:100%;">
+                    <tr><th rowspan="2">階</th><th colspan="2">柱位置</th><th rowspan="2">出隅</th><th rowspan="2">h1/h2<br>係数</th><th colspan="2">計算式</th><th rowspan="2">N値</th><th colspan="2">金物</th></tr>
+                    <tr><th>X</th><th>Y</th><th>X方向</th><th>Y方向</th><th>柱頭</th><th>柱脚</th></tr>`;
+                pillars.filter(p => p.floor === f && !p.isDeleted && !p.isInvalidPos).forEach(p => {
+                    if (p.nValue > 0 || p.Ax > 0 || p.Ay > 0) {
+                        const m = p.isC ? "〇" : "×";
+                        const k1s = f === '1F' && p.h1 ? `(${p.h1.toFixed(2)}/2.7)` : "-";
+                        const k2s = p.h2 ? `(${p.h2.toFixed(2)}/2.7)` : `(2.70/2.7)`;
+                        const hCoef = f === '1F' ? k1s : k2s;
+                        const nCalcX = p.nCalcX || 0;
+                        const nCalcY = p.nCalcY || 0;
+                        const nValue = p.nValue || 0;
+                        h += `<tr><td>${f[0]}</td><td>${p.gx}</td><td>${p.gy}</td><td>${m}</td><td>${hCoef}</td><td style="text-align:left;">${p.cStrX || '-'} = ${nCalcX.toFixed(2)}</td><td style="text-align:left;">${p.cStrY || '-'} = ${nCalcY.toFixed(2)}</td><td><b>${nValue.toFixed(2)}</b></td><td class="bg-ok">${p.nMark}</td><td class="bg-ok">${p.nMark}</td></tr>`;
+                    }
+                });
+                h += `</table><br>`;
             });
-            h += `</table>`;
-            h += `<div style="text-align:right; font-size:11px; margin-top:2px;">※特記：h1/h2係数の算出において、階高が3.2m以下の場合は2.7mとして算出しています。</div>`;
-            h += `<br>`;
-        });
+        }
 
         const hwList = getHardwareList();
         h += `<h4>【金物耐力（N値）凡例】</h4><table class="report-table" style="width:70%; margin:auto;"><tr><th>N値上限</th><th>略記号</th><th>接合具(告示1460号)・仕様例</th></tr><tr><td>0 以下</td><td>不要</td><td>(い) 仕様外・接合不要</td></tr>`;
