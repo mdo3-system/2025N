@@ -199,5 +199,112 @@ window.AppExport = {
         
         let rc = document.getElementById('ratio-container');
         if (rc) { rc.innerHTML = html; document.getElementById('modal-ratio').style.display = 'flex'; }
+    },
+
+    /**
+     * 一括出力の「2. 耐力壁配置図 ＆ 壁量検定」をモーダル表示
+     */
+    showWallSummaryModal: function() {
+        const modal = document.getElementById('modal-wall-summary');
+        const container = document.getElementById('wall-summary-modal-container');
+        if (!modal || !container) return;
+
+        if (typeof updateCalculations === 'function') updateCalculations();
+        
+        const state = window.AppState;
+        const walls = state.walls || [];
+        const reqWall = state.reqWall || {};
+        const getVal = window.MathUtils ? window.MathUtils.getVal : ((id) => parseFloat(document.getElementById(id)?.value) || 0);
+
+        let globalLegendHtml = `
+        <div style="font-size:11px; margin-top:8px; margin-bottom:12px; background:#f8f9fa; padding:8px; border:1px solid #e9ecef; border-radius:4px; line-height:1.6;">
+            <b>【凡例・記号】</b><br>
+            面材記号: <b>P</b>(構造用合板等) / <b>P1</b>(1面) / <b>P2</b>(2面) / <b>P+P</b>(両面張)<br>
+            筋交記号: <b>／, ＼</b> (片掛け 1.5倍〜3.0倍) / <b>Ｘ</b> (たすき掛け 4.0倍〜5.0倍)
+        </div>`;
+
+        let html = `<div style="font-family:sans-serif; color:#333; line-height:1.5;">`;
+        html += `<h3 style="color:#27ae60; border-bottom:2px solid #27ae60; padding-bottom:6px; margin-top:0;">■ 存在壁量リスト ＆ 壁量検定</h3>`;
+
+        ['1F', '2F'].forEach(f => {
+            let xl = [], yl = [], tX = 0, tY = 0;
+            let xList = [], yList = [];
+            walls.filter(w => w.floor === f).forEach(w => {
+                let dx = Math.abs(w.p2.x - w.p1.x), dy = Math.abs(w.p2.y - w.p1.y);
+                let L_wall = Math.sqrt(dx * dx + dy * dy) / 1000;
+                if (L_wall === 0) return;
+                let ratioX = Math.min(1, Math.max(-1, dx / 1000 / L_wall)), ratioY = Math.min(1, Math.max(-1, dy / 1000 / L_wall));
+                let degX = Math.acos(ratioX) * 180 / Math.PI, degY = Math.acos(ratioY) * 180 / Math.PI;
+                let tv = window.getWallTotalVal ? window.getWallTotalVal(w) : ((w.totalVal) || 0);
+                let effMx = Math.floor(tv * (ratioX * ratioX) * 100) / 100;
+                let effMy = Math.floor(tv * (ratioY * ratioY) * 100) / 100;
+                let effX = effMx, effY = effMy;
+                if (degX > 75 && L_wall < 1.82) effX = 0;
+                if (degY > 75 && L_wall < 1.82) effY = 0;
+                let isDiag = (degX > 0.1 && degX < 89.9) ? ' [✔斜]' : '';
+
+                let bV = w.braceVal || 0;
+                let outV = w.outPanelVal !== undefined ? w.outPanelVal : 0;
+                let inV = w.inPanelVal || 0;
+
+                let mark1 = (w.outPanelName && !w.outPanelName.includes('なし')) ? w.outPanelName.charAt(0) : '';
+                let mark2 = (w.inPanelName && !w.inPanelName.includes('なし')) ? w.inPanelName.charAt(0) : '';
+
+                let marks = [];
+                if (mark1) marks.push(mark1);
+                if (mark2) marks.push(mark2);
+
+                let mark = marks.join('+');
+                if (!mark && (outV > 0 || inV > 0)) {
+                    let panelSum = outV + inV;
+                    mark = window._currentLegendDic ? window._currentLegendDic[panelSum.toFixed(2)] || '' : '';
+                }
+
+                let tvStr = '';
+                let braceLabel = (window.WallEngine && window.WallEngine.getBraceLabel) ? window.WallEngine.getBraceLabel(w.braceName, bV, w) : '';
+                if (mark && braceLabel) tvStr = `${mark} + ${braceLabel}`;
+                else if (mark) tvStr = mark;
+                else if (braceLabel) tvStr = braceLabel;
+                else tvStr = '-';
+
+                let kx = Math.floor(L_wall * effX * 100) / 100, ky = Math.floor(L_wall * effY * 100) / 100;
+                if (effX > 0) xList.push({ w, kx: kx, row: `<tr><td>${w.p1.gy}通り ${w.p1.gx}-${w.p2.gx}${isDiag}</td><td>${L_wall.toFixed(3)}</td><td style="font-size:12px;">${tvStr}</td><td>${effX.toFixed(2)}</td><td>${kx.toFixed(2)}</td></tr>` });
+                if (effY > 0) yList.push({ w, ky: ky, row: `<tr><td>${w.p1.gx}通り ${w.p1.gy}-${w.p2.gy}${isDiag}</td><td>${L_wall.toFixed(3)}</td><td style="font-size:12px;">${tvStr}</td><td>${effY.toFixed(2)}</td><td>${ky.toFixed(2)}</td></tr>` });
+            });
+
+            xList.sort((a, b) => { let yA = Math.min(a.w.p1.y, a.w.p2.y), yB = Math.min(b.w.p1.y, b.w.p2.y); return Math.abs(yA - yB) > 150 ? yA - yB : Math.min(a.w.p1.x, a.w.p2.x) - Math.min(b.w.p1.x, b.w.p2.x); });
+            yList.sort((a, b) => { let xA = Math.min(a.w.p1.x, a.w.p2.x), xB = Math.min(b.w.p1.x, b.w.p2.x); return Math.abs(xA - xB) > 150 ? xA - xB : Math.min(a.w.p1.y, a.w.p2.y) - Math.min(b.w.p1.y, b.w.p2.y); });
+            xList.forEach(item => { xl.push(item.row); tX += item.kx; });
+            yList.forEach(item => { yl.push(item.row); tY += item.ky; });
+
+            html += `<h4 style="margin-top:15px; color:#2c3e50;">【${f} 存在壁量リスト ＆ 検定】</h4>`;
+            html += `<div style="display:flex; gap:15px; flex-wrap:wrap;">`;
+            html += `<div style="flex:1; min-width:300px;"><table class="report-table" style="width:100%;"><tr><th colspan="5" style="background:#e8f4f8; color:#0056b3;">X方向壁 (${f})</th></tr><tr><th>通り芯</th><th>実長(m)</th><th>壁倍率・内訳</th><th>有効倍率</th><th>壁量(m)</th></tr>${xl.join('') || '<tr><td colspan="5">壁なし</td></tr>'}<tr style="background:#f1f9f5;"><b><td colspan="4">合計</td><td>${tX.toFixed(2)}m</td></b></tr></table></div>`;
+            html += `<div style="flex:1; min-width:300px;"><table class="report-table" style="width:100%;"><tr><th colspan="5" style="background:#e8f4f8; color:#0056b3;">Y方向壁 (${f})</th></tr><tr><th>通り芯</th><th>実長(m)</th><th>壁倍率・内訳</th><th>有効倍率</th><th>壁量(m)</th></tr>${yl.join('') || '<tr><td colspan="5">壁なし</td></tr>'}<tr style="background:#f1f9f5;"><b><td colspan="4">合計</td><td>${tY.toFixed(2)}m</td></b></tr></table></div>`;
+            html += `</div>`;
+
+            html += globalLegendHtml;
+
+            const rX = reqWall[f] ? reqWall[f].qX : 0;
+            const rY = reqWall[f] ? reqWall[f].qY : 0;
+            const okX = tX >= rX, okY = tY >= rY;
+
+            html += `<table class="report-table" style="width:100%; max-width:500px; margin-top:10px; margin-bottom:25px;">
+                <tr><th colspan="4" style="background:#27ae60; color:#fff;">${f} 壁量判定結果 (必要壁量 vs 存在壁量)</th></tr>
+                <tr><th>加力方向</th><th>必要壁量(m)</th><th>存在壁量(m)</th><th>判定結果</th></tr>
+                <tr><td>X方向 (間口)</td><td>${rX.toFixed(2)} m</td><td>${tX.toFixed(2)} m</td><td style="font-weight:bold; color:${okX ? '#27ae60' : '#e74c3c'};">${okX ? '✅ OK' : '❌ NG'}</td></tr>
+                <tr><td>Y方向 (奥行)</td><td>${rY.toFixed(2)} m</td><td>${tY.toFixed(2)} m</td><td style="font-weight:bold; color:${okY ? '#27ae60' : '#e74c3c'};">${okY ? '✅ OK' : '❌ NG'}</td></tr>
+            </table><hr style="border:0; border-top:1px dashed #ccc; margin:20px 0;">`;
+        });
+
+        html += `</div>`;
+        container.innerHTML = html;
+        modal.style.display = 'flex';
+    }
+};
+
+window.showWallSummaryModal = function() {
+    if (window.AppExport && window.AppExport.showWallSummaryModal) {
+        window.AppExport.showWallSummaryModal();
     }
 };
