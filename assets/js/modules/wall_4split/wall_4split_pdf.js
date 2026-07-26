@@ -878,8 +878,19 @@ async function generateDoc() {
             }
         };
 
-        let h = `<div id="sec-summary" class="doc-section" style="margin-bottom:25px; border:2px solid ${isTotalOk ? '#27ae60' : '#c0392b'}; border-radius:4px; padding:15px; background:#fdfdfd;">
-            <h3 style="margin:0 0 10px 0; color:#333; font-size:16px;">📄 構造計算 検定結果サマリー</h3>
+        const getHeader = (title) => {
+            return (window.ReportHeaderView && typeof window.ReportHeaderView.generatePageHeaderHtml === 'function')
+                ? window.ReportHeaderView.generatePageHeaderHtml(title)
+                : `<h3 style="margin:0 0 10px 0; color:#333; font-size:16px;">${title}</h3>`;
+        };
+
+        // 表紙HTMLの生成
+        let h = (window.ReportHeaderView && typeof window.ReportHeaderView.generateReportCoverHtml === 'function')
+            ? window.ReportHeaderView.generateReportCoverHtml(s)
+            : '';
+
+        h += `<div id="sec-summary" class="doc-section" style="margin-bottom:25px; border:2px solid ${isTotalOk ? '#27ae60' : '#c0392b'}; border-radius:4px; padding:15px; background:#fdfdfd;">
+            ${getHeader('構造計算 検定結果サマリー')}
             <table class="report-table" style="width:100%; margin:0; font-size:14px;">
                 <tr><th style="width:15%;">階</th><th>壁量検定 (X/Y)</th><th>4分割 壁釣り合い</th><th>有効細長比</th><th>柱の最大負担面積(㎡)</th><th style="width:20%;">総合判定</th></tr>`;
 
@@ -1144,11 +1155,11 @@ async function generateDoc() {
         });
         h += `</div><div class="page-break"></div>`;
 
-        h += `<div class="doc-section" id="sec-wall"><h3>■ ${secNum++}. 耐力壁配置図 ＆ 壁量検定</h3>`;
+        h += `<div class="doc-section" id="sec-wall">${getHeader(`■ ${secNum++}. 耐力壁配置図 ＆ 壁量検定`)}`;
         h += `<div style="text-align:center; position:relative;">`;
         h += `<div style="text-align:center;margin-bottom:20px"><b>【1F 耐力壁配置図】</b><br><img src="${w1}" style="width:95%;max-width:800px;border:1px solid #ccc;margin-top:5px"></div>`;
         h += `<div style="text-align:center;margin-bottom:20px"><b>【2F 耐力壁配置図】</b><br><img src="${w2}" style="width:95%;max-width:800px;border:1px solid #ccc;margin-top:5px"></div>`;
-
+        
         ['1F', '2F'].forEach(f => {
             let xl = [], yl = [], tX = 0, tY = 0;
             let xList = [], yList = [];
@@ -1218,7 +1229,7 @@ async function generateDoc() {
         h += `</div><div class="page-break"></div>`;
 
         // ★ 斜め壁専用の計算表ページ
-        h += `<div class="doc-section" id="sec-diag"><h3>■ ${secNum++}. 斜め壁専用 計算リスト</h3>`;
+        h += `<div class="doc-section" id="sec-diag">${getHeader(`■ ${secNum++}. 斜め壁専用 計算リスト`)}`;
         ['1F', '2F'].forEach(f => {
             let diagWalls = walls.filter(w => {
                 if (w.floor !== f) return false;
@@ -1282,7 +1293,7 @@ async function generateDoc() {
         // ★ 床面積求積表は図面印字のみで担保するため削除
         h += `<div class="page-break"></div>`;
 
-        h += `<div class="doc-section" id="sec-div4"><h3>■ ${secNum++}. 4分割 境界図</h3>`;
+        h += `<div class="doc-section" id="sec-div4">${getHeader(`■ ${secNum++}. 4分割 境界図`)}`;
         h += `<div style="display:flex;flex-direction:column;gap:20px;justify-content:center;margin-bottom:20px;">
               <div style="width:100%;text-align:center;"><b>【1F X方向 4分割】</b><br><img src="${x1}" style="width:95%;max-width:800px;border:1px solid #ccc;"></div>
               <div style="width:100%;text-align:center;"><b>【1F Y方向 4分割】</b><br><img src="${y1}" style="width:95%;max-width:800px;border:1px solid #ccc;"></div>`;
@@ -1291,7 +1302,7 @@ async function generateDoc() {
               <div style="width:100%;text-align:center;"><b>【2F Y方向 4分割】</b><br><img src="${y2}" style="width:95%;max-width:800px;border:1px solid #ccc;"></div></div>`;
         h += `</div><div class="page-break"></div>`;
 
-        h += `<div class="doc-section"><h3>■ ${secNum++}. 4分割 存在壁量リスト ＆ 検定表</h3>`;
+        h += `<div class="doc-section">${getHeader(`■ ${secNum++}. 4分割 存在壁量リスト ＆ 検定表`)}`;
         ['1F', '2F'].forEach(f => {
             let xt = [], xb = [], ylf = [], yrg = [], txt = 0, txb = 0, tyl = 0, tyr = 0, b = window.GridEngine.get4DivisionBounds(f, window.AppState);
             walls.filter(w => w.floor === f).forEach(w => {
@@ -1338,7 +1349,7 @@ async function generateDoc() {
         });
         h += `</div><div class="page-break"></div>`;
 
-        h += `<div class="doc-section" id="sec-nval"><h3>■ ${secNum++}. 柱の小径等 ＆ 金物・N値 計算表</h3>`;
+        h += `<div class="doc-section" id="sec-nval">${getHeader(`■ ${secNum++}. 柱の小径等 ＆ 金物・N値 計算表`)}`;
         h += `<div style="text-align:center;margin-bottom:20px"><b>【1F 金物・N値配置図】</b><br><img src="${n1}" style="width:95%;max-width:800px;border:1px solid #ccc;margin-top:5px"></div>`;
         h += `<div style="text-align:center;margin-bottom:20px"><b>【2F 金物・N値配置図】</b><br><img src="${n2}" style="width:95%;max-width:800px;border:1px solid #ccc;margin-top:5px"></div>`;
 
@@ -1371,7 +1382,7 @@ async function generateDoc() {
         hwList.forEach(hw => { h += `<tr><td>${hw.n.toFixed(2)} 以下</td><td><b>${hw.name}</b></td><td>${hw.isCust ? "[任意追加金物]" : `(告示基準)`}</td></tr>`; });
         h += `<tr><td>5.6 超</td><td>32(等)</td><td>別途検討</td></tr></table><div style="text-align:center; color:#e74c3c; font-weight:bold; margin-top:10px;">※金物記載のない柱は、短ほぞ差しまたはカスガイ打ち同等以上の接合方法とする。</div></div><div class="page-break"></div>`;
 
-        h += `<div class="doc-section" id="sec-pillar"><h3>■ ${secNum++}. 柱負担面積 自動算出図 ＆ 算出リスト</h3>`;
+        h += `<div class="doc-section" id="sec-pillar">${getHeader(`■ ${secNum++}. 柱負担面積 自動算出図 ＆ 算出リスト`)}`;
         h += `<div style="text-align:center;margin-bottom:20px"><b>【1F 柱負担面積図】</b><br><img src="${pa1}" style="width:95%;max-width:800px;border:1px solid #ccc;margin-top:5px"></div>`;
         h += `<div style="text-align:center;margin-bottom:20px"><b>【2F 柱負担面積図】</b><br><img src="${pa2}" style="width:95%;max-width:800px;border:1px solid #ccc;margin-top:5px"></div>`;
 
@@ -1393,7 +1404,7 @@ async function generateDoc() {
         });
         h += `</div><div class="page-break"></div>`;
 
-        h += `<div class="doc-section"><h3>■ ${secNum++}. 有効細長比 判定表</h3>`;
+        h += `<div class="doc-section">${getHeader(`■ ${secNum++}. 有効細長比 判定表`)}`;
         ['1F', '2F'].forEach(f => {
             h += `<h4>【${f}】</h4><table class="report-table" style="width:100%;"><tr><th>位置</th><th>小径 d (mm)</th><th>垂直距離 l0 (m)</th><th>細長比 λ</th><th>判定</th></tr>`;
             let sortedPillars = pillars.filter(p => !p.isDeleted && !p.isInvalidPos && p.floor === f).sort((a, b) => {
@@ -1414,7 +1425,7 @@ async function generateDoc() {
 
         // --- 6. 基礎スラブ構造検定 ---
         h += `<div class="doc-section" id="sec-fd-slab" style="margin-bottom:30px;">
-            <h3 style="color:#2c3e50; border-bottom:2px solid #8e44ad; padding-bottom:5px; margin-bottom:15px;">■ 6. 基礎スラブ 構造検定</h3>`;
+            ${getHeader(`■ ${secNum++}. 基礎スラブ 構造検定`)}`;
         
         const slabs = window.AppState.foundationSlabs || [];
         if (slabs.length === 0) {
@@ -1463,7 +1474,7 @@ async function generateDoc() {
         // --- 7. 基礎梁構造検定 ＆ 応力図 ---
         h += `<div class="page-break" id="pb-between-fd"></div>`;
         h += `<div class="doc-section" id="sec-fd-beam" style="margin-bottom:30px;">
-            <h3 style="color:#2c3e50; border-bottom:2px solid #8e44ad; padding-bottom:5px; margin-bottom:15px;">■ 7. 基礎梁 構造検定 ＆ 応力（N・M・Q）図</h3>`;
+            ${getHeader(`■ ${secNum++}. 基礎梁 構造検定 ＆ 応力（N・M・Q）図`)}`;
 
         // 7-1. 基礎梁負担図（べた基礎接地圧分担域）を最初に1枚出力
         if (window.FoundationRenderer && typeof window.FoundationRenderer.generateFoundationTributarySvg === 'function') {

@@ -1,4 +1,4 @@
 /**
  * Version.js - Centralized Version Management
  */
-window.APP_VERSION = "v3.9.0"; // Feature: Sales Portal Hybrid Integration (Query API & Webhook Relay) & Permanent Staff Setup
+window.APP_VERSION = "v3.9.1"; // Feature: Report Header & Layout Enhancement (Project Name & Designer Info Integration)
