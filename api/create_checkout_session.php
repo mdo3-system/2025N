@@ -62,6 +62,10 @@ try {
         'cancel_url'  => 'https://2025.eie.jp/pricing.html?payment=canceled',
         'line_items[0][price]' => $targetPlan['price_id'],
         'line_items[0][quantity]' => 1,
+        'payment_method_types[0]' => 'card',
+        'payment_method_types[1]' => 'customer_balance',
+        'payment_method_options[customer_balance][funding_type]' => 'bank_transfer',
+        'payment_method_options[customer_balance][bank_transfer][type]' => 'jp_bank_transfer',
         'metadata[user_id]' => $user['id'],
         'metadata[plan_key]' => $planKey
     ];

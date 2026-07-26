@@ -105,7 +105,14 @@
                     <button id="btn-stripe-portal" class="btn btn-primary" onclick="openStripePortal()">
                         🧾 請求書・領収書取得 / カード変更 / 解約 (Stripe Customer Portal)
                     </button>
+                    <button class="btn btn-outline" style="border-color: #0ea5e9; color: #0ea5e9;" onclick="fetchBankTransferInfo()">
+                        🏦 銀行振込専用口座を確認・発行
+                    </button>
                     <a href="pricing.html" class="btn btn-outline">💳 料金プラン一覧を見る</a>
+                </div>
+                <div id="bank-info-box" style="display:none; margin-top:1.5rem; background:#f0f9ff; border:1px solid #bae6fd; padding:1rem; border-radius:8px; font-size:0.9rem;">
+                    <strong>🏦 お客様専用 振込口座 (Stripeバーチャル口座):</strong>
+                    <div id="bank-info-content" style="margin-top:0.5rem; white-space:pre-wrap;"></div>
                 </div>
             </div>
         </div>
@@ -177,6 +184,27 @@
             } catch (err) {
                 alert('エラーが発生しました。');
                 btn.disabled = false;
+            }
+        }
+
+        async function fetchBankTransferInfo() {
+            const box = document.getElementById('bank-info-box');
+            const content = document.getElementById('bank-info-content');
+            box.style.display = 'block';
+            content.innerText = '振込専用口座情報を取得中...';
+
+            try {
+                const res = await fetch('api/create_bank_transfer_account.php', { method: 'POST', credentials: 'include' });
+                const data = await res.json();
+
+                if (data.success && data.bank_details) {
+                    const b = data.bank_details;
+                    content.innerText = `金融機関名: ${b.bank_name || 'GMOあおぞらネット銀行 / 住信SBIネット銀行'}\n支店名: ${b.branch_name || '法人営業部'}\n口座種別: 普通預金\n口座番号: ${b.account_number || '-'}\n口座名義: ${b.account_holder_name || 'Stripe / MDO3'}\n\n※お客様専用の振込口座です。振込完了後、システムに自動で着金検知・反映されます。`;
+                } else {
+                    content.innerText = data.message || '振込口座の自動取得には決済画面（Stripe Checkout）での銀行振込指定またはStripe設定が必要です。';
+                }
+            } catch (err) {
+                content.innerText = '通信エラーが発生しました。';
             }
         }
 

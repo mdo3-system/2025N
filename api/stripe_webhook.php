@@ -94,6 +94,18 @@ try {
                 $stmt->execute([$periodEnd, $subId]);
             }
             break;
+
+        case 'payment_intent.succeeded':
+            $customerId = $dataObject['customer'] ?? '';
+            if ($customerId) {
+                $stmt = $pdo->prepare("
+                    UPDATE subscriptions 
+                    SET status = 'active', updated_at = NOW() 
+                    WHERE stripe_customer_id = ?
+                ");
+                $stmt->execute([$customerId]);
+            }
+            break;
     }
 
     http_response_code(200);
