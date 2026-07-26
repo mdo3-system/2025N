@@ -542,7 +542,7 @@
                             <li>7日間無制限アクセス</li>
                         </ul>
                     </div>
-                    <a href="index.html" class="btn-plan btn-plan-outline">週額で始める</a>
+                    <button onclick="startCheckout('weekly')" class="btn-plan btn-plan-outline">週額で始める</button>
                 </div>
 
                 <!-- Monthly Standard Plan -->
@@ -562,7 +562,7 @@
                             <li>いつでも自動更新停止可能</li>
                         </ul>
                     </div>
-                    <a href="index.html" class="btn-plan btn-plan-outline">月額で始める</a>
+                    <button onclick="startCheckout('monthly_std')" class="btn-plan btn-plan-outline">月額で始める</button>
                 </div>
 
                 <!-- Annual Plan (Featured) -->
@@ -583,7 +583,7 @@
                             <li>メール優先サポート</li>
                         </ul>
                     </div>
-                    <a href="index.html" class="btn-plan btn-plan-primary">年額プランで始める</a>
+                    <button onclick="startCheckout('annual')" class="btn-plan btn-plan-primary">年額プランで始める</button>
                 </div>
 
                 <!-- Monthly Premium (With Support) Plan -->
@@ -603,7 +603,7 @@
                             <li>優先電話・メールサポート</li>
                         </ul>
                     </div>
-                    <a href="index.html" class="btn-plan btn-plan-outline" style="color: #8e44ad; border-color: #8e44ad;">サポート付きで始める</a>
+                    <button onclick="startCheckout('monthly_prem')" class="btn-plan btn-plan-outline" style="color: #8e44ad; border-color: #8e44ad;">サポート付きで始める</button>
                 </div>
             </div>
 
@@ -625,6 +625,38 @@
         </div>
         <p class="copyright">&copy; 2026 MDO3 Structural Support Systems. All rights reserved.</p>
     </footer>
+
+    <script>
+        async function startCheckout(planKey) {
+            try {
+                // 認証チェック
+                const authRes = await fetch('api/check_auth.php', { credentials: 'include' });
+                const authData = await authRes.json();
+
+                if (!authData.authenticated) {
+                    alert('決済に進むにはログインが必要です。\nマジックリンクにてログインしてください。');
+                    window.location.href = 'index.html';
+                    return;
+                }
+
+                // Checkout Session 発行
+                const res = await fetch('api/create_checkout_session.php?plan=' + encodeURIComponent(planKey), {
+                    method: 'POST',
+                    credentials: 'include'
+                });
+                const data = await res.json();
+
+                if (data.success && data.url) {
+                    window.location.href = data.url;
+                } else {
+                    alert(data.message || '決済画面の呼び出しに失敗しました。');
+                }
+            } catch (err) {
+                console.error(err);
+                alert('通信エラーが発生しました。');
+            }
+        }
+    </script>
 
 </body>
 </html>

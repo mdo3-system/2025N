@@ -1,4 +1,4 @@
 /**
  * Version.js - Centralized Version Management
  */
-window.APP_VERSION = "v3.6.2"; // Feature: 4-tier pricing plans (Weekly, Monthly Standard, Annual, Monthly Premium)
+window.APP_VERSION = "v3.7.0"; // Feature: Complete Stripe Billing, Checkout, Webhook & Customer Portal Integration

@@ -55,6 +55,26 @@ try {
     $pdo->exec($sqlSessions);
     echo "Table 'sessions' verified/created.\n";
 
+    // 4. subscriptions テーブル (Stripe 契約管理用)
+    $sqlSubscriptions = "
+    CREATE TABLE IF NOT EXISTS subscriptions (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NOT NULL,
+        plan_key VARCHAR(50) NOT NULL DEFAULT 'weekly',
+        stripe_customer_id VARCHAR(255) NOT NULL,
+        stripe_subscription_id VARCHAR(255) NULL,
+        status VARCHAR(50) NOT NULL DEFAULT 'inactive',
+        current_period_end DATETIME NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+        INDEX idx_user_status (user_id, status),
+        INDEX idx_stripe_customer (stripe_customer_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    ";
+    $pdo->exec($sqlSubscriptions);
+    echo "Table 'subscriptions' verified/created.\n";
+
     echo "ALL TABLES SET UP SUCCESSFULLY.\n";
 
 } catch (Exception $e) {
