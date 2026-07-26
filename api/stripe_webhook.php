@@ -108,10 +108,104 @@ try {
             break;
     }
 
+    // 販売管理ポータル (pr.eie.tokyo) への方式B リアルタイム Webhook 転送処理
+    forwardToSalesPortal($eventType, $dataObject, $pdo);
+
     http_response_code(200);
     echo json_encode(['status' => 'success', 'event' => $eventType]);
 
 } catch (Exception $e) {
     http_response_code(500);
     echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+}
+
+/**
+ * 販売管理ポータル (pr.eie.tokyo) への Webhook イベント転送関数 (方式B)
+ * X-API-KEY ヘッダー認証 ＆ 最大3回リトライ ＆ エラーログ保存
+ */
+function forwardToSalesPortal($eventType, $dataObject, $pdo) {
+    $targetUrl = SALES_PORTAL_WEBHOOK_URL;
+    $apiKey    = API_SECRET_KEY;
+
+    if (empty($targetUrl)) return;
+
+    // ユーザー情報等の補完
+    $customerId = $dataObject['customer'] ?? '';
+    $userEmail  = $dataObject['customer_email'] ?? '';
+    $userId     = $dataObject['metadata']['user_id'] ?? null;
+
+    if (empty($userEmail) && $customerId && $pdo) {
+        $stmt = $pdo->prepare("
+            SELECT u.id, u.email 
+            FROM subscriptions sub 
+            JOIN users u ON sub.user_id = u.id 
+            WHERE sub.stripe_customer_id = ? 
+            LIMIT 1
+        ");
+        $stmt->execute([$customerId]);
+        $u = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($u) {
+            $userEmail = $u['email'];
+            $userId    = $u['id'];
+        }
+    }
+
+    $payload = [
+        'event_type' => $eventType,
+        'timestamp'  => date('c'),
+        'data'       => [
+            'user_id'                => $userId,
+            'email'                  => $userEmail,
+            'plan_key'               => $dataObject['metadata']['plan_key'] ?? null,
+            'status'                 => $dataObject['status'] ?? 'active',
+            'stripe_customer_id'     => $customerId,
+            'stripe_subscription_id' => $dataObject['subscription'] ?? $dataObject['id'] ?? null,
+            'current_period_end'     => isset($dataObject['current_period_end']) ? date('Y-m-d H:i:s', $dataObject['current_period_end']) : null,
+            'raw_event'              => $dataObject
+        ]
+    ];
+
+    $jsonPayload = json_encode($payload);
+    $maxRetries  = 3;
+    $success     = false;
+
+    for ($attempt = 1; $attempt <= $maxRetries; $attempt++) {
+        $ch = curl_init($targetUrl);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $jsonPayload);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 5);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            'Content-Type: application/json',
+            'X-API-KEY: ' . $apiKey
+        ]);
+
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($httpCode >= 200 && $httpCode < 300) {
+            $success = true;
+            break;
+        }
+
+        usleep(500000); // 0.5秒待機後リトライ
+    }
+
+    if (!$success) {
+        $logDir = __DIR__ . '/../logs';
+        if (!is_dir($logDir)) {
+            @mkdir($logDir, 0755, true);
+        }
+        $logFile = $logDir . '/webhook_forward_error.log';
+        $logMessage = sprintf(
+            "[%s] ERROR Forwarding event '%s' for email '%s' (HTTP Code: %s)\nPayload: %s\n\n",
+            date('Y-m-d H:i:s'),
+            $eventType,
+            $userEmail,
+            $httpCode ?? '0',
+            $jsonPayload
+        );
+        @file_put_contents($logFile, $logMessage, FILE_APPEND);
+    }
 }

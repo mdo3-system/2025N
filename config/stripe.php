@@ -8,6 +8,10 @@ define('STRIPE_PUBLISHABLE_KEY', getenv('STRIPE_PUBLISHABLE_KEY') ?: 'pk_live_pl
 define('STRIPE_SECRET_KEY',      getenv('STRIPE_SECRET_KEY')      ?: 'sk_live_placeholder');
 define('STRIPE_WEBHOOK_SECRET', getenv('STRIPE_WEBHOOK_SECRET')  ?: 'whsec_placeholder');
 
+// 販売管理ポータル (pr.eie.tokyo) 連携用 共通シークレット認証キー ＆ Webhook転送先URL
+define('API_SECRET_KEY',           getenv('API_SECRET_KEY')           ?: 'eie_sales_portal_secret_key_2026');
+define('SALES_PORTAL_WEBHOOK_URL', getenv('SALES_PORTAL_WEBHOOK_URL') ?: 'https://pr.eie.tokyo/api/stripe_event');
+
 // Stripe 料金プラン Price ID 設定 (4プラン対応)
 $STRIPE_PLANS = [
     'weekly' => [
