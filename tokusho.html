@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>特定商取引法に基づく表記 | MDO3 木造構造計算システム</title>
+    <meta name="description" content="MDO3 木造住宅構造計算システムの特定商取引法に基づく表示ページです。事業者情報、料金、支払方法、キャンセル・解約規定などを掲載しています。">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --primary-light: #eff6ff;
+            --text-main: #0f172a;
+            --text-muted: #475569;
+            --bg-main: #f8fafc;
+            --bg-card: #ffffff;
+            --border: #e2e8f0;
+            --radius: 12px;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', 'Noto Sans JP', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            line-height: 1.7;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Header / Navigation */
+        .navbar {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--border);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .nav-container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 1rem 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .brand-logo {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--primary);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .brand-badge {
+            background: var(--primary-light);
+            color: var(--primary);
+            font-size: 0.75rem;
+            padding: 0.2rem 0.6rem;
+            border-radius: 999px;
+            font-weight: 600;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 1.5rem;
+            align-items: center;
+        }
+
+        .nav-link {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 0.95rem;
+            transition: color 0.2s ease;
+        }
+
+        .nav-link:hover {
+            color: var(--primary);
+        }
+
+        .btn-nav {
+            background-color: var(--primary);
+            color: white;
+            padding: 0.5rem 1.2rem;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.9rem;
+            transition: all 0.2s ease;
+        }
+
+        .btn-nav:hover {
+            background-color: var(--primary-dark);
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+        }
+
+        /* Container */
+        .container {
+            max-width: 900px;
+            margin: 2.5rem auto 4rem;
+            padding: 0 1.5rem;
+        }
+
+        /* Header Title Section */
+        .page-header {
+            text-align: center;
+            margin-bottom: 2.5rem;
+        }
+
+        .page-title {
+            font-size: 2rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            color: var(--text-main);
+            margin-bottom: 0.5rem;
+        }
+
+        .page-subtitle {
+            color: var(--text-muted);
+            font-size: 1rem;
+        }
+
+        /* Card Content */
+        .content-card {
+            background: var(--bg-card);
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow);
+            padding: 2.5rem;
+        }
+
+        /* Legal Table Style */
+        .tokusho-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .tokusho-table tr {
+            border-bottom: 1px solid var(--border);
+        }
+
+        .tokusho-table tr:last-child {
+            border-bottom: none;
+        }
+
+        .tokusho-table th {
+            width: 28%;
+            padding: 1.25rem 1rem 1.25rem 0.5rem;
+            text-align: left;
+            font-weight: 600;
+            color: var(--text-main);
+            vertical-align: top;
+            background-color: #fafafa;
+        }
+
+        .tokusho-table td {
+            width: 72%;
+            padding: 1.25rem 0.5rem 1.25rem 1rem;
+            color: var(--text-muted);
+            vertical-align: top;
+            line-height: 1.7;
+        }
+
+        .tokusho-table ul {
+            padding-left: 1.25rem;
+            margin-top: 0.4rem;
+        }
+
+        .tokusho-table li {
+            margin-bottom: 0.3rem;
+        }
+
+        .highlight-box {
+            background: var(--primary-light);
+            border-left: 4px solid var(--primary);
+            padding: 0.8rem 1rem;
+            border-radius: 0 6px 6px 0;
+            margin-top: 0.5rem;
+            font-size: 0.92rem;
+            color: #1e40af;
+        }
+
+        /* Footer */
+        .footer {
+            border-top: 1px solid var(--border);
+            background: #ffffff;
+            padding: 2.5rem 1.5rem;
+            text-align: center;
+            margin-top: 5rem;
+        }
+
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .footer-link {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.9rem;
+        }
+
+        .footer-link:hover {
+            color: var(--primary);
+            text-decoration: underline;
+        }
+
+        .copyright {
+            color: #94a3b8;
+            font-size: 0.85rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 640px) {
+            .content-card {
+                padding: 1.5rem 1rem;
+            }
+
+            .tokusho-table th,
+            .tokusho-table td {
+                display: block;
+                width: 100%;
+            }
+
+            .tokusho-table th {
+                padding-bottom: 0.3rem;
+                background-color: transparent;
+            }
+
+            .tokusho-table td {
+                padding-top: 0.2rem;
+                padding-left: 0.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header Navigation -->
+    <header class="navbar">
+        <div class="nav-container">
+            <a href="index.html" class="brand-logo">
+                MDO3 構造計算Web
+                <span class="brand-badge">v3.6.1</span>
+            </a>
+            <nav class="nav-links">
+                <a href="pricing.html" class="nav-link">機能・料金詳細</a>
+                <a href="tokusho.html" class="nav-link" style="color: var(--primary); font-weight: 600;">特定商取引法表記</a>
+                <a href="manual/index.html" class="nav-link">操作マニュアル</a>
+                <a href="index.html" class="btn-nav">アプリを始める</a>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container">
+        <div class="page-header">
+            <h1 class="page-title">特定商取引法に基づく表記</h1>
+            <p class="page-subtitle">Specified Commercial Transactions Act</p>
+        </div>
+
+        <div class="content-card">
+            <table class="tokusho-table">
+                <tbody>
+                    <tr>
+                        <th>販売事業者名</th>
+                        <td>設計サポート (MDO3 開発運営チーム)</td>
+                    </tr>
+                    <tr>
+                        <th>運営統括責任者</th>
+                        <td>運営責任者名（お問い合わせ窓口にて開示）</td>
+                    </tr>
+                    <tr>
+                        <th>所在地</th>
+                        <td>〒000-0000 東京都（請求があった場合、遅滞なく開示いたします）</td>
+                    </tr>
+                    <tr>
+                        <th>お問い合わせ先</th>
+                        <td>
+                            メールアドレス: support@eie.jp<br>
+                            電話番号: お問い合わせメールにてご請求いただきましたら遅滞なく開示いたします。<br>
+                            受付時間: 平日 10:00〜18:00（土日祝日・年末年始を除く）
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>販売価格</th>
+                        <td>
+                            対象となるデジタルサービス（MDO3 木造構造計算システム利用権）の利用料金は、プラン指定ページ（<a href="pricing.html" style="color: var(--primary);">機能・料金詳細</a>）に表示される価格となります。
+                            <ul>
+                                <li><strong>月額プラン:</strong> ¥3,300 / 月 (税込)</li>
+                                <li><strong>年額プラン:</strong> ¥33,000 / 年 (税込)</li>
+                            </ul>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>商品代金以外の必要料金</th>
+                        <td>
+                            当サイトの閲覧および本Webサービスの利用に必要なインターネット接続環境、パケット通信料等は各お客様のご負担となります。
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>お支払方法</th>
+                        <td>
+                            クレジットカード決済（Stripe 決済システム利用）<br>
+                            対応ブランド: Visa, Mastercard, American Express, JCB, Discover, Diners Club
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>代金の支払時期</th>
+                        <td>
+                            初回購入時：お申し込み時（クレジットカード即時決済）<br>
+                            定期購入（サブスクリプション）：契約更新日（毎月または毎年）に自動的に決済されます。
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>サービスの引渡時期</th>
+                        <td>
+                            決済完了確認後、即時（直ちにWebシステムへログインし、全機能をご利用いただけます）。
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>返品・交換・キャンセル</th>
+                        <td>
+                            デジタルコンテンツ・Webサービスの性質上、決済完了後のお客様都合による返金およびキャンセルには応じられません。あらかじめご了承ください。<br>
+                            不具合やシステムトラブル等で正常にご利用いただけない場合は、お問い合わせ窓口までご連絡ください。
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>解約・サブスクリプションの停止</th>
+                        <td>
+                            会員マイページまたはマイポータル画面（Stripe Customer Portal）より、いつでも次回更新の解約・定期課金の自動停止手続きが可能です。<br>
+                            次回更新日の前日までに解約手続きを行っていただくことで、翌月（または翌年）以降の課金は発生いたしません。期間途中での解約の場合も、有効期限終了日までサービスをご利用いただけます。
+                            <div class="highlight-box">
+                                ※中途解約に伴う日割り計算等での返金は行っておりません。
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>動作環境</th>
+                        <td>
+                            <strong>推奨ブラウザ:</strong><br>
+                            Google Chrome 最新版, Microsoft Edge 最新版, Apple Safari 最新版, Mozilla Firefox 最新版<br>
+                            ※最新のJavaScriptおよびHTML5規格に対応したブラウザ環境が必要です。
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-links">
+            <a href="index.html" class="footer-link">計算アプリ ホーム</a>
+            <a href="pricing.html" class="footer-link">機能・料金詳細</a>
+            <a href="tokusho.html" class="footer-link">特定商取引法に基づく表記</a>
+            <a href="manual/index.html" class="footer-link">操作マニュアル</a>
+        </div>
+        <p class="copyright">&copy; 2026 MDO3 Structural Support Systems. All rights reserved.</p>
+    </footer>
+
+</body>
+</html>

@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>機能・商品詳細と料金プラン | MDO3 木造構造計算システム</title>
+    <meta name="description" content="MDO3 木造住宅構造計算Webツールの商品詳細、機能特長、および月額・年額料金プランのご案内ページです。">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --primary-light: #eff6ff;
+            --secondary: #0ea5e9;
+            --accent: #f59e0b;
+            --text-main: #0f172a;
+            --text-muted: #475569;
+            --bg-main: #f8fafc;
+            --bg-card: #ffffff;
+            --border: #e2e8f0;
+            --radius-lg: 16px;
+            --radius: 12px;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+            --shadow-lg: 0 10px 25px -5px rgba(37, 99, 235, 0.12), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', 'Noto Sans JP', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            line-height: 1.7;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Header Navigation */
+        .navbar {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--border);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .nav-container {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 1rem 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .brand-logo {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--primary);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .brand-badge {
+            background: var(--primary-light);
+            color: var(--primary);
+            font-size: 0.75rem;
+            padding: 0.2rem 0.6rem;
+            border-radius: 999px;
+            font-weight: 600;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 1.5rem;
+            align-items: center;
+        }
+
+        .nav-link {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 0.95rem;
+            transition: color 0.2s ease;
+        }
+
+        .nav-link:hover {
+            color: var(--primary);
+        }
+
+        .btn-nav {
+            background-color: var(--primary);
+            color: white;
+            padding: 0.5rem 1.2rem;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.9rem;
+            transition: all 0.2s ease;
+        }
+
+        .btn-nav:hover {
+            background-color: var(--primary-dark);
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+        }
+
+        /* Hero Section */
+        .hero {
+            background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 50%, #0284c7 100%);
+            color: white;
+            padding: 4rem 1.5rem 5rem;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero-title {
+            font-size: 2.5rem;
+            font-weight: 800;
+            margin-bottom: 1rem;
+            letter-spacing: -0.02em;
+            line-height: 1.3;
+        }
+
+        .hero-subtitle {
+            font-size: 1.15rem;
+            color: #e0f2fe;
+            max-width: 720px;
+            margin: 0 auto 2rem;
+            font-weight: 400;
+        }
+
+        .hero-tags {
+            display: flex;
+            justify-content: center;
+            gap: 0.8rem;
+            flex-wrap: wrap;
+        }
+
+        .hero-tag {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(4px);
+            padding: 0.4rem 1rem;
+            border-radius: 999px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        /* Main Container */
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 0 1.5rem;
+        }
+
+        /* Section Styling */
+        .section {
+            padding: 4.5rem 0;
+        }
+
+        .section-title-wrap {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .section-tag {
+            color: var(--primary);
+            font-size: 0.85rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 0.4rem;
+        }
+
+        .section-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--text-main);
+            letter-spacing: -0.02em;
+        }
+
+        /* Features Grid */
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 1.75rem;
+        }
+
+        .feature-card {
+            background: var(--bg-card);
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            padding: 2rem;
+            box-shadow: var(--shadow);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .feature-icon {
+            width: 48px;
+            height: 48px;
+            background: var(--primary-light);
+            color: var(--primary);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            margin-bottom: 1.25rem;
+        }
+
+        .feature-h3 {
+            font-size: 1.2rem;
+            font-weight: 700;
+            margin-bottom: 0.6rem;
+            color: var(--text-main);
+        }
+
+        .feature-p {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+
+        /* Pricing Cards */
+        .pricing-wrap {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 2rem;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .pricing-card {
+            background: var(--bg-card);
+            border-radius: var(--radius-lg);
+            border: 2px solid var(--border);
+            padding: 2.5rem 2rem;
+            box-shadow: var(--shadow);
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .pricing-card.featured {
+            border-color: var(--primary);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .popular-badge {
+            position: absolute;
+            top: -14px;
+            right: 24px;
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            color: white;
+            font-size: 0.75rem;
+            font-weight: 700;
+            padding: 0.3rem 0.8rem;
+            border-radius: 999px;
+            box-shadow: 0 4px 6px rgba(245, 158, 11, 0.3);
+        }
+
+        .plan-name {
+            font-size: 1.35rem;
+            font-weight: 700;
+            color: var(--text-main);
+            margin-bottom: 0.5rem;
+        }
+
+        .plan-desc {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .plan-price-wrap {
+            margin-bottom: 2rem;
+            display: flex;
+            align-items: baseline;
+            gap: 0.3rem;
+        }
+
+        .plan-price {
+            font-size: 2.75rem;
+            font-weight: 800;
+            color: var(--text-main);
+            letter-spacing: -0.03em;
+        }
+
+        .plan-period {
+            color: var(--text-muted);
+            font-weight: 500;
+            font-size: 0.95rem;
+        }
+
+        .plan-features {
+            list-style: none;
+            margin-bottom: 2rem;
+            border-top: 1px solid var(--border);
+            padding-top: 1.5rem;
+        }
+
+        .plan-features li {
+            padding: 0.5rem 0;
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+        }
+
+        .plan-features li::before {
+            content: "✓";
+            color: var(--primary);
+            font-weight: 700;
+        }
+
+        .btn-plan {
+            display: block;
+            width: 100%;
+            text-align: center;
+            padding: 0.85rem;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 1rem;
+            text-decoration: none;
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+
+        .btn-plan-primary {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+        }
+
+        .btn-plan-primary:hover {
+            background-color: var(--primary-dark);
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+        }
+
+        .btn-plan-outline {
+            background-color: transparent;
+            color: var(--primary);
+            border: 2px solid var(--primary);
+        }
+
+        .btn-plan-outline:hover {
+            background-color: var(--primary-light);
+        }
+
+        /* Notice Box */
+        .notice-box {
+            background: #fffbebfb;
+            border: 1px solid #fde68a;
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            max-width: 900px;
+            margin: 2rem auto 0;
+            text-align: center;
+            font-size: 0.9rem;
+            color: #b45309;
+        }
+
+        .notice-box a {
+            color: #92400e;
+            font-weight: 700;
+            text-decoration: underline;
+        }
+
+        /* Footer */
+        .footer {
+            border-top: 1px solid var(--border);
+            background: #ffffff;
+            padding: 2.5rem 1.5rem;
+            text-align: center;
+            margin-top: 4rem;
+        }
+
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .footer-link {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.9rem;
+        }
+
+        .footer-link:hover {
+            color: var(--primary);
+            text-decoration: underline;
+        }
+
+        .copyright {
+            color: #94a3b8;
+            font-size: 0.85rem;
+        }
+
+        @media (max-width: 640px) {
+            .hero-title {
+                font-size: 1.8rem;
+            }
+            .hero-subtitle {
+                font-size: 1rem;
+            }
+            .pricing-wrap {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header Navigation -->
+    <header class="navbar">
+        <div class="nav-container">
+            <a href="index.html" class="brand-logo">
+                MDO3 構造計算Web
+                <span class="brand-badge">v3.6.1</span>
+            </a>
+            <nav class="nav-links">
+                <a href="pricing.html" class="nav-link" style="color: var(--primary); font-weight: 600;">機能・料金詳細</a>
+                <a href="tokusho.html" class="nav-link">特定商取引法表記</a>
+                <a href="manual/index.html" class="nav-link">操作マニュアル</a>
+                <a href="index.html" class="btn-nav">アプリを始める</a>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <h1 class="hero-title">木造住宅 構造計算をWeb上で高速・正確に</h1>
+        <p class="hero-subtitle">
+            壁量計算、四分割法、N値計算、柱・梁伏図入力から各種帳票・DXF出力まで。<br>
+            建築士・構造設計者の実務を強力にバックアップする次世代構造計算Webツール。
+        </p>
+        <div class="hero-tags">
+            <span class="hero-tag">⚡ ブラウザで即座に動作</span>
+            <span class="hero-tag">📐 DXFデータ連携</span>
+            <span class="hero-tag">📑 建築基準法準拠</span>
+            <span class="hero-tag">🔒 Stripe安全決済</span>
+        </div>
+    </section>
+
+    <!-- Main Content Container -->
+    <div class="container">
+        
+        <!-- Service & Product Description -->
+        <section class="section">
+            <div class="section-title-wrap">
+                <div class="section-tag">PRODUCT DETAILS</div>
+                <h2 class="section-title">商品の詳細・主な機能</h2>
+            </div>
+
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">📊</div>
+                    <h3 class="feature-h3">壁量計算・四分割法</h3>
+                    <p class="feature-p">
+                        地震力・風圧力に対する必要壁量および存在壁量をリアルタイム自動計算。4分割法による壁配置の偏心チェックを完全網羅。
+                    </p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🧩</div>
+                    <h3 class="feature-h3">N値計算 (柱頭柱脚金物)</h3>
+                    <p class="feature-p">
+                        各柱に発生する引抜力を算出。出隅・一般部の判定および柱頭・柱脚金物選定に必要なN値を精度高く求められます。
+                    </p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🖥️</div>
+                    <h3 class="feature-h3">3Dプレビュー & CADインポート</h3>
+                    <p class="feature-p">
+                        DXF図面の取り込み対応。インタラクティブな3Dビューアで柱・耐力壁の空間配置を視覚的に即座にプレビュー・確認可能。
+                    </p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📄</div>
+                    <h3 class="feature-h3">各種帳票・PDF/DXF出力</h3>
+                    <p class="feature-p">
+                        確認申請および構造審査に使用できる詳細構造計算書、壁配置図、N値確認図をワンクリックでPDFおよびDXFフォーマット出力。
+                    </p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">☁️</div>
+                    <h3 class="feature-h3">クラウド連携・インストール不要</h3>
+                    <p class="feature-p">
+                        専用ソフトのインストールは一切不要。Windows / Mac等の最新Webブラウザで、いつでもどこでもプロジェクトの閲覧・編集が可能です。
+                    </p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">⚡</div>
+                    <h3 class="feature-h3">即時アプリアクセス</h3>
+                    <p class="feature-p">
+                        Stripeアカウント決済完了後、待ち時間なしで全計算機能およびデータ保存・帳票出力機能が即座にアンロックされます。
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Pricing Section -->
+        <section class="section" id="plans">
+            <div class="section-title-wrap">
+                <div class="section-tag">PRICING PLANS</div>
+                <h2 class="section-title">利用料金・サブスクリプションプラン</h2>
+            </div>
+
+            <div class="pricing-wrap">
+                <!-- Monthly Plan -->
+                <div class="pricing-card">
+                    <div>
+                        <h3 class="plan-name">月額プラン</h3>
+                        <p class="plan-desc">短期プロジェクトや月単位で柔軟に利用したい方に</p>
+                        <div class="plan-price-wrap">
+                            <span class="plan-price">¥3,300</span>
+                            <span class="plan-period">/ 月 (税込)</span>
+                        </div>
+                        <ul class="plan-features">
+                            <li>すべての構造計算機能（壁量/4分割/N値）</li>
+                            <li>DXF図面インポート & 3D表示</li>
+                            <li>帳票PDF・CAD（DXF）無制限出力</li>
+                            <li>プロジェクト保存・クラウド管理</li>
+                            <li>いつでも解約可能（次回更新停止）</li>
+                        </ul>
+                    </div>
+                    <a href="index.html" class="btn-plan btn-plan-outline">月額プランで始める</a>
+                </div>
+
+                <!-- Annual Plan (Featured) -->
+                <div class="pricing-card featured">
+                    <div class="popular-badge">お得な2ヶ月分実質無料</div>
+                    <div>
+                        <h3 class="plan-name">年額プラン</h3>
+                        <p class="plan-desc">継続的な業務や設計事務所様におすすめの年間契約</p>
+                        <div class="plan-price-wrap">
+                            <span class="plan-price">¥33,000</span>
+                            <span class="plan-period">/ 年 (税込)</span>
+                        </div>
+                        <ul class="plan-features">
+                            <li>月額プランのすべての機能</li>
+                            <li>年間一括払い（2ヶ月分お得）</li>
+                            <li>DXF図面インポート & 3D表示</li>
+                            <li>帳票PDF・CAD（DXF）無制限出力</li>
+                            <li>優先メールサポート</li>
+                        </ul>
+                    </div>
+                    <a href="index.html" class="btn-plan btn-plan-primary">年額プランで始める</a>
+                </div>
+            </div>
+
+            <div class="notice-box">
+                ※ お支払いには Stripe の安全なクレジットカード決済システムを使用しています。<br>
+                販売事業者情報、解約規定、引渡時期などの法的事項につきましては<a href="tokusho.html">特定商取引法に基づく表記</a>をご確認ください。
+            </div>
+        </section>
+
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-links">
+            <a href="index.html" class="footer-link">計算アプリ ホーム</a>
+            <a href="pricing.html" class="footer-link">機能・料金詳細</a>
+            <a href="tokusho.html" class="footer-link">特定商取引法に基づく表記</a>
+            <a href="manual/index.html" class="footer-link">操作マニュアル</a>
+        </div>
+        <p class="copyright">&copy; 2026 MDO3 Structural Support Systems. All rights reserved.</p>
+    </footer>
+
+</body>
+</html>
