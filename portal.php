@@ -63,7 +63,7 @@
 
     <header class="navbar">
         <div class="nav-container">
-            <a href="index.html" class="brand-logo">MDO3 構造計算Web System</a>
+            <a href="index.html" class="brand-logo">上善如水 構造計算WEB</a>
             <div>
                 <a href="index.html" style="color: var(--text-muted); text-decoration: none; font-weight: 500; font-size: 0.9rem;">← アプリに戻る</a>
             </div>
