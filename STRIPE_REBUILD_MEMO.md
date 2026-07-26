@@ -18,8 +18,10 @@
    - `STRIPE_WEBHOOK_SECRET` (Webhook署名ヘッダー検証キー: `whsec_...`)
 
 2. **商品および価格 (Products & Prices)**:
-   - 月額プラン Price ID (例: `price_1N...`)
-   - 年額プラン Price ID (例: `price_1N...`)
+   - 週額スポット (1,650円/週) Price ID (例: `price_weekly_...`)
+   - 月額スタンダード (5,500円/月) Price ID (例: `price_monthly_std_...`)
+   - 年額プラン (55,000円/年) Price ID (例: `price_annual_...`)
+   - 月額プレミアム (10,000円/月 サポート付) Price ID (例: `price_monthly_prem_...`)
 
 3. **Webhook エンドポイント設定**:
    - URL: `https://2025.eie.jp/api/stripe_webhook.php`

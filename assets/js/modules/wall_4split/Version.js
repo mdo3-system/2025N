@@ -1,4 +1,4 @@
 /**
  * Version.js - Centralized Version Management
  */
-window.APP_VERSION = "v3.6.1"; // Feature: Stripe Product details & Tokusho Legal pages
+window.APP_VERSION = "v3.6.2"; // Feature: 4-tier pricing plans (Weekly, Monthly Standard, Annual, Monthly Premium)

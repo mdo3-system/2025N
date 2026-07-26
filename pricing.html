@@ -239,9 +239,9 @@
         /* Pricing Cards */
         .pricing-wrap {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-            gap: 2rem;
-            max-width: 900px;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 1.5rem;
+            max-width: 1100px;
             margin: 0 auto;
         }
 
@@ -526,24 +526,43 @@
             </div>
 
             <div class="pricing-wrap">
-                <!-- Monthly Plan -->
+                <!-- Weekly Spot Plan -->
                 <div class="pricing-card">
                     <div>
-                        <h3 class="plan-name">月額プラン</h3>
-                        <p class="plan-desc">短期プロジェクトや月単位で柔軟に利用したい方に</p>
+                        <h3 class="plan-name">週額スポット</h3>
+                        <p class="plan-desc">単発物件や1週間集中して使いたい方に</p>
                         <div class="plan-price-wrap">
-                            <span class="plan-price">¥3,300</span>
+                            <span class="plan-price">¥1,650</span>
+                            <span class="plan-period">/ 週 (税込)</span>
+                        </div>
+                        <ul class="plan-features">
+                            <li>全構造計算機能（壁量/4分割/N値）</li>
+                            <li>DXFインポート & 3D表示</li>
+                            <li>帳票PDF・CAD（DXF）無制限出力</li>
+                            <li>7日間無制限アクセス</li>
+                        </ul>
+                    </div>
+                    <a href="index.html" class="btn-plan btn-plan-outline">週額で始める</a>
+                </div>
+
+                <!-- Monthly Standard Plan -->
+                <div class="pricing-card">
+                    <div>
+                        <h3 class="plan-name">月額スタンダード</h3>
+                        <p class="plan-desc">継続的・定期的に設計業務を行っている方に</p>
+                        <div class="plan-price-wrap">
+                            <span class="plan-price">¥5,500</span>
                             <span class="plan-period">/ 月 (税込)</span>
                         </div>
                         <ul class="plan-features">
-                            <li>すべての構造計算機能（壁量/4分割/N値）</li>
-                            <li>DXF図面インポート & 3D表示</li>
+                            <li>全構造計算機能（壁量/4分割/N値）</li>
+                            <li>DXFインポート & 3D表示</li>
                             <li>帳票PDF・CAD（DXF）無制限出力</li>
                             <li>プロジェクト保存・クラウド管理</li>
-                            <li>いつでも解約可能（次回更新停止）</li>
+                            <li>いつでも自動更新停止可能</li>
                         </ul>
                     </div>
-                    <a href="index.html" class="btn-plan btn-plan-outline">月額プランで始める</a>
+                    <a href="index.html" class="btn-plan btn-plan-outline">月額で始める</a>
                 </div>
 
                 <!-- Annual Plan (Featured) -->
@@ -551,20 +570,40 @@
                     <div class="popular-badge">お得な2ヶ月分実質無料</div>
                     <div>
                         <h3 class="plan-name">年額プラン</h3>
-                        <p class="plan-desc">継続的な業務や設計事務所様におすすめの年間契約</p>
+                        <p class="plan-desc">年間を通した設計業務に一番人気の契約</p>
                         <div class="plan-price-wrap">
-                            <span class="plan-price">¥33,000</span>
+                            <span class="plan-price">¥55,000</span>
                             <span class="plan-period">/ 年 (税込)</span>
                         </div>
                         <ul class="plan-features">
-                            <li>月額プランのすべての機能</li>
-                            <li>年間一括払い（2ヶ月分お得）</li>
-                            <li>DXF図面インポート & 3D表示</li>
+                            <li>スタンダードプランの全機能</li>
+                            <li>年間一括払い（実質2ヶ月分お得）</li>
+                            <li>DXFインポート & 3D表示</li>
                             <li>帳票PDF・CAD（DXF）無制限出力</li>
-                            <li>優先メールサポート</li>
+                            <li>メール優先サポート</li>
                         </ul>
                     </div>
                     <a href="index.html" class="btn-plan btn-plan-primary">年額プランで始める</a>
+                </div>
+
+                <!-- Monthly Premium (With Support) Plan -->
+                <div class="pricing-card" style="border-color: #8e44ad;">
+                    <div>
+                        <h3 class="plan-name">月額プレミアム</h3>
+                        <p class="plan-desc">操作方法や個別構造設計相談のサポート付き</p>
+                        <div class="plan-price-wrap">
+                            <span class="plan-price" style="color: #8e44ad;">¥10,000</span>
+                            <span class="plan-period">/ 月 (税込)</span>
+                        </div>
+                        <ul class="plan-features">
+                            <li>スタンダードプランの全機能</li>
+                            <li>専任構造設計サポート・質疑対応</li>
+                            <li>入力データの整合性チェック助言</li>
+                            <li>帳票PDF・CAD（DXF）無制限出力</li>
+                            <li>優先電話・メールサポート</li>
+                        </ul>
+                    </div>
+                    <a href="index.html" class="btn-plan btn-plan-outline" style="color: #8e44ad; border-color: #8e44ad;">サポート付きで始める</a>
                 </div>
             </div>
 
