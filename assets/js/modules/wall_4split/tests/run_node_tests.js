@@ -33,6 +33,7 @@ global.document = {
 const filesToLoad = [
     '../logic/ServiceContainer.js',
     '../logic/MathUtils.js',
+    '../logic/CadEngine.js',
     '../logic/WallEngine.js',
     '../logic/NValueEngine.js',
     '../logic/StructuralEngine.js',
@@ -67,6 +68,7 @@ filesToLoad.forEach(f => {
 // テストケースの読み込み
 const testFiles = [
     'MathUtils.test.js',
+    'CadEngine.test.js',
     'StructuralEngine.test.js',
     'SlabBeamSynchronizer.test.js',
     'FoundationEngine.test.js',

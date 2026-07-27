@@ -9,8 +9,20 @@ function loadDxf(event) {
     const reader = new FileReader();
     reader.onload = function(ev) {
         try {
-            const rawTxt = new TextDecoder('UTF-8').decode(ev.target.result);
-            const dxfRaw = rawTxt.includes('\uFFFD') ? new TextDecoder('Shift_JIS').decode(ev.target.result) : rawTxt;
+            const buffer = new Uint8Array(ev.target.result);
+            let dxfRaw = "";
+
+            if (typeof window.Encoding !== 'undefined' && window.Encoding.detect) {
+                const detected = window.Encoding.detect(buffer);
+                dxfRaw = window.Encoding.convert(buffer, { to: 'UNICODE', from: detected || 'AUTO', type: 'STRING' });
+            } else {
+                const utf8Txt = new TextDecoder('UTF-8').decode(buffer);
+                if (utf8Txt.includes('\uFFFD')) {
+                    dxfRaw = new TextDecoder('Shift_JIS').decode(buffer);
+                } else {
+                    dxfRaw = utf8Txt;
+                }
+            }
             
             const dxf = window.CadEngine.processDxf(dxfRaw);
             if (!dxf) {
@@ -49,6 +61,12 @@ function processDxfData(dxf, isIncremental, rawDxf) {
         walls = [];
         windowsArr = [];
         areaLines = [];
+        if (state) {
+            state.pillars = [];
+            state.walls = [];
+            state.windowsArr = [];
+            state.areaLines = [];
+        }
     }
 
     // Merge or set background data
@@ -69,10 +87,24 @@ function processDxfData(dxf, isIncremental, rawDxf) {
         index === self.findIndex((t) => Math.hypot(t.x - p.x, t.y - p.y) < 10)
     );
 
+    if (state) {
+        state.bgLinesOriginal = bgLinesOriginal;
+        state.bgTextsOriginal = bgTextsOriginal;
+        state.gridBubbles = gridBubbles;
+        state.pillars = pillars;
+        state.areaLines = areaLines;
+    }
+
     // Update drawings container for PDF/Reports
     const docData = { entities: [...bgLinesOriginal, ...bgTextsOriginal], loaded: true, rawDxf: rawDxf };
-    docDrawings.floor = docData;
-    docDrawings.div4 = docData;
+    if (typeof docDrawings !== 'undefined') {
+        docDrawings.floor = docData;
+        docDrawings.div4 = docData;
+    }
+    if (state && state.docDrawings) {
+        state.docDrawings.floor = docData;
+        state.docDrawings.div4 = docData;
+    }
 
     if (typeof analyzeGrids === 'function') analyzeGrids();
     if (typeof initViewForce === 'function') initViewForce();
