@@ -898,8 +898,18 @@
                 </div>
 
                 <b style="color:#0056b3;">① 平面図 DXF読込 (マスト)</b>
+                <div style="margin-top:6px; margin-bottom:8px;">
+                    <label style="margin-bottom:3px; font-weight:bold; color:#333;">読込対象階:</label>
+                    <select id="dxf-target-floor" style="width:100%; padding:6px; font-size:12px; margin-bottom:5px;">
+                        <option value="1F" selected>1階 (1F)</option>
+                        <option value="2F">2階 (2F)</option>
+                        <option value="1RF">1階 屋根 (1RF)</option>
+                        <option value="RF">2階 屋根伏 (RF)</option>
+                        <option value="ALL">全体 (レイヤー自動判別)</option>
+                    </select>
+                </div>
                 <input type="file" id="dxf-upload" accept=".dxf" style="display: none;">
-                <label for="dxf-upload" class="action-btn" style="width:100%; box-sizing:border-box; padding:8px; font-size:12px; margin-top:5px;">📂 平面図を選択</label>
+                <label for="dxf-upload" class="action-btn" style="width:100%; box-sizing:border-box; padding:8px; font-size:12px; margin-top:2px;">📂 平面図を選択して読込</label>
 
                 <input type="hidden" id="scale-sub" value="100">
                 <div style="margin-top:10px; display:flex; flex-direction:column; gap:5px;">

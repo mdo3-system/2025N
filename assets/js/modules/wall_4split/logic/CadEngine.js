@@ -18,7 +18,67 @@ window.CadEngine = {
         }
     },
 
-    mapEntitiesToBackground: function(entities, blocks, state) {
+    /**
+     * Detect base grid origin (e.g. bottom-left intersection of GRID lines or bounding box)
+     */
+    detectGridOrigin: function(entities, blocks) {
+        let gridLines = [];
+        const collectGrids = (ents, blks, transformStack = []) => {
+            ents.forEach(ent => {
+                let L = (ent.layer || "").toUpperCase().trim();
+                if (ent.type === 'INSERT') {
+                    const block = blks ? blks[ent.name] : null;
+                    if (block && block.entities) {
+                        const tf = {
+                            position: ent.position || { x: ent.x || 0, y: ent.y || 0 },
+                            rotation: ent.rotation || 0,
+                            xScale: ent.xScale !== undefined ? ent.xScale : (ent.scale ? ent.scale.x : 1),
+                            yScale: ent.yScale !== undefined ? ent.yScale : (ent.scale ? ent.scale.y : 1)
+                        };
+                        collectGrids(block.entities, blks, [...transformStack, tf]);
+                    }
+                } else if (/(GRID|GLID)/i.test(L)) {
+                    gridLines.push(ent);
+                }
+            });
+        };
+        collectGrids(entities || [], blocks || {});
+
+        let minX = Infinity, minY = Infinity;
+        let xCoords = [], yCoords = [];
+
+        gridLines.forEach(ent => {
+            if (ent.type === 'LINE' && ent.start && ent.end) {
+                xCoords.push(ent.start.x, ent.end.x);
+                yCoords.push(ent.start.y, ent.end.y);
+            } else if (ent.vertices && Array.isArray(ent.vertices)) {
+                ent.vertices.forEach(v => { xCoords.push(v.x); yCoords.push(v.y); });
+            } else if (ent.center) {
+                xCoords.push(ent.center.x);
+                yCoords.push(ent.center.y);
+            }
+        });
+
+        if (xCoords.length > 0 && yCoords.length > 0) {
+            minX = Math.min(...xCoords);
+            minY = Math.min(...yCoords);
+        } else {
+            // Fallback to bounding box of all entities if no GRID layer is found
+            (entities || []).forEach(e => {
+                if (e.position) { minX = Math.min(minX, e.position.x); minY = Math.min(minY, e.position.y); }
+                if (e.center) { minX = Math.min(minX, e.center.x); minY = Math.min(minY, e.center.y); }
+                if (e.start) { minX = Math.min(minX, e.start.x); minY = Math.min(minY, e.start.y); }
+            });
+        }
+
+        if (minX === Infinity || minY === Infinity) {
+            return { x: 0, y: 0 };
+        }
+
+        return { x: Math.round(minX * 10) / 10, y: Math.round(minY * 10) / 10 };
+    },
+
+    mapEntitiesToBackground: function(entities, blocks, state, options = {}) {
         const newBgLines = [];
         const newBgTexts = [];
         const newBubbles = [];
@@ -26,34 +86,49 @@ window.CadEngine = {
         const areaLines = [];
         let pIdCounter = Date.now();
 
-        // 精密なモジュール丸め（極端な強制補正を行わず、0.1mm単位の四捨五入に留める）
-        const roundCoord = (val) => Math.round(val * 10) / 10;
+        const targetFloor = options.targetFloor || null;
+        const currentOrigin = this.detectGridOrigin(entities, blocks);
+        let shiftX = 0;
+        let shiftY = 0;
 
-        // 座標変換ヘルパー (INSERTブロックの移動・回転・拡大縮小を変換)
+        if (options.baseOrigin) {
+            shiftX = options.baseOrigin.x - currentOrigin.x;
+            shiftY = options.baseOrigin.y - currentOrigin.y;
+        }
+
+        // 精密なモジュール丸め（0.1mm単位の四捨五入）
+        const roundCoord = (val) => Math.round((val) * 10) / 10;
+
+        // 座標変換ヘルパー (INSERTブロックの移動・回転・拡大縮小＋基準原点シフト)
         const transformPoint = (pt, transform) => {
             if (!pt) return { x: 0, y: 0 };
             let x = pt.x || 0;
             let y = pt.y || 0;
-            if (!transform) return { x, y };
+            if (transform) {
+                const sx = transform.xScale !== undefined ? transform.xScale : 1;
+                const sy = transform.yScale !== undefined ? transform.yScale : 1;
+                x *= sx;
+                y *= sy;
 
-            const sx = transform.xScale !== undefined ? transform.xScale : 1;
-            const sy = transform.yScale !== undefined ? transform.yScale : 1;
-            x *= sx;
-            y *= sy;
+                if (transform.rotation) {
+                    const rad = (transform.rotation * Math.PI) / 180;
+                    const cos = Math.cos(rad);
+                    const sin = Math.sin(rad);
+                    const rx = x * cos - y * sin;
+                    const ry = x * sin + y * cos;
+                    x = rx;
+                    y = ry;
+                }
 
-            if (transform.rotation) {
-                const rad = (transform.rotation * Math.PI) / 180;
-                const cos = Math.cos(rad);
-                const sin = Math.sin(rad);
-                const rx = x * cos - y * sin;
-                const ry = x * sin + y * cos;
-                x = rx;
-                y = ry;
+                x += transform.position ? (transform.position.x || 0) : 0;
+                y += transform.position ? (transform.position.y || 0) : 0;
             }
-
-            x += transform.position ? (transform.position.x || 0) : 0;
-            y += transform.position ? (transform.position.y || 0) : 0;
             return { x, y };
+        };
+
+        const applyShift = (pt) => {
+            if (!pt) return { x: 0, y: 0 };
+            return { x: pt.x + shiftX, y: pt.y + shiftY };
         };
 
         const collect = (ents, blks, parentLayer = "", transformStack = []) => {
@@ -92,10 +167,29 @@ window.CadEngine = {
                         }
                     });
 
+                    // 通り芯原点差分 (shiftX, shiftY) のシフト適用
+                    if (shiftX !== 0 || shiftY !== 0) {
+                        if (e.position) e.position = applyShift(e.position);
+                        if (e.startPoint) e.startPoint = applyShift(e.startPoint);
+                        if (e.insertionPoint) e.insertionPoint = applyShift(e.insertionPoint);
+                        if (e.center) e.center = applyShift(e.center);
+                        if (e.start) e.start = applyShift(e.start);
+                        if (e.end) e.end = applyShift(e.end);
+                        if (e.vertices && Array.isArray(e.vertices)) {
+                            e.vertices = e.vertices.map(v => applyShift(v));
+                        }
+                    }
+
                     const isGrid = /(GRID|GLID)/i.test(L);
 
+                    // 階指定オプションの決定
+                    let floor = targetFloor;
+                    if (!floor || floor === 'ALL') {
+                        floor = L.includes('2F') || L.includes('RF') ? (L.includes('RF') ? 'RF' : '2F') : (L.includes('1F') ? '1F' : 'ALL');
+                    }
+
                     if (L.includes('COL')) {
-                        const f = (L.includes('2F') || L.includes('RF')) ? '2F' : '1F';
+                        const f = targetFloor || ((L.includes('2F') || L.includes('RF')) ? '2F' : '1F');
                         let px = 0, py = 0, found = false;
 
                         if (e.type === 'POINT') {
@@ -103,17 +197,20 @@ window.CadEngine = {
                             px = pos.x; py = pos.y; found = true;
                         } else if (e.type === 'CIRCLE' && (e.radius || 0) < 500) {
                             px = e.center.x; py = e.center.y; found = true;
+                            e.floor = f;
                             newBgLines.push(e);
                         } else if (['LWPOLYLINE', 'POLYLINE'].includes(e.type) && e.vertices && e.vertices.length > 0) {
                             px = e.vertices.reduce((s, v) => s + v.x, 0) / e.vertices.length;
                             py = e.vertices.reduce((s, v) => s + v.y, 0) / e.vertices.length;
                             found = true;
+                            e.floor = f;
                             newBgLines.push(e);
                         } else if (e.type === 'LINE' && e.start && e.end) {
                             px = (e.start.x + e.end.x) / 2;
                             py = (e.start.y + e.end.y) / 2;
                             found = true;
                             e.vertices = [{ x: e.start.x, y: e.start.y }, { x: e.end.x, y: e.end.y }];
+                            e.floor = f;
                             newBgLines.push(e);
                         }
 
@@ -121,7 +218,7 @@ window.CadEngine = {
                             pillars.push({ id: `P${pIdCounter++}`, x: roundCoord(px), y: roundCoord(py), floor: f, layer: L });
                         }
                     } else if (L.includes('AREA')) {
-                        let f = L.includes('2F') || L.includes('RF') ? (L.includes('RF') ? 'RF' : '2F') : '1F';
+                        let f = targetFloor || (L.includes('2F') || L.includes('RF') ? (L.includes('RF') ? 'RF' : '2F') : '1F');
                         if (['LWPOLYLINE', 'POLYLINE'].includes(e.type) && e.vertices && e.vertices.length >= 3) {
                             e.vertices.forEach(v => { v.x = roundCoord(v.x); v.y = roundCoord(v.y); });
                             areaLines.push({ ...e, layer: L, floor: f, id: Date.now() + Math.random() });
@@ -129,6 +226,7 @@ window.CadEngine = {
                             if (e.type === 'LINE' && e.start && e.end) {
                                 e.vertices = [{ x: e.start.x, y: e.start.y }, { x: e.end.x, y: e.end.y }];
                             }
+                            e.floor = f;
                             newBgLines.push(e);
                         }
                     } else if (isGrid) {
@@ -146,7 +244,7 @@ window.CadEngine = {
                             newBgLines.push(e);
                         }
                     } else {
-                        let f = L.includes('1F') ? '1F' : (L.includes('2F') || L.includes('RF') ? '2F' : 'ALL');
+                        let f = targetFloor || (L.includes('1F') ? '1F' : (L.includes('2F') || L.includes('RF') ? '2F' : 'ALL'));
                         e.floor = f; e.isUnderlay = true;
                         if (e.type === 'LINE') {
                             if (e.start && e.end) e.vertices = [{ x: e.start.x, y: e.start.y }, { x: e.end.x, y: e.end.y }];
@@ -155,7 +253,7 @@ window.CadEngine = {
                             newBgLines.push(e);
                         } else if (['TEXT', 'MTEXT'].includes(e.type)) {
                             const pos = e.startPoint || e.position || e.insertionPoint || {};
-                            newBgTexts.push({ text: e.text || e.string || "", x: pos.x || 0, y: pos.y || 0, floor: f, layer: L });
+                            newBgTexts.push({ text: e.text || e.string || "", x: pos.x || 0, y: pos.y || 0, layer: L, floor: f });
                         }
                     }
                 }
@@ -163,6 +261,6 @@ window.CadEngine = {
         };
 
         collect(entities, blocks || {});
-        return { newBgLines, newBgTexts, newBubbles, pillars, areaLines };
+        return { newBgLines, newBgTexts, newBubbles, pillars, areaLines, detectedOrigin: currentOrigin, shiftApplied: { x: shiftX, y: shiftY } };
     }
 };

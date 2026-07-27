@@ -6,6 +6,10 @@
 function loadDxf(event) {
     const file = event.target.files[0];
     if (!file) return;
+
+    const floorSelect = document.getElementById('dxf-target-floor');
+    const targetFloor = floorSelect ? floorSelect.value : 'ALL';
+
     const reader = new FileReader();
     reader.onload = function(ev) {
         try {
@@ -30,19 +34,24 @@ function loadDxf(event) {
                 return;
             }
 
-            // [Smart Reload] Check if existing data should be preserved
-            let isIncremental = false;
-            if (pillars && pillars.length > 0) {
-                isIncremental = confirm("既存の柱や壁のデータを保持しますか？\n[OK] 保持して追加 / [キャンセル] 全消去して新規読込");
+            // [Smart Reload] Check if existing data should be preserved or per-floor merged
+            let isIncremental = true;
+            if ((pillars && pillars.length > 0) || (bgLinesOriginal && bgLinesOriginal.length > 0)) {
+                if (targetFloor === 'ALL') {
+                    isIncremental = confirm("既存の柱や壁のデータを保持しますか？\n[OK] 保持して追加 / [キャンセル] 全消去して新規読込");
+                }
+            } else {
+                isIncremental = false;
             }
 
-            processDxfData(dxf, isIncremental, dxfRaw);
+            processDxfData(dxf, isIncremental, dxfRaw, targetFloor);
             
             // Show area input modal for floor area confirmation
             showAreaInputModal();
 
             let msgEl = document.getElementById('action-msg');
-            if (msgEl) msgEl.innerText = "✅ 平面図DXFを読み込みました。";
+            const targetName = targetFloor === 'ALL' ? '全体' : targetFloor;
+            if (msgEl) msgEl.innerText = `✅ [${targetName}] DXFを基準位置に自動調整して読み込みました。`;
 
         } catch (err) {
             console.error(err);
@@ -52,34 +61,53 @@ function loadDxf(event) {
     reader.readAsArrayBuffer(file);
 }
 
-function processDxfData(dxf, isIncremental, rawDxf) {
+function processDxfData(dxf, isIncremental, rawDxf, targetFloor = 'ALL') {
     const state = window.AppState;
-    const result = window.CadEngine.mapEntitiesToBackground(dxf.entities, dxf.blocks, state);
+    
+    // 基準通芯原点の保持と自動アライメント
+    const baseOrigin = state ? state.baseGridOrigin : null;
+    const result = window.CadEngine.mapEntitiesToBackground(dxf.entities, dxf.blocks, state, {
+        targetFloor: targetFloor,
+        baseOrigin: baseOrigin
+    });
 
-    if (!isIncremental) {
+    // 最初の読み込みで基準原点を保存
+    if (state && !state.baseGridOrigin && result.detectedOrigin) {
+        state.baseGridOrigin = result.detectedOrigin;
+    }
+
+    if (!isIncremental && targetFloor === 'ALL') {
         pillars = [];
         walls = [];
         windowsArr = [];
         areaLines = [];
+        bgLinesOriginal = [];
+        bgTextsOriginal = [];
+        gridBubbles = [];
         if (state) {
             state.pillars = [];
             state.walls = [];
             state.windowsArr = [];
             state.areaLines = [];
+            state.bgLinesOriginal = [];
+            state.bgTextsOriginal = [];
+            state.gridBubbles = [];
         }
     }
 
-    // Merge or set background data
-    bgLinesOriginal = result.newBgLines;
-    bgTextsOriginal = result.newBgTexts;
-    gridBubbles = result.newBubbles;
-    
-    // Merge extracted elements
-    if (result.pillars) {
-        pillars = [...pillars, ...result.pillars];
-    }
-    if (result.areaLines) {
-        areaLines = [...areaLines, ...result.areaLines];
+    // 階別読込の場合は、当該階の古い下絵要素のみを差し替え
+    if (targetFloor !== 'ALL' && isIncremental) {
+        bgLinesOriginal = [...bgLinesOriginal.filter(l => l.floor !== targetFloor), ...result.newBgLines];
+        bgTextsOriginal = [...bgTextsOriginal.filter(t => t.floor !== targetFloor), ...result.newBgTexts];
+        pillars = [...pillars.filter(p => p.floor !== targetFloor), ...(result.pillars || [])];
+        areaLines = [...areaLines.filter(a => a.floor !== targetFloor), ...(result.areaLines || [])];
+        gridBubbles = result.newBubbles.length > 0 ? result.newBubbles : gridBubbles;
+    } else {
+        bgLinesOriginal = [...bgLinesOriginal, ...result.newBgLines];
+        bgTextsOriginal = [...bgTextsOriginal, ...result.newBgTexts];
+        if (result.newBubbles && result.newBubbles.length > 0) gridBubbles = result.newBubbles;
+        if (result.pillars) pillars = [...pillars, ...result.pillars];
+        if (result.areaLines) areaLines = [...areaLines, ...result.areaLines];
     }
 
     // Deduplicate pillars
