@@ -294,6 +294,17 @@ window.setFloorOriginByClick = function(targetFloor, clickX, clickY) {
 
     const state = window.AppState;
     if (state) {
+        if (isFirstFloorSetup) {
+            if (Array.isArray(state.gridXCoords)) {
+                state.gridXCoords = state.gridXCoords.map(x => Math.round((x - clickX) * 10) / 10).filter((v, i, self) => self.indexOf(v) === i);
+            }
+            if (Array.isArray(state.gridYCoords)) {
+                state.gridYCoords = state.gridYCoords.map(y => Math.round((y - clickY) * 10) / 10).filter((v, i, self) => self.indexOf(v) === i);
+            }
+            if (window.GridEngine && typeof window.GridEngine.detectGridCoords === 'function') {
+                window.GridEngine.detectGridCoords(state);
+            }
+        }
         state.bgLinesOriginal = bgLinesOriginal;
         state.bgTextsOriginal = bgTextsOriginal;
         state.pillars = pillars;

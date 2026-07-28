@@ -221,9 +221,22 @@ window.CadEngine = {
                             e.floor = f;
                             newBgLines.push(e);
                         } else if (['LWPOLYLINE', 'POLYLINE'].includes(e.type) && e.vertices && e.vertices.length > 0) {
-                            px = e.vertices.reduce((s, v) => s + v.x, 0) / e.vertices.length;
-                            py = e.vertices.reduce((s, v) => s + v.y, 0) / e.vertices.length;
-                            found = true;
+                            const xs = e.vertices.map(v => v.x);
+                            const ys = e.vertices.map(v => v.y);
+                            const minX = Math.min(...xs), maxX = Math.max(...xs);
+                            const minY = Math.min(...ys), maxY = Math.max(...ys);
+                            const w = maxX - minX, h = maxY - minY;
+
+                            // 木造柱の一般的なサイズ範囲（40mm〜450mm、正方形・□表記の柱）
+                            if (w >= 40 && w <= 450 && h >= 40 && h <= 450) {
+                                px = (minX + maxX) / 2;
+                                py = (minY + maxY) / 2;
+                                found = true;
+                            } else {
+                                px = xs.reduce((s, v) => s + v, 0) / xs.length;
+                                py = ys.reduce((s, v) => s + v, 0) / ys.length;
+                                found = true;
+                            }
                             e.floor = f;
                             newBgLines.push(e);
                         } else if (e.type === 'LINE' && e.start && e.end) {

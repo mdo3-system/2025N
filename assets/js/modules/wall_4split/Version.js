@@ -1,4 +1,4 @@
 /**
  * Version.js - Centralized Version Management
  */
-window.APP_VERSION = "v3.10.0"; // Feature: Grid Deduplication, Pillar Rendering Fix & Full DXF Layer Visibility Control
+window.APP_VERSION = "v3.10.1"; // Feature: Square/Cross Pillar Extraction & Grid Coordinate Syncing
