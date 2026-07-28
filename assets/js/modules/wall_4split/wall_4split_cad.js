@@ -64,6 +64,11 @@ function loadDxf(event) {
 function processDxfData(dxf, isIncremental, rawDxf, targetFloor = 'ALL') {
     const state = window.AppState;
     
+    // [v3.10.7] 新規読込・全体再読込時は、過去のメモリ原点をクリアして最新の通り芯原点に補正
+    if (state && !isIncremental && targetFloor === 'ALL') {
+        state.baseGridOrigin = null;
+    }
+
     // 基準通芯原点の保持と自動アライメント
     const baseOrigin = state ? state.baseGridOrigin : null;
     const result = window.CadEngine.mapEntitiesToBackground(dxf.entities, dxf.blocks, state, {
