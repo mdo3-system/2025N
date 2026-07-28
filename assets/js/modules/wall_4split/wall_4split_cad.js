@@ -241,3 +241,50 @@ window.shiftFloorOffset = function(targetFloor, deltaX, deltaY) {
 
     if (window.AppController) window.AppController.refreshAll();
 };
+
+window.setFloorOriginByClick = function(targetFloor, clickX, clickY) {
+    if (clickX === undefined || clickY === undefined) return;
+    const floor = targetFloor || (window.AppState ? window.AppState.currentFloor : '1F');
+
+    const shiftPt = (pt) => {
+        if (!pt) return;
+        if (pt.x !== undefined) pt.x = Math.round((pt.x - clickX) * 10) / 10;
+        if (pt.y !== undefined) pt.y = Math.round((pt.y - clickY) * 10) / 10;
+    };
+
+    const shiftEnt = (ent) => {
+        if (ent.position) shiftPt(ent.position);
+        if (ent.startPoint) shiftPt(ent.startPoint);
+        if (ent.insertionPoint) shiftPt(ent.insertionPoint);
+        if (ent.center) shiftPt(ent.center);
+        if (ent.start) shiftPt(ent.start);
+        if (ent.end) shiftPt(ent.end);
+        if (ent.vertices && Array.isArray(ent.vertices)) {
+            ent.vertices.forEach(v => shiftPt(v));
+        }
+    };
+
+    if (typeof bgLinesOriginal !== 'undefined' && Array.isArray(bgLinesOriginal)) {
+        bgLinesOriginal.filter(l => l.floor === floor || floor === 'ALL').forEach(shiftEnt);
+    }
+    if (typeof bgTextsOriginal !== 'undefined' && Array.isArray(bgTextsOriginal)) {
+        bgTextsOriginal.filter(t => t.floor === floor || floor === 'ALL').forEach(shiftPt);
+    }
+    if (typeof pillars !== 'undefined' && Array.isArray(pillars)) {
+        pillars.filter(p => p.floor === floor || floor === 'ALL').forEach(shiftPt);
+    }
+    if (typeof areaLines !== 'undefined' && Array.isArray(areaLines)) {
+        areaLines.filter(a => a.floor === floor || floor === 'ALL').forEach(shiftEnt);
+    }
+
+    const state = window.AppState;
+    if (state) {
+        state.bgLinesOriginal = bgLinesOriginal;
+        state.bgTextsOriginal = bgTextsOriginal;
+        state.pillars = pillars;
+        state.areaLines = areaLines;
+    }
+
+    if (window.AppController) window.AppController.refreshAll();
+    else if (typeof draw === 'function') draw();
+};

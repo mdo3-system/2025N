@@ -941,6 +941,10 @@
                 <button class="btn-undo" id="btn-zoom-fit" style="background:#27ae60; color:#fff;" onclick="window.zoomFit()">🔍 全体表示</button>
             </div>
         </div>
+        <div id="banner-set-origin" style="display:none; background:#8e44ad; color:#fff; padding:10px 15px; text-align:center; font-weight:bold; font-size:13px; z-index:4000; position:relative; box-shadow:0 3px 8px rgba(0,0,0,0.3);">
+            📍 対象階（現在表示中の階）の基準となる通り芯交点をキャンバス上でクリックしてください
+            <button type="button" onclick="window.cancelSetOriginMode()" style="margin-left:20px; background:#fff; color:#8e44ad; border:none; padding:4px 12px; border-radius:4px; cursor:pointer; font-size:12px; font-weight:bold;">✖ キャンセル</button>
+        </div>
         <div id="cad-container">
 
             <!-- DXFレイヤ表示設定パネル -->
@@ -991,7 +995,7 @@
                 </div>
                 <input type="file" id="dxf-upload" accept=".dxf" style="display: none;">
                 <label for="dxf-upload" class="action-btn" style="width:100%; box-sizing:border-box; padding:8px; font-size:12px; margin-top:2px;">📂 平面図を選択して読込</label>
-                <button type="button" class="action-btn" style="width:100%; box-sizing:border-box; padding:8px; font-size:12px; margin-top:6px; background:#8e44ad;" onclick="document.getElementById('modal-align-origin').style.display='flex'">🎯 下絵の位置・原点を微調整</button>
+                <button type="button" class="action-btn" style="width:100%; box-sizing:border-box; padding:8px; font-size:12px; margin-top:6px; background:#8e44ad;" onclick="window.startSetOriginMode()">🎯 クリックで原点を設定</button>
 
                 <input type="hidden" id="scale-sub" value="100">
                 <div style="margin-top:10px; display:flex; flex-direction:column; gap:5px;">
