@@ -138,13 +138,22 @@ window.MainRenderer = {
         drawRect({ minX: b.minX, maxX: b.maxX, minY: b.yLineB, maxY: b.maxY }, 'rgba(231,76,60,0.25)');
     },
 
+    isLayerVisible: function(layer, state) {
+        if (!state || !state.layerVisibility || !layer) return true;
+        const lv = state.layerVisibility;
+        if (lv[layer] === false) return false;
+        const upperL = String(layer).toUpperCase().trim();
+        if (lv[upperL] === false) return false;
+        return true;
+    },
+
     drawBackground: function(state) {
         const ctx = state.ctx;
         ctx.lineWidth = 1.0;
         ctx.strokeStyle = state.isPrintMode ? '#aaa' : 'rgba(170, 170, 170, 0.5)';
         
         state.bgLinesOriginal.forEach(e => {
-            if ((state.layerVisibility || {})[e.layer] === false) return;
+            if (!this.isLayerVisible(e.layer, state)) return;
             if (e.isGridLine) return; // スナップ用GRID線は除外
             if (e.floor !== state.currentFloor && e.floor !== 'ALL') return;
 
@@ -557,7 +566,7 @@ window.MainRenderer = {
         const ctx = state.ctx;
         ctx.textAlign = "left";
         state.bgTextsOriginal.filter(t => t.floor === state.currentFloor || t.floor === 'ALL').forEach(t => {
-            if ((state.layerVisibility || {})[t.layer] === false) return;
+            if (!this.isLayerVisible(t.layer, state)) return;
             const p = this.toCanvas(t, null, state);
             if (p.cx != null) {
                 ctx.fillStyle = t.isUnderlay ? '#666' : (state.isPrintMode ? '#333' : '#aaaaaa');

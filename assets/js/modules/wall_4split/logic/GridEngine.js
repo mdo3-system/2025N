@@ -148,16 +148,42 @@ window.GridEngine = {
             let nx = masterXs.map((x, i) => (state.userEditedGridX && state.userEditedGridX[x]) || nameMapX[x] || `X${i + 1}`);
             let ny = masterYs.map((y, i) => (state.userEditedGridY && state.userEditedGridY[y]) || nameMapY[y] || `Y${i + 1}`);
 
-            // 柱への名称割り当て
+            // 柱への名称割り当ておよび最寄りグリッドへの完全吸着
             cfPillars.forEach(p => {
                 let xi = masterXs.indexOf(p.x);
                 let yi = masterYs.indexOf(p.y);
+
+                if (xi < 0) {
+                    let minD = Infinity, bestIdx = -1;
+                    masterXs.forEach((mx, idx) => {
+                        let d = Math.abs(mx - p.x);
+                        if (d < minD) { minD = d; bestIdx = idx; }
+                    });
+                    if (bestIdx >= 0 && minD < 150) {
+                        p.x = masterXs[bestIdx];
+                        xi = bestIdx;
+                    }
+                }
+                if (yi < 0) {
+                    let minD = Infinity, bestIdx = -1;
+                    masterYs.forEach((my, idx) => {
+                        let d = Math.abs(my - p.y);
+                        if (d < minD) { minD = d; bestIdx = idx; }
+                    });
+                    if (bestIdx >= 0 && minD < 150) {
+                        p.y = masterYs[bestIdx];
+                        yi = bestIdx;
+                    }
+                }
+
                 if (xi >= 0 && yi >= 0) {
                     p.gx = nx[xi]; p.gy = ny[yi]; p.gName = `${p.gx}${p.gy}`;
                     p.isInvalidPos = false;
                 } else {
-                    p.gx = '?'; p.gy = '?'; p.gName = '位置不明';
-                    p.isInvalidPos = true;
+                    if (xi < 0) { masterXs.push(p.x); masterXs.sort((a, b) => a - b); xi = masterXs.indexOf(p.x); }
+                    if (yi < 0) { masterYs.push(p.y); masterYs.sort((a, b) => a - b); yi = masterYs.indexOf(p.y); }
+                    p.gx = nx[xi] || 'X?'; p.gy = ny[yi] || 'Y?'; p.gName = `${p.gx}${p.gy}`;
+                    p.isInvalidPos = false;
                 }
             });
 

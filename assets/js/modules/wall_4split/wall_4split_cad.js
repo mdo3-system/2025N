@@ -295,14 +295,20 @@ window.setFloorOriginByClick = function(targetFloor, clickX, clickY) {
     const state = window.AppState;
     if (state) {
         if (isFirstFloorSetup) {
-            if (Array.isArray(state.gridXCoords)) {
-                state.gridXCoords = state.gridXCoords.map(x => Math.round((x - clickX) * 10) / 10).filter((v, i, self) => self.indexOf(v) === i);
+            // シフト前の旧手動・カスタム編集グリッドデータをシフト更新して重複増殖を防止
+            if (Array.isArray(state.manualGridX)) {
+                state.manualGridX.forEach(m => { m.coord = Math.round((m.coord - clickX) * 10) / 10; });
             }
-            if (Array.isArray(state.gridYCoords)) {
-                state.gridYCoords = state.gridYCoords.map(y => Math.round((y - clickY) * 10) / 10).filter((v, i, self) => self.indexOf(v) === i);
+            if (Array.isArray(state.manualGridY)) {
+                state.manualGridY.forEach(m => { m.coord = Math.round((m.coord - clickY) * 10) / 10; });
             }
-            if (window.GridEngine && typeof window.GridEngine.detectGridCoords === 'function') {
-                window.GridEngine.detectGridCoords(state);
+            state.deletedGridX = [];
+            state.deletedGridY = [];
+            state.userEditedGridX = {};
+            state.userEditedGridY = {};
+
+            if (window.GridEngine && typeof window.GridEngine.analyzeGrids === 'function') {
+                window.GridEngine.analyzeGrids(state);
             }
         }
         state.bgLinesOriginal = bgLinesOriginal;
