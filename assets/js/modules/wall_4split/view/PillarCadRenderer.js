@@ -17,7 +17,8 @@ window.PillarCadRenderer = {
         const isPrintMode = state.isPrintMode;
 
         state.pillars
-            .filter(p => !p.isDeleted && !p.isInvalidPos && (p.floor === state.currentFloor || p.floor === 'ALL'))
+            .filter(p => !p.isDeleted && !p.isInvalidPos && (p.floor === state.currentFloor || p.floor === 'ALL' || !p.floor))
+            .filter(p => !state.layerVisibility || !p.layer || state.layerVisibility[p.layer] !== false)
             .forEach(p => {
                 const renderer = window.MainRenderer;
                 const pt = renderer ? renderer.toCanvas(p, null, state) : { cx: null, cy: null };

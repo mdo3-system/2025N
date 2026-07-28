@@ -115,6 +115,9 @@ function processDxfData(dxf, isIncremental, rawDxf, targetFloor = 'ALL') {
         index === self.findIndex((t) => Math.hypot(t.x - p.x, t.y - p.y) < 10)
     );
 
+    // Deduplicate grid lines and bubbles
+    if (window.deduplicateGridElements) window.deduplicateGridElements();
+
     if (state) {
         state.bgLinesOriginal = bgLinesOriginal;
         state.bgTextsOriginal = bgTextsOriginal;
@@ -286,6 +289,9 @@ window.setFloorOriginByClick = function(targetFloor, clickX, clickY) {
         gridBubbles.forEach(shiftPt);
     }
 
+    // Deduplicate grid lines and bubbles
+    if (window.deduplicateGridElements) window.deduplicateGridElements();
+
     const state = window.AppState;
     if (state) {
         state.bgLinesOriginal = bgLinesOriginal;
@@ -298,4 +304,44 @@ window.setFloorOriginByClick = function(targetFloor, clickX, clickY) {
 
     if (window.AppController) window.AppController.refreshAll();
     else if (typeof draw === 'function') draw();
+};
+
+window.deduplicateGridElements = function() {
+    if (typeof bgLinesOriginal !== 'undefined' && Array.isArray(bgLinesOriginal)) {
+        const uniqueLines = [];
+        bgLinesOriginal.forEach(line => {
+            if (!line.isGridLine && line.floor !== 'ALL') {
+                uniqueLines.push(line);
+                return;
+            }
+            const isDup = uniqueLines.some(ul => {
+                if (ul.type !== line.type) return false;
+                if (line.type === 'LINE' && line.vertices && ul.vertices && line.vertices.length >= 2 && ul.vertices.length >= 2) {
+                    const dStart = Math.hypot(ul.vertices[0].x - line.vertices[0].x, ul.vertices[0].y - line.vertices[0].y);
+                    const dEnd = Math.hypot(ul.vertices[1].x - line.vertices[1].x, ul.vertices[1].y - line.vertices[1].y);
+                    const dStartRev = Math.hypot(ul.vertices[1].x - line.vertices[0].x, ul.vertices[1].y - line.vertices[0].y);
+                    const dEndRev = Math.hypot(ul.vertices[0].x - line.vertices[1].x, ul.vertices[0].y - line.vertices[1].y);
+                    return (dStart < 20 && dEnd < 20) || (dStartRev < 20 && dEndRev < 20);
+                }
+                return false;
+            });
+            if (!isDup) uniqueLines.push(line);
+        });
+        bgLinesOriginal = uniqueLines;
+    }
+
+    if (typeof gridBubbles !== 'undefined' && Array.isArray(gridBubbles)) {
+        const uniqueBubbles = [];
+        gridBubbles.forEach(b => {
+            const isDup = uniqueBubbles.some(ub => Math.hypot(ub.x - b.x, ub.y - b.y) < 20);
+            if (!isDup) uniqueBubbles.push(b);
+        });
+        gridBubbles = uniqueBubbles;
+    }
+
+    const state = window.AppState;
+    if (state) {
+        state.bgLinesOriginal = bgLinesOriginal;
+        state.gridBubbles = gridBubbles;
+    }
 };

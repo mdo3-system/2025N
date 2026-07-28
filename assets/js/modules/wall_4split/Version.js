@@ -1,4 +1,4 @@
 /**
  * Version.js - Centralized Version Management
  */
-window.APP_VERSION = "v3.9.9"; // Feature: Extended Block Pillar Recognition & Floor-Isolated Origin Calibration
+window.APP_VERSION = "v3.10.0"; // Feature: Grid Deduplication, Pillar Rendering Fix & Full DXF Layer Visibility Control

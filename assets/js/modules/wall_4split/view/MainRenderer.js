@@ -571,6 +571,7 @@ window.MainRenderer = {
         if (!state.elementVisibility.areas) return;
         const ctx = state.ctx;
         state.areaLines.filter(a => a.floor === state.currentFloor).forEach((a, index) => {
+            if ((state.layerVisibility || {})[a.layer] === false) return;
             ctx.beginPath();
             a.vertices.forEach((v, i) => {
                 const p = this.toCanvas(v, null, state);
