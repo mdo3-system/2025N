@@ -143,8 +143,12 @@ function processDxfData(dxf, isIncremental, rawDxf, targetFloor = 'ALL') {
         state.docDrawings.div4 = docData;
     }
 
-    // 初回読込時のみ通り芯解析を実行（既存データがある再読込時はグリッド構造を全保護）
-    if (!hasExistingData && typeof analyzeGrids === 'function') analyzeGrids();
+    // DXF読込完了時は常に通り芯解析を再実行し、最新の物理座標配列と4分割枠を構築
+    if (window.GridEngine && typeof window.GridEngine.analyzeGrids === 'function') {
+        window.GridEngine.analyzeGrids(state || window.AppState);
+    } else if (typeof analyzeGrids === 'function') {
+        analyzeGrids();
+    }
     if (typeof initViewForce === 'function') initViewForce();
     if (window.AppController) window.AppController.refreshAll();
 }

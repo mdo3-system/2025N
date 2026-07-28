@@ -238,15 +238,23 @@ window.GridEngine = {
     /**
      * 4分割図の境界範囲を計算します
      */
+    /**
+     * 4分割図の境界範囲を計算します
+     */
     get4DivisionBounds: function(floor, state) {
         const s = state || window.AppState;
         let xs = [], ys = [];
+        // 床求積ポリゴン（AREA）を最優先として建物本体の範囲を算出
         const floorPolys = s.areaLines.filter(a => a.floor === floor && a.areaType !== 'attic' && a.areaType !== 'balcony');
         
         if (floorPolys.length > 0) {
             floorPolys.forEach(a => a.vertices.forEach(v => { xs.push(v.x); ys.push(v.y); }));
+        } else if (s.areaLines && s.areaLines.length > 0) {
+            s.areaLines.forEach(a => (a.vertices || []).forEach(v => { xs.push(v.x); ys.push(v.y); }));
         } else {
-            s.pillars.filter(p => !p.isDeleted && !p.isInvalidPos && (p.floor === floor || p.floor === 'ALL')).forEach(p => { xs.push(p.x); ys.push(p.y); });
+            // 柱から外郭範囲を判定（削除済みおよび位置無効な柱を除外）
+            const validPillars = s.pillars.filter(p => !p.isDeleted && !p.isInvalidPos && (p.floor === floor || p.floor === 'ALL'));
+            validPillars.forEach(p => { xs.push(p.x); ys.push(p.y); });
         }
         
         if (xs.length === 0 || ys.length === 0) return null;
@@ -256,8 +264,7 @@ window.GridEngine = {
         const W = maxX - minX, H = maxY - minY;
         if (W <= 0 || H <= 0) return null;
 
-        const suffix = floor === '1F' ? '1' : '2';
-        const c = s.config;
+        const c = s.config || {};
         const zones = (c.div4Zones && c.div4Zones[floor]) ? c.div4Zones[floor] : { xt: null, xb: null, yl: null, yr: null };
         const zxt = zones.xt || (H / 4);
         const zxb = zones.xb || (H / 4);
