@@ -94,10 +94,18 @@ window.CadEngine = {
 
         const targetFloor = options.targetFloor || null;
         const currentOrigin = this.detectGridOrigin(entities, blocks);
-        // 全階統一ゼロ点規格化 (Zero-Align Grid Normalization)
-        // どんなCADで作図されたDXFでも、通り芯の最左下交点を (0, 0) に揃える
-        let shiftX = -currentOrigin.x;
-        let shiftY = -currentOrigin.y;
+        let shiftX = 0;
+        let shiftY = 0;
+
+        if (options.baseOrigin) {
+            // 基準階 (1F) の原点が存在する場合、通り芯基準点を1階の原点位置に一致させる自動相対アライメント
+            shiftX = options.baseOrigin.x - currentOrigin.x;
+            shiftY = options.baseOrigin.y - currentOrigin.y;
+        } else {
+            // 初回読み込み時は、検出された最左下通り芯原点を (0, 0) に正規化
+            shiftX = -currentOrigin.x;
+            shiftY = -currentOrigin.y;
+        }
 
         // 精密なモジュール丸め（0.1mm単位の四捨五入）
         const roundCoord = (val) => Math.round((val) * 10) / 10;
