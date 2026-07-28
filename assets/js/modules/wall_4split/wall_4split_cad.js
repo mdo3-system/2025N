@@ -95,14 +95,15 @@ function processDxfData(dxf, isIncremental, rawDxf, targetFloor = 'ALL') {
         }
     }
 
-    // 階別読込の場合は、当該階の古い下絵要素のみを差し替え
-    if (targetFloor !== 'ALL' && isIncremental) {
+    // 既存の作図データ（柱や壁など）が存在する場合、または追加入力（isIncremental）時
+    const hasExistingData = isIncremental || (pillars && pillars.length > 0) || (walls && walls.length > 0);
+
+    if (hasExistingData) {
+        // 既存の入力データ（柱・壁・求積・通り芯バブル）は一切削除・上書きせず完全に保持
         bgLinesOriginal = [...bgLinesOriginal.filter(l => l.floor !== targetFloor), ...result.newBgLines];
         bgTextsOriginal = [...bgTextsOriginal.filter(t => t.floor !== targetFloor), ...result.newBgTexts];
-        pillars = [...pillars.filter(p => p.floor !== targetFloor), ...(result.pillars || [])];
-        areaLines = [...areaLines.filter(a => a.floor !== targetFloor), ...(result.areaLines || [])];
-        gridBubbles = result.newBubbles.length > 0 ? result.newBubbles : gridBubbles;
     } else {
+        // 初回読込時のみ新規抽出された柱・求積・バブルをセット
         bgLinesOriginal = [...bgLinesOriginal, ...result.newBgLines];
         bgTextsOriginal = [...bgTextsOriginal, ...result.newBgTexts];
         if (result.newBubbles && result.newBubbles.length > 0) gridBubbles = result.newBubbles;
@@ -137,7 +138,8 @@ function processDxfData(dxf, isIncremental, rawDxf, targetFloor = 'ALL') {
         state.docDrawings.div4 = docData;
     }
 
-    if (typeof analyzeGrids === 'function') analyzeGrids();
+    // 初回読込時のみ通り芯解析を実行（既存データがある再読込時はグリッド構造を全保護）
+    if (!hasExistingData && typeof analyzeGrids === 'function') analyzeGrids();
     if (typeof initViewForce === 'function') initViewForce();
     if (window.AppController) window.AppController.refreshAll();
 }
