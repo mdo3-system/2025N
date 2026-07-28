@@ -142,9 +142,9 @@ window.CadEngine = {
             return { x: pt.x + shiftX, y: pt.y + shiftY };
         };
 
-        const isGridLayer = (l) => /(GRID|GLID|通り芯|軸線|軸|芯|GL)/i.test(l);
-        const isPillarLayer = (l) => /(COL|COLUMN|柱|柱心)/i.test(l);
-        const isAreaLayer = (l) => /(AREA|面積|求積)/i.test(l);
+        const isGridLayer = (l, name = "") => /(GRID|GLID|通り芯|軸線|軸|芯|GL)/i.test(l) || /(GRID|GLID|通り芯)/i.test(name);
+        const isPillarLayer = (l, name = "") => /(COL|COLUMN|柱|柱心|HASHIRA|HASIRA|角柱|管柱|通し柱|S-COL|H-COL|C105|C120)/i.test(l) || /(COL|COLUMN|柱|柱心|角柱|管柱|通し柱|HASHIRA|HASIRA|C105|C120)/i.test(name);
+        const isAreaLayer = (l, name = "") => /(AREA|面積|求積)/i.test(l) || /(AREA|面積)/i.test(name);
 
         const collect = (ents, blks, parentLayer = "", transformStack = []) => {
             ents.forEach(ent => {
@@ -154,15 +154,19 @@ window.CadEngine = {
                 if (L === 'AREA_D_Y') L = 'AREA_Y';
 
                 if (ent.type === 'INSERT') {
+                    const blockName = ent.name || "";
+                    const currentTransform = {
+                        position: ent.position || { x: ent.x || 0, y: ent.y || 0 },
+                        rotation: ent.rotation || 0,
+                        xScale: ent.xScale !== undefined ? ent.xScale : (ent.scale ? ent.scale.x : 1),
+                        yScale: ent.yScale !== undefined ? ent.yScale : (ent.scale ? ent.scale.y : 1)
+                    };
+                    const newStack = [...transformStack, currentTransform];
+                    const effectiveLayer = isPillarLayer(L, blockName) ? (isPillarLayer(L) ? L : `COL_${blockName}`) : L;
+
                     const block = blks ? blks[ent.name] : null;
                     if (block && block.entities) {
-                        const currentTransform = {
-                            position: ent.position || { x: ent.x || 0, y: ent.y || 0 },
-                            rotation: ent.rotation || 0,
-                            xScale: ent.xScale !== undefined ? ent.xScale : (ent.scale ? ent.scale.x : 1),
-                            yScale: ent.yScale !== undefined ? ent.yScale : (ent.scale ? ent.scale.y : 1)
-                        };
-                        collect(block.entities, blks, L, [...transformStack, currentTransform]);
+                        collect(block.entities, blks, effectiveLayer, newStack);
                     }
                 } else {
                     // クローンエンティティの作成
@@ -280,6 +284,13 @@ window.CadEngine = {
         };
 
         collect(entities, blocks || {});
-        return { newBgLines, newBgTexts, newBubbles, pillars, areaLines, detectedOrigin: currentOrigin, shiftApplied: { x: shiftX, y: shiftY } };
+
+        const uniquePillars = [];
+        pillars.forEach(p => {
+            const exists = uniquePillars.some(up => up.floor === p.floor && Math.abs(up.x - p.x) <= 150 && Math.abs(up.y - p.y) <= 150);
+            if (!exists) uniquePillars.push(p);
+        });
+
+        return { newBgLines, newBgTexts, newBubbles, pillars: uniquePillars, areaLines, detectedOrigin: currentOrigin, shiftApplied: { x: shiftX, y: shiftY } };
     }
 };

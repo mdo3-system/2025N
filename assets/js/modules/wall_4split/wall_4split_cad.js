@@ -264,17 +264,26 @@ window.setFloorOriginByClick = function(targetFloor, clickX, clickY) {
         }
     };
 
+    // 共通通り芯・グリッド要素は1階設定時にのみアライメント。2階以降は2階自階の要素のみをシフトする
+    const isFirstFloorSetup = (floor === '1F' || floor === 'ALL');
+
     if (typeof bgLinesOriginal !== 'undefined' && Array.isArray(bgLinesOriginal)) {
-        bgLinesOriginal.filter(l => l.floor === floor || floor === 'ALL').forEach(shiftEnt);
+        bgLinesOriginal.filter(l => l.floor === floor || (isFirstFloorSetup && (l.isGridLine || l.floor === 'ALL'))).forEach(shiftEnt);
     }
     if (typeof bgTextsOriginal !== 'undefined' && Array.isArray(bgTextsOriginal)) {
-        bgTextsOriginal.filter(t => t.floor === floor || floor === 'ALL').forEach(shiftPt);
+        bgTextsOriginal.filter(t => t.floor === floor || (isFirstFloorSetup && (t.isGridText || t.floor === 'ALL'))).forEach(shiftPt);
     }
     if (typeof pillars !== 'undefined' && Array.isArray(pillars)) {
-        pillars.filter(p => p.floor === floor || floor === 'ALL').forEach(shiftPt);
+        pillars.filter(p => p.floor === floor).forEach(shiftPt);
     }
     if (typeof areaLines !== 'undefined' && Array.isArray(areaLines)) {
-        areaLines.filter(a => a.floor === floor || floor === 'ALL').forEach(shiftEnt);
+        areaLines.filter(a => a.floor === floor).forEach(shiftEnt);
+    }
+    if (typeof walls !== 'undefined' && Array.isArray(walls)) {
+        walls.filter(w => w.floor === floor).forEach(shiftEnt);
+    }
+    if (isFirstFloorSetup && typeof gridBubbles !== 'undefined' && Array.isArray(gridBubbles)) {
+        gridBubbles.forEach(shiftPt);
     }
 
     const state = window.AppState;
@@ -283,6 +292,8 @@ window.setFloorOriginByClick = function(targetFloor, clickX, clickY) {
         state.bgTextsOriginal = bgTextsOriginal;
         state.pillars = pillars;
         state.areaLines = areaLines;
+        state.walls = walls;
+        state.gridBubbles = gridBubbles;
     }
 
     if (window.AppController) window.AppController.refreshAll();
