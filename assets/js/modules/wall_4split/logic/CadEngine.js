@@ -23,6 +23,9 @@ window.CadEngine = {
      */
     detectGridOrigin: function(entities, blocks) {
         let gridLines = [];
+        const isGridLayer = (l) => /(GRID|GLID|通り芯|軸線|軸|芯|GL)/i.test(l);
+        const isPillarLayer = (l) => /(COL|COLUMN|柱|柱心)/i.test(l);
+
         const collectGrids = (ents, blks, transformStack = []) => {
             ents.forEach(ent => {
                 let L = (ent.layer || "").toUpperCase().trim();
@@ -37,7 +40,7 @@ window.CadEngine = {
                         };
                         collectGrids(block.entities, blks, [...transformStack, tf]);
                     }
-                } else if (/(GRID|GLID)/i.test(L)) {
+                } else if (isGridLayer(L)) {
                     gridLines.push(ent);
                 }
             });
@@ -63,11 +66,14 @@ window.CadEngine = {
             minX = Math.min(...xCoords);
             minY = Math.min(...yCoords);
         } else {
-            // Fallback to bounding box of all entities if no GRID layer is found
+            // Fallback to pillar locations or bounding box of all entities
             (entities || []).forEach(e => {
-                if (e.position) { minX = Math.min(minX, e.position.x); minY = Math.min(minY, e.position.y); }
-                if (e.center) { minX = Math.min(minX, e.center.x); minY = Math.min(minY, e.center.y); }
-                if (e.start) { minX = Math.min(minX, e.start.x); minY = Math.min(minY, e.start.y); }
+                let L = (e.layer || "").toUpperCase().trim();
+                if (isPillarLayer(L) || e.type === 'POINT' || e.type === 'LINE') {
+                    if (e.position) { minX = Math.min(minX, e.position.x); minY = Math.min(minY, e.position.y); }
+                    if (e.center) { minX = Math.min(minX, e.center.x); minY = Math.min(minY, e.center.y); }
+                    if (e.start) { minX = Math.min(minX, e.start.x); minY = Math.min(minY, e.start.y); }
+                }
             });
         }
 
@@ -131,6 +137,10 @@ window.CadEngine = {
             return { x: pt.x + shiftX, y: pt.y + shiftY };
         };
 
+        const isGridLayer = (l) => /(GRID|GLID|通り芯|軸線|軸|芯|GL)/i.test(l);
+        const isPillarLayer = (l) => /(COL|COLUMN|柱|柱心)/i.test(l);
+        const isAreaLayer = (l) => /(AREA|面積|求積)/i.test(l);
+
         const collect = (ents, blks, parentLayer = "", transformStack = []) => {
             ents.forEach(ent => {
                 let L = (ent.layer || "").toUpperCase().trim();
@@ -180,7 +190,9 @@ window.CadEngine = {
                         }
                     }
 
-                    const isGrid = /(GRID|GLID)/i.test(L);
+                    const isGrid = isGridLayer(L);
+                    const isPillar = isPillarLayer(L);
+                    const isArea = isAreaLayer(L);
 
                     // 階指定オプションの決定
                     let floor = targetFloor;
@@ -188,7 +200,7 @@ window.CadEngine = {
                         floor = L.includes('2F') || L.includes('RF') ? (L.includes('RF') ? 'RF' : '2F') : (L.includes('1F') ? '1F' : 'ALL');
                     }
 
-                    if (L.includes('COL')) {
+                    if (isPillar) {
                         const f = targetFloor || ((L.includes('2F') || L.includes('RF')) ? '2F' : '1F');
                         let px = 0, py = 0, found = false;
 
@@ -217,7 +229,7 @@ window.CadEngine = {
                         if (found) {
                             pillars.push({ id: `P${pIdCounter++}`, x: roundCoord(px), y: roundCoord(py), floor: f, layer: L });
                         }
-                    } else if (L.includes('AREA')) {
+                    } else if (isArea) {
                         let f = targetFloor || (L.includes('2F') || L.includes('RF') ? (L.includes('RF') ? 'RF' : '2F') : '1F');
                         if (['LWPOLYLINE', 'POLYLINE'].includes(e.type) && e.vertices && e.vertices.length >= 3) {
                             e.vertices.forEach(v => { v.x = roundCoord(v.x); v.y = roundCoord(v.y); });
@@ -235,7 +247,9 @@ window.CadEngine = {
                             if (e.start && e.end) e.vertices = [{ x: e.start.x, y: e.start.y }, { x: e.end.x, y: e.end.y }];
                             newBgLines.push(e);
                         } else if (['CIRCLE', 'ARC'].includes(e.type)) {
-                            newBubbles.push({ x: e.center.x, y: e.center.y, r: e.radius, floor: 'ALL', layer: L });
+                            if (e.center) {
+                                newBubbles.push({ x: e.center.x, y: e.center.y, r: e.radius || 0, floor: 'ALL', layer: L });
+                            }
                             newBgLines.push(e);
                         } else if (['TEXT', 'MTEXT'].includes(e.type)) {
                             const pos = e.startPoint || e.position || e.insertionPoint || {};

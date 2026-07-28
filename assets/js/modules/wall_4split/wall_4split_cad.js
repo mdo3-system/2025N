@@ -196,3 +196,48 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnApplyArea = document.getElementById('btn-apply-area-input');
     if (btnApplyArea) btnApplyArea.addEventListener('click', applyAreaInputModal);
 });
+
+window.shiftFloorOffset = function(targetFloor, deltaX, deltaY) {
+    if (!targetFloor || (deltaX === 0 && deltaY === 0)) return;
+
+    const shiftPt = (pt) => {
+        if (!pt) return;
+        if (pt.x !== undefined) pt.x += deltaX;
+        if (pt.y !== undefined) pt.y += deltaY;
+    };
+
+    const shiftEnt = (ent) => {
+        if (ent.position) shiftPt(ent.position);
+        if (ent.startPoint) shiftPt(ent.startPoint);
+        if (ent.insertionPoint) shiftPt(ent.insertionPoint);
+        if (ent.center) shiftPt(ent.center);
+        if (ent.start) shiftPt(ent.start);
+        if (ent.end) shiftPt(ent.end);
+        if (ent.vertices && Array.isArray(ent.vertices)) {
+            ent.vertices.forEach(v => shiftPt(v));
+        }
+    };
+
+    if (typeof bgLinesOriginal !== 'undefined' && Array.isArray(bgLinesOriginal)) {
+        bgLinesOriginal.filter(l => l.floor === targetFloor || targetFloor === 'ALL').forEach(shiftEnt);
+    }
+    if (typeof bgTextsOriginal !== 'undefined' && Array.isArray(bgTextsOriginal)) {
+        bgTextsOriginal.filter(t => t.floor === targetFloor || targetFloor === 'ALL').forEach(shiftPt);
+    }
+    if (typeof pillars !== 'undefined' && Array.isArray(pillars)) {
+        pillars.filter(p => p.floor === targetFloor || targetFloor === 'ALL').forEach(shiftPt);
+    }
+    if (typeof areaLines !== 'undefined' && Array.isArray(areaLines)) {
+        areaLines.filter(a => a.floor === targetFloor || targetFloor === 'ALL').forEach(shiftEnt);
+    }
+
+    const state = window.AppState;
+    if (state) {
+        state.bgLinesOriginal = bgLinesOriginal;
+        state.bgTextsOriginal = bgTextsOriginal;
+        state.pillars = pillars;
+        state.areaLines = areaLines;
+    }
+
+    if (window.AppController) window.AppController.refreshAll();
+};

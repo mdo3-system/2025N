@@ -208,11 +208,21 @@
 
     <!-- 契約・免責・同時ログイン規約 -->
     <div class="section" style="border-top: 6px solid #27ae60;">
-        <h2>🔄 ご契約と解約について</h2>
-        <p>本ツールは、必要な時に必要な期間だけ安心してご利用いただけるよう、非常にシンプルで分かりやすい解約システムを採用しています。</p>
+        <h2>💳 料金が発生する機能（無料範囲と有料サブスクリプション機能）</h2>
+        <p>本ツールは、基本作図や判定結果の試算を無料でご利用いただけます。料金が発生する（有料サブスクリプション契約が必要な）機能は以下の2点のみです。</p>
+        <div style="background:#f0fdf4; border:1px solid #bbf7d0; padding:18px; border-radius:8px; margin:15px 0;">
+            <strong style="color:#166534; font-size:16px;">【有料プラン（月額サブスクリプション）で解放される機能】</strong>
+            <ol style="margin-top:10px; margin-bottom:8px; padding-left:22px; font-weight:bold; font-size:15px; color:#1e293b;">
+                <li>📑 構造計算書の一括印刷・PDF出力機能（確認申請に提出可能な完成版計算書PDFのダウンロード）</li>
+                <li>📊 柱のN値計算・金物選定結果の表示および耐力壁の軸力図（立面）の出力機能</li>
+            </ol>
+            <span style="font-size:13px; color:#475569;">※上記以外の作図、見附面積、壁量判定、重心剛心の画面上試算はすべて無料で何度でもお試しいただけます。サブスク未契約時に有料ボタンを押すと案内ダイアログが表示されます。</span>
+        </div>
+
+        <h3 style="margin-top:20px; color:#27ae60; border:none;">🔄 いつでも簡単に解約可能です（ご契約と解約について）</h3>
         <ul>
-            <li><strong>引き止めや複雑な手続きは一切ありません。</strong> 設定画面（ポータル画面）の「解約ボタン」を1クリックするだけで即座に解約手続きが完了します。</li>
-            <li>解約手続きを行った後も、<strong>現在ご契約いただいている期間の最終日時までは、引き続きすべての機能（計算書のPDF出力など）をご利用いただけます。</strong></li>
+            <li><strong>引き止めや複雑な手続きは一切ありません。</strong> 設定画面（ポータル画面: portal.php）の「解約ボタン」を1クリックするだけで即座に解約手続きが完了します。</li>
+            <li>解約手続きを行った後も、<strong>現在ご契約いただいている期間の最終日時までは、引き続きすべての有料機能（計算書のPDF出力など）をご利用いただけます。</strong></li>
             <li>単発のプロジェクトでのご利用など、1ヶ月だけ使ってすぐに解約する、といった使い方も大歓迎です。</li>
         </ul>
 
@@ -220,7 +230,7 @@
             <strong style="font-size:16px;">⚠️ ご利用前の重要同意事項（免責事項）</strong>
             <p style="margin-top: 8px;">本プログラムを起動すると、初回に「免責事項および利用条件」の同意モーダルが表示されます。</p>
             <ul style="margin-bottom: 0;">
-                <li>本ツールは法適合性を確認する補助ツールです。画面上の計算は無償ですが、計算書を出力（確認申請にそのまま出しても使えるPDF形式等）する際は有償となります。</li>
+                <li>本ツールは法適合性を確認する補助ツールです。画面上の計算は無償ですが、計算書を出力（確認申請にそのまま出しても使えるPDF形式等）および柱N値・金物表示を行う際は有償（サブスクリプション契約）となります。</li>
                 <li>出力結果を用いた申請等に関するすべての責任は利用者（設計者ご自身）に帰属します。</li>
                 <li>操作や結果に対する個別サポートは行っておりません（ユーザー専用BBSをご利用ください）。</li>
             </ul>
@@ -256,6 +266,40 @@
         <div class="alert alert-important">
             <strong>⚠️ 【本プログラムの最重要原則】:</strong><br>
             本システムで構造計算を行うにあたり、<strong>「柱・耐力壁・スラブ端部・床面積端部が通る位置には、必ず通り芯（グリッド）が存在すること」</strong> が絶対条件です。CADで作図する段階で、通り芯（グリッド）を 1mm 単位で綺麗に配置しておくことが、読み込み後の入力を圧倒的に楽にする最大の鍵となります。
+        </div>
+
+        <h3>1-1. お使いのCADでのDXFデータ作成 ＆ 各種CAD対応レイヤー規則</h3>
+        <p>本ツールは Jw_cad、AutoCAD、DRA-CAD、ARCHITREND ZERO、Vectorworks など、DXF出力可能なすべての日本の主要CADソフトに対応しています。以下のレイヤー命名ルールのいずれかで平面図を作成し、DXF保存してください。</p>
+        
+        <table>
+            <thead>
+                <tr>
+                    <th style="width:25%;">要素タイプ</th>
+                    <th style="width:35%;">推奨レイヤー名</th>
+                    <th style="width:40%;">自動識別されるレイヤー名エイリアス（各種CAD対応）</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>通り芯 (軸)</strong></td>
+                    <td><code>GLID</code>, <code>GRID</code></td>
+                    <td><code>GRID</code>, <code>GLID</code>, <code>通り芯</code>, <code>軸線</code>, <code>芯</code>, <code>GL</code>, <code>軸</code></td>
+                </tr>
+                <tr>
+                    <td><strong>柱</strong></td>
+                    <td><code>COL_1F</code>, <code>COL_2F</code></td>
+                    <td><code>COL</code>, <code>COLUMN</code>, <code>柱</code>, <code>柱心</code></td>
+                </tr>
+                <tr>
+                    <td><strong>背景下図 / 壁</strong></td>
+                    <td><code>BG_1F</code>, <code>BG_2F</code>, <code>BG_RF</code></td>
+                    <td><code>BG</code>, <code>壁</code>, <code>内壁</code>, <code>外壁</code>, <code>建具</code>, <code>データ</code>, <code>0</code></td>
+                </tr>
+            </tbody>
+        </table>
+        <div class="alert alert-tip">
+            💡 <strong>1Fと2Fの図面位置ズレの自動同定機能:</strong><br>
+            CAD上で 1F図面と 2F図面が離れた位置に描画されている場合でも、システムが通り芯の交点を自動検知して基準位置にミリ単位でアライメント調整します。また、操作画面の「🎯 下絵の位置・原点を微調整」ボタンから手動で10mm/100mm単位で位置調整も可能です。
         </div>
 
         <h3>📐 CADレイヤーの分割ルール ＆ 下絵（背景）取り込み</h3>
