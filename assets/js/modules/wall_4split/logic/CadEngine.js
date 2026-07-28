@@ -21,13 +21,32 @@ window.CadEngine = {
     /**
      * Detect base grid origin (e.g. bottom-left intersection of GRID lines or bounding box)
      */
+    /**
+     * Detect base grid origin (e.g. bottom-left intersection of main GRID lines or bounding box)
+     */
     detectGridOrigin: function(entities, blocks) {
         let gridLines = [];
         const isGridLayer = (l) => /(GRID|GLID|通り芯|軸線|軸|芯|GL)/i.test(l);
         const isPillarLayer = (l) => /(COL|COLUMN|柱|柱心)/i.test(l);
 
+        const transformPoint = (pt, tf) => {
+            if (!pt || !tf) return pt || { x: 0, y: 0 };
+            let x = (pt.x || 0) * (tf.xScale !== undefined ? tf.xScale : 1);
+            let y = (pt.y || 0) * (tf.yScale !== undefined ? tf.yScale : 1);
+            if (tf.rotation) {
+                const rad = (tf.rotation * Math.PI) / 180;
+                const cos = Math.cos(rad), sin = Math.sin(rad);
+                const rx = x * cos - y * sin, ry = x * sin + y * cos;
+                x = rx; y = ry;
+            }
+            return {
+                x: x + (tf.position ? (tf.position.x || 0) : 0),
+                y: y + (tf.position ? (tf.position.y || 0) : 0)
+            };
+        };
+
         const collectGrids = (ents, blks, transformStack = []) => {
-            ents.forEach(ent => {
+            (ents || []).forEach(ent => {
                 let L = (ent.layer || "").toUpperCase().trim();
                 if (ent.type === 'INSERT') {
                     const block = blks ? blks[ent.name] : null;
@@ -41,24 +60,60 @@ window.CadEngine = {
                         collectGrids(block.entities, blks, [...transformStack, tf]);
                     }
                 } else if (isGridLayer(L)) {
-                    gridLines.push(ent);
+                    let e = JSON.parse(JSON.stringify(ent));
+                    transformStack.forEach(tf => {
+                        if (e.start) e.start = transformPoint(e.start, tf);
+                        if (e.end) e.end = transformPoint(e.end, tf);
+                        if (e.vertices) e.vertices = e.vertices.map(v => transformPoint(v, tf));
+                    });
+                    gridLines.push(e);
                 }
             });
         };
         collectGrids(entities || [], blocks || {});
 
+        let vertXs = [];
+        let horizYs = [];
+
+        const addSegment = (p1, p2) => {
+            if (!p1 || !p2) return;
+            let dx = Math.abs(p1.x - p2.x);
+            let dy = Math.abs(p1.y - p2.y);
+            let len = Math.hypot(dx, dy);
+            // 通り芯主線（長さ 2000mm 以上の長尺直線）のみをグリッド基準軸として抽出（引き出し小線分や記号を除外）
+            if (len > 2000) {
+                if (dx < 10) vertXs.push((p1.x + p2.x) / 2);
+                if (dy < 10) horizYs.push((p1.y + p2.y) / 2);
+            }
+        };
+
+        gridLines.forEach(ent => {
+            if (ent.type === 'LINE') {
+                const v1 = ent.start || (ent.vertices ? ent.vertices[0] : null);
+                const v2 = ent.end || (ent.vertices ? ent.vertices[1] : null);
+                addSegment(v1, v2);
+            } else if (['LWPOLYLINE', 'POLYLINE'].includes(ent.type) && ent.vertices && ent.vertices.length >= 2) {
+                for (let i = 0; i < ent.vertices.length - 1; i++) {
+                    addSegment(ent.vertices[i], ent.vertices[i + 1]);
+                }
+            }
+        });
+
+        if (vertXs.length > 0 && horizYs.length > 0) {
+            let minX = Math.min(...vertXs);
+            let minY = Math.min(...horizYs);
+            return { x: Math.round(minX * 10) / 10, y: Math.round(minY * 10) / 10 };
+        }
+
+        // Fallback: 2000mm以上の長尺線がない場合は旧ロジック（LINE/Polylineの最左下座標）
         let minX = Infinity, minY = Infinity;
         let xCoords = [], yCoords = [];
-
         gridLines.forEach(ent => {
             if (ent.type === 'LINE' && ent.start && ent.end) {
                 xCoords.push(ent.start.x, ent.end.x);
                 yCoords.push(ent.start.y, ent.end.y);
             } else if (ent.vertices && Array.isArray(ent.vertices)) {
                 ent.vertices.forEach(v => { xCoords.push(v.x); yCoords.push(v.y); });
-            } else if (ent.center) {
-                xCoords.push(ent.center.x);
-                yCoords.push(ent.center.y);
             }
         });
 

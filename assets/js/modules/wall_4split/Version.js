@@ -1,4 +1,4 @@
 /**
  * Version.js - Centralized Version Management
  */
-window.APP_VERSION = "v3.10.5"; // Feature: 6-LINE Pillar Clustering & Long-Span Grid Selection
+window.APP_VERSION = "v3.10.6"; // Fix: DXF Grid Origin Alignment to align pillars with grids
