@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>上善如水 - 壁量計算WEB (v3.9.2)</title>
+    <title>上善如水 - 壁量計算WEB (v3.9.5)</title>
     <script src="https://cdn.jsdelivr.net/npm/dxf-parser@1.1.2/dist/dxf-parser.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/encoding-japanese/2.0.0/encoding.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/clipper-lib@6.4.2/clipper.js"></script>
@@ -517,8 +517,42 @@
             <div style="margin-top:20px; font-size:11px; color:#94a3b8;">
                 送信元: <code>noreply@2025.eie.jp</code>
             </div>
+    <!-- 免責事項・利用条件 同意モーダル -->
+    <div id="modal-disclaimer" class="modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.8); z-index:20000; align-items:center; justify-content:center; backdrop-filter:blur(3px);">
+        <div class="modal-content" style="max-width:650px; width:92%; background:#fff; border-radius:12px; padding:25px; box-shadow:0 15px 40px rgba(0,0,0,0.5); font-family:sans-serif;">
+            <div style="text-align:center; border-bottom:2px solid #e74c3c; padding-bottom:12px; margin-bottom:15px;">
+                <div style="font-size:32px; margin-bottom:5px;">⚠️</div>
+                <h3 style="margin:0; color:#c0392b; font-size:19px;">免責事項およびご利用条件への同意</h3>
+            </div>
+            
+            <div style="font-size:13px; color:#333; line-height:1.7; max-height:55vh; overflow-y:auto; padding:12px; background:#f9f9f9; border:1px solid #e2e8f0; border-radius:8px; margin-bottom:18px;">
+                <p style="margin-top:0;">本システム（「上善如水 壁量計算WEB」）のご利用にあたっては、以下の免責事項および条件をご確認の上、ご同意いただく必要があります。</p>
+                <ol style="padding-left:20px; margin-bottom:0;">
+                    <li><strong>法適合性確認の補助ツール:</strong> 本ツールは木造軸組工法における構造安全性の事前検証・試算を支援する補助ツールです。最終的な計算書を用いた確認申請等に関する一切の法的責任は、設計責任者（建築士・設計者ご本人様）に帰属いたします。</li>
+                    <li><strong>計算機能と料金体系:</strong> 画面上の作図、壁量計算、見附求積、重心剛心の計算試算は無償です。計算書の一括印刷（完成版PDFダウンロード）および柱N値・金物選定表示・軸力図の閲覧には有償サブスクリプション契約が必要です。</li>
+                    <li><strong>1アカウント1人利用の厳守:</strong> セキュリティ保護およびデータ保全のため、同一アカウントでの複数端末からの同時ログインは禁止されています。同時ログイン検知時は先のセッションが自動ログアウトされます。</li>
+                </ol>
+            </div>
+
+            <div style="text-align:center;">
+                <button type="button" onclick="agreeDisclaimer()" style="background:#27ae60; color:#fff; border:none; padding:12px 35px; border-radius:6px; font-size:15px; font-weight:bold; cursor:pointer; box-shadow:0 4px 10px rgba(39,174,96,0.3);">✅ 同意して利用を開始する</button>
+            </div>
         </div>
     </div>
+    <script>
+        function checkDisclaimer() {
+            if (!localStorage.getItem('disclaimer_agreed')) {
+                const el = document.getElementById('modal-disclaimer');
+                if (el) el.style.display = 'flex';
+            }
+        }
+        function agreeDisclaimer() {
+            localStorage.setItem('disclaimer_agreed', 'true');
+            const el = document.getElementById('modal-disclaimer');
+            if (el) el.style.display = 'none';
+        }
+        document.addEventListener('DOMContentLoaded', checkDisclaimer);
+    </script>
 
     <!-- 各種モーダル群 -->
     
@@ -738,7 +772,7 @@
     <!-- 左パネル -->
     <div id="left-panel">
         <h1 style="font-size:16px; margin:0 0 10px 0; color:#2c3e50; border-bottom:2px solid #2ecc71; padding-bottom:5px; display:flex; justify-content:space-between; align-items:center;">
-            <span>上善如水 <span style="font-size:12px; color:#7f8c8d;">壁量計算WEB <span id="app-version-title">v3.9.2</span></span></span>
+            <span>上善如水 <span style="font-size:12px; color:#7f8c8d;">壁量計算WEB <span id="app-version-title">v3.9.5</span></span></span>
         </h1>
 
         <div style="display:flex; gap:5px; margin-bottom:15px;">

@@ -2,8 +2,8 @@
  * CadEngine.test.js - Unit tests for DXF block transformation and entity mapping
  */
 
-window.TestRunner.describe('CadEngine (v3.9.3)', function() {
-    window.TestRunner.it('should correctly apply matrix transformations to INSERT block entities', function() {
+window.TestRunner.describe('CadEngine (v3.9.5)', function() {
+    window.TestRunner.it('should correctly apply matrix transformations and normalize origin to (0,0)', function() {
         const mockEntities = [
             {
                 type: 'INSERT',
@@ -33,12 +33,12 @@ window.TestRunner.describe('CadEngine (v3.9.3)', function() {
         window.TestRunner.expect(result && result.pillars && result.pillars.length === 1).toBeTruthy();
 
         const pillar = result.pillars[0];
-        // (100, 0) rotated +90 deg -> (0, 100), shifted by (1000, 2000) -> (1000, 2100)
-        window.TestRunner.expect(pillar.x).toBeCloseTo(1000, 1);
-        window.TestRunner.expect(pillar.y).toBeCloseTo(2100, 1);
+        // Absolute (1000, 2100), normalized against detected origin (1000, 2000) -> (0, 100)
+        window.TestRunner.expect(pillar.x).toBeCloseTo(0, 1);
+        window.TestRunner.expect(pillar.y).toBeCloseTo(100, 1);
     });
 
-    window.TestRunner.it('should detect grid origin and align 2F DXF to 1F base grid origin', function() {
+    window.TestRunner.it('should detect grid origin and normalize 2F DXF to (0,0) canvas grid origin', function() {
         // 1F DXF with grid origin at (100, 200)
         const dxf1F = [
             { type: 'LINE', layer: 'GRID_X', start: { x: 100, y: 200 }, end: { x: 1000, y: 200 } },
@@ -55,17 +55,14 @@ window.TestRunner.describe('CadEngine (v3.9.3)', function() {
             { type: 'POINT', layer: 'COL_2F', position: { x: 600, y: 700 } }
         ];
 
-        // Process 2F with baseOrigin set to 1F origin
+        // Process 2F with Zero-Align normalization
         const result2F = window.CadEngine.mapEntitiesToBackground(dxf2F, {}, {}, {
-            targetFloor: '2F',
-            baseOrigin: origin1F
+            targetFloor: '2F'
         });
 
-        // 2F pillar originally at (600, 700) shifted by dx=(100-500)=-400, dy=(200-600)=-400 -> (200, 300)
-        window.TestRunner.expect(result2F.pillars.length).toBe(1);
-        const p2 = result2F.pillars[0];
-        window.TestRunner.expect(p2.floor).toBe('2F');
-        window.TestRunner.expect(p2.x).toBeCloseTo(200, 1);
-        window.TestRunner.expect(p2.y).toBeCloseTo(300, 1);
+        const pillar2F = result2F.pillars[0];
+        // Point (600, 700) minus grid origin (500, 600) -> (100, 100)
+        window.TestRunner.expect(pillar2F.x).toBeCloseTo(100, 1);
+        window.TestRunner.expect(pillar2F.y).toBeCloseTo(100, 1);
     });
 });

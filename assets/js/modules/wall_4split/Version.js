@@ -1,4 +1,4 @@
 /**
  * Version.js - Centralized Version Management
  */
-window.APP_VERSION = "v3.9.4"; // Feature: DXF Expanded Layer Alias (All Japanese CADs), Origin Tuning Tool & Manual Pricing Rule Update
+window.APP_VERSION = "v3.9.5"; // Feature: Zero-Align DXF Normalization, Layer Setting Panel Fix & Disclaimer Modal Update

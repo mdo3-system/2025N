@@ -94,13 +94,10 @@ window.CadEngine = {
 
         const targetFloor = options.targetFloor || null;
         const currentOrigin = this.detectGridOrigin(entities, blocks);
-        let shiftX = 0;
-        let shiftY = 0;
-
-        if (options.baseOrigin) {
-            shiftX = options.baseOrigin.x - currentOrigin.x;
-            shiftY = options.baseOrigin.y - currentOrigin.y;
-        }
+        // 全階統一ゼロ点規格化 (Zero-Align Grid Normalization)
+        // どんなCADで作図されたDXFでも、通り芯の最左下交点を (0, 0) に揃える
+        let shiftX = -currentOrigin.x;
+        let shiftY = -currentOrigin.y;
 
         // 精密なモジュール丸め（0.1mm単位の四捨五入）
         const roundCoord = (val) => Math.round((val) * 10) / 10;
