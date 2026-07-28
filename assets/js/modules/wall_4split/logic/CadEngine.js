@@ -239,13 +239,17 @@ window.CadEngine = {
                             }
                             e.floor = f;
                             newBgLines.push(e);
-                        } else if (e.type === 'LINE' && e.start && e.end) {
-                            px = (e.start.x + e.end.x) / 2;
-                            py = (e.start.y + e.end.y) / 2;
-                            found = true;
-                            e.vertices = [{ x: e.start.x, y: e.start.y }, { x: e.end.x, y: e.end.y }];
-                            e.floor = f;
-                            newBgLines.push(e);
+                        } else if (e.type === 'LINE') {
+                            const v1 = e.start || (e.vertices ? e.vertices[0] : null);
+                            const v2 = e.end || (e.vertices ? e.vertices[1] : null);
+                            if (v1 && v2) {
+                                px = (v1.x + v2.x) / 2;
+                                py = (v1.y + v2.y) / 2;
+                                found = true;
+                                e.vertices = [{ x: v1.x, y: v1.y }, { x: v2.x, y: v2.y }];
+                                e.floor = f;
+                                newBgLines.push(e);
+                            }
                         }
 
                         if (found) {
@@ -299,9 +303,26 @@ window.CadEngine = {
         collect(entities, blocks || {});
 
         const uniquePillars = [];
+        const pillarGroups = [];
+
+        // 柱枠を構成する複数のLINE要素の中心点 (150mm以内) をクラスタリングして真の中心を算出
         pillars.forEach(p => {
-            const exists = uniquePillars.some(up => up.floor === p.floor && Math.abs(up.x - p.x) <= 150 && Math.abs(up.y - p.y) <= 150);
-            if (!exists) uniquePillars.push(p);
+            let group = pillarGroups.find(g => g.floor === p.floor && g.points.some(pt => Math.abs(pt.x - p.x) <= 150 && Math.abs(pt.y - p.y) <= 150));
+            if (!group) {
+                group = { floor: p.floor, layer: p.layer, points: [] };
+                pillarGroups.push(group);
+            }
+            group.points.push(p);
+        });
+
+        pillarGroups.forEach(g => {
+            const xs = g.points.map(pt => pt.x);
+            const ys = g.points.map(pt => pt.y);
+            const minX = Math.min(...xs), maxX = Math.max(...xs);
+            const minY = Math.min(...ys), maxY = Math.max(...ys);
+            const cx = roundCoord((minX + maxX) / 2);
+            const cy = roundCoord((minY + maxY) / 2);
+            uniquePillars.push({ id: `P${pIdCounter++}`, x: cx, y: cy, floor: g.floor, layer: g.layer });
         });
 
         return { newBgLines, newBgTexts, newBubbles, pillars: uniquePillars, areaLines, detectedOrigin: currentOrigin, shiftApplied: { x: shiftX, y: shiftY } };

@@ -30,7 +30,8 @@ window.GridEngine = {
             if (e.isGridLine && e.type === 'LINE' && e.vertices && e.vertices.length === 2) {
                 let p1 = e.vertices[0], p2 = e.vertices[1];
                 let dx = Math.abs(p1.x - p2.x), dy = Math.abs(p1.y - p2.y);
-                if (Math.max(dx, dy) > 100) {
+                // 長さ 2000mm 以上の主要通り芯線のみを対象とし、短小線分による過剰グリッド生成を防止
+                if (Math.max(dx, dy) > 2000) {
                     if (dx < TOL_SNAP) gridLineXs.push(snapToModule((p1.x + p2.x) / 2));
                     if (dy < TOL_SNAP) gridLineYs.push(snapToModule((p1.y + p2.y) / 2));
                 }
