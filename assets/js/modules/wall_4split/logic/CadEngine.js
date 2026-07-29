@@ -26,7 +26,7 @@ window.CadEngine = {
      */
     detectGridOrigin: function(entities, blocks) {
         let gridLines = [];
-        const isGridLayer = (l) => /(GRID|GLID|通り芯|軸線|軸|芯|GL)/i.test(l);
+        const isGridLayer = (l) => /(GRID|GLID|通り芯|軸線|軸|芯)/i.test(l) && !/^GL([_-]|$)/i.test(l.trim());
         const isPillarLayer = (l) => /(COL|COLUMN|柱|柱心)/i.test(l);
 
         const transformPoint = (pt, tf) => {
@@ -197,7 +197,7 @@ window.CadEngine = {
             return { x: pt.x + shiftX, y: pt.y + shiftY };
         };
 
-        const isGridLayer = (l, name = "") => /(GRID|GLID|通り芯|軸線|軸|芯|GL)/i.test(l) || /(GRID|GLID|通り芯)/i.test(name);
+        const isGridLayer = (l, name = "") => ((/(GRID|GLID|通り芯|軸線|軸|芯)/i.test(l) || /(GRID|GLID|通り芯)/i.test(name)) && !/^GL([_-]|$)/i.test(l.trim()));
         const isPillarLayer = (l, name = "") => /(COL|COLUMN|柱|柱心|HASHIRA|HASIRA|角柱|管柱|通し柱|S-COL|H-COL|C105|C120)/i.test(l) || /(COL|COLUMN|柱|柱心|角柱|管柱|通し柱|HASHIRA|HASIRA|C105|C120)/i.test(name);
         const isAreaLayer = (l, name = "") => /(AREA|面積|求積)/i.test(l) || /(AREA|面積)/i.test(name);
 

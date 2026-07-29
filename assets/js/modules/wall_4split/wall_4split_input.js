@@ -49,8 +49,11 @@ function initCanvasInput(canvas) {
             const mx = e.offsetX;
             const my = e.offsetY;
             // キャンバスローカル座標からワールド座標（ミリメートル単位）への変換
+            // [v3.10.9] DPI独立: cssH = 物理px / dpr = CSS論理px (toCanvasPixel と同一基準)
+            const dpr = window.devicePixelRatio || 1;
+            const cssH = state.canvas.height / dpr;
             const worldX = (mx - state.offsetX) / state.scale;
-            const worldY = (state.canvas.height - my - state.offsetY) / state.scale;
+            const worldY = (cssH - my - state.offsetY) / state.scale;
 
             let clickX = Math.round(worldX * 10) / 10;
             let clickY = Math.round(worldY * 10) / 10;
@@ -427,13 +430,18 @@ function handleRoofGridInput(mode, state, clickX, clickY) {
             let bestGY = 0;
             let minDY = Infinity;
             if (roofGrids.y.length > 0) {
+                // [v3.10.9] DPI独立: cssH = 物理px / dpr = CSS論理px
+                const _dprRG = window.devicePixelRatio || 1;
+                const _cssHRG = state.canvas.height / _dprRG;
                 roofGrids.y.forEach(gy => {
-                    let d = Math.abs(clickY - (state.canvas.height - (gy * state.scale + state.offsetY)));
+                    let d = Math.abs(clickY - (_cssHRG - (gy * state.scale + state.offsetY)));
                     if (d < minDY) { minDY = d; bestGY = gy; }
                 });
             }
             if (minDY > 100 || minDY === Infinity) {
-                bestGY = snapToModule((state.canvas.height - clickY - state.offsetY) / state.scale);
+                const _dprRG2 = window.devicePixelRatio || 1;
+                const _cssHRG2 = state.canvas.height / _dprRG2;
+                bestGY = snapToModule((_cssHRG2 - clickY - state.offsetY) / state.scale);
             }
 
             const offsetStr = prompt(`屋根基準位置 (座標: ${bestGY}) からのオフセット距離を入力してください (mm)\n上方向はプラス、下方向はマイナス`, "910");
@@ -463,8 +471,11 @@ function handleRoofGridInput(mode, state, clickX, clickY) {
             let d = Math.abs(clickX - (gx * state.scale + state.offsetX));
             if (d < minD) { minD = d; bestIX = i; targetVal = gx; targetAxis = 'X'; }
         });
+        // [v3.10.9] DPI独立
+        const _dprRGD = window.devicePixelRatio || 1;
+        const _cssHRGD = state.canvas.height / _dprRGD;
         roofGrids.y.forEach((gy, i) => {
-            let d = Math.abs(clickY - (state.canvas.height - (gy * state.scale + state.offsetY)));
+            let d = Math.abs(clickY - (_cssHRGD - (gy * state.scale + state.offsetY)));
             if (d < minD) { minD = d; bestIY = i; targetVal = gy; targetAxis = 'Y'; }
         });
 
@@ -526,22 +537,23 @@ function handleGridInput(mode, state, clickX, clickY) {
             if (!state.manualGridX) state.manualGridX = [];
             state.manualGridX.push({ coord: newGX, name: name.trim() });
 
-            // 削除リストに入っていたら解除
             if (state.deletedGridX) {
                 state.deletedGridX = state.deletedGridX.filter(dx => Math.abs(dx - newGX) > 5);
             }
         } else if (upAxis === 'Y') {
             let bestGY = 0;
             let minDY = Infinity;
+            const _dprGY = window.devicePixelRatio || 1;
+            const _cssHGY = state.canvas.height / _dprGY;
             if (state.gridYCoords && state.gridYCoords.length > 0) {
                 state.gridYCoords.forEach(gy => {
-                    let d = Math.abs(clickY - (state.canvas.height - (gy * state.scale + state.offsetY)));
+                    let d = Math.abs(clickY - (_cssHGY - (gy * state.scale + state.offsetY)));
                     if (d < minDY) { minDY = d; bestGY = gy; }
                 });
             }
 
             if (minDY > 100 || minDY === Infinity) {
-                bestGY = snapToModule((state.canvas.height - clickY - state.offsetY) / state.scale);
+                bestGY = snapToModule((_cssHGY - clickY - state.offsetY) / state.scale);
             }
 
             const offsetStr = prompt(`基準位置 (座標: ${bestGY}) からのオフセット距離を入力してください (mm)\n上方向はプラス、下方向はマイナス`, "910");
@@ -641,7 +653,10 @@ function handleGridInput(mode, state, clickX, clickY) {
 }
 
 function handleEditText(e, state) {
-    const toC = (x, y) => ({ cx: x * state.scale + state.offsetX, cy: state.canvas.height - (y * state.scale + state.offsetY) });
+    // [v3.10.9] DPI独立: cssH = 物理px / dpr = CSS論理px
+    const _dprET = window.devicePixelRatio || 1;
+    const _cssHET = state.canvas.height / _dprET;
+    const toC = (x, y) => ({ cx: x * state.scale + state.offsetX, cy: _cssHET - (y * state.scale + state.offsetY) });
     
     let bestGX = null, bestGY = null, bestDiag = null;
     let minD = 20; // 統合距離閾値（px）
@@ -655,7 +670,7 @@ function handleEditText(e, state) {
     });
     // 2. Y通りチェック
     state.gridYCoords.forEach((gy, i) => { 
-        let d = Math.abs(e.offsetY - (state.canvas.height - (gy * state.scale + state.offsetY))); 
+        let d = Math.abs(e.offsetY - (_cssHET - (gy * state.scale + state.offsetY))); 
         if (d < minD) { minD = d; bestGY = gy; bestIY = i; winnerType = 'Y'; } 
     });
     // 3. 斜め通り芯チェック

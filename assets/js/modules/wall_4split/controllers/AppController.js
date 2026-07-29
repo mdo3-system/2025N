@@ -492,9 +492,10 @@ window.AppController = {
             minY = 0; maxY = 9100;
         }
 
-        // キャンバスの物理・論理サイズを確実に取得
-        const cw = canvas.clientWidth || canvas.width || 800;
-        const ch = canvas.clientHeight || canvas.height || 600;
+        // [v3.10.9] キャンバスのCSS論理ピクセルサイズを確実に取得（DPI非依存）
+        const dpr = window.devicePixelRatio || 1;
+        const cw = canvas.clientWidth || (canvas.width / dpr) || 800;
+        const ch = canvas.clientHeight || (canvas.height / dpr) || 600;
         
         // 周囲のマージンピクセル (通り芯ラベル X1, Y1 文字の描画余白)
         const padding = 80;
