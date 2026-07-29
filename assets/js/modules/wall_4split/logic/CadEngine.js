@@ -198,8 +198,10 @@ window.CadEngine = {
         };
 
         const isGridLayer = (l, name = "") => ((/(GRID|GLID|通り芯|軸線|軸|芯)/i.test(l) || /(GRID|GLID|通り芯)/i.test(name)) && !/^GL([_-]|$)/i.test(l.trim()));
-        const isPillarLayer = (l, name = "") => /(COL|COLUMN|柱|柱心|HASHIRA|HASIRA|角柱|管柱|通し柱|S-COL|H-COL|C105|C120)/i.test(l) || /(COL|COLUMN|柱|柱心|角柱|管柱|通し柱|HASHIRA|HASIRA|C105|C120)/i.test(name);
+        const isPillarLayer = (l, name = "") => /(1F_COL|2F_COL|COL|COLUMN|柱|柱心|HASHIRA|HASIRA|角柱|管柱|通し柱|S-COL|H-COL|C105|C120)/i.test(l) || /(1F_COL|2F_COL|COL|COLUMN|柱|柱心)/i.test(name);
         const isAreaLayer = (l, name = "") => /(AREA|面積|求積)/i.test(l) || /(AREA|面積)/i.test(name);
+        const isBackLayer = (l) => /(1F_BACK|2F_BACK|_BACK$|BACK|下絵)/i.test(l);
+        const isRoofLayer = (l) => /(1F_R|2F_R|_R$)/i.test(l);
 
         const collect = (ents, blks, parentLayer = "", transformStack = []) => {
             ents.forEach(ent => {
@@ -257,32 +259,39 @@ window.CadEngine = {
                     const isGrid = isGridLayer(L);
                     const isPillar = isPillarLayer(L);
                     const isArea = isAreaLayer(L);
+                    const isBack = isBackLayer(L);
+                    const isRoof = isRoofLayer(L);
 
-                    // 階指定オプションの決定
+                    // 階指定オプションの決定 (1F_COL, 2F_COL, 1F_BACK, 2F_BACK 等から判別)
                     let floor = targetFloor;
                     if (!floor || floor === 'ALL') {
-                        floor = L.includes('2F') || L.includes('RF') ? (L.includes('RF') ? 'RF' : '2F') : (L.includes('1F') ? '1F' : 'ALL');
+                        floor = (L.includes('2F') || L.includes('RF')) ? (L.includes('RF') ? 'RF' : '2F') : (L.includes('1F') ? '1F' : 'ALL');
                     }
 
                     if (isPillar) {
-                        const f = targetFloor || ((L.includes('2F') || L.includes('RF')) ? '2F' : '1F');
+                        const f = targetFloor || (L.includes('2F') ? '2F' : '1F');
                         let px = 0, py = 0, found = false;
 
+                        // 1. 点 (POINT)
                         if (e.type === 'POINT') {
                             const pos = e.position || { x: e.x, y: e.y };
                             px = pos.x; py = pos.y; found = true;
-                        } else if (e.type === 'CIRCLE' && (e.radius || 0) < 500) {
+                        } 
+                        // 2. 円 (CIRCLE)
+                        else if (e.type === 'CIRCLE' && (e.radius || 0) < 500) {
                             px = e.center.x; py = e.center.y; found = true;
                             e.floor = f;
                             newBgLines.push(e);
-                        } else if (['LWPOLYLINE', 'POLYLINE'].includes(e.type) && e.vertices && e.vertices.length > 0) {
+                        } 
+                        // 3. 四角形 (LWPOLYLINE / POLYLINE - 4頂点矩形)
+                        else if (['LWPOLYLINE', 'POLYLINE'].includes(e.type) && e.vertices && e.vertices.length > 0) {
                             const xs = e.vertices.map(v => v.x);
                             const ys = e.vertices.map(v => v.y);
                             const minX = Math.min(...xs), maxX = Math.max(...xs);
                             const minY = Math.min(...ys), maxY = Math.max(...ys);
                             const w = maxX - minX, h = maxY - minY;
 
-                            // 木造柱の一般的なサイズ範囲（40mm〜450mm、正方形・□表記の柱）
+                            // 木造柱の一般的なサイズ範囲（40mm〜450mm、正方形・長方形柱）
                             if (w >= 40 && w <= 450 && h >= 40 && h <= 450) {
                                 px = (minX + maxX) / 2;
                                 py = (minY + maxY) / 2;
@@ -294,7 +303,9 @@ window.CadEngine = {
                             }
                             e.floor = f;
                             newBgLines.push(e);
-                        } else if (e.type === 'LINE') {
+                        } 
+                        // 4. 四角形内のバツ印線 (LINE 対角線)
+                        else if (e.type === 'LINE') {
                             const v1 = e.start || (e.vertices ? e.vertices[0] : null);
                             const v2 = e.end || (e.vertices ? e.vertices[1] : null);
                             if (v1 && v2) {
@@ -339,8 +350,10 @@ window.CadEngine = {
                             newBgLines.push(e);
                         }
                     } else {
+                        // 下絵(BACK) / 屋根(R) / その他背景線
                         let f = targetFloor || (L.includes('1F') ? '1F' : (L.includes('2F') || L.includes('RF') ? '2F' : 'ALL'));
-                        e.floor = f; e.isUnderlay = true;
+                        e.floor = f; 
+                        e.isUnderlay = isBack; // 1F_BACK / 2F_BACK 等は下絵フラグ設定
                         if (e.type === 'LINE') {
                             if (e.start && e.end) e.vertices = [{ x: e.start.x, y: e.start.y }, { x: e.end.x, y: e.end.y }];
                             newBgLines.push(e);
@@ -357,10 +370,25 @@ window.CadEngine = {
 
         collect(entities, blocks || {});
 
+        // 通り芯線 (isGridLine) から垂直・水平軸の座標を収集
+        const gridXs = [];
+        const gridYs = [];
+        newBgLines.forEach(l => {
+            if (l.isGridLine && l.type === 'LINE' && l.vertices && l.vertices.length === 2) {
+                let p1 = l.vertices[0], p2 = l.vertices[1];
+                let dx = Math.abs(p1.x - p2.x), dy = Math.abs(p1.y - p2.y);
+                let len = Math.hypot(dx, dy);
+                if (len > 1500) {
+                    if (dx < 10) gridXs.push((p1.x + p2.x) / 2);
+                    if (dy < 10) gridYs.push((p1.y + p2.y) / 2);
+                }
+            }
+        });
+
         const uniquePillars = [];
         const pillarGroups = [];
 
-        // 柱枠を構成する複数のLINE要素の中心点 (150mm以内) をクラスタリングして真の中心を算出
+        // 柱枠・バツ印対角線を構成する複数要素の中心点 (150mm以内) をクラスタリング
         pillars.forEach(p => {
             let group = pillarGroups.find(g => g.floor === p.floor && g.points.some(pt => Math.abs(pt.x - p.x) <= 150 && Math.abs(pt.y - p.y) <= 150));
             if (!group) {
@@ -370,13 +398,35 @@ window.CadEngine = {
             group.points.push(p);
         });
 
+        // 柱の「通り芯交点判定アルゴリズム」 (本システムの核心)
+        const SNAP_TOL = 250; // 通り芯交点スナップ許容距離 (mm)
+
         pillarGroups.forEach(g => {
             const xs = g.points.map(pt => pt.x);
             const ys = g.points.map(pt => pt.y);
             const minX = Math.min(...xs), maxX = Math.max(...xs);
             const minY = Math.min(...ys), maxY = Math.max(...ys);
-            const cx = roundCoord((minX + maxX) / 2);
-            const cy = roundCoord((minY + maxY) / 2);
+            let cx = roundCoord((minX + maxX) / 2);
+            let cy = roundCoord((minY + maxY) / 2);
+
+            // 通り芯（GRID/GLID）交点との距離判定
+            let nearestX = cx, minDx = Infinity;
+            gridXs.forEach(gx => {
+                let d = Math.abs(gx - cx);
+                if (d < minDx) { minDx = d; nearestX = gx; }
+            });
+
+            let nearestY = cy, minDy = Infinity;
+            gridYs.forEach(gy => {
+                let d = Math.abs(gy - cy);
+                if (d < minDy) { minDy = d; nearestY = gy; }
+            });
+
+            // 通り芯交点が近くに存在する場合は交点へ厳密吸着
+            if (minDx <= SNAP_TOL) cx = roundCoord(nearestX);
+            if (minDy <= SNAP_TOL) cy = roundCoord(nearestY);
+
+            // 通り芯交点または有効位置にある柱を確定
             uniquePillars.push({ id: `P${pIdCounter++}`, x: cx, y: cy, floor: g.floor, layer: g.layer });
         });
 

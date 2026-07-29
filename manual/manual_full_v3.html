@@ -268,38 +268,61 @@
             本システムで構造計算を行うにあたり、<strong>「柱・耐力壁・スラブ端部・床面積端部が通る位置には、必ず通り芯（グリッド）が存在すること」</strong> が絶対条件です。CADで作図する段階で、通り芯（グリッド）を 1mm 単位で綺麗に配置しておくことが、読み込み後の入力を圧倒的に楽にする最大の鍵となります。
         </div>
 
-        <h3>1-1. お使いのCADでのDXFデータ作成 ＆ 各種CAD対応レイヤー規則</h3>
-        <p>本ツールは Jw_cad、AutoCAD、DRA-CAD、ARCHITREND ZERO、Vectorworks など、DXF出力可能なすべての日本の主要CADソフトに対応しています。以下のレイヤー命名ルールのいずれかで平面図を作成し、DXF保存してください。</p>
+        <h3>1-1. 単一DXFデータ作成 ＆ 標準レイヤー規則</h3>
+        <p>本ツールは 1つのDXFファイル内に 1F/2F の通り芯、柱、屋根、下絵レイヤーを定義して読み込みます。Jw_cad、AutoCAD、DRA-CAD、ARCHITREND ZERO、Vectorworks 等の主要CADソフトから以下のレイヤー命名規則で保存してください。</p>
         
         <table>
             <thead>
                 <tr>
                     <th style="width:25%;">要素タイプ</th>
-                    <th style="width:35%;">推奨レイヤー名</th>
-                    <th style="width:40%;">自動識別されるレイヤー名エイリアス（各種CAD対応）</th>
+                    <th style="width:35%;">標準レイヤー名</th>
+                    <th style="width:40%;">対応エイリアス・概要</th>
                 </tr>
             </thead>
             <tbody>
                 <tr>
                     <td><strong>通り芯 (軸)</strong></td>
-                    <td><code>GLID</code>, <code>GRID</code></td>
-                    <td><code>GRID</code>, <code>GLID</code>, <code>通り芯</code>, <code>軸線</code>, <code>芯</code>, <code>GL</code>, <code>軸</code></td>
+                    <td><code>GRID</code>, <code>GLID</code></td>
+                    <td><code>GRID</code>, <code>GLID</code>, <code>通り芯</code>, <code>軸線</code>, <code>芯</code></td>
                 </tr>
                 <tr>
-                    <td><strong>柱</strong></td>
-                    <td><code>COL_1F</code>, <code>COL_2F</code></td>
-                    <td><code>COL</code>, <code>COLUMN</code>, <code>柱</code>, <code>柱心</code></td>
+                    <td><strong>1階 柱</strong></td>
+                    <td><code>1F_COL</code></td>
+                    <td><code>1F_COL</code>, <code>COL_1F</code>, <code>1F*COL</code></td>
                 </tr>
                 <tr>
-                    <td><strong>背景下図 / 壁</strong></td>
-                    <td><code>BG_1F</code>, <code>BG_2F</code>, <code>BG_RF</code></td>
-                    <td><code>BG</code>, <code>壁</code>, <code>内壁</code>, <code>外壁</code>, <code>建具</code>, <code>データ</code>, <code>0</code></td>
+                    <td><strong>2階 柱</strong></td>
+                    <td><code>2F_COL</code></td>
+                    <td><code>2F_COL</code>, <code>COL_2F</code>, <code>2F*COL</code></td>
+                </tr>
+                <tr>
+                    <td><strong>1階/2階 屋根</strong></td>
+                    <td><code>1F_R</code>, <code>2F_R</code></td>
+                    <td><code>1F_R</code>, <code>2F_R</code> (屋根伏せ・軒の出ライン)</td>
+                </tr>
+                <tr>
+                    <td><strong>1階/2階 下絵</strong></td>
+                    <td><code>1F_BACK</code>, <code>2F_BACK</code></td>
+                    <td><code>1F_BACK</code>, <code>2F_BACK</code> (屋根モード時も背景として重ね表示)</td>
                 </tr>
             </tbody>
         </table>
+
+        <div class="alert alert-important" style="margin-top: 20px; border-left: 5px solid #e74c3c; background: #fdf2e9; padding: 15px; border-radius: 4px;">
+            ⚠️ <strong>【最重要】柱の自動抽出アルゴリズムおよび通り芯交点条件:</strong><br>
+            柱レイヤー（<code>1F_COL</code>, <code>2F_COL</code>）内に配置された以下の <strong>4種類の図形要素</strong> の中心点を認識し、<strong>「通り芯（GRID/GLID）の交点上（スナップ範囲内）」に位置するもののみ</strong> を正確な柱として抽出・自動吸着します。<br>
+            <ul style="margin-top: 8px; margin-bottom: 4px; padding-left: 20px;">
+                <li>① <strong>点</strong> (<code>POINT</code>)</li>
+                <li>② <strong>四角形</strong> (<code>LWPOLYLINE</code> / <code>POLYLINE</code> の4頂点矩形)</li>
+                <li>③ <strong>四角形＋内部バツ印</strong> (矩形枠＋対角線 <code>LINE</code> / ✕表記)</li>
+                <li>④ <strong>円</strong> (<code>CIRCLE</code> の中心座標)</li>
+            </ul>
+            ※ 通り芯交点上にない図形や離れた線分は柱として抽出されません。
+        </div>
+
         <div class="alert alert-tip">
-            💡 <strong>1Fと2Fの図面位置ズレの自動同定機能:</strong><br>
-            CAD上で 1F図面と 2F図面が離れた位置に描画されている場合でも、システムが通り芯の交点を自動検知して基準位置にミリ単位でアライメント調整します。また、操作画面の「🎯 下絵の位置・原点を微調整」ボタンから手動で10mm/100mm単位で位置調整も可能です。
+            💡 <strong>下絵（BACK）レイヤーの重畳表示:</strong><br>
+            <code>1F_BACK</code> および <code>2F_BACK</code> レイヤーの下絵線分は、作図モードだけでなく「屋根作図モード」時にも背景下絵として自動表示されます。
         </div>
 
         <h3>📐 CADレイヤーの分割ルール ＆ 下絵（背景）取り込み</h3>
