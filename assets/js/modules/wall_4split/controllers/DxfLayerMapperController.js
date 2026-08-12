@@ -283,7 +283,12 @@ window.DxfLayerMapperController = {
         }
 
         const modal = document.getElementById('modal-dxf-layer-mapper');
-        if (modal) modal.style.display = 'flex';
+        if (modal) {
+            modal.style.display = 'flex';
+            setTimeout(() => {
+                this.renderPreviewCanvas(0);
+            }, 60);
+        }
     },
 
     /**
@@ -470,6 +475,46 @@ window.DxfLayerMapperController = {
     previewZoomScale: 1.0,
     previewPanOffset: { x: 0, y: 0 },
 
+    /**
+     * 生DXFテキストからダイレクト座標スキャン (フォールバックパーサー)
+     */
+    parseDxfRawLinesDirect: function(rawTxt) {
+        const lines = [];
+        if (!rawTxt || typeof rawTxt !== 'string') return lines;
+
+        const rawLines = rawTxt.split(/\r?\n/);
+        let inEntities = false;
+        let currentType = null;
+        let curX1 = null, curY1 = null, curX2 = null, curY2 = null;
+
+        for (let i = 0; i < rawLines.length - 1; i++) {
+            const code = rawLines[i].trim();
+            const val = rawLines[i + 1] ? rawLines[i + 1].trim() : "";
+
+            if (code === '2' && val === 'ENTITIES') { inEntities = true; }
+            if (code === '0' && val === 'ENDSEC') { if (inEntities) break; }
+
+            if (inEntities && code === '0') {
+                if (currentType === 'LINE' && curX1 !== null && curY1 !== null && curX2 !== null && curY2 !== null) {
+                    lines.push({ x1: curX1, y1: curY1, x2: curX2, y2: curY2 });
+                }
+                currentType = val;
+                curX1 = null; curY1 = null; curX2 = null; curY2 = null;
+            }
+
+            if (inEntities && currentType === 'LINE') {
+                if (code === '10') curX1 = parseFloat(val);
+                if (code === '20') curY1 = parseFloat(val);
+                if (code === '11') curX2 = parseFloat(val);
+                if (code === '21') curY2 = parseFloat(val);
+            }
+        }
+        if (currentType === 'LINE' && curX1 !== null && curY1 !== null && curX2 !== null && curY2 !== null) {
+            lines.push({ x1: curX1, y1: curY1, x2: curX2, y2: curY2 });
+        }
+        return lines;
+    },
+
     renderPreviewCanvas: function(fileIdx) {
         const cvs = document.getElementById('dxf-origin-preview-canvas');
         if (!cvs) return;
@@ -479,59 +524,47 @@ window.DxfLayerMapperController = {
         const fileObj = this.loadedFiles[fileIdx] || this.loadedFiles[0];
         if (!fileObj || !fileObj.rawTxt) return;
 
-        const dxf = window.CadEngine ? window.CadEngine.processDxf(fileObj.rawTxt) : null;
-        if (!dxf || !dxf.entities) return;
-
-        // 全エンティティから線分・交点を抽出
         let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-        const lines = [];
+        let lines = [];
 
-        function collectEntities(entities, blocks, parentLayer = "") {
-            if (!entities) return;
-            entities.forEach(ent => {
-                if (ent.type === 'LINE' && ent.start && ent.end) {
-                    lines.push({ x1: ent.start.x, y1: ent.start.y, x2: ent.end.x, y2: ent.end.y });
-                    minX = Math.min(minX, ent.start.x, ent.end.x);
-                    minY = Math.min(minY, ent.start.y, ent.end.y);
-                    maxX = Math.max(maxX, ent.start.x, ent.end.x);
-                    maxY = Math.max(maxY, ent.start.y, ent.end.y);
-                } else if ((ent.type === 'LWPOLYLINE' || ent.type === 'POLYLINE') && ent.vertices && ent.vertices.length > 1) {
-                    for (let i = 0; i < ent.vertices.length - 1; i++) {
-                        const v1 = ent.vertices[i];
-                        const v2 = ent.vertices[i + 1];
-                        lines.push({ x1: v1.x, y1: v1.y, x2: v2.x, y2: v2.y });
-                        minX = Math.min(minX, v1.x, v2.x);
-                        minY = Math.min(minY, v1.y, v2.y);
-                        maxX = Math.max(maxX, v1.x, v2.x);
-                        maxY = Math.max(maxY, v1.y, v2.y);
+        const dxf = window.CadEngine ? window.CadEngine.processDxf(fileObj.rawTxt) : null;
+        if (dxf && dxf.entities) {
+            function collectEntities(entities, blocks) {
+                if (!entities) return;
+                entities.forEach(ent => {
+                    if (ent.type === 'LINE' && ent.start && ent.end) {
+                        lines.push({ x1: ent.start.x, y1: ent.start.y, x2: ent.end.x, y2: ent.end.y });
+                        minX = Math.min(minX, ent.start.x, ent.end.x);
+                        minY = Math.min(minY, ent.start.y, ent.end.y);
+                        maxX = Math.max(maxX, ent.start.x, ent.end.x);
+                        maxY = Math.max(maxY, ent.start.y, ent.end.y);
+                    } else if ((ent.type === 'LWPOLYLINE' || ent.type === 'POLYLINE') && ent.vertices && ent.vertices.length > 1) {
+                        for (let i = 0; i < ent.vertices.length - 1; i++) {
+                            const v1 = ent.vertices[i];
+                            const v2 = ent.vertices[i + 1];
+                            lines.push({ x1: v1.x, y1: v1.y, x2: v2.x, y2: v2.y });
+                            minX = Math.min(minX, v1.x, v2.x);
+                            minY = Math.min(minY, v1.y, v2.y);
+                            maxX = Math.max(maxX, v1.x, v2.x);
+                            maxY = Math.max(maxY, v1.y, v2.y);
+                        }
+                    } else if (ent.type === 'INSERT' && blocks && blocks[ent.name]) {
+                        const blk = blocks[ent.name];
+                        if (blk.entities) collectEntities(blk.entities, blocks);
                     }
-                    if (ent.shape) {
-                        const vFirst = ent.vertices[0];
-                        const vLast = ent.vertices[ent.vertices.length - 1];
-                        lines.push({ x1: vLast.x, y1: vLast.y, x2: vFirst.x, y2: vFirst.y });
-                    }
-                } else if (ent.type === 'CIRCLE' && ent.center) {
-                    const r = ent.radius || 10;
-                    minX = Math.min(minX, ent.center.x - r);
-                    minY = Math.min(minY, ent.center.y - r);
-                    maxX = Math.max(maxX, ent.center.x + r);
-                    maxY = Math.max(maxY, ent.center.y + r);
-                } else if (ent.type === 'ARC' && ent.center) {
-                    const r = ent.radius || 10;
-                    minX = Math.min(minX, ent.center.x - r);
-                    minY = Math.min(minY, ent.center.y - r);
-                    maxX = Math.max(maxX, ent.center.x + r);
-                    maxY = Math.max(maxY, ent.center.y + r);
-                } else if ((ent.type === 'TEXT' || ent.type === 'MTEXT') && (ent.position || ent.startPoint)) {
-                    const pos = ent.position || ent.startPoint;
-                    minX = Math.min(minX, pos.x);
-                    minY = Math.min(minY, pos.y);
-                    maxX = Math.max(maxX, pos.x);
-                    maxY = Math.max(maxY, pos.y);
-                } else if (ent.type === 'INSERT' && blocks && blocks[ent.name]) {
-                    const blk = blocks[ent.name];
-                    if (blk.entities) collectEntities(blk.entities, blocks, ent.layer);
-                }
+                });
+            }
+            collectEntities(dxf.entities, dxf.blocks);
+        }
+
+        // ライブラリで線分が取れない場合は強力な直接生テキストフォールバックパーサーを実行
+        if (lines.length === 0) {
+            lines = this.parseDxfRawLinesDirect(fileObj.rawTxt);
+            lines.forEach(l => {
+                minX = Math.min(minX, l.x1, l.x2);
+                minY = Math.min(minY, l.y1, l.y2);
+                maxX = Math.max(maxX, l.x1, l.x2);
+                maxY = Math.max(maxY, l.y1, l.y2);
             });
         }
 
