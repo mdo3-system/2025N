@@ -90,48 +90,120 @@ window.DxfLayerMapperController = {
 
         // レイヤーカウント表記
         const countEl = document.getElementById('dxf-mapper-layer-count');
-        if (countEl) countEl.innerText = `検出ファイル数: ${this.loadedFiles.length} ファイル | 全レイヤー数: ${allLayers.length}`;
+        if (countEl) countEl.innerText = `ロード済みファイル: ${this.loadedFiles.length} 件 | 全レイヤー数: ${allLayers.length}`;
 
-        // ドロップダウンのレンダリング
-        const selectIds = [
-            { id: 'dxf-select-grid', selectedKey: 'grid', isBack: false },
-            { id: 'dxf-select-1f-col', selectedKey: 'col1F', isBack: false },
-            { id: 'dxf-select-2f-col', selectedKey: 'col2F', isBack: false },
-            { id: 'dxf-select-1f-roof', selectedKey: 'roof1F', isBack: true },
-            { id: 'dxf-select-2f-roof', selectedKey: 'roof2F', isBack: true },
-            { id: 'dxf-select-1f-back', selectedKey: 'back1F', isBack: true },
-            { id: 'dxf-select-2f-back', selectedKey: 'back2F', isBack: true }
+        // 7つのスロット設定ID
+        const slotKeys = [
+            { fileId: 'dxf-file-grid', selectId: 'dxf-select-grid', selectedKey: 'grid', isBack: false },
+            { fileId: 'dxf-file-1f-col', selectId: 'dxf-select-1f-col', selectedKey: 'col1F', isBack: false },
+            { fileId: 'dxf-file-2f-col', selectId: 'dxf-select-2f-col', selectedKey: 'col2F', isBack: false },
+            { fileId: 'dxf-file-1f-roof', selectId: 'dxf-select-1f-roof', selectedKey: 'roof1F', isBack: true },
+            { fileId: 'dxf-file-2f-roof', selectId: 'dxf-select-2f-roof', selectedKey: 'roof2F', isBack: true },
+            { fileId: 'dxf-file-1f-back', selectId: 'dxf-select-1f-back', selectedKey: 'back1F', isBack: true },
+            { fileId: 'dxf-file-2f-back', selectId: 'dxf-select-2f-back', selectedKey: 'back2F', isBack: true }
         ];
 
-        selectIds.forEach(item => {
-            const selectEl = document.getElementById(item.id);
-            if (!selectEl) return;
-            selectEl.innerHTML = '';
+        // 各スロットのファイル選択ドロップダウンの更新関数
+        const populateSlotDropdowns = () => {
+            slotKeys.forEach(item => {
+                const fileEl = document.getElementById(item.fileId);
+                const selectEl = document.getElementById(item.selectId);
+                if (!fileEl || !selectEl) return;
 
-            // 「-指定なし/自動判定-」はNG！ 明示的選択メッセージを設定
-            const defaultOpt = document.createElement('option');
-            defaultOpt.value = '';
-            defaultOpt.text = '-- ※明示的にレイヤーを選択してください --';
-            selectEl.appendChild(defaultOpt);
-
-            // 背景・屋根レイヤーには「ファイル内全レイヤー一括取り込み」を追加
-            if (item.isBack) {
-                const allOpt = document.createElement('option');
-                allOpt.value = '__ALL_LAYERS__';
-                allOpt.text = '★ [ファイル内全レイヤー] を背景として一括取り込み';
-                selectEl.appendChild(allOpt);
-            }
-
-            allLayers.forEach(l => {
-                const opt = document.createElement('option');
-                opt.value = l;
-                opt.text = l;
-                if (autoMap[item.selectedKey] === l) {
-                    opt.selected = true;
+                // ファイルドロップダウン構築
+                const currentFileVal = fileEl.value;
+                fileEl.innerHTML = '';
+                this.loadedFiles.forEach((f, idx) => {
+                    const opt = document.createElement('option');
+                    opt.value = idx;
+                    opt.text = f.name;
+                    fileEl.appendChild(opt);
+                });
+                if (currentFileVal && fileEl.options[currentFileVal]) {
+                    fileEl.value = currentFileVal;
                 }
-                selectEl.appendChild(opt);
+
+                // 選択中ファイルに基づくレイヤー一覧の再構成
+                const activeFileIdx = parseInt(fileEl.value || 0, 10);
+                const targetFileObj = this.loadedFiles[activeFileIdx] || this.loadedFiles[0];
+                const fileLayers = targetFileObj ? targetFileObj.layers : allLayers;
+
+                const currentLayerVal = selectEl.value;
+                selectEl.innerHTML = '';
+
+                const defaultOpt = document.createElement('option');
+                defaultOpt.value = '';
+                defaultOpt.text = '-- ※明示的にレイヤーを選択してください --';
+                selectEl.appendChild(defaultOpt);
+
+                if (item.isBack) {
+                    const allOpt = document.createElement('option');
+                    allOpt.value = '__ALL_LAYERS__';
+                    allOpt.text = '★ [ファイル内全レイヤー] を背景として一括取り込み';
+                    selectEl.appendChild(allOpt);
+                }
+
+                fileLayers.forEach(l => {
+                    const opt = document.createElement('option');
+                    opt.value = l;
+                    opt.text = l;
+                    if (currentLayerVal ? (currentLayerVal === l) : (autoMap[item.selectedKey] === l)) {
+                        opt.selected = true;
+                    }
+                    selectEl.appendChild(opt);
+                });
             });
+        };
+
+        // ファイルドロップダウン初期化 ＆ 変更イベント接続
+        populateSlotDropdowns();
+        slotKeys.forEach(item => {
+            const fileEl = document.getElementById(item.fileId);
+            if (fileEl) {
+                fileEl.onchange = () => populateSlotDropdowns();
+            }
         });
+
+        // 「📂 別ファイルをスロット追加ロード」ボタンのイベント接続
+        const addFileEl = document.getElementById('dxf-slot-add-file');
+        if (addFileEl) {
+            addFileEl.onchange = (e) => {
+                const addFiles = Array.from(e.target.files || []);
+                if (addFiles.length === 0) return;
+
+                let readCount = 0;
+                addFiles.forEach(file => {
+                    const reader = new FileReader();
+                    reader.onload = (ev) => {
+                        try {
+                            const buffer = new Uint8Array(ev.target.result);
+                            let raw = "";
+                            if (typeof window.Encoding !== 'undefined' && window.Encoding.detect) {
+                                const det = window.Encoding.detect(buffer);
+                                raw = window.Encoding.convert(buffer, { to: 'UNICODE', from: det || 'AUTO', type: 'STRING' });
+                            } else {
+                                raw = new TextDecoder('UTF-8').decode(buffer);
+                            }
+                            const dxf = window.CadEngine ? window.CadEngine.processDxf(raw) : null;
+                            if (dxf && dxf.entities) {
+                                const lSet = new Set();
+                                dxf.entities.forEach(ent => { if (ent.layer) lSet.add(ent.layer.toUpperCase().trim()); });
+                                this.loadedFiles.push({ name: file.name, rawTxt: raw, layers: Array.from(lSet).sort() });
+                            }
+                        } catch (err) {
+                            console.error(err);
+                        } finally {
+                            readCount++;
+                            if (readCount === addFiles.length) {
+                                populateSlotDropdowns();
+                                if (countEl) countEl.innerText = `ロード済みファイル: ${this.loadedFiles.length} 件 | 最新ファイルを全スロットで指定可能`;
+                            }
+                        }
+                    };
+                    reader.readAsArrayBuffer(file);
+                });
+            };
+        }
 
         // イベントハンドラーのバインド
         const btnConfirm = document.getElementById('btn-dxf-mapper-confirm');
@@ -167,7 +239,16 @@ window.DxfLayerMapperController = {
             roof1FLayer: document.getElementById('dxf-select-1f-roof')?.value || "",
             roof2FLayer: document.getElementById('dxf-select-2f-roof')?.value || "",
             back1FLayer: document.getElementById('dxf-select-1f-back')?.value || "",
-            back2FLayer: document.getElementById('dxf-select-2f-back')?.value || ""
+            back2FLayer: document.getElementById('dxf-select-2f-back')?.value || "",
+            slots: {
+                grid: { fileIdx: parseInt(document.getElementById('dxf-file-grid')?.value || 0, 10), layer: document.getElementById('dxf-select-grid')?.value || "", origin: document.getElementById('dxf-origin-grid')?.value || "auto_min_grid" },
+                col1F: { fileIdx: parseInt(document.getElementById('dxf-file-1f-col')?.value || 0, 10), layer: document.getElementById('dxf-select-1f-col')?.value || "", origin: document.getElementById('dxf-origin-1f-col')?.value || "auto_min_grid" },
+                col2F: { fileIdx: parseInt(document.getElementById('dxf-file-2f-col')?.value || 0, 10), layer: document.getElementById('dxf-select-2f-col')?.value || "", origin: document.getElementById('dxf-origin-2f-col')?.value || "auto_min_grid" },
+                roof1F: { fileIdx: parseInt(document.getElementById('dxf-file-1f-roof')?.value || 0, 10), layer: document.getElementById('dxf-select-1f-roof')?.value || "", origin: document.getElementById('dxf-origin-1f-roof')?.value || "auto_min_grid" },
+                roof2F: { fileIdx: parseInt(document.getElementById('dxf-file-2f-roof')?.value || 0, 10), layer: document.getElementById('dxf-select-2f-roof')?.value || "", origin: document.getElementById('dxf-origin-2f-roof')?.value || "auto_min_grid" },
+                back1F: { fileIdx: parseInt(document.getElementById('dxf-file-1f-back')?.value || 0, 10), layer: document.getElementById('dxf-select-1f-back')?.value || "", origin: document.getElementById('dxf-origin-1f-back')?.value || "auto_min_grid" },
+                back2F: { fileIdx: parseInt(document.getElementById('dxf-file-2f-back')?.value || 0, 10), layer: document.getElementById('dxf-select-2f-back')?.value || "", origin: document.getElementById('dxf-origin-2f-back')?.value || "auto_min_grid" }
+            }
         };
 
         if (!mapping.gridLayer) {
