@@ -268,49 +268,44 @@
             本システムで構造計算を行うにあたり、<strong>「柱・耐力壁・スラブ端部・床面積端部が通る位置には、必ず通り芯（グリッド）が存在すること」</strong> が絶対条件です。CADで作図する段階で、通り芯（グリッド）を 1mm 単位で綺麗に配置しておくことが、読み込み後の入力を圧倒的に楽にする最大の鍵となります。
         </div>
 
-        <h3>1-1. 単一DXFデータ作成 ＆ 標準レイヤー規則</h3>
-        <p>本ツールは 1つのDXFファイル内に 1F/2F の通り芯、柱、屋根、下絵レイヤーを定義して読み込みます。Jw_cad、AutoCAD、DRA-CAD、ARCHITREND ZERO、Vectorworks 等の主要CADソフトから以下のレイヤー命名規則で保存してください。</p>
+        <h3>1-1. DXFデータ読み込み ＆ レイヤー割当設定 (v3.10版)</h3>
+        <p>本ツールは、1つのDXFファイルから通り芯、柱、屋根、背景レイヤーを柔軟に割り当てて読み込みます。Jw_cad、AutoCAD、DRA-CAD、ARCHITREND ZERO、Vectorworks 等の主要CADソフトのレイヤー名に関わらず、読み込み時に表示されるダイアログで各階層役割を選択・割り当てて読み込んでください。</p>
         
         <table>
             <thead>
                 <tr>
-                    <th style="width:25%;">要素タイプ</th>
-                    <th style="width:35%;">標準レイヤー名</th>
-                    <th style="width:40%;">対応エイリアス・概要</th>
+                    <th style="width:25%;">役割分類</th>
+                    <th style="width:35%;">DXF読み込み時ダイアログでの選択指定</th>
+                    <th style="width:40%;">取り込みと動作仕様</th>
                 </tr>
             </thead>
             <tbody>
                 <tr>
-                    <td><strong>通り芯 (軸)</strong></td>
-                    <td><code>GRID</code>, <code>GLID</code></td>
-                    <td><code>GRID</code>, <code>GLID</code>, <code>通り芯</code>, <code>軸線</code>, <code>芯</code></td>
+                    <td><strong>通り芯 (軸線・文字)</strong></td>
+                    <td><code>通り芯レイヤー (Grid Layer)</code></td>
+                    <td>直線を「通り芯座標」、文字を「通り芯名（X1, Y1等）」として解析しマスター通り芯（105mm/120mmダブル壁偏芯通り芯含む）を自動構築します。</td>
                 </tr>
                 <tr>
-                    <td><strong>1階 柱</strong></td>
-                    <td><code>1F_COL</code></td>
-                    <td><code>1F_COL</code>, <code>COL_1F</code>, <code>1F*COL</code></td>
-                </tr>
-                <tr>
-                    <td><strong>2階 柱</strong></td>
-                    <td><code>2F_COL</code></td>
-                    <td><code>2F_COL</code>, <code>COL_2F</code>, <code>2F*COL</code></td>
+                    <td><strong>1階柱 / 2階柱</strong></td>
+                    <td><code>1階柱レイヤー / 2階柱レイヤー (COL Layer)</code></td>
+                    <td>点・円・四角枠の中心を1階/2階の「柱」として通り芯交点へ自動吸着配置します。柱データは計算の基本要素として常時表示されます。</td>
                 </tr>
                 <tr>
                     <td><strong>1階/2階 屋根</strong></td>
-                    <td><code>1F_R</code>, <code>2F_R</code></td>
-                    <td><code>1F_R</code>, <code>2F_R</code> (屋根伏せ・軒の出ライン)</td>
+                    <td><code>1階屋根レイヤー / 2階屋根レイヤー (Roof Layer)</code></td>
+                    <td>屋根形状（軒の出ライン等）の下絵ガイド線分として取り込まれ、作図時に活用できます。</td>
                 </tr>
                 <tr>
-                    <td><strong>1階/2階 下絵</strong></td>
-                    <td><code>1F_BACK</code>, <code>2F_BACK</code></td>
-                    <td><code>1F_BACK</code>, <code>2F_BACK</code> (屋根モード時も背景として重ね表示)</td>
+                    <td><strong>1階/2階 背景</strong></td>
+                    <td><code>1階背景レイヤー / 2階背景レイヤー (Background Layer)</code></td>
+                    <td>間取り・壁・建具・寸法文字などを下絵（背景）として取り込みます。画面表示のON/OFFは中央パネル上部の「🗂 レイヤ設定」で自由に制御可能です。</td>
                 </tr>
             </tbody>
         </table>
 
         <div class="alert alert-important" style="margin-top: 20px; border-left: 5px solid #e74c3c; background: #fdf2e9; padding: 15px; border-radius: 4px;">
             ⚠️ <strong>【最重要】柱の自動抽出アルゴリズムおよび通り芯交点条件:</strong><br>
-            柱レイヤー（<code>1F_COL</code>, <code>2F_COL</code>）内に配置された以下の <strong>4種類の図形要素</strong> の中心点を認識し、<strong>「通り芯（GRID/GLID）の交点上（スナップ範囲内）」に位置するもののみ</strong> を正確な柱として抽出・自動吸着します。<br>
+            ダイアログで指定した柱レイヤー内に配置された以下の <strong>4種類の図形要素</strong> の中心点を認識し、<strong>「通り芯の交点上（スナップ範囲内）」に位置するもののみ</strong> を正確な柱として抽出・自動吸着します。<br>
             <ul style="margin-top: 8px; margin-bottom: 4px; padding-left: 20px;">
                 <li>① <strong>点</strong> (<code>POINT</code>)</li>
                 <li>② <strong>四角形</strong> (<code>LWPOLYLINE</code> / <code>POLYLINE</code> の4頂点矩形)</li>
@@ -321,13 +316,9 @@
         </div>
 
         <div class="alert alert-tip">
-            💡 <strong>下絵（BACK）レイヤーの重畳表示:</strong><br>
-            <code>1F_BACK</code> および <code>2F_BACK</code> レイヤーの下絵線分は、作図モードだけでなく「屋根作図モード」時にも背景下絵として自動表示されます。
+            💡 <strong>背景レイヤーの表示コントロール:</strong><br>
+            読込後の下絵線分は、作図モードだけでなく「屋根作図モード」時にも背景下絵として表示可能です。中央パネル上部の<strong>「🗂 レイヤ設定」</strong>ボタンを押し、表示パネル内でチェックが入っているレイヤーが素直に画面上に表示されます。
         </div>
-
-        <h3>📐 DXFレイヤー設定 ＆ 表示コントロール</h3>
-        <p>DXFファイルを読み込む際は、表示されるダイアログにて<strong>通り芯レイヤー、1階柱レイヤー、2階柱レイヤー、1階屋根レイヤー、2階屋根レイヤー、1階背景レイヤー、2階背景レイヤー</strong>を選択・割り当てて読み込んでください。</p>
-        <p>キャンバス上に表示させたい背景レイヤーは、中央パネル上部の<strong>「🗂 レイヤ設定」</strong>ボタンを押し、表示パネル内でチェックが入っているレイヤーが表示されます。</p>
 
         <div class="screenshot-card" style="max-width: 480px; margin: 24px auto; text-align: left; background: #fff; border: 2px solid #e67e22; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
             <div style="background: #fdebd0; color: #d35400; font-weight: bold; padding: 10px 14px; border-radius: 6px 6px 0 0; font-size: 14px; display: flex; align-items: center; gap: 6px;">
@@ -342,49 +333,13 @@
 
                 <b style="color: #0056b3; font-size: 13px; display: block; margin-bottom: 6px;">① 平面図 DXF読込 (マスト)</b>
                 <div style="background: #e67e22; color: #ffffff; text-align: center; padding: 10px; font-weight: bold; font-size: 13px; border-radius: 6px; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                    📂 平面図を選択
-                </div>
-
-                <div style="margin-top: 12px; display: flex; align-items: center; gap: 8px; font-size: 12px;">
-                    <label style="margin: 0; color: #334155;">平面図スケール: S=1/</label>
-                    <input type="number" value="100" readonly style="width: 60px; padding: 4px 6px; border: 1px solid #cbd5e1; border-radius: 4px; text-align: center; background: #f8fafc; font-weight: bold;">
+                    📂 平面図を選択して読込
                 </div>
             </div>
             <div class="screenshot-caption" style="padding: 10px 14px; border-top: 1px solid #f1f5f9; margin-top: 0;">
-                🖼️ 図1. 最新の「1. DXFデータ読込 (必須)」パネル画面。立面・見附の旧項目が除去され、平面図のCOL(柱)・GRID(芯)・背景レイヤーのみが表示されるアプリ実物と100%整合した状態です。
+                🖼️ 図1. 最新の「1. DXFデータ読込 (必須)」パネル画面（v3.10版）。平面図DXF読込時にモーダルダイアログで階層役割を割り当て、画面表示は「🗂 レイヤ設定」でON/OFFを調整する最新画面と100%整合した状態です。
             </div>
         </div>
-
-        <table>
-            <thead>
-                <tr>
-                    <th>読み込み種別</th>
-                    <th>CADレイヤー名（判定キーワード）</th>
-                    <th>抽出エンティティ</th>
-                    <th>取り込みと動作仕様</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td><strong>通り芯・文字</strong></td>
-                    <td><code>GLID</code> または <code>GRID</code></td>
-                    <td>LINE, TEXT, MTEXT</td>
-                    <td>直線を「通り芯座標」、文字を「通り芯名（X1, Y1等）」として構造データ化します。</td>
-                </tr>
-                <tr>
-                    <td><strong>柱</strong></td>
-                    <td><code>COL_1F</code>, <code>COL_2F</code>, <code>COL</code></td>
-                    <td>POINT, CIRCLE, POLYGON</td>
-                    <td>点・円・ポリゴンの中心座標を「柱」として通り芯交点へ自動配置します。</td>
-                </tr>
-                <tr>
-                    <td><strong>下絵（背景）</strong></td>
-                    <td><code>GRID</code>/<code>GLID</code>, <code>COL</code> 以外すべて<br>(例: <code>BG_1F</code>, <code>BG_2F</code>, <code>BG_RF</code>)</td>
-                    <td>すべての図形・線分・文字</td>
-                    <td><strong>GLID(通り芯)とCOL(柱)以外はすべて下絵(背景)として読み込まれます。</strong>部屋の間取り・壁位置・窓などを自由な線分として描いておくと、作図時の下絵ガイドとして活用できます。</td>
-                </tr>
-            </tbody>
-        </table>
     </div>
 
     <!-- 2. 確認申請審査に関する注意点 -->
