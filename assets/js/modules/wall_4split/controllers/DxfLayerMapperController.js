@@ -169,8 +169,7 @@ window.DxfLayerMapperController = {
                     (state.pillars || []).forEach(p => { if (p.layer) allLayers.add(p.layer.toUpperCase().trim()); });
 
                     allLayers.forEach(l => {
-                        // モーダルで割り当てられた主要レイヤーは ON、未割り当ての雑レイヤーは OFF
-                        state.layerVisibility[l] = (assignedLayers.size === 0) ? true : assignedLayers.has(l);
+                        state.layerVisibility[l] = true;
                     });
 
                     if (window.AppController && window.AppController.refreshAll) {

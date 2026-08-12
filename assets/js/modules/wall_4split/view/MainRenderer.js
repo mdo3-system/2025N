@@ -145,41 +145,16 @@ window.MainRenderer = {
         const upperL = rawL.toUpperCase();
 
         if (lv[rawL] === false || lv[upperL] === false) return false;
-        if (lv[rawL] === true || lv[upperL] === true) return true;
-
-        if (state.layerMapping) {
-            const assignedSet = new Set(
-                Object.values(state.layerMapping).filter(v => v && typeof v === 'string').map(v => v.toUpperCase().trim())
-            );
-            return assignedSet.has(upperL);
-        }
         return true;
-    },
-
-    isElementVisibleForFloor: function(elementFloor, currentFloor, isGridLine = false) {
-        if (isGridLine || !elementFloor || elementFloor === 'ALL') return true;
-        const cur = currentFloor || '1F';
-        if (cur === 'foundation' || cur === '1F') {
-            return elementFloor === '1F';
-        } else if (cur === '2F') {
-            return elementFloor === '2F';
-        } else if (cur === '1R') {
-            return elementFloor === '1F' || elementFloor === '1R';
-        } else if (cur === '2R') {
-            return elementFloor === '2F' || elementFloor === '2R' || elementFloor === 'RF';
-        }
-        return elementFloor === cur;
     },
 
     drawBackground: function(state) {
         const ctx = state.ctx;
         ctx.lineWidth = 1.0;
         ctx.strokeStyle = state.isPrintMode ? '#aaa' : 'rgba(170, 170, 170, 0.5)';
-        const curFloor = state.currentFloor || '1F';
         
         state.bgLinesOriginal.forEach(e => {
             if (!this.isLayerVisible(e.layer, state)) return;
-            if (!this.isElementVisibleForFloor(e.floor, curFloor)) return;
             if (e.isGridLine) return; // スナップ用GRID線は除外
 
             ctx.beginPath();
@@ -590,10 +565,8 @@ window.MainRenderer = {
     drawTexts: function(state) {
         const ctx = state.ctx;
         ctx.textAlign = "left";
-        const curFloor = state.currentFloor || '1F';
         state.bgTextsOriginal.forEach(t => {
             if (!this.isLayerVisible(t.layer, state)) return;
-            if (!this.isElementVisibleForFloor(t.floor, curFloor)) return;
             const p = this.toCanvas(t, null, state);
             if (p.cx != null) {
                 ctx.fillStyle = t.isUnderlay ? '#666' : (state.isPrintMode ? '#333' : '#aaaaaa');

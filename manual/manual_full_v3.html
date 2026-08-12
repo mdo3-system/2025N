@@ -325,8 +325,9 @@
             <code>1F_BACK</code> および <code>2F_BACK</code> レイヤーの下絵線分は、作図モードだけでなく「屋根作図モード」時にも背景下絵として自動表示されます。
         </div>
 
-        <h3>📐 CADレイヤーの分割ルール ＆ 下絵（背景）取り込み</h3>
-        <p>CADソフトで平面図を作成・DXF出力する際、<strong>`GLID` / `GRID` (通り芯) と `COL_1F` / `COL_2F` (柱) 以外のすべてのレイヤー（`BG_1F`, `BG_2F`, `BG_RF` 等の下絵レイヤー含む）は、すべてキャンバス上に「下絵（背景）」として自動的に読み込まれます。</strong>（※本ツールでは見附面積は屋根伏図作図により描画・算出するため、旧来のような立面DXFの読み込みは一切不要です）。</p>
+        <h3>📐 DXFレイヤー設定 ＆ 表示コントロール</h3>
+        <p>DXFファイルを読み込む際は、表示されるダイアログにて<strong>通り芯レイヤー、1階柱レイヤー、2階柱レイヤー、1階屋根レイヤー、2階屋根レイヤー、1階背景レイヤー、2階背景レイヤー</strong>を選択・割り当てて読み込んでください。</p>
+        <p>キャンバス上に表示させたい背景レイヤーは、中央パネル上部の<strong>「🗂 レイヤ設定」</strong>ボタンを押し、表示パネル内でチェックが入っているレイヤーが表示されます。</p>
 
         <div class="screenshot-card" style="max-width: 480px; margin: 24px auto; text-align: left; background: #fff; border: 2px solid #e67e22; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
             <div style="background: #fdebd0; color: #d35400; font-weight: bold; padding: 10px 14px; border-radius: 6px 6px 0 0; font-size: 14px; display: flex; align-items: center; gap: 6px;">
@@ -334,9 +335,9 @@
             </div>
             <div style="padding: 14px; background: #fff; font-size: 12px; color: #1e293b;">
                 <div style="margin-bottom: 12px; padding: 10px 12px; background: #fff3cd; border: 1px solid #ffeeba; border-radius: 6px; line-height: 1.6;">
-                    <b style="color: #d35400; font-size: 13px;">【作図・レイヤルール】</b><br>
-                    ・<b>平面図:</b> COL_1F/2F(柱), GRID(芯), BG_1F/2F/RF(背景)<br>
-                    <span style="color: #555; font-size: 11px;">※GLID(通り芯)とCOL(柱)以外はすべて下絵(背景)として自動的に読み込まれます（※見附面積は屋根伏図作図により描画・算定されます）。</span>
+                    <b style="color: #d35400; font-size: 13px;">【DXF読込 ＆ レイヤー表示ルール】</b><br>
+                    ・読込ボタン押下後、ダイアログにて<b>通り芯レイヤー、1階柱レイヤー、2階柱レイヤー、1階屋根レイヤー、2階屋根レイヤー、1階背景レイヤー、2階背景レイヤー</b>を選択・割り当てて読み込んでください。<br>
+                    ・画面上に表示する背景レイヤーは、中央パネル上部の<b>「🗂 レイヤ設定」</b>ボタンを押し、チェックが入っているレイヤーが表示されます。
                 </div>
 
                 <b style="color: #0056b3; font-size: 13px; display: block; margin-bottom: 6px;">① 平面図 DXF読込 (マスト)</b>
