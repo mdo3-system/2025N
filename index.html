@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>上善如水 - 壁量計算WEB (v3.12.0 完成版)</title>
+    <title>上善如水 - 壁量計算WEB (v3.12版)</title>
     <script src="https://cdn.jsdelivr.net/npm/dxf-parser@1.1.2/dist/dxf-parser.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/encoding-japanese/2.0.0/encoding.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/clipper-lib@6.4.2/clipper.js"></script>
@@ -1058,8 +1058,8 @@
                 </div>
 
                 <b style="color:#0056b3;">① 平面図 DXF読込 (マスト)</b>
-                <input type="file" id="dxf-upload" accept=".dxf" style="display: none;">
-                <label for="dxf-upload" class="action-btn" style="width:100%; box-sizing:border-box; padding:8px; font-size:12px; margin-top:6px;">📂 平面図を選択して読込</label>
+                <input type="file" id="dxf-upload" accept=".dxf" multiple style="display: none;">
+                <label for="dxf-upload" class="action-btn" style="width:100%; box-sizing:border-box; padding:8px; font-size:12px; margin-top:6px;">📂 DXFファイルを選択して読込 (単一/複数対応)</label>
 
                 <input type="hidden" id="scale-sub" value="100">
                 <input type="hidden" id="scale-plan" value="100">

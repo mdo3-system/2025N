@@ -1,4 +1,4 @@
 /**
  * Version.js - Centralized Version Management
  */
-window.APP_VERSION = "v3.12.0"; // Final Consolidated Release: Pure layerPanel control, DXF mapper, Refactored SRP architecture
+window.APP_VERSION = "v3.12版"; // 7-Slot Dedicated DXF Mapper & Origin Alignment Release

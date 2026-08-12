@@ -35,38 +35,62 @@ window.DxfLayerMapperController = {
      * @param {string} rawTxt - DXFの生テキスト
      * @param {Function} callback - 確定時に呼び出すコールバック function(mapping, rawTxt)
      */
-    openMapper: function(rawTxt, callback) {
-        this.closeProgress();
-        this.currentDxfRaw = rawTxt;
-        this.onConfirmCallback = callback;
+    loadedFiles: [], // [{ name: string, rawTxt: string, layers: string[] }]
 
-        const dxf = window.CadEngine ? window.CadEngine.processDxf(rawTxt) : null;
-        if (!dxf || !dxf.entities) {
+    /**
+     * DXFレイヤーマッピングモーダルを開く
+     * @param {string|Array} inputData - DXFの生テキスト または ファイルオブジェクト配列 [{ name, rawTxt }]
+     * @param {Function} callback - 確定時に呼び出すコールバック function(mapping, combinedDxfRaw)
+     */
+    openMapper: function(inputData, callback) {
+        this.closeProgress();
+        this.onConfirmCallback = callback;
+        this.loadedFiles = [];
+
+        if (Array.isArray(inputData)) {
+            inputData.forEach(item => {
+                const dxf = window.CadEngine ? window.CadEngine.processDxf(item.rawTxt) : null;
+                if (dxf && dxf.entities) {
+                    const lSet = new Set();
+                    dxf.entities.forEach(ent => { if (ent.layer) lSet.add(ent.layer.toUpperCase().trim()); });
+                    this.loadedFiles.push({ name: item.name, rawTxt: item.rawTxt, layers: Array.from(lSet).sort() });
+                }
+            });
+        } else if (typeof inputData === 'string') {
+            const dxf = window.CadEngine ? window.CadEngine.processDxf(inputData) : null;
+            if (dxf && dxf.entities) {
+                const lSet = new Set();
+                dxf.entities.forEach(ent => { if (ent.layer) lSet.add(ent.layer.toUpperCase().trim()); });
+                this.loadedFiles.push({ name: "単一DXFデータ.dxf", rawTxt: inputData, layers: Array.from(lSet).sort() });
+            }
+        }
+
+        if (this.loadedFiles.length === 0) {
             alert("❌ DXFの読み込みに失敗しました。ファイルフォーマットをご確認ください。");
             return;
         }
 
-        // ユニークレイヤー名の抽出
-        const layerSet = new Set();
-        dxf.entities.forEach(ent => {
-            if (ent.layer) layerSet.add(ent.layer.toUpperCase().trim());
-        });
-        const layers = Array.from(layerSet).sort();
+        this.currentDxfRaw = this.loadedFiles[0].rawTxt;
+
+        // 全ファイルの統合ユニークレイヤー抽出
+        const allLayersSet = new Set();
+        this.loadedFiles.forEach(f => f.layers.forEach(l => allLayersSet.add(l)));
+        const allLayers = Array.from(allLayersSet).sort();
 
         // スマート自動推定 (Smart Auto-Select)
         const autoMap = {
-            grid: layers.find(l => /(GRID|GLID|通り芯|軸線)/i.test(l) && !/(COL|COLUMN|柱|BACK|Rｸﾞﾙｰﾌﾟ|グループ|背景)/i.test(l)) || "",
-            col1F: layers.find(l => /(1F_COL|1F.*COL|1F.*柱)/i.test(l) && !/(BACK|背景)/i.test(l)) || layers.find(l => /(COL|COLUMN|柱)/i.test(l) && !/(2F|BACK|背景)/i.test(l)) || "",
-            col2F: layers.find(l => /(2F_COL|2F.*COL|2F.*柱)/i.test(l) && !/(BACK|背景)/i.test(l)) || "",
-            roof1F: layers.find(l => /(1F_R|1F.*屋根|軒|下屋)/i.test(l) && !/(BACK|背景)/i.test(l)) || "",
-            roof2F: layers.find(l => /(2F_R|2F.*屋根|RF|大屋根)/i.test(l) && !/(BACK|背景)/i.test(l)) || "",
-            back1F: layers.find(l => /(1F_BACK|1_BACK|1F.*背景|1F.*下図)/i.test(l)) || layers.find(l => /(BACK|背景|下図)/i.test(l) && !/2F/i.test(l)) || "",
-            back2F: layers.find(l => /(2F_BACK|2_BACK|2F.*背景|2F.*下図)/i.test(l)) || ""
+            grid: allLayers.find(l => /(GRID|GLID|通り芯|軸線)/i.test(l) && !/(COL|COLUMN|柱|BACK|Rｸﾞﾙｰﾌﾟ|グループ|背景)/i.test(l)) || "",
+            col1F: allLayers.find(l => /(1F_COL|1F.*COL|1F.*柱)/i.test(l) && !/(BACK|背景)/i.test(l)) || allLayers.find(l => /(COL|COLUMN|柱)/i.test(l) && !/(2F|BACK|背景)/i.test(l)) || "",
+            col2F: allLayers.find(l => /(2F_COL|2F.*COL|2F.*柱)/i.test(l) && !/(BACK|背景)/i.test(l)) || "",
+            roof1F: allLayers.find(l => /(1F_R|1F.*屋根|軒|下屋)/i.test(l) && !/(BACK|背景)/i.test(l)) || "",
+            roof2F: allLayers.find(l => /(2F_R|2F.*屋根|RF|大屋根)/i.test(l) && !/(BACK|背景)/i.test(l)) || "",
+            back1F: allLayers.find(l => /(1F_BACK|1_BACK|1F.*背景|1F.*下図)/i.test(l)) || allLayers.find(l => /(BACK|背景|下図)/i.test(l) && !/2F/i.test(l)) || "",
+            back2F: allLayers.find(l => /(2F_BACK|2_BACK|2F.*背景|2F.*下図)/i.test(l)) || ""
         };
 
         // レイヤーカウント表記
         const countEl = document.getElementById('dxf-mapper-layer-count');
-        if (countEl) countEl.innerText = `検出レイヤー数: ${layers.length}`;
+        if (countEl) countEl.innerText = `検出ファイル数: ${this.loadedFiles.length} ファイル | 全レイヤー数: ${allLayers.length}`;
 
         // ドロップダウンのレンダリング
         const selectIds = [
@@ -89,7 +113,7 @@ window.DxfLayerMapperController = {
             defaultOpt.text = '-- 指定なし / 自動判定 --';
             selectEl.appendChild(defaultOpt);
 
-            layers.forEach(l => {
+            allLayers.forEach(l => {
                 const opt = document.createElement('option');
                 opt.value = l;
                 opt.text = l;

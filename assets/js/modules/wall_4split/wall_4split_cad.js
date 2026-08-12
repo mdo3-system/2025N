@@ -4,55 +4,76 @@
  */
 
 function loadDxf(event) {
-    const file = event.target.files[0];
-    if (!file) return;
+    const files = Array.from(event.target.files || []);
+    if (files.length === 0) return;
 
     const floorSelect = document.getElementById('dxf-target-floor');
     const targetFloor = floorSelect ? floorSelect.value : 'ALL';
 
-    const reader = new FileReader();
-    reader.onload = function(ev) {
-        try {
-            const buffer = new Uint8Array(ev.target.result);
-            let dxfRaw = "";
+    const fileList = [];
+    let readCount = 0;
 
-            if (typeof window.Encoding !== 'undefined' && window.Encoding.detect) {
-                const detected = window.Encoding.detect(buffer);
-                dxfRaw = window.Encoding.convert(buffer, { to: 'UNICODE', from: detected || 'AUTO', type: 'STRING' });
-            } else {
-                const utf8Txt = new TextDecoder('UTF-8').decode(buffer);
-                if (utf8Txt.includes('\uFFFD')) {
-                    dxfRaw = new TextDecoder('Shift_JIS').decode(buffer);
+    files.forEach(file => {
+        const reader = new FileReader();
+        reader.onload = function(ev) {
+            try {
+                const buffer = new Uint8Array(ev.target.result);
+                let dxfRaw = "";
+
+                if (typeof window.Encoding !== 'undefined' && window.Encoding.detect) {
+                    const detected = window.Encoding.detect(buffer);
+                    dxfRaw = window.Encoding.convert(buffer, { to: 'UNICODE', from: detected || 'AUTO', type: 'STRING' });
                 } else {
-                    dxfRaw = utf8Txt;
-                }
-            }
-            
-            const dxf = window.CadEngine.processDxf(dxfRaw);
-            if (!dxf) {
-                alert("❌ DXFの解析に失敗しました。ファイル形式を確認してください。");
-                return;
-            }
-
-            // DXFレイヤー選択・自動解析モーダルを展開
-            if (window.DxfLayerMapperController) {
-                window.DxfLayerMapperController.openMapper(dxfRaw, (layerMapping) => {
-                    let isIncremental = true;
-                    if ((pillars && pillars.length > 0) || (bgLinesOriginal && bgLinesOriginal.length > 0)) {
-                        if (targetFloor === 'ALL') {
-                            isIncremental = confirm("既存の柱や壁のデータを保持しますか？\n[OK] 保持して追加 / [キャンセル] 全消去して新規読込");
-                        }
+                    const utf8Txt = new TextDecoder('UTF-8').decode(buffer);
+                    if (utf8Txt.includes('\uFFFD')) {
+                        dxfRaw = new TextDecoder('Shift_JIS').decode(buffer);
                     } else {
-                        isIncremental = false;
+                        dxfRaw = utf8Txt;
+                    }
+                }
+
+                fileList.push({ name: file.name, rawTxt: dxfRaw });
+            } catch (err) {
+                console.error("Error reading DXF file:", file.name, err);
+            } finally {
+                readCount++;
+                if (readCount === files.length) {
+                    if (fileList.length === 0) {
+                        alert("❌ DXFの解析に失敗しました。ファイル形式を確認してください。");
+                        return;
                     }
 
-                    // layerMapping付きでDXF解析を実行
-                    if (window.Parsers && window.Parsers.parseDxf) {
-                        window.Parsers.parseDxf(dxfRaw, window.AppState, false, false, layerMapping);
-                        if (window.GridEngine && window.GridEngine.analyzeGrids) {
-                            window.GridEngine.analyzeGrids(window.AppState);
-                        }
-                    } else {
+                    // DXFレイヤー選択・自動解析モーダルを展開（単一 / 複数対応）
+                    if (window.DxfLayerMapperController) {
+                        const inputData = fileList.length === 1 ? fileList[0].rawTxt : fileList;
+                        window.DxfLayerMapperController.openMapper(inputData, (layerMapping, rawDxfData) => {
+                            let isIncremental = true;
+                            if ((pillars && pillars.length > 0) || (bgLinesOriginal && bgLinesOriginal.length > 0)) {
+                                if (targetFloor === 'ALL') {
+                                    isIncremental = confirm("既存の柱や壁のデータを保持しますか？\n[OK] 保持して追加 / [キャンセル] 全消去して新規読込");
+                                }
+                            } else {
+                                isIncremental = false;
+                            }
+
+                            // layerMapping付きでDXF解析を実行
+                            if (window.Parsers && window.Parsers.parseDxf) {
+                                window.Parsers.parseDxf(rawDxfData || fileList[0].rawTxt, window.AppState, false, false, layerMapping);
+                                if (window.GridEngine && window.GridEngine.analyzeGrids) {
+                                    window.GridEngine.analyzeGrids(window.AppState);
+                                }
+                            } else {
+                                parseDxf(rawDxfData || fileList[0].rawTxt, targetFloor, isIncremental, layerMapping);
+                            }
+                            if (window.AppController && window.AppController.refreshAll) window.AppController.refreshAll();
+                        });
+                    }
+                }
+            }
+        };
+        reader.readAsArrayBuffer(file);
+    });
+}
                         processDxfData(dxf, isIncremental, dxfRaw, targetFloor);
                     }
 
