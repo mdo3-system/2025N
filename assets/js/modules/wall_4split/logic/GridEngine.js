@@ -58,10 +58,9 @@ window.GridEngine = {
             if (gy !== undefined) p.y = gy;
         });
 
-        // 3. 通り芯の座標マスターリストを作成
+        // 3. 通り芯の座標マスターリストを作成（純粋なGRID線および手動追加グリッドのみで構成）
         let masterXs = [], masterYs = [];
 
-        // グリッド線から
         gridLineXs.forEach(x => { 
             let sx = snapToModule(x);
             if (!masterXs.some(mx => Math.abs(mx - sx) < TOL_SNAP)) masterXs.push(sx); 
@@ -71,10 +70,7 @@ window.GridEngine = {
             if (!masterYs.some(my => Math.abs(my - sy) < TOL_SNAP)) masterYs.push(sy); 
         });
 
-        // 柱から（勝手な自動グリッド追加は全撤去）
-        // (マスターグリッドはDXFのGRID線および手動追加グリッドのみで構成)
-
-        // 手動追加グリッドから
+        // 手動追加グリッド
         state.manualGridX.forEach(m => { 
             let sx = snapToModule(m.coord);
             if (!masterXs.some(x => Math.abs(x - sx) < TOL_SNAP)) masterXs.push(sx); 
@@ -84,7 +80,7 @@ window.GridEngine = {
             if (!masterYs.some(y => Math.abs(y - sy) < TOL_SNAP)) masterYs.push(sy); 
         });
 
-        // 基礎梁の端点を追加（基礎モードでの通り芯消失を防止）
+        // 基礎梁の端点（基礎モード時の通り芯維持）
         (state.foundationBeams || []).forEach(b => {
             let s1x = snapToModule(b.p1.x), s1y = snapToModule(b.p1.y);
             let s2x = snapToModule(b.p2.x), s2y = snapToModule(b.p2.y);
@@ -112,94 +108,42 @@ window.GridEngine = {
         state.masterXs = masterXs; 
         state.masterYs = masterYs;
 
-        // 4. 柱の座標を統合したマスター座標で揃える
+        // 通り芯名称の決定 (ユーザー手動変更優先 > 自動連番 X1, X2... / Y1, Y2...)
+        let nx = masterXs.map((x, i) => (state.userEditedGridX && state.userEditedGridX[x]) || `X${i + 1}`);
+        let ny = masterYs.map((y, i) => (state.userEditedGridY && state.userEditedGridY[y]) || `Y${i + 1}`);
+
+        state.gridXCoords = masterXs; state.gridXNames = nx;
+        state.gridYCoords = masterYs; state.gridYNames = ny;
+
+        // 4. すべての柱をマスター通り芯の交点に100%厳密に吸着配置
         validPillars.forEach(p => {
-            let mx = masterXs.find(x => Math.abs(x - p.x) < TOL_SNAP);
-            if (mx !== undefined) p.x = mx;
-            let my = masterYs.find(y => Math.abs(y - p.y) < TOL_SNAP);
-            if (my !== undefined) p.y = my;
+            let bestXIdx = -1, minDx = Infinity;
+            masterXs.forEach((mx, idx) => {
+                let d = Math.abs(mx - p.x);
+                if (d < minDx) { minDx = d; bestXIdx = idx; }
+            });
+
+            let bestYIdx = -1, minDy = Infinity;
+            masterYs.forEach((my, idx) => {
+                let d = Math.abs(my - p.y);
+                if (d < minDy) { minDy = d; bestYIdx = idx; }
+            });
+
+            if (bestXIdx >= 0 && bestYIdx >= 0 && minDx <= 500 && minDy <= 500) {
+                p.x = masterXs[bestXIdx];
+                p.y = masterYs[bestYIdx];
+                p.gx = nx[bestXIdx];
+                p.gy = ny[bestYIdx];
+                p.gName = `${p.gx}${p.gy}`;
+                p.isInvalidPos = false;
+            } else {
+                p.gx = '?'; p.gy = '?'; p.gName = '位置不明';
+                p.isInvalidPos = true;
+            }
         });
 
-        // 5. 階ごとに名称マッピング
-        ['1F', '2F'].forEach(targetFloor => {
-            let cfPillars = validPillars.filter(p => p.floor === targetFloor);
-            let availableGridTexts = state.bgTextsOriginal.filter(t => t.isGridText);
-
-            let nameMapX = {}, nameMapY = {};
-            state.manualGridX.forEach(m => { nameMapX[snapToModule(m.coord)] = m.name; });
-            state.manualGridY.forEach(m => { nameMapY[snapToModule(m.coord)] = m.name; });
-
-            // X軸マッピング
-            masterXs.forEach(x => {
-                if (nameMapX[x]) return;
-                let possibleTexts = availableGridTexts.filter(t => Math.abs(t.x - x) < TEXT_GRID_TOL_WIDE);
-                if (possibleTexts.length > 0) {
-                    possibleTexts.sort((a, b) => Math.abs(a.x - x) - Math.abs(b.x - x));
-                    nameMapX[x] = possibleTexts[0].text.trim().normalize("NFKC").toUpperCase();
-                    availableGridTexts = availableGridTexts.filter(at => at !== possibleTexts[0]);
-                }
-            });
-
-            // Y軸マッピング
-            masterYs.forEach(y => {
-                if (nameMapY[y]) return;
-                let possibleTexts = availableGridTexts.filter(t => Math.abs(t.y - y) < TEXT_GRID_TOL_WIDE);
-                if (possibleTexts.length > 0) {
-                    possibleTexts.sort((a, b) => Math.abs(a.y - y) - Math.abs(b.y - y));
-                    nameMapY[y] = possibleTexts[0].text.trim().normalize("NFKC").toUpperCase();
-                    availableGridTexts = availableGridTexts.filter(at => at !== possibleTexts[0]);
-                }
-            });
-
-            // 最終名称の確定 (ユーザー編集優先 > 抽出テキスト > 自動連番)
-            let nx = masterXs.map((x, i) => (state.userEditedGridX && state.userEditedGridX[x]) || nameMapX[x] || `X${i + 1}`);
-            let ny = masterYs.map((y, i) => (state.userEditedGridY && state.userEditedGridY[y]) || nameMapY[y] || `Y${i + 1}`);
-
-            // 柱への名称割り当ておよびグリッド交点吸着判定
-            cfPillars.forEach(p => {
-                let xi = masterXs.indexOf(p.x);
-                let yi = masterYs.indexOf(p.y);
-
-                if (xi < 0) {
-                    let minD = Infinity, bestIdx = -1;
-                    masterXs.forEach((mx, idx) => {
-                        let d = Math.abs(mx - p.x);
-                        if (d < minD) { minD = d; bestIdx = idx; }
-                    });
-                    if (bestIdx >= 0 && minD <= 300) {
-                        p.x = masterXs[bestIdx];
-                        xi = bestIdx;
-                    }
-                }
-                if (yi < 0) {
-                    let minD = Infinity, bestIdx = -1;
-                    masterYs.forEach((my, idx) => {
-                        let d = Math.abs(my - p.y);
-                        if (d < minD) { minD = d; bestIdx = idx; }
-                    });
-                    if (bestIdx >= 0 && minD <= 300) {
-                        p.y = masterYs[bestIdx];
-                        yi = bestIdx;
-                    }
-                }
-
-                if (xi >= 0 && yi >= 0) {
-                    p.gx = nx[xi]; p.gy = ny[yi]; p.gName = `${p.gx}${p.gy}`;
-                    p.isInvalidPos = false;
-                } else {
-                    // 通り芯グリッド交点上にない柱は読み込まない（完全除外）
-                    p.gx = '?'; p.gy = '?'; p.gName = '位置不明';
-                    p.isInvalidPos = true;
-                }
-            });
-
-            // グリッド交点上にない柱を除外・削除
-            state.pillars = state.pillars.filter(p => !p.isInvalidPos);
-
-            // 全階層共通のマスター設定として同期 (階のループ内だが最後に設定したものが勝つ = 全階層包含)
-            state.gridXCoords = masterXs; state.gridXNames = nx;
-            state.gridYCoords = masterYs; state.gridYNames = ny;
-        });
+        // 通り芯交点上にない位置不明な柱を除外
+        state.pillars = state.pillars.filter(p => !p.isInvalidPos);
     },
 
     /**

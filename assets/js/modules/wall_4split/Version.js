@@ -1,4 +1,4 @@
 /**
  * Version.js - Centralized Version Management
  */
-window.APP_VERSION = "v3.11.3"; // Fix: Grid and pillar snapping alignment from DXF, robust pillar clustering & background layer filtering
+window.APP_VERSION = "v3.11.4"; // Fix: Strict layer-based grid/pillar extraction, ignore bg/text, no pillar-to-grid auto generation
