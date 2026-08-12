@@ -34,24 +34,46 @@ function loadDxf(event) {
                 return;
             }
 
-            // [Smart Reload] Check if existing data should be preserved or per-floor merged
-            let isIncremental = true;
-            if ((pillars && pillars.length > 0) || (bgLinesOriginal && bgLinesOriginal.length > 0)) {
-                if (targetFloor === 'ALL') {
-                    isIncremental = confirm("既存の柱や壁のデータを保持しますか？\n[OK] 保持して追加 / [キャンセル] 全消去して新規読込");
-                }
+            // DXFレイヤー選択・自動解析モーダルを展開
+            if (window.DxfLayerMapperController) {
+                window.DxfLayerMapperController.openMapper(dxfRaw, (layerMapping) => {
+                    let isIncremental = true;
+                    if ((pillars && pillars.length > 0) || (bgLinesOriginal && bgLinesOriginal.length > 0)) {
+                        if (targetFloor === 'ALL') {
+                            isIncremental = confirm("既存の柱や壁のデータを保持しますか？\n[OK] 保持して追加 / [キャンセル] 全消去して新規読込");
+                        }
+                    } else {
+                        isIncremental = false;
+                    }
+
+                    // layerMapping付きでDXF解析を実行
+                    if (window.Parsers && window.Parsers.parseDxf) {
+                        window.Parsers.parseDxf(dxfRaw, window.AppState, false, false, layerMapping);
+                        if (window.GridEngine && window.GridEngine.analyzeGrids) {
+                            window.GridEngine.analyzeGrids(window.AppState);
+                        }
+                    } else {
+                        processDxfData(dxf, isIncremental, dxfRaw, targetFloor);
+                    }
+
+                    showAreaInputModal();
+                    let msgEl = document.getElementById('action-msg');
+                    const targetName = targetFloor === 'ALL' ? '全体' : targetFloor;
+                    if (msgEl) msgEl.innerText = `✅ [${targetName}] 指定レイヤーでDXFを解析・読み込みました。`;
+                    if (window.AppController) window.AppController.refreshAll();
+                });
             } else {
-                isIncremental = false;
+                let isIncremental = true;
+                if ((pillars && pillars.length > 0) || (bgLinesOriginal && bgLinesOriginal.length > 0)) {
+                    if (targetFloor === 'ALL') {
+                        isIncremental = confirm("既存の柱や壁のデータを保持しますか？\n[OK] 保持して追加 / [キャンセル] 全消去して新規読込");
+                    }
+                } else {
+                    isIncremental = false;
+                }
+                processDxfData(dxf, isIncremental, dxfRaw, targetFloor);
+                showAreaInputModal();
             }
-
-            processDxfData(dxf, isIncremental, dxfRaw, targetFloor);
-            
-            // Show area input modal for floor area confirmation
-            showAreaInputModal();
-
-            let msgEl = document.getElementById('action-msg');
-            const targetName = targetFloor === 'ALL' ? '全体' : targetFloor;
-            if (msgEl) msgEl.innerText = `✅ [${targetName}] DXFを基準位置に自動調整して読み込みました。`;
 
         } catch (err) {
             console.error(err);

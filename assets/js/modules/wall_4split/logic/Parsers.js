@@ -7,7 +7,7 @@ window.Parsers = {
     /**
      * Parse raw DXF string and update state
      */
-    parseDxf: function(rawTxt, state, isSub = false, skipEntities = false) {
+    parseDxf: function(rawTxt, state, isSub = false, skipEntities = false, layerMapping = null) {
         const s = state || window.AppState;
         const parser = new window.DxfParser();
         const dxf = parser.parseSync(rawTxt);
@@ -31,10 +31,24 @@ window.Parsers = {
                     const block = blocks[ent.name];
                     if (block && block.entities) collect(block.entities, blocks, L);
                 } else {
-                    const isBgLayer = /(BACK|Rｸﾞﾙｰﾌﾟ|グループ|背景|下図|UNDER)/i.test(L);
-                    const isCol = /(COL|COLUMN|柱)/i.test(L) && !isBgLayer;
-                    const isGrid = /(GRID|GLID|通り芯|軸線)/i.test(L) && !isBgLayer && !isCol;
-                    const floor = L.includes('2F') ? '2F' : (L.includes('1F') ? '1F' : 'ALL');
+                    let isGrid = false, isCol = false, floor = 'ALL';
+
+                    if (layerMapping) {
+                        // モーダルで指定された明示的レイヤーマッピング
+                        if (layerMapping.gridLayer && L === layerMapping.gridLayer.toUpperCase().trim()) isGrid = true;
+                        if (layerMapping.col1FLayer && L === layerMapping.col1FLayer.toUpperCase().trim()) { isCol = true; floor = '1F'; }
+                        if (layerMapping.col2FLayer && L === layerMapping.col2FLayer.toUpperCase().trim()) { isCol = true; floor = '2F'; }
+                        if (layerMapping.back1FLayer && L === layerMapping.back1FLayer.toUpperCase().trim()) { floor = '1F'; }
+                        if (layerMapping.back2FLayer && L === layerMapping.back2FLayer.toUpperCase().trim()) { floor = '2F'; }
+                        if (layerMapping.roof1FLayer && L === layerMapping.roof1FLayer.toUpperCase().trim()) { floor = '1F'; ent.isRoof = true; }
+                        if (layerMapping.roof2FLayer && L === layerMapping.roof2FLayer.toUpperCase().trim()) { floor = '2F'; ent.isRoof = true; }
+                    } else {
+                        // 自動レイヤー判定フォールバック
+                        const isBgLayer = /(BACK|Rｸﾞﾙｰﾌﾟ|グループ|背景|下図|UNDER)/i.test(L);
+                        isCol = /(COL|COLUMN|柱)/i.test(L) && !isBgLayer;
+                        isGrid = /(GRID|GLID|通り芯|軸線)/i.test(L) && !isBgLayer && !isCol;
+                        floor = L.includes('2F') ? '2F' : (L.includes('1F') ? '1F' : 'ALL');
+                    }
                     
                     if (isCol && !isSub) {
                         // 柱レイヤーの幾何要素のみから柱候補を抽出（通り芯は作らない）
@@ -51,10 +65,8 @@ window.Parsers = {
                     } else if (['TEXT', 'MTEXT'].includes(ent.type)) {
                         const txt = ent.text || ent.string || "";
                         const pos = ent.startPoint || ent.position || ent.insertionPoint || {};
-                        // テキストから通り芯を生成しないため isGridText は常に false
                         newBgTexts.push({ text: txt, x: pos.x || 0, y: pos.y || 0, floor, layer: L, isUnderlay: true, isGridText: false });
                     } else {
-                        // GRIDレイヤーの直線要素のみ isGridLine = true
                         newBgLines.push({ ...ent, floor, isUnderlay: true, isGridLine: isGrid });
                     }
                 }

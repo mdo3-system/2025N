@@ -12,8 +12,7 @@ window.GridEngine = {
         let validPillars = state.pillars.filter(p => !p.isDeleted);
         
         let gridLineXs = [], gridLineYs = [];
-        const TOL_SNAP = 5; // 近接グリッドのマージ制限
-        const TEXT_GRID_TOL_WIDE = 300; // 文字検索の許容誤差
+        const TOL_SNAP = 3; // 近接グリッドのマージ制限 (105mm等のダブル壁偏芯通り芯を保持するため3mmに厳密化)
 
         // 座標を標準モジュール(455mm)に「近い場合のみ」吸着させる補助関数
         const snapToModule = (val) => {
@@ -21,7 +20,7 @@ window.GridEngine = {
             const nearest = Math.round(val / module) * module;
             // 5mm以内の誤差であれば標準モジュールに吸着
             if (Math.abs(val - nearest) < 5) return nearest;
-            // それ以外は1mm単位の丸めのみ（斜め壁等の位置維持）
+            // 105mm/120mm等のダブル壁偏芯通り芯を含む任意のオフセット位置は1mm単位の精度でそのまま維持
             return Math.round(val);
         };
 
