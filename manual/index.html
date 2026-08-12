@@ -86,46 +86,41 @@
 
     <h2>第1章：事前準備と基本設定</h2>
 
-    <h3>1-1. 単一DXFデータ作成 ＆ 標準レイヤー規則</h3>
+    <h3>1-1. DXFデータ読み込み ＆ レイヤー割当設定 (v3.10版)</h3>
     <div class="inline-video">
         <iframe src="https://www.youtube.com/embed/3dRqIqXyllU" frameborder="0" allowfullscreen></iframe>
     </div>
     
-    <p>本ツールは 1つのDXFファイル内に 1F/2F の通り芯、柱、屋根、下絵レイヤーを定義して読み込みます。Jw_cad、AutoCAD、DRA-CAD、ARCHITREND ZERO、Vectorworks 等の主要CADソフトから以下のレイヤー命名規則で保存してください。</p>
+    <p>本ツールは 1つのDXFファイルから、通り芯、柱、屋根、背景レイヤーを柔軟に割り当てて読み込みます。Jw_cad、AutoCAD、DRA-CAD、ARCHITREND ZERO、Vectorworks 等の主要CADソフトのレイヤー名に関わらず、読込時のダイアログで各階層役割を選択・割り当てて読み込んでください。</p>
     
     <table style="width:100%; border-collapse:collapse; font-size:13px; margin:15px 0;" border="1" cellpadding="8" cellspacing="0">
         <thead style="background:#004a99; color:#fff;">
             <tr>
-                <th style="width:25%;">要素タイプ</th>
-                <th style="width:35%;">標準レイヤー名</th>
-                <th style="width:40%;">対応エイリアス・概要</th>
+                <th style="width:25%;">役割分類</th>
+                <th style="width:35%;">DXF読み込み時ダイアログでの選択指定</th>
+                <th style="width:40%;">取り込みと動作仕様</th>
             </tr>
         </thead>
         <tbody>
             <tr>
-                <td><strong>通り芯 (軸)</strong></td>
-                <td><code>GRID</code>, <code>GLID</code></td>
-                <td><code>GRID</code>, <code>GLID</code>, <code>通り芯</code>, <code>軸線</code>, <code>芯</code></td>
+                <td><strong>通り芯 (軸線・文字)</strong></td>
+                <td><code>通り芯レイヤー (Grid Layer)</code></td>
+                <td>直線を「通り芯座標」、文字を「通り芯名（X1, Y1等）」として解析しマスター通り芯を自動構築します。</td>
             </tr>
             <tr>
-                <td><strong>1階 柱</strong></td>
-                <td><code>1F_COL</code></td>
-                <td><code>1F_COL</code>, <code>COL_1F</code>, <code>1F*COL</code></td>
-            </tr>
-            <tr>
-                <td><strong>2階 柱</strong></td>
-                <td><code>2F_COL</code></td>
-                <td><code>2F_COL</code>, <code>COL_2F</code>, <code>2F*COL</code></td>
+                <td><strong>1階柱 / 2階柱</strong></td>
+                <td><code>1階柱レイヤー / 2階柱レイヤー (COL Layer)</code></td>
+                <td>点・円・四角枠の中心を1階/2階の「柱」として通り芯交点へ自動吸着配置します。柱データは計算の基本要素として常時表示されます。</td>
             </tr>
             <tr>
                 <td><strong>1階/2階 屋根</strong></td>
-                <td><code>1F_R</code>, <code>2F_R</code></td>
-                <td><code>1F_R</code>, <code>2F_R</code> (屋根伏せ・軒の出ライン)</td>
+                <td><code>1階屋根レイヤー / 2階屋根レイヤー (Roof Layer)</code></td>
+                <td>屋根形状（軒の出ライン等）の下絵ガイド線分として取り込まれ、作図時に活用できます。</td>
             </tr>
             <tr>
-                <td><strong>1階/2階 下絵</strong></td>
-                <td><code>1F_BACK</code>, <code>2F_BACK</code></td>
-                <td><code>1F_BACK</code>, <code>2F_BACK</code> (屋根モード時も背景として重ね表示)</td>
+                <td><strong>1階/2階 背景</strong></td>
+                <td><code>1階背景レイヤー / 2階背景レイヤー (Background Layer)</code></td>
+                <td>間取り・壁・建具・寸法文字などを下絵（背景）として取り込みます。画面表示のON/OFFは中央パネル上部の「🗂 レイヤ設定」で自由に制御可能です。</td>
             </tr>
         </tbody>
     </table>
