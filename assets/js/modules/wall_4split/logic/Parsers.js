@@ -82,12 +82,13 @@ window.Parsers = {
         console.log("📂 [Parsers] Restoring project data...", d);
 
         // 1. Core data (Handle property name variations)
+        s.rawDxf = d.rawDxf || s.rawDxf || "";
         s.pillars = d.pillars || [];
         s.walls = d.walls || [];
         s.windowsArr = d.windowsArr || d.windows || [];
         s.areaLines = d.areaLines || [];
-        s.bgLinesOriginal = d.bgLines || [];
-        s.bgTextsOriginal = d.texts || [];
+        s.bgLinesOriginal = d.bgLinesOriginal || d.bgLines || [];
+        s.bgTextsOriginal = d.bgTextsOriginal || d.texts || [];
         s.gridBubbles = d.gridBubbles || [];
         s.roofFaces = d.roofFaces || []; // [v2.7.0]
         s.roofGridManualX = d.roofGridManualX || []; // [v2.7.0]
@@ -236,7 +237,8 @@ window.Parsers = {
 
         // 9. Migrate legacy data (Add IDs if missing)
         this.migrateLegacyData(s);
-        
+        if (typeof renderLayerPanel === 'function') renderLayerPanel();
+
         return s;
     },
 

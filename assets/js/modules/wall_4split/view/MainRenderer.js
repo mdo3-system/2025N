@@ -155,7 +155,6 @@ window.MainRenderer = {
         state.bgLinesOriginal.forEach(e => {
             if (!this.isLayerVisible(e.layer, state)) return;
             if (e.isGridLine) return; // スナップ用GRID線は除外
-            if (e.floor !== state.currentFloor && e.floor !== 'ALL') return;
 
             ctx.beginPath();
             if (e.type === 'LINE' && e.vertices) {
@@ -565,7 +564,7 @@ window.MainRenderer = {
     drawTexts: function(state) {
         const ctx = state.ctx;
         ctx.textAlign = "left";
-        state.bgTextsOriginal.filter(t => t.floor === state.currentFloor || t.floor === 'ALL').forEach(t => {
+        state.bgTextsOriginal.forEach(t => {
             if (!this.isLayerVisible(t.layer, state)) return;
             const p = this.toCanvas(t, null, state);
             if (p.cx != null) {

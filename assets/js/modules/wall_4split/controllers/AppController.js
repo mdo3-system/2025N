@@ -414,6 +414,7 @@ window.AppController = {
      */
     setFloor: function(floor) {
         window.AppState.currentFloor = floor;
+        this.setDefaultLayerVisibility(floor);
         this.switchAppMode('wall');
     },
 
@@ -422,9 +423,63 @@ window.AppController = {
      */
     setRoofFloor: function(floor) {
         window.AppState.currentFloor = floor;
+        this.setDefaultLayerVisibility(floor);
         this.switchAppMode('roof');
         const roofRadio = document.querySelector('input[name="mode"][value="draw-roof"]');
         if (roofRadio) roofRadio.checked = true;
+    },
+
+    /**
+     * 階切替時の背景レイヤ初期ON/OFFフィルター
+     */
+    setDefaultLayerVisibility: function(floor) {
+        const state = window.AppState;
+        if (!state) return;
+        if (!state.layerVisibility) state.layerVisibility = {};
+
+        const targetFloor = floor || state.currentFloor || '1F';
+        const is1F = targetFloor === '1F' || state.currentAppMode === 'foundation';
+        const is2F = targetFloor === '2F';
+        const is1R = targetFloor === '1RF' || targetFloor === '1F_R';
+        const is2R = targetFloor === '2RF' || targetFloor === 'RF' || targetFloor === '2F_R';
+
+        const foundLayers = new Set(Object.keys(state.layerVisibility));
+        (state.bgLinesOriginal || []).forEach(l => { if (l.layer) foundLayers.add(l.layer); });
+        (state.bgTextsOriginal || []).forEach(t => { if (t.layer) foundLayers.add(t.layer); });
+        (state.pillars || []).forEach(p => { if (p.layer) foundLayers.add(p.layer); });
+
+        foundLayers.forEach(L => {
+            const uL = String(L).toUpperCase().trim();
+            if (/(GRID|GLID|通り芯|軸線|軸|芯|COL|COLUMN|柱|柱心)/i.test(uL)) {
+                state.layerVisibility[L] = true;
+            } else if (is1F) {
+                if (uL.includes('1F_BACK') || uL.includes('1F_BG') || uL.includes('BG_1F') || (uL.includes('1F') && !uL.includes('2F') && !uL.includes('_R'))) {
+                    state.layerVisibility[L] = true;
+                } else if (uL.includes('2F') || uL.includes('_R') || uL.includes('RF')) {
+                    state.layerVisibility[L] = false;
+                }
+            } else if (is2F) {
+                if (uL.includes('2F_BACK') || uL.includes('2F_BG') || uL.includes('BG_2F') || (uL.includes('2F') && !uL.includes('1F') && !uL.includes('_R'))) {
+                    state.layerVisibility[L] = true;
+                } else if (uL.includes('1F') || uL.includes('_R') || uL.includes('RF')) {
+                    state.layerVisibility[L] = false;
+                }
+            } else if (is1R) {
+                if (uL.includes('1F_R') || uL.includes('1RF') || uL.includes('R_1F')) {
+                    state.layerVisibility[L] = true;
+                } else if (uL.includes('2F') || uL.includes('2F_R') || uL.includes('RF')) {
+                    state.layerVisibility[L] = false;
+                }
+            } else if (is2R) {
+                if (uL.includes('2F_R') || uL.includes('RF_R') || uL.includes('2RF') || uL.includes('RF')) {
+                    state.layerVisibility[L] = true;
+                } else if (uL.includes('1F') || uL.includes('1F_R')) {
+                    state.layerVisibility[L] = false;
+                }
+            }
+        });
+
+        if (typeof renderLayerPanel === 'function') renderLayerPanel();
     },
 
     /**
