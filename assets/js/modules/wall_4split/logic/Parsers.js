@@ -19,6 +19,8 @@ window.Parsers = {
         const newPillars = [];
         const newAreaLines = [];
 
+        const rawPillarCandidates = [];
+
         function collect(entities, blocks, parentLayer = "") {
             entities.forEach(ent => {
                 let L = (ent.layer || "").toUpperCase().trim();
@@ -29,19 +31,23 @@ window.Parsers = {
                     const block = blocks[ent.name];
                     if (block && block.entities) collect(block.entities, blocks, L);
                 } else {
-                    const isGrid = /(GRID|GLID)/i.test(L);
+                    const isBgLayer = /(BACK|UNDER|背景|図面|下図)/i.test(L);
+                    const isGrid = /(GRID|GLID|通り芯|軸線)/i.test(L) && !isBgLayer;
+                    const isCol = /(COL|COLUMN|柱)/i.test(L) && !isBgLayer;
                     const floor = L.includes('2F') ? '2F' : (L.includes('1F') ? '1F' : 'ALL');
                     
-                    if (L.includes('COL') && !isSub) {
-                        // Pillar extraction (COL/COLUMNレイヤーのみ柱として認識)
-                        const p = { id: `P${s.pIdCounter++}`, x: 0, y: 0, floor, layer: L, isManual: false, isDeleted: false };
-                        if (ent.type === 'POINT') { p.x = ent.position.x; p.y = ent.position.y; }
-                        else if (ent.type === 'CIRCLE') { p.x = ent.center.x; p.y = ent.center.y; }
+                    if (isCol && !isSub) {
+                        // Pillar extraction candidate
+                        let cx = null, cy = null;
+                        if (ent.type === 'POINT') { cx = ent.position.x; cy = ent.position.y; }
+                        else if (ent.type === 'CIRCLE') { cx = ent.center.x; cy = ent.center.y; }
                         else if (ent.vertices && ent.vertices.length > 0) {
-                            p.x = ent.vertices.reduce((sum, v) => sum + v.x, 0) / ent.vertices.length;
-                            p.y = ent.vertices.reduce((sum, v) => sum + v.y, 0) / ent.vertices.length;
+                            cx = ent.vertices.reduce((sum, v) => sum + v.x, 0) / ent.vertices.length;
+                            cy = ent.vertices.reduce((sum, v) => sum + v.y, 0) / ent.vertices.length;
                         }
-                        newPillars.push(p);
+                        if (cx != null && cy != null && !isNaN(cx) && !isNaN(cy)) {
+                            rawPillarCandidates.push({ x: cx, y: cy, floor, layer: L });
+                        }
                     } else if (['TEXT', 'MTEXT'].includes(ent.type)) {
                         const txt = ent.text || ent.string || "";
                         const pos = ent.startPoint || ent.position || ent.insertionPoint || {};
@@ -54,6 +60,43 @@ window.Parsers = {
         }
 
         collect(dxf.entities, dxf.blocks || {});
+
+        // 柱要素のクラスタリング（近接する200mm以内の幾何要素群を1本の柱に集約）
+        const pillarClusters = [];
+        rawPillarCandidates.forEach(cand => {
+            let found = null;
+            for (const cl of pillarClusters) {
+                if (cl.floor === cand.floor && Math.hypot(cl.x - cand.x, cl.y - cand.y) < 200) {
+                    found = cl;
+                    break;
+                }
+            }
+            if (found) {
+                found.items.push(cand);
+                found.x = found.items.reduce((s, item) => s + item.x, 0) / found.items.length;
+                found.y = found.items.reduce((s, item) => s + item.y, 0) / found.items.length;
+            } else {
+                pillarClusters.push({
+                    x: cand.x,
+                    y: cand.y,
+                    floor: cand.floor,
+                    layer: cand.layer,
+                    items: [cand]
+                });
+            }
+        });
+
+        pillarClusters.forEach(cl => {
+            newPillars.push({
+                id: `P${s.pIdCounter++}`,
+                x: cl.x,
+                y: cl.y,
+                floor: cl.floor,
+                layer: cl.layer,
+                isManual: false,
+                isDeleted: false
+            });
+        });
 
         const docData = { entities: [...newBgLines, ...newBgTexts], loaded: true, rawDxf: rawTxt };
         

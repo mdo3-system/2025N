@@ -166,7 +166,7 @@ window.GridEngine = {
                         let d = Math.abs(mx - p.x);
                         if (d < minD) { minD = d; bestIdx = idx; }
                     });
-                    if (bestIdx >= 0 && minD <= 50) {
+                    if (bestIdx >= 0 && minD <= 300) {
                         p.x = masterXs[bestIdx];
                         xi = bestIdx;
                     }
@@ -177,7 +177,7 @@ window.GridEngine = {
                         let d = Math.abs(my - p.y);
                         if (d < minD) { minD = d; bestIdx = idx; }
                     });
-                    if (bestIdx >= 0 && minD <= 50) {
+                    if (bestIdx >= 0 && minD <= 300) {
                         p.y = masterYs[bestIdx];
                         yi = bestIdx;
                     }
