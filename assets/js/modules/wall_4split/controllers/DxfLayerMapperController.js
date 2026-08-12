@@ -155,6 +155,33 @@ window.DxfLayerMapperController = {
             });
         };
 
+        // 単一ファイルモード vs 複数ファイルモードの切り替え制御
+        const isMultiMode = this.loadedFiles.length > 1;
+        const setRouteMode = (multi) => {
+            const tabSingle = document.getElementById('tab-mode-single');
+            const tabMulti = document.getElementById('tab-mode-multi');
+            const previewContainer = document.getElementById('dxf-origin-preview-canvas')?.parentElement?.parentElement;
+            
+            if (multi) {
+                if (tabSingle) { tabSingle.style.background = '#353b48'; tabSingle.style.color = '#a4b0be'; }
+                if (tabMulti) { tabMulti.style.background = '#00d2d3'; tabMulti.style.color = '#1e272e'; }
+                if (previewContainer) previewContainer.style.display = 'flex';
+                document.querySelectorAll('.dxf-slot-file-select, .dxf-slot-origin-select, .btn-pick-origin').forEach(el => el.style.display = '');
+            } else {
+                if (tabSingle) { tabSingle.style.background = '#00d2d3'; tabSingle.style.color = '#1e272e'; }
+                if (tabMulti) { tabMulti.style.background = '#353b48'; tabMulti.style.color = '#a4b0be'; }
+                if (previewContainer) previewContainer.style.display = 'none';
+                document.querySelectorAll('.dxf-slot-file-select, .dxf-slot-origin-select, .btn-pick-origin').forEach(el => el.style.display = 'none');
+            }
+        };
+
+        const tabSingle = document.getElementById('tab-mode-single');
+        const tabMulti = document.getElementById('tab-mode-multi');
+        if (tabSingle) tabSingle.onclick = () => setRouteMode(false);
+        if (tabMulti) tabMulti.onclick = () => setRouteMode(true);
+
+        setRouteMode(isMultiMode);
+
         // ファイルドロップダウン初期化 ＆ 変更イベント接続
         populateSlotDropdowns();
         slotKeys.forEach(item => {
@@ -460,6 +487,7 @@ window.DxfLayerMapperController = {
         const lines = [];
 
         function collectEntities(entities, blocks, parentLayer = "") {
+            if (!entities) return;
             entities.forEach(ent => {
                 if (ent.type === 'LINE' && ent.start && ent.end) {
                     lines.push({ x1: ent.start.x, y1: ent.start.y, x2: ent.end.x, y2: ent.end.y });
@@ -477,11 +505,29 @@ window.DxfLayerMapperController = {
                         maxX = Math.max(maxX, v1.x, v2.x);
                         maxY = Math.max(maxY, v1.y, v2.y);
                     }
-                    if (ent.shape) { // Closed polyline
+                    if (ent.shape) {
                         const vFirst = ent.vertices[0];
                         const vLast = ent.vertices[ent.vertices.length - 1];
                         lines.push({ x1: vLast.x, y1: vLast.y, x2: vFirst.x, y2: vFirst.y });
                     }
+                } else if (ent.type === 'CIRCLE' && ent.center) {
+                    const r = ent.radius || 10;
+                    minX = Math.min(minX, ent.center.x - r);
+                    minY = Math.min(minY, ent.center.y - r);
+                    maxX = Math.max(maxX, ent.center.x + r);
+                    maxY = Math.max(maxY, ent.center.y + r);
+                } else if (ent.type === 'ARC' && ent.center) {
+                    const r = ent.radius || 10;
+                    minX = Math.min(minX, ent.center.x - r);
+                    minY = Math.min(minY, ent.center.y - r);
+                    maxX = Math.max(maxX, ent.center.x + r);
+                    maxY = Math.max(maxY, ent.center.y + r);
+                } else if ((ent.type === 'TEXT' || ent.type === 'MTEXT') && (ent.position || ent.startPoint)) {
+                    const pos = ent.position || ent.startPoint;
+                    minX = Math.min(minX, pos.x);
+                    minY = Math.min(minY, pos.y);
+                    maxX = Math.max(maxX, pos.x);
+                    maxY = Math.max(maxY, pos.y);
                 } else if (ent.type === 'INSERT' && blocks && blocks[ent.name]) {
                     const blk = blocks[ent.name];
                     if (blk.entities) collectEntities(blk.entities, blocks, ent.layer);
