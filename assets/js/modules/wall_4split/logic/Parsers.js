@@ -36,6 +36,7 @@ window.Parsers = {
                     const normMap = (v) => (v || "").normalize('NFKC').toUpperCase().trim();
                     const normL = normMap(L);
 
+                    let isRoof = false;
                     if (layerMapping) {
                         // モーダルで指定された明示的レイヤーマッピング
                         const gridL  = normMap(layerMapping.gridLayer);
@@ -47,14 +48,13 @@ window.Parsers = {
                         const roof2L = normMap(layerMapping.roof2FLayer);
 
                         if (gridL && normL === gridL) isGrid = true;
-                        if ((col1L && normL === col1L) || (col2L && normL === col2L)) isCol = true;
+                        if (col1L && normL === col1L) { isCol = true; floor = '1F'; }
+                        if (col2L && normL === col2L) { isCol = true; floor = '2F'; }
 
-                        if (roof1L && (roof1L === '__ALL_LAYERS__' || normL === roof1L)) { floor = '1R'; ent.isRoof = true; }
-                        else if (roof2L && (roof2L === '__ALL_LAYERS__' || normL === roof2L)) { floor = '2R'; ent.isRoof = true; }
+                        if (roof1L && (roof1L === '__ALL_LAYERS__' || normL === roof1L)) { floor = '1R'; ent.isRoof = true; isRoof = true; }
+                        else if (roof2L && (roof2L === '__ALL_LAYERS__' || normL === roof2L)) { floor = '2R'; ent.isRoof = true; isRoof = true; }
                         else if (back1L && (back1L === '__ALL_LAYERS__' || normL === back1L)) { floor = '1F'; }
                         else if (back2L && (back2L === '__ALL_LAYERS__' || normL === back2L)) { floor = '2F'; }
-                        else if (col1L && normL === col1L) { floor = '1F'; }
-                        else if (col2L && normL === col2L) { floor = '2F'; }
                         else if (normL.includes('1F_R') || normL.includes('1R')) { floor = '1R'; }
                         else if (normL.includes('2F_R') || normL.includes('2R') || normL.includes('RF')) { floor = '2R'; }
                         else if (normL.startsWith('1F_') || normL.startsWith('1_')) { floor = '1F'; }
@@ -79,14 +79,28 @@ window.Parsers = {
                             cy = ent.vertices.reduce((sum, v) => sum + v.y, 0) / ent.vertices.length;
                         }
                         if (cx != null && cy != null && !isNaN(cx) && !isNaN(cy)) {
-                            rawPillarCandidates.push({ x: cx, y: cy, floor, layer: L });
+                            rawPillarCandidates.push({ x: cx, y: cy, floor, layer: isCol ? (floor === '2F' ? '2F_COL' : '1F_COL') : L });
                         }
-                    } else if (['TEXT', 'MTEXT'].includes(ent.type)) {
-                        const txt = ent.text || ent.string || "";
-                        const pos = ent.startPoint || ent.position || ent.insertionPoint || {};
-                        newBgTexts.push({ text: txt, x: pos.x || 0, y: pos.y || 0, floor, layer: L, isUnderlay: true, isGridText: false });
+                    } else if (isGrid) {
+                        if (['TEXT', 'MTEXT'].includes(ent.type)) {
+                            const txt = ent.text || ent.string || "";
+                            const pos = ent.startPoint || ent.position || ent.insertionPoint || {};
+                            newBgTexts.push({ text: txt, x: pos.x || 0, y: pos.y || 0, floor: 'ALL', layer: 'GRID', isUnderlay: false, isGridText: true });
+                        } else {
+                            newBgLines.push({ ...ent, layer: 'GRID', floor: 'ALL', isUnderlay: false, isGridLine: true });
+                        }
                     } else {
-                        newBgLines.push({ ...ent, floor, isUnderlay: true, isGridLine: isGrid });
+                        // 通り芯・柱・屋根として指定されていないすべての余剰CADレイヤー（オーバーハングライン、畳、記号、部屋、仕上等）は背景図面（1F_BACK / 2F_BACK）に100%一括集約
+                        const backGroupLayer = (floor === '2F' || floor === '2R') ? '2F_BACK' : '1F_BACK';
+                        const targetF = (floor === 'ALL') ? '1F' : floor;
+
+                        if (['TEXT', 'MTEXT'].includes(ent.type)) {
+                            const txt = ent.text || ent.string || "";
+                            const pos = ent.startPoint || ent.position || ent.insertionPoint || {};
+                            newBgTexts.push({ text: txt, x: pos.x || 0, y: pos.y || 0, floor: targetF, layer: backGroupLayer, isUnderlay: true, isGridText: false });
+                        } else {
+                            newBgLines.push({ ...ent, layer: backGroupLayer, floor: targetF, isUnderlay: true, isGridLine: false });
+                        }
                     }
                 }
             });
