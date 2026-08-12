@@ -587,6 +587,7 @@ window.DxfLayerMapperController = {
                     intersections.push({ x: ix, y: iy });
                 }
             });
+        });
         // 通り芯交点がない場合は線分端点を交点候補に採用
         if (intersections.length === 0) {
             lines.slice(0, 50).forEach(l => {
