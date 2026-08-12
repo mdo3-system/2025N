@@ -26,14 +26,23 @@ window.GridEngine = {
         };
 
         // 1. 背景図面(DXF)のグリッド線から座標を抽出
+        const addGridCoord = (p1, p2) => {
+            if (!p1 || !p2) return;
+            let dx = Math.abs(p1.x - p2.x), dy = Math.abs(p1.y - p2.y);
+            if (Math.hypot(dx, dy) > 500) {
+                if (dx < 15) gridLineXs.push(snapToModule((p1.x + p2.x) / 2));
+                if (dy < 15) gridLineYs.push(snapToModule((p1.y + p2.y) / 2));
+            }
+        };
+
         state.bgLinesOriginal.forEach(e => {
-            if (e.isGridLine && e.type === 'LINE' && e.vertices && e.vertices.length === 2) {
-                let p1 = e.vertices[0], p2 = e.vertices[1];
-                let dx = Math.abs(p1.x - p2.x), dy = Math.abs(p1.y - p2.y);
-                // 長さ 2000mm 以上の主要通り芯線のみを対象とし、短小線分による過剰グリッド生成を防止
-                if (Math.max(dx, dy) > 2000) {
-                    if (dx < TOL_SNAP) gridLineXs.push(snapToModule((p1.x + p2.x) / 2));
-                    if (dy < TOL_SNAP) gridLineYs.push(snapToModule((p1.y + p2.y) / 2));
+            if (e.isGridLine) {
+                if (e.type === 'LINE' && e.vertices && e.vertices.length === 2) {
+                    addGridCoord(e.vertices[0], e.vertices[1]);
+                } else if (['LWPOLYLINE', 'POLYLINE'].includes(e.type) && e.vertices && e.vertices.length >= 2) {
+                    for (let i = 0; i < e.vertices.length - 1; i++) {
+                        addGridCoord(e.vertices[i], e.vertices[i + 1]);
+                    }
                 }
             }
         });

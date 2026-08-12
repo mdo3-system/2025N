@@ -360,14 +360,24 @@ window.CadEngine = {
         // 通り芯線 (isGridLine) から垂直・水平軸の座標を収集
         const gridXs = [];
         const gridYs = [];
+        const addGridSegment = (p1, p2) => {
+            if (!p1 || !p2) return;
+            let dx = Math.abs(p1.x - p2.x), dy = Math.abs(p1.y - p2.y);
+            let len = Math.hypot(dx, dy);
+            if (len > 500) {
+                if (dx < 15) gridXs.push((p1.x + p2.x) / 2);
+                if (dy < 15) gridYs.push((p1.y + p2.y) / 2);
+            }
+        };
+
         newBgLines.forEach(l => {
-            if (l.isGridLine && l.type === 'LINE' && l.vertices && l.vertices.length === 2) {
-                let p1 = l.vertices[0], p2 = l.vertices[1];
-                let dx = Math.abs(p1.x - p2.x), dy = Math.abs(p1.y - p2.y);
-                let len = Math.hypot(dx, dy);
-                if (len > 1500) {
-                    if (dx < 10) gridXs.push((p1.x + p2.x) / 2);
-                    if (dy < 10) gridYs.push((p1.y + p2.y) / 2);
+            if (l.isGridLine) {
+                if (l.type === 'LINE' && l.vertices && l.vertices.length === 2) {
+                    addGridSegment(l.vertices[0], l.vertices[1]);
+                } else if (['LWPOLYLINE', 'POLYLINE'].includes(l.type) && l.vertices && l.vertices.length >= 2) {
+                    for (let i = 0; i < l.vertices.length - 1; i++) {
+                        addGridSegment(l.vertices[i], l.vertices[i + 1]);
+                    }
                 }
             }
         });
@@ -386,7 +396,7 @@ window.CadEngine = {
         });
 
         // 柱の「通り芯交点判定アルゴリズム」 (本システムの核心)
-        const SNAP_TOL = 250; // 通り芯交点スナップ許容距離 (mm)
+        const SNAP_TOL = 350; // 通り芯交点スナップ許容距離 (mm)
 
         pillarGroups.forEach(g => {
             const xs = g.points.map(pt => pt.x);
