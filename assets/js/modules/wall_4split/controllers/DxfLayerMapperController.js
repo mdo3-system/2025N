@@ -167,8 +167,11 @@ window.DxfLayerMapperController = {
             }
         });
 
-        // 初回キャンバス描画
+        // 初回キャンバス描画 ＆ イベントバインド
+        this.previewZoomScale = 1.0;
+        this.previewPanOffset = { x: 0, y: 0 };
         this.renderPreviewCanvas(0);
+        this.initPreviewCanvasEvents();
 
         // キャンバスクリックで原点交点を視覚的選択
         const cvs = document.getElementById('dxf-origin-preview-canvas');
@@ -437,6 +440,9 @@ window.DxfLayerMapperController = {
     lastGridIntersections: [],
     selectedVisualOriginPt: null,
 
+    previewZoomScale: 1.0,
+    previewPanOffset: { x: 0, y: 0 },
+
     renderPreviewCanvas: function(fileIdx) {
         const cvs = document.getElementById('dxf-origin-preview-canvas');
         if (!cvs) return;
@@ -449,31 +455,60 @@ window.DxfLayerMapperController = {
         const dxf = window.CadEngine ? window.CadEngine.processDxf(fileObj.rawTxt) : null;
         if (!dxf || !dxf.entities) return;
 
-        // BoundingBox 算定
+        // 全エンティティから線分・交点を抽出
         let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
         const lines = [];
 
-        dxf.entities.forEach(ent => {
-            if (ent.type === 'LINE' && ent.start && ent.end) {
-                lines.push({ x1: ent.start.x, y1: ent.start.y, x2: ent.end.x, y2: ent.end.y });
-                minX = Math.min(minX, ent.start.x, ent.end.x);
-                minY = Math.min(minY, ent.start.y, ent.end.y);
-                maxX = Math.max(maxX, ent.start.x, ent.end.x);
-                maxY = Math.max(maxY, ent.start.y, ent.end.y);
-            }
-        });
+        function collectEntities(entities, blocks, parentLayer = "") {
+            entities.forEach(ent => {
+                if (ent.type === 'LINE' && ent.start && ent.end) {
+                    lines.push({ x1: ent.start.x, y1: ent.start.y, x2: ent.end.x, y2: ent.end.y });
+                    minX = Math.min(minX, ent.start.x, ent.end.x);
+                    minY = Math.min(minY, ent.start.y, ent.end.y);
+                    maxX = Math.max(maxX, ent.start.x, ent.end.x);
+                    maxY = Math.max(maxY, ent.start.y, ent.end.y);
+                } else if ((ent.type === 'LWPOLYLINE' || ent.type === 'POLYLINE') && ent.vertices && ent.vertices.length > 1) {
+                    for (let i = 0; i < ent.vertices.length - 1; i++) {
+                        const v1 = ent.vertices[i];
+                        const v2 = ent.vertices[i + 1];
+                        lines.push({ x1: v1.x, y1: v1.y, x2: v2.x, y2: v2.y });
+                        minX = Math.min(minX, v1.x, v2.x);
+                        minY = Math.min(minY, v1.y, v2.y);
+                        maxX = Math.max(maxX, v1.x, v2.x);
+                        maxY = Math.max(maxY, v1.y, v2.y);
+                    }
+                    if (ent.shape) { // Closed polyline
+                        const vFirst = ent.vertices[0];
+                        const vLast = ent.vertices[ent.vertices.length - 1];
+                        lines.push({ x1: vLast.x, y1: vLast.y, x2: vFirst.x, y2: vFirst.y });
+                    }
+                } else if (ent.type === 'INSERT' && blocks && blocks[ent.name]) {
+                    const blk = blocks[ent.name];
+                    if (blk.entities) collectEntities(blk.entities, blocks, ent.layer);
+                }
+            });
+        }
 
-        if (minX === Infinity) return;
+        collectEntities(dxf.entities, dxf.blocks);
+
+        if (minX === Infinity) {
+            ctx.fillStyle = '#64748b';
+            ctx.font = '12px sans-serif';
+            ctx.fillText('※プレビュー描画用エンティティがありません', 20, cvs.height / 2);
+            return;
+        }
+
         const w = maxX - minX || 1;
         const h = maxY - minY || 1;
         const padding = 20;
-        const scale = Math.min((cvs.width - padding * 2) / w, (cvs.height - padding * 2) / h);
+        const baseScale = Math.min((cvs.width - padding * 2) / w, (cvs.height - padding * 2) / h);
+        const scale = baseScale * (this.previewZoomScale || 1.0);
 
         this.lastPreviewBounds = { minX, minY, maxX, maxY, scale, padding };
 
-        // 簡易通り芯交点の解析抽出
-        const xLines = lines.filter(l => Math.abs(l.x1 - l.x2) < 5);
-        const yLines = lines.filter(l => Math.abs(l.y1 - l.y2) < 5);
+        // 通り芯交点の抽出アルゴリズム
+        const xLines = lines.filter(l => Math.abs(l.x1 - l.x2) < 10);
+        const yLines = lines.filter(l => Math.abs(l.y1 - l.y2) < 10);
         const intersections = [];
 
         xLines.forEach(xl => {
@@ -485,15 +520,25 @@ window.DxfLayerMapperController = {
                 }
             });
         });
+
+        // 通り芯交点がない場合は線分端点を交点候補に採用
+        if (intersections.length === 0) {
+            lines.forEach(l => {
+                if (!intersections.some(pt => Math.hypot(pt.x - l.x1, pt.y - l.y1) < 500)) intersections.push({ x: l.x1, y: l.y1 });
+            });
+        }
         this.lastGridIntersections = intersections;
 
+        const panX = this.previewPanOffset ? this.previewPanOffset.x : 0;
+        const panY = this.previewPanOffset ? this.previewPanOffset.y : 0;
+
         const toCanvas = (x, y) => ({
-            cx: padding + (x - minX) * scale,
-            cy: cvs.height - (padding + (y - minY) * scale)
+            cx: padding + (x - minX) * scale + panX,
+            cy: cvs.height - (padding + (y - minY) * scale) + panY
         });
 
-        // 1. 線分の描画
-        ctx.strokeStyle = '#334155';
+        // 1. 線分要素のプレビュー描画
+        ctx.strokeStyle = '#475569';
         ctx.lineWidth = 1;
         lines.forEach(l => {
             const p1 = toCanvas(l.x1, l.y1);
@@ -504,30 +549,77 @@ window.DxfLayerMapperController = {
             ctx.stroke();
         });
 
-        // 2. 通り芯交点の描写 (小さい青マーク)
+        // 2. 通り芯交点（青いスナップポイント）の描画
         intersections.forEach(pt => {
             const cp = toCanvas(pt.x, pt.y);
-            ctx.fillStyle = '#38bdf8';
+            ctx.fillStyle = '#00d2d3';
             ctx.beginPath();
             ctx.arc(cp.cx, cp.cy, 3, 0, Math.PI * 2);
             ctx.fill();
         });
 
-        // 3. 選択中原点ターゲットマーカー (目立つ赤円 🎯)
+        // 3. 選択中の基準原点ターゲットマーカー (赤い 🎯 マーカー)
         const targetPt = this.selectedVisualOriginPt || (intersections.length > 0 ? intersections[0] : null);
         if (targetPt) {
             const cp = toCanvas(targetPt.x, targetPt.y);
-            ctx.strokeStyle = '#ef4444';
+            ctx.strokeStyle = '#ff6b6b';
             ctx.lineWidth = 2;
             ctx.beginPath();
             ctx.arc(cp.cx, cp.cy, 8, 0, Math.PI * 2);
             ctx.stroke();
 
-            ctx.fillStyle = '#ef4444';
+            ctx.fillStyle = '#ff6b6b';
             ctx.beginPath();
             ctx.arc(cp.cx, cp.cy, 3, 0, Math.PI * 2);
             ctx.fill();
         }
+    },
+
+    /**
+     * キャンバスイベント初期化（ホイールズーム、ドラッグパン、交点磁石スナップ）
+     */
+    initPreviewCanvasEvents: function() {
+        const cvs = document.getElementById('dxf-origin-preview-canvas');
+        const btnFit = document.getElementById('btn-preview-zoom-fit');
+        if (!cvs) return;
+
+        let isDragging = false;
+        let lastMousePos = { x: 0, y: 0 };
+
+        if (btnFit) {
+            btnFit.onclick = () => {
+                this.previewZoomScale = 1.0;
+                this.previewPanOffset = { x: 0, y: 0 };
+                this.renderPreviewCanvas(0);
+            };
+        }
+
+        cvs.onwheel = (ev) => {
+            ev.preventDefault();
+            const zoomFactor = ev.deltaY < 0 ? 1.15 : 0.85;
+            this.previewZoomScale = Math.max(0.2, Math.min(10.0, (this.previewZoomScale || 1.0) * zoomFactor));
+            this.renderPreviewCanvas(0);
+        };
+
+        cvs.onmousedown = (ev) => {
+            isDragging = true;
+            lastMousePos = { x: ev.clientX, y: ev.clientY };
+        };
+
+        cvs.onmousemove = (ev) => {
+            if (isDragging) {
+                const dx = ev.clientX - lastMousePos.x;
+                const dy = ev.clientY - lastMousePos.y;
+                if (!this.previewPanOffset) this.previewPanOffset = { x: 0, y: 0 };
+                this.previewPanOffset.x += dx;
+                this.previewPanOffset.y += dy;
+                lastMousePos = { x: ev.clientX, y: ev.clientY };
+                this.renderPreviewCanvas(0);
+            }
+        };
+
+        cvs.onmouseup = () => { isDragging = false; };
+        cvs.onmouseleave = () => { isDragging = false; };
     },
 
     /**
@@ -537,12 +629,15 @@ window.DxfLayerMapperController = {
         if (!this.lastPreviewBounds || !this.lastGridIntersections || this.lastGridIntersections.length === 0) return;
 
         const { minX, minY, scale, padding } = this.lastPreviewBounds;
+        const panX = this.previewPanOffset ? this.previewPanOffset.x : 0;
+        const panY = this.previewPanOffset ? this.previewPanOffset.y : 0;
+
         let closestPt = null;
         let minDist = Infinity;
 
         this.lastGridIntersections.forEach(pt => {
-            const cx = padding + (pt.x - minX) * scale;
-            const cy = cvsH - (padding + (pt.y - minY) * scale);
+            const cx = padding + (pt.x - minX) * scale + panX;
+            const cy = cvsH - (padding + (pt.y - minY) * scale) + panY;
             const d = Math.hypot(cx - clickCx, cy - clickCy);
             if (d < minDist) {
                 minDist = d;
