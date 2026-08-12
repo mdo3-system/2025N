@@ -320,14 +320,8 @@ window.CadEngine = {
                     let floor = 'ALL';
                     if (isRoof1F) floor = '1R';
                     else if (isRoof2F) floor = '2R';
-                    else if (isBack1F || isCol1F) floor = '1F';
-                    else if (isBack2F || isCol2F) floor = '2F';
-                    else if (normL.startsWith('1F_') || normL.startsWith('1_')) floor = '1F';
-                    else if (normL.startsWith('2F_') || normL.startsWith('2_')) floor = '2F';
-                    else if (targetFloor && targetFloor !== 'ALL') floor = targetFloor;
-
                     if (isPillar && !isRoof && !isBack && !isGrid) {
-                        const f = floor === 'ALL' ? (normL.includes('2F') ? '2F' : '1F') : floor;
+                        const f = isCol2F ? '2F' : (isCol1F ? '1F' : (floor === 'ALL' ? (normL.includes('2F') ? '2F' : '1F') : floor));
                         let px = 0, py = 0, found = false;
 
                         // 1. 点 (POINT)

@@ -103,15 +103,15 @@ window.DxfLayerMapperController = {
             { fileId: 'dxf-file-2f-back', selectId: 'dxf-select-2f-back', selectedKey: 'back2F', isBack: true }
         ];
 
-        // 各スロットのファイル選択ドロップダウンの更新関数
-        const populateSlotDropdowns = () => {
-            slotKeys.forEach(item => {
-                const fileEl = document.getElementById(item.fileId);
-                const selectEl = document.getElementById(item.selectId);
-                if (!fileEl || !selectEl) return;
+        // 特定スロットのみのドロップダウン更新関数 (他スロットの選択値を100%保護)
+        const populateSingleSlotDropdown = (item) => {
+            const fileEl = document.getElementById(item.fileId);
+            const selectEl = document.getElementById(item.selectId);
+            if (!fileEl || !selectEl) return;
 
-                // ファイルドロップダウン構築
-                const currentFileVal = fileEl.value;
+            // ファイル選択オプションの設定
+            const currentFileVal = fileEl.value;
+            if (fileEl.options.length === 0) {
                 fileEl.innerHTML = '';
                 this.loadedFiles.forEach((f, idx) => {
                     const opt = document.createElement('option');
@@ -122,37 +122,42 @@ window.DxfLayerMapperController = {
                 if (currentFileVal && fileEl.options[currentFileVal]) {
                     fileEl.value = currentFileVal;
                 }
+            }
 
-                // 選択中ファイルに基づくレイヤー一覧の再構成
-                const activeFileIdx = parseInt(fileEl.value || 0, 10);
-                const targetFileObj = this.loadedFiles[activeFileIdx] || this.loadedFiles[0];
-                const fileLayers = targetFileObj ? targetFileObj.layers : allLayers;
+            // 選択中ファイルに基づくレイヤー一覧の構築
+            const activeFileIdx = parseInt(fileEl.value || 0, 10);
+            const targetFileObj = this.loadedFiles[activeFileIdx] || this.loadedFiles[0];
+            const fileLayers = targetFileObj ? targetFileObj.layers : allLayers;
 
-                const currentLayerVal = selectEl.value;
-                selectEl.innerHTML = '';
+            const currentLayerVal = selectEl.value;
+            selectEl.innerHTML = '';
 
-                const defaultOpt = document.createElement('option');
-                defaultOpt.value = '';
-                defaultOpt.text = '-- ※明示的にレイヤーを選択してください --';
-                selectEl.appendChild(defaultOpt);
+            const defaultOpt = document.createElement('option');
+            defaultOpt.value = '';
+            defaultOpt.text = '-- ※明示的にレイヤーを選択してください --';
+            selectEl.appendChild(defaultOpt);
 
-                if (item.isBack) {
-                    const allOpt = document.createElement('option');
-                    allOpt.value = '__ALL_LAYERS__';
-                    allOpt.text = '★ [ファイル内全レイヤー] を背景として一括取り込み';
-                    selectEl.appendChild(allOpt);
+            if (item.isBack) {
+                const allOpt = document.createElement('option');
+                allOpt.value = '__ALL_LAYERS__';
+                allOpt.text = '★ [ファイル内全レイヤー] を背景として一括取り込み';
+                if (currentLayerVal === '__ALL_LAYERS__') allOpt.selected = true;
+                selectEl.appendChild(allOpt);
+            }
+
+            fileLayers.forEach(l => {
+                const opt = document.createElement('option');
+                opt.value = l;
+                opt.text = l;
+                if (currentLayerVal ? (currentLayerVal === l) : (autoMap[item.selectedKey] === l)) {
+                    opt.selected = true;
                 }
-
-                fileLayers.forEach(l => {
-                    const opt = document.createElement('option');
-                    opt.value = l;
-                    opt.text = l;
-                    if (currentLayerVal ? (currentLayerVal === l) : (autoMap[item.selectedKey] === l)) {
-                        opt.selected = true;
-                    }
-                    selectEl.appendChild(opt);
-                });
+                selectEl.appendChild(opt);
             });
+        };
+
+        const populateSlotDropdowns = () => {
+            slotKeys.forEach(item => populateSingleSlotDropdown(item));
         };
 
         // 単一ファイルモード vs 複数ファイルモードの切り替え制御
@@ -183,13 +188,13 @@ window.DxfLayerMapperController = {
 
         setRouteMode(isMultiMode);
 
-        // ファイルドロップダウン初期化 ＆ 変更イベント接続
+        // ファイルドロップダウン初期化 ＆ 変更イベント接続 (対象スロットのみ限定更新)
         populateSlotDropdowns();
         slotKeys.forEach(item => {
             const fileEl = document.getElementById(item.fileId);
             if (fileEl) {
                 fileEl.onchange = () => {
-                    populateSlotDropdowns();
+                    populateSingleSlotDropdown(item);
                     this.renderPreviewCanvas(parseInt(fileEl.value || 0, 10));
                 };
             }
