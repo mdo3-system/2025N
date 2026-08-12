@@ -64,7 +64,13 @@ window.InputController = {
         
         bC('btn-toggle-layer', () => {
             const panel = document.getElementById('dxf-layer-panel');
-            if (panel) panel.style.display = (panel.style.display === 'none' || panel.style.display === '') ? 'block' : 'none';
+            if (panel) {
+                const willShow = (panel.style.display === 'none' || panel.style.display === '');
+                panel.style.display = willShow ? 'block' : 'none';
+                if (willShow && window.DxfLayerMapperController && window.DxfLayerMapperController.renderLayerPanel) {
+                    window.DxfLayerMapperController.renderLayerPanel();
+                }
+            }
         });
 
         bC('btn-add-cust-wall', () => { console.log("Click: btn-add-cust-wall"); if (window.UIView) window.UIView.addCustomWallRow(); });

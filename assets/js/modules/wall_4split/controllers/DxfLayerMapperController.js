@@ -156,10 +156,97 @@ window.DxfLayerMapperController = {
                     this.showProgress(100, "🎨 画面描画と計算結果を更新完了！");
                     setTimeout(() => {
                         this.closeProgress();
+                        this.renderLayerPanel();
                     }, 400);
                 }, 100);
             }, 100);
         }, 100);
+    },
+
+    /**
+     * DXFレイヤ表示設定パネル (dxf-layer-panel) のレンダリング
+     */
+    renderLayerPanel: function() {
+        const container = document.getElementById('layer-list-container');
+        if (!container) return;
+        container.innerHTML = '';
+
+        const state = window.AppState || {};
+        if (!state.layerVisibility) state.layerVisibility = {};
+
+        // アプリケーション内の全ユニークレイヤー名を収集
+        const layerSet = new Set();
+        (state.bgLinesOriginal || []).forEach(l => { if (l.layer) layerSet.add(l.layer.toUpperCase().trim()); });
+        (state.bgTextsOriginal || []).forEach(t => { if (t.layer) layerSet.add(t.layer.toUpperCase().trim()); });
+        (state.pillars || []).forEach(p => { if (p.layer) layerSet.add(p.layer.toUpperCase().trim()); });
+
+        const layers = Array.from(layerSet).sort();
+
+        if (layers.length === 0) {
+            container.innerHTML = '<div style="color:#999; padding:8px; text-align:center;">DXFレイヤーデータがありません</div>';
+            return;
+        }
+
+        // 全選択 / 全解除ツールバー
+        const toolbar = document.createElement('div');
+        toolbar.style.cssText = 'display:flex; justify-content:space-between; margin-bottom:8px; padding-bottom:6px; border-bottom:1px dashed #ccc;';
+        toolbar.innerHTML = `
+            <button type="button" id="btn-layer-all-on" style="font-size:10px; padding:2px 8px; background:#2ecc71; color:#fff; border:none; border-radius:3px; cursor:pointer;">✔ 全選択</button>
+            <button type="button" id="btn-layer-all-off" style="font-size:10px; padding:2px 8px; background:#e74c3c; color:#fff; border:none; border-radius:3px; cursor:pointer;">✖ 全解除</button>
+        `;
+        container.appendChild(toolbar);
+
+        toolbar.querySelector('#btn-layer-all-on').onclick = () => {
+            layers.forEach(l => { state.layerVisibility[l] = true; });
+            this.renderLayerPanel();
+            if (window.AppController && window.AppController.refreshAll) window.AppController.refreshAll();
+        };
+        toolbar.querySelector('#btn-layer-all-off').onclick = () => {
+            layers.forEach(l => { state.layerVisibility[l] = false; });
+            this.renderLayerPanel();
+            if (window.AppController && window.AppController.refreshAll) window.AppController.refreshAll();
+        };
+
+        // レイヤーチェックボックスリスト
+        const listDiv = document.createElement('div');
+        listDiv.style.cssText = 'display:flex; flex-direction:column; gap:4px; max-height:180px; overflow-y:auto;';
+
+        layers.forEach(layer => {
+            if (state.layerVisibility[layer] === undefined) {
+                state.layerVisibility[layer] = true;
+            }
+            const isChecked = state.layerVisibility[layer] !== false;
+
+            const item = document.createElement('label');
+            item.style.cssText = 'display:flex; align-items:center; gap:6px; font-size:11px; color:#2c3e50; cursor:pointer; padding:2px 4px; border-radius:3px; hover:background:#f1f2f6;';
+            item.innerHTML = `
+                <input type="checkbox" ${isChecked ? 'checked' : ''} style="cursor:pointer;">
+                <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${layer}">${layer}</span>
+            `;
+
+            item.querySelector('input').onchange = (e) => {
+                state.layerVisibility[layer] = e.target.checked;
+                if (window.AppController && window.AppController.refreshAll) window.AppController.refreshAll();
+            };
+
+            listDiv.appendChild(item);
+        });
+
+        container.appendChild(listDiv);
+
+        // 下部：レイヤー再割り当てモーダル呼び出しボタン
+        if (this.currentDxfRaw) {
+            const reMapBtn = document.createElement('button');
+            reMapBtn.type = 'button';
+            reMapBtn.style.cssText = 'width:100%; margin-top:8px; padding:6px; background:#0056b3; color:#fff; border:none; border-radius:4px; font-size:11px; font-weight:bold; cursor:pointer; text-align:center;';
+            reMapBtn.innerText = '⚙️ レイヤー割当を再変更...';
+            reMapBtn.onclick = () => {
+                const panel = document.getElementById('dxf-layer-panel');
+                if (panel) panel.style.display = 'none';
+                this.openMapper(this.currentDxfRaw, this.onConfirmCallback);
+            };
+            container.appendChild(reMapBtn);
+        }
     }
 };
 
