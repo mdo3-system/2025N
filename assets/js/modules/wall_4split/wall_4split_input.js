@@ -5,23 +5,8 @@
 
 // Removed local diagGridPoints, now handled in state.diagGridPoints
 
-let isSetOriginMode = false;
-
-window.startSetOriginMode = function() {
-    isSetOriginMode = true;
-    const banner = document.getElementById('banner-set-origin');
-    if (banner) banner.style.display = 'block';
-    const canvas = window.AppState ? window.AppState.canvas : document.getElementById('cad-canvas');
-    if (canvas) canvas.style.cursor = 'crosshair';
-};
-
-window.cancelSetOriginMode = function() {
-    isSetOriginMode = false;
-    const banner = document.getElementById('banner-set-origin');
-    if (banner) banner.style.display = 'none';
-    const canvas = window.AppState ? window.AppState.canvas : document.getElementById('cad-canvas');
-    if (canvas) canvas.style.cursor = 'default';
-};
+window.startSetOriginMode = function() {};
+window.cancelSetOriginMode = function() {};
 
 function initCanvasInput(canvas) {
     if (!canvas) return;
@@ -43,32 +28,6 @@ function initCanvasInput(canvas) {
     canvas.addEventListener('mousedown', (e) => {
         const state = window.AppState;
         const mode = getMode();
-
-        // 📍 クリックで原点を設定モード
-        if (isSetOriginMode && e.button === 0) {
-            const mx = e.offsetX;
-            const my = e.offsetY;
-            // キャンバスローカル座標からワールド座標（ミリメートル単位）への変換
-            // [v3.10.9] DPI独立: cssH = 物理px / dpr = CSS論理px (toCanvasPixel と同一基準)
-            const dpr = window.devicePixelRatio || 1;
-            const cssH = state.canvas.height / dpr;
-            const worldX = (mx - state.offsetX) / state.scale;
-            const worldY = (cssH - my - state.offsetY) / state.scale;
-
-            let clickX = Math.round(worldX * 10) / 10;
-            let clickY = Math.round(worldY * 10) / 10;
-
-            const currentFloor = state.currentFloor || '1F';
-            if (window.setFloorOriginByClick) {
-                window.setFloorOriginByClick(currentFloor, clickX, clickY);
-            }
-
-            let msgEl = document.getElementById('action-msg');
-            if (msgEl) msgEl.innerText = `✅ [${currentFloor}] の基準原点 (0,0) を固定しました。`;
-
-            window.cancelSetOriginMode();
-            return;
-        }
 
         // 右クリックによる入力取り消し (すべての要素に対応)
         if (e.button === 2) {

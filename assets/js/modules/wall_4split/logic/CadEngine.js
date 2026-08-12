@@ -258,7 +258,6 @@ window.CadEngine = {
 
                     const isGrid = isGridLayer(L);
                     const isPillar = isPillarLayer(L);
-                    const isArea = isAreaLayer(L);
                     const isBack = isBackLayer(L);
                     const isRoof = isRoofLayer(L);
 
@@ -320,18 +319,6 @@ window.CadEngine = {
 
                         if (found) {
                             pillars.push({ id: `P${pIdCounter++}`, x: roundCoord(px), y: roundCoord(py), floor: f, layer: L });
-                        }
-                    } else if (isArea) {
-                        let f = targetFloor || (L.includes('2F') || L.includes('RF') ? (L.includes('RF') ? 'RF' : '2F') : '1F');
-                        if (['LWPOLYLINE', 'POLYLINE'].includes(e.type) && e.vertices && e.vertices.length >= 3) {
-                            e.vertices.forEach(v => { v.x = roundCoord(v.x); v.y = roundCoord(v.y); });
-                            areaLines.push({ ...e, layer: L, floor: f, id: Date.now() + Math.random() });
-                        } else {
-                            if (e.type === 'LINE' && e.start && e.end) {
-                                e.vertices = [{ x: e.start.x, y: e.start.y }, { x: e.end.x, y: e.end.y }];
-                            }
-                            e.floor = f;
-                            newBgLines.push(e);
                         }
                     } else if (isGrid) {
                         e.isGridLine = true; e.floor = 'ALL';
