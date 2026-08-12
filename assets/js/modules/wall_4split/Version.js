@@ -1,4 +1,4 @@
 /**
  * Version.js - Centralized Version Management
  */
-window.APP_VERSION = "v3.12.3"; // Purge dangling syntax error tokens in wall_4split_cad.js
+window.APP_VERSION = "v3.12.4"; // 7-Slot Individual File Picker & Explicit Layer Mapper Release

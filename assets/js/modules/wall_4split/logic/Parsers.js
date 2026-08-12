@@ -49,10 +49,10 @@ window.Parsers = {
                         if (gridL && normL === gridL) isGrid = true;
                         if ((col1L && normL === col1L) || (col2L && normL === col2L)) isCol = true;
 
-                        if (roof1L && normL === roof1L) { floor = '1R'; ent.isRoof = true; }
-                        else if (roof2L && normL === roof2L) { floor = '2R'; ent.isRoof = true; }
-                        else if (back1L && normL === back1L) { floor = '1F'; }
-                        else if (back2L && normL === back2L) { floor = '2F'; }
+                        if (roof1L && (roof1L === '__ALL_LAYERS__' || normL === roof1L)) { floor = '1R'; ent.isRoof = true; }
+                        else if (roof2L && (roof2L === '__ALL_LAYERS__' || normL === roof2L)) { floor = '2R'; ent.isRoof = true; }
+                        else if (back1L && (back1L === '__ALL_LAYERS__' || normL === back1L)) { floor = '1F'; }
+                        else if (back2L && (back2L === '__ALL_LAYERS__' || normL === back2L)) { floor = '2F'; }
                         else if (col1L && normL === col1L) { floor = '1F'; }
                         else if (col2L && normL === col2L) { floor = '2F'; }
                         else if (normL.includes('1F_R') || normL.includes('1R')) { floor = '1R'; }

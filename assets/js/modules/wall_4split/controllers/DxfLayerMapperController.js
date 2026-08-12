@@ -94,13 +94,13 @@ window.DxfLayerMapperController = {
 
         // ドロップダウンのレンダリング
         const selectIds = [
-            { id: 'dxf-select-grid', selectedKey: 'grid' },
-            { id: 'dxf-select-1f-col', selectedKey: 'col1F' },
-            { id: 'dxf-select-2f-col', selectedKey: 'col2F' },
-            { id: 'dxf-select-1f-roof', selectedKey: 'roof1F' },
-            { id: 'dxf-select-2f-roof', selectedKey: 'roof2F' },
-            { id: 'dxf-select-1f-back', selectedKey: 'back1F' },
-            { id: 'dxf-select-2f-back', selectedKey: 'back2F' }
+            { id: 'dxf-select-grid', selectedKey: 'grid', isBack: false },
+            { id: 'dxf-select-1f-col', selectedKey: 'col1F', isBack: false },
+            { id: 'dxf-select-2f-col', selectedKey: 'col2F', isBack: false },
+            { id: 'dxf-select-1f-roof', selectedKey: 'roof1F', isBack: true },
+            { id: 'dxf-select-2f-roof', selectedKey: 'roof2F', isBack: true },
+            { id: 'dxf-select-1f-back', selectedKey: 'back1F', isBack: true },
+            { id: 'dxf-select-2f-back', selectedKey: 'back2F', isBack: true }
         ];
 
         selectIds.forEach(item => {
@@ -108,10 +108,19 @@ window.DxfLayerMapperController = {
             if (!selectEl) return;
             selectEl.innerHTML = '';
 
+            // 「-指定なし/自動判定-」はNG！ 明示的選択メッセージを設定
             const defaultOpt = document.createElement('option');
             defaultOpt.value = '';
-            defaultOpt.text = '-- 指定なし / 自動判定 --';
+            defaultOpt.text = '-- ※明示的にレイヤーを選択してください --';
             selectEl.appendChild(defaultOpt);
+
+            // 背景・屋根レイヤーには「ファイル内全レイヤー一括取り込み」を追加
+            if (item.isBack) {
+                const allOpt = document.createElement('option');
+                allOpt.value = '__ALL_LAYERS__';
+                allOpt.text = '★ [ファイル内全レイヤー] を背景として一括取り込み';
+                selectEl.appendChild(allOpt);
+            }
 
             allLayers.forEach(l => {
                 const opt = document.createElement('option');
@@ -160,6 +169,11 @@ window.DxfLayerMapperController = {
             back1FLayer: document.getElementById('dxf-select-1f-back')?.value || "",
             back2FLayer: document.getElementById('dxf-select-2f-back')?.value || ""
         };
+
+        if (!mapping.gridLayer) {
+            alert("⚠️ 通り芯（グリッド）レイヤーが選択されていません。\n正確な基準座標スナップのため、必ず通り芯レイヤーを選択してください。");
+            return;
+        }
 
         this.closeMapper();
 
