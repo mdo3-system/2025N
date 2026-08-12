@@ -1,4 +1,4 @@
 /**
  * Version.js - Centralized Version Management
  */
-window.APP_VERSION = "v3.12.1"; // Increment patch version per update
+window.APP_VERSION = "v3.12.2"; // Fix SyntaxError in wall_4split_cad.js loadDxf handler

@@ -74,30 +74,6 @@ function loadDxf(event) {
         reader.readAsArrayBuffer(file);
     });
 }
-                        processDxfData(dxf, isIncremental, dxfRaw, targetFloor);
-                    }
-
-                    showAreaInputModal();
-                    let msgEl = document.getElementById('action-msg');
-                    const targetName = targetFloor === 'ALL' ? '全体' : targetFloor;
-                    if (msgEl) msgEl.innerText = `✅ [${targetName}] 指定レイヤーでDXFを解析・読み込みました。`;
-                    if (window.AppController) {
-                        window.AppController.refreshAll();
-                        if (window.AppController.zoomFit) window.AppController.zoomFit();
-                    }
-                });
-            } else {
-                let isIncremental = true;
-                if ((pillars && pillars.length > 0) || (bgLinesOriginal && bgLinesOriginal.length > 0)) {
-                    if (targetFloor === 'ALL') {
-                        isIncremental = confirm("既存の柱や壁のデータを保持しますか？\n[OK] 保持して追加 / [キャンセル] 全消去して新規読込");
-                    }
-                } else {
-                    isIncremental = false;
-                }
-                processDxfData(dxf, isIncremental, dxfRaw, targetFloor);
-                showAreaInputModal();
-            }
 
         } catch (err) {
             console.error(err);
