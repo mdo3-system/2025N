@@ -327,8 +327,8 @@ window.DxfLayerMapperController = {
             return;
         }
 
-        // 複数別ファイルモード時、レイヤーが選択されている全スロットで原点指定が完了しているか判定
-        const isMultiMode = this.loadedFiles.length > 1;
+        // 複数別ファイルモード時（タブ選択または複数ファイルロード時）のみ、レイヤーが選択されている全スロットで原点指定チェック
+        const isMultiMode = this.currentRouteMode === 'multi' || this.loadedFiles.length > 1;
         if (isMultiMode) {
             const slotTitleMap = {
                 grid: '①通り芯', col1F: '②1階柱', col2F: '③2階柱',
@@ -348,6 +348,19 @@ window.DxfLayerMapperController = {
                 alert(`⚠️ 原点位置の合致基準が未指定のスロットがあります：\n\n・${unassignedSlots.join('\n・')}\n\n対象スロットの「🎯 原点指定」ボタンを押し、キャンバス上の交点を選択してください。`);
                 return;
             }
+        }
+
+        // AppState への全主要レイヤープロパティのパイプライン完全転送
+        if (window.AppState) {
+            window.AppState.gridLayer = mapping.gridLayer;
+            window.AppState.col1FLayer = mapping.col1FLayer;
+            window.AppState.col2FLayer = mapping.col2FLayer;
+            window.AppState.back1FLayer = mapping.back1FLayer;
+            window.AppState.back2FLayer = mapping.back2FLayer;
+            window.AppState.roof1FLayer = mapping.roof1FLayer;
+            window.AppState.roof2FLayer = mapping.roof2FLayer;
+            window.AppState.dxfLayerMapping = mapping;
+            window.AppState.slotOrigins = this.slotOrigins || {};
         }
 
         this.closeMapper();
@@ -613,17 +626,25 @@ window.DxfLayerMapperController = {
 
         this.lastPreviewBounds = { minX, minY, maxX, maxY, scale, padding };
 
-        // 通り芯交点の抽出 (最大30本×30本の計算キャップ制限)
-        const xLines = lines.filter(l => Math.abs(l.x1 - l.x2) < 15).slice(0, 30);
-        const yLines = lines.filter(l => Math.abs(l.y1 - l.y2) < 15).slice(0, 30);
+        // 真の通り芯交点の幾何計算 (垂直線 vs 水平線の交点判定)
+        const vertLines = lines.filter(l => Math.abs(l.x1 - l.x2) < 25).slice(0, 40);
+        const horizLines = lines.filter(l => Math.abs(l.y1 - l.y2) < 25).slice(0, 40);
         const intersections = [];
 
-        xLines.forEach(xl => {
-            yLines.forEach(yl => {
-                const ix = (xl.x1 + xl.x2) / 2;
-                const iy = (yl.y1 + yl.y2) / 2;
-                if (!intersections.some(pt => Math.hypot(pt.x - ix, pt.y - iy) < 100)) {
-                    intersections.push({ x: ix, y: iy });
+        vertLines.forEach(vl => {
+            const vx = (vl.x1 + vl.x2) / 2;
+            const vMinY = Math.min(vl.y1, vl.y2) - 300;
+            const vMaxY = Math.max(vl.y1, vl.y2) + 300;
+
+            horizLines.forEach(hl => {
+                const hy = (hl.y1 + hl.y2) / 2;
+                const hMinX = Math.min(hl.x1, hl.x2) - 300;
+                const hMaxX = Math.max(hl.x1, hl.x2) + 300;
+
+                if (vx >= hMinX && vx <= hMaxX && hy >= vMinY && hy <= vMaxY) {
+                    if (!intersections.some(pt => Math.hypot(pt.x - vx, pt.y - hy) < 50)) {
+                        intersections.push({ x: vx, y: hy });
+                    }
                 }
             });
         });

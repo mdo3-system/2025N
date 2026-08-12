@@ -198,11 +198,28 @@ window.CadEngine = {
             return { x: pt.x + shiftX, y: pt.y + shiftY };
         };
 
-        const isBackLayer = (l) => /(BACK|Rｸﾞﾙｰﾌﾟ|グループ|背景|下図|UNDER|1F_BACK|2F_BACK|_BACK$)/i.test(l);
-        const isPillarLayer = (l, name = "") => !isBackLayer(l) && (/(1F_COL|2F_COL|COL|COLUMN|柱|柱心|HASHIRA|HASIRA|角柱|管柱|通し柱|S-COL|H-COL|C105|C120)/i.test(l) || /(1F_COL|2F_COL|COL|COLUMN|柱|柱心)/i.test(name));
-        const isGridLayer = (l, name = "") => !isBackLayer(l) && !isPillarLayer(l, name) && ((/(GRID|GLID|通り芯|軸線)/i.test(l) || /(GRID|GLID|通り芯)/i.test(name)) && !/^GL([_-]|$)/i.test(l.trim()));
+        const isBackLayer = (l) => {
+            if (state && state.back1FLayer && (l === state.back1FLayer.toUpperCase() || l.includes(state.back1FLayer.toUpperCase()))) return true;
+            if (state && state.back2FLayer && (l === state.back2FLayer.toUpperCase() || l.includes(state.back2FLayer.toUpperCase()))) return true;
+            return /(BACK|Rｸﾞﾙｰﾌﾟ|グループ|背景|下図|UNDER|1F_BACK|2F_BACK|_BACK$)/i.test(l);
+        };
+        const isPillarLayer = (l, name = "") => {
+            if (isBackLayer(l)) return false;
+            if (state && state.col1FLayer && (l === state.col1FLayer.toUpperCase() || l.includes(state.col1FLayer.toUpperCase()))) return true;
+            if (state && state.col2FLayer && (l === state.col2FLayer.toUpperCase() || l.includes(state.col2FLayer.toUpperCase()))) return true;
+            return /(1F_COL|2F_COL|COL|COLUMN|柱|柱心|HASHIRA|HASIRA|角柱|管柱|通し柱|S-COL|H-COL|C105|C120)/i.test(l) || /(1F_COL|2F_COL|COL|COLUMN|柱|柱心)/i.test(name);
+        };
+        const isGridLayer = (l, name = "") => {
+            if (isBackLayer(l)) return false;
+            if (state && state.gridLayer && (l === state.gridLayer.toUpperCase() || l.includes(state.gridLayer.toUpperCase()))) return true;
+            return !isPillarLayer(l, name) && ((/(GRID|GLID|通り芯|軸線)/i.test(l) || /(GRID|GLID|通り芯)/i.test(name)) && !/^GL([_-]|$)/i.test(l.trim()));
+        };
         const isAreaLayer = (l, name = "") => /(AREA|面積|求積)/i.test(l) || /(AREA|面積)/i.test(name);
-        const isRoofLayer = (l) => /(1F_R|2F_R|_R$)/i.test(l);
+        const isRoofLayer = (l) => {
+            if (state && state.roof1FLayer && (l === state.roof1FLayer.toUpperCase() || l.includes(state.roof1FLayer.toUpperCase()))) return true;
+            if (state && state.roof2FLayer && (l === state.roof2FLayer.toUpperCase() || l.includes(state.roof2FLayer.toUpperCase()))) return true;
+            return /(1F_R|2F_R|_R$)/i.test(l);
+        };
 
         const collect = (ents, blks, parentLayer = "", transformStack = []) => {
             ents.forEach(ent => {
