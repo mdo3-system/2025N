@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>上善如水 - 壁量計算WEB (v3.12.12)</title>
+    <title>上善如水 - 壁量計算WEB (v3.12.13)</title>
     <script src="https://cdn.jsdelivr.net/npm/dxf-parser@1.1.2/dist/dxf-parser.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/encoding-japanese/2.0.0/encoding.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/clipper-lib@6.4.2/clipper.js"></script>
@@ -686,7 +686,7 @@
                 <div style="grid-column: span 2; background:#2f3640; padding:12px; border-radius:8px; border-left:5px solid #00d2d3;">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
                         <div style="font-weight:bold; font-size:14px; color:#00d2d3;">📐 ① 通り芯（グリッド）スロット</div>
-                        <button type="button" class="btn-pick-origin" data-slot="grid" style="background:#00d2d3; color:#1e272e; border:none; padding:4px 10px; border-radius:4px; font-weight:bold; font-size:11px; cursor:pointer;">🎯 プレビューで原点指定</button>
+                        <button type="button" class="btn-pick-origin" data-slot="grid" style="background:#00d2d3; color:#1e272e; border:none; padding:4px 10px; border-radius:4px; font-weight:bold; font-size:11px; cursor:pointer;">🎯 プレビュー画面で原点指定</button>
                     </div>
                     <div style="display:grid; grid-template-columns: 1.2fr 1.2fr 1fr; gap:8px; align-items:center;">
                         <div>
@@ -698,12 +698,8 @@
                             <select id="dxf-select-grid" class="dxf-slot-layer-select" style="width:100%; padding:6px; background:#1e272e; color:#fff; border:1px solid #485460; border-radius:4px; font-size:12px;"></select>
                         </div>
                         <div>
-                            <span style="font-size:11px; color:#a4b0be; display:block;">📍 原点位置合わせ基準:</span>
-                            <select id="dxf-origin-grid" class="dxf-slot-origin-select" style="width:100%; padding:6px; background:#1e272e; color:#fff; border:1px solid #485460; border-radius:4px; font-size:12px;">
-                                <option value="auto_min_grid">最左下通り芯交点を原点(0,0)</option>
-                                <option value="grid_x1_y1">通り芯交点 X1-Y1 を原点(0,0)</option>
-                                <option value="cad_origin">CADデータ原点(0,0)のまま</option>
-                            </select>
+                            <span style="font-size:11px; color:#a4b0be; display:block;">🎯 基準原点 (0,0) ポイント:</span>
+                            <span id="slot-origin-badge-grid" class="slot-origin-badge" style="display:block; padding:6px; background:#1e272e; color:#ff6b6b; border:1px solid #ff6b6b; border-radius:4px; font-size:11px; font-weight:bold; text-align:center;">⚠️ 未指定 (クリック指定)</span>
                         </div>
                     </div>
                 </div>
@@ -723,12 +719,8 @@
                         <select id="dxf-select-1f-col" class="dxf-slot-layer-select" style="width:100%; padding:6px; background:#1e272e; color:#fff; border:1px solid #485460; border-radius:4px; font-size:12px;"></select>
                     </div>
                     <div>
-                        <span style="font-size:11px; color:#a4b0be;">📍 原点位置合わせ基準:</span>
-                        <select id="dxf-origin-1f-col" class="dxf-slot-origin-select" style="width:100%; padding:6px; background:#1e272e; color:#fff; border:1px solid #485460; border-radius:4px; font-size:12px;">
-                            <option value="auto_min_grid">最左下通り芯交点に合わせる</option>
-                            <option value="grid_x1_y1">通り芯交点 X1-Y1 に合わせる</option>
-                            <option value="cad_origin">CADデータ原点(0,0)のまま</option>
-                        </select>
+                        <span style="font-size:11px; color:#a4b0be;">🎯 基準原点 (0,0) ポイント:</span>
+                        <span id="slot-origin-badge-1f-col" class="slot-origin-badge" style="display:block; padding:5px; background:#1e272e; color:#ff6b6b; border:1px solid #ff6b6b; border-radius:4px; font-size:11px; font-weight:bold; text-align:center;">⚠️ 未指定</span>
                     </div>
                 </div>
 
@@ -747,12 +739,8 @@
                         <select id="dxf-select-2f-col" class="dxf-slot-layer-select" style="width:100%; padding:6px; background:#1e272e; color:#fff; border:1px solid #485460; border-radius:4px; font-size:12px;"></select>
                     </div>
                     <div>
-                        <span style="font-size:11px; color:#a4b0be;">📍 原点位置合わせ基準:</span>
-                        <select id="dxf-origin-2f-col" class="dxf-slot-origin-select" style="width:100%; padding:6px; background:#1e272e; color:#fff; border:1px solid #485460; border-radius:4px; font-size:12px;">
-                            <option value="auto_min_grid">最左下通り芯交点に合わせる</option>
-                            <option value="grid_x1_y1">通り芯交点 X1-Y1 に合わせる</option>
-                            <option value="cad_origin">CADデータ原点(0,0)のまま</option>
-                        </select>
+                        <span style="font-size:11px; color:#a4b0be;">🎯 基準原点 (0,0) ポイント:</span>
+                        <span id="slot-origin-badge-2f-col" class="slot-origin-badge" style="display:block; padding:5px; background:#1e272e; color:#ff6b6b; border:1px solid #ff6b6b; border-radius:4px; font-size:11px; font-weight:bold; text-align:center;">⚠️ 未指定</span>
                     </div>
                 </div>
 
@@ -771,12 +759,8 @@
                         <select id="dxf-select-1f-back" class="dxf-slot-layer-select" style="width:100%; padding:6px; background:#1e272e; color:#fff; border:1px solid #485460; border-radius:4px; font-size:12px;"></select>
                     </div>
                     <div>
-                        <span style="font-size:11px; color:#a4b0be;">📍 原点位置合わせ基準:</span>
-                        <select id="dxf-origin-1f-back" class="dxf-slot-origin-select" style="width:100%; padding:6px; background:#1e272e; color:#fff; border:1px solid #485460; border-radius:4px; font-size:12px;">
-                            <option value="auto_min_grid">最左下通り芯交点に合わせる</option>
-                            <option value="grid_x1_y1">通り芯交点 X1-Y1 に合わせる</option>
-                            <option value="cad_origin">CADデータ原点(0,0)のまま</option>
-                        </select>
+                        <span style="font-size:11px; color:#a4b0be;">🎯 基準原点 (0,0) ポイント:</span>
+                        <span id="slot-origin-badge-1f-back" class="slot-origin-badge" style="display:block; padding:5px; background:#1e272e; color:#ff6b6b; border:1px solid #ff6b6b; border-radius:4px; font-size:11px; font-weight:bold; text-align:center;">⚠️ 未指定</span>
                     </div>
                 </div>
 
@@ -795,12 +779,8 @@
                         <select id="dxf-select-2f-back" class="dxf-slot-layer-select" style="width:100%; padding:6px; background:#1e272e; color:#fff; border:1px solid #485460; border-radius:4px; font-size:12px;"></select>
                     </div>
                     <div>
-                        <span style="font-size:11px; color:#a4b0be;">📍 原点位置合わせ基準:</span>
-                        <select id="dxf-origin-2f-back" class="dxf-slot-origin-select" style="width:100%; padding:6px; background:#1e272e; color:#fff; border:1px solid #485460; border-radius:4px; font-size:12px;">
-                            <option value="auto_min_grid">最左下通り芯交点に合わせる</option>
-                            <option value="grid_x1_y1">通り芯交点 X1-Y1 に合わせる</option>
-                            <option value="cad_origin">CADデータ原点(0,0)のまま</option>
-                        </select>
+                        <span style="font-size:11px; color:#a4b0be;">🎯 基準原点 (0,0) ポイント:</span>
+                        <span id="slot-origin-badge-2f-back" class="slot-origin-badge" style="display:block; padding:5px; background:#1e272e; color:#ff6b6b; border:1px solid #ff6b6b; border-radius:4px; font-size:11px; font-weight:bold; text-align:center;">⚠️ 未指定</span>
                     </div>
                 </div>
 
@@ -819,12 +799,8 @@
                         <select id="dxf-select-1f-roof" class="dxf-slot-layer-select" style="width:100%; padding:6px; background:#1e272e; color:#fff; border:1px solid #485460; border-radius:4px; font-size:12px;"></select>
                     </div>
                     <div>
-                        <span style="font-size:11px; color:#a4b0be;">📍 原点位置合わせ基準:</span>
-                        <select id="dxf-origin-1f-roof" class="dxf-slot-origin-select" style="width:100%; padding:6px; background:#1e272e; color:#fff; border:1px solid #485460; border-radius:4px; font-size:12px;">
-                            <option value="auto_min_grid">最左下通り芯交点に合わせる</option>
-                            <option value="grid_x1_y1">通り芯交点 X1-Y1 に合わせる</option>
-                            <option value="cad_origin">CADデータ原点(0,0)のまま</option>
-                        </select>
+                        <span style="font-size:11px; color:#a4b0be;">🎯 基準原点 (0,0) ポイント:</span>
+                        <span id="slot-origin-badge-1f-roof" class="slot-origin-badge" style="display:block; padding:5px; background:#1e272e; color:#ff6b6b; border:1px solid #ff6b6b; border-radius:4px; font-size:11px; font-weight:bold; text-align:center;">⚠️ 未指定</span>
                     </div>
                 </div>
 
@@ -843,12 +819,8 @@
                         <select id="dxf-select-2f-roof" class="dxf-slot-layer-select" style="width:100%; padding:6px; background:#1e272e; color:#fff; border:1px solid #485460; border-radius:4px; font-size:12px;"></select>
                     </div>
                     <div>
-                        <span style="font-size:11px; color:#a4b0be;">📍 原点位置合わせ基準:</span>
-                        <select id="dxf-origin-2f-roof" class="dxf-slot-origin-select" style="width:100%; padding:6px; background:#1e272e; color:#fff; border:1px solid #485460; border-radius:4px; font-size:12px;">
-                            <option value="auto_min_grid">最左下通り芯交点に合わせる</option>
-                            <option value="grid_x1_y1">通り芯交点 X1-Y1 に合わせる</option>
-                            <option value="cad_origin">CADデータ原点(0,0)のまま</option>
-                        </select>
+                        <span style="font-size:11px; color:#a4b0be;">🎯 基準原点 (0,0) ポイント:</span>
+                        <span id="slot-origin-badge-2f-roof" class="slot-origin-badge" style="display:block; padding:5px; background:#1e272e; color:#ff6b6b; border:1px solid #ff6b6b; border-radius:4px; font-size:11px; font-weight:bold; text-align:center;">⚠️ 未指定</span>
                     </div>
                 </div>
             </div>
@@ -1021,7 +993,7 @@
     <!-- 左パネル -->
     <div id="left-panel">
         <h1 style="font-size:16px; margin:0 0 10px 0; color:#2c3e50; border-bottom:2px solid #2ecc71; padding-bottom:5px; display:flex; justify-content:space-between; align-items:center;">
-            <span>上善如水 <span style="font-size:12px; color:#7f8c8d;">壁量計算WEB <span id="app-version-title">v3.12.12</span></span></span>
+            <span>上善如水 <span style="font-size:12px; color:#7f8c8d;">壁量計算WEB <span id="app-version-title">v3.12.13</span></span></span>
         </h1>
 
         <div style="display:flex; gap:5px; margin-bottom:15px;">

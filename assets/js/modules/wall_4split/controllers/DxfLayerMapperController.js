@@ -327,6 +327,29 @@ window.DxfLayerMapperController = {
             return;
         }
 
+        // 複数別ファイルモード時、レイヤーが選択されている全スロットで原点指定が完了しているか判定
+        const isMultiMode = this.loadedFiles.length > 1;
+        if (isMultiMode) {
+            const slotTitleMap = {
+                grid: '①通り芯', col1F: '②1階柱', col2F: '③2階柱',
+                back1F: '④1階背景', back2F: '⑤2階背景', roof1F: '⑥1階屋根', roof2F: '⑦2階屋根'
+            };
+            const unassignedSlots = [];
+
+            if (mapping.gridLayer && (!this.slotOrigins || !this.slotOrigins.grid)) unassignedSlots.push(slotTitleMap.grid);
+            if (mapping.col1FLayer && (!this.slotOrigins || !this.slotOrigins['1f-col'])) unassignedSlots.push(slotTitleMap.col1F);
+            if (mapping.col2FLayer && (!this.slotOrigins || !this.slotOrigins['2f-col'])) unassignedSlots.push(slotTitleMap.col2F);
+            if (mapping.back1FLayer && (!this.slotOrigins || !this.slotOrigins['1f-back'])) unassignedSlots.push(slotTitleMap.back1F);
+            if (mapping.back2FLayer && (!this.slotOrigins || !this.slotOrigins['2f-back'])) unassignedSlots.push(slotTitleMap.back2F);
+            if (mapping.roof1FLayer && (!this.slotOrigins || !this.slotOrigins['1f-roof'])) unassignedSlots.push(slotTitleMap.roof1F);
+            if (mapping.roof2FLayer && (!this.slotOrigins || !this.slotOrigins['2f-roof'])) unassignedSlots.push(slotTitleMap.roof2F);
+
+            if (unassignedSlots.length > 0) {
+                alert(`⚠️ 原点位置の合致基準が未指定のスロットがあります：\n\n・${unassignedSlots.join('\n・')}\n\n対象スロットの「🎯 原点指定」ボタンを押し、キャンバス上の交点を選択してください。`);
+                return;
+            }
+        }
+
         this.closeMapper();
 
         // 割り当てられた指定主要レイヤーの集合を作成
@@ -714,10 +737,22 @@ window.DxfLayerMapperController = {
 
         if (closestPt) {
             this.selectedVisualOriginPt = closestPt;
+            if (!this.slotOrigins) this.slotOrigins = {};
+            const activeKey = this.activeOriginSlotKey || 'grid';
+            this.slotOrigins[activeKey] = closestPt;
+
             const infoEl = document.getElementById('preview-origin-info');
             if (infoEl) {
                 infoEl.innerText = `🎯 基準指定交点: X=${Math.round(closestPt.x)}, Y=${Math.round(closestPt.y)}`;
             }
+
+            const badgeEl = document.getElementById(`slot-origin-badge-${activeKey}`);
+            if (badgeEl) {
+                badgeEl.innerText = `✅ X:${Math.round(closestPt.x)}, Y:${Math.round(closestPt.y)}`;
+                badgeEl.style.color = '#1dd1a1';
+                badgeEl.style.borderColor = '#1dd1a1';
+            }
+
             this.renderPreviewCanvas(0);
         }
     }
