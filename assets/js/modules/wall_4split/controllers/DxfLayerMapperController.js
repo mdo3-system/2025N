@@ -158,6 +158,7 @@ window.DxfLayerMapperController = {
         // 単一ファイルモード vs 複数ファイルモードの切り替え制御
         const isMultiMode = this.loadedFiles.length > 1;
         const setRouteMode = (multi) => {
+            this.currentRouteMode = multi ? 'multi' : 'single';
             const tabSingle = document.getElementById('tab-mode-single');
             const tabMulti = document.getElementById('tab-mode-multi');
             const previewContainer = document.getElementById('dxf-origin-preview-canvas')?.parentElement?.parentElement;
@@ -166,12 +167,12 @@ window.DxfLayerMapperController = {
                 if (tabSingle) { tabSingle.style.background = '#353b48'; tabSingle.style.color = '#a4b0be'; }
                 if (tabMulti) { tabMulti.style.background = '#00d2d3'; tabMulti.style.color = '#1e272e'; }
                 if (previewContainer) previewContainer.style.display = 'flex';
-                document.querySelectorAll('.dxf-slot-file-select, .dxf-slot-origin-select, .btn-pick-origin').forEach(el => el.style.display = '');
+                document.querySelectorAll('.dxf-slot-file-select, .dxf-slot-origin-select, .btn-pick-origin, [id^="slot-origin-badge-"]').forEach(el => el.style.display = '');
             } else {
                 if (tabSingle) { tabSingle.style.background = '#00d2d3'; tabSingle.style.color = '#1e272e'; }
                 if (tabMulti) { tabMulti.style.background = '#353b48'; tabMulti.style.color = '#a4b0be'; }
                 if (previewContainer) previewContainer.style.display = 'none';
-                document.querySelectorAll('.dxf-slot-file-select, .dxf-slot-origin-select, .btn-pick-origin').forEach(el => el.style.display = 'none');
+                document.querySelectorAll('.dxf-slot-file-select, .dxf-slot-origin-select, .btn-pick-origin, [id^="slot-origin-badge-"]').forEach(el => el.style.display = 'none');
             }
         };
 

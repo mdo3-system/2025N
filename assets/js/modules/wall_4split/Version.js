@@ -1,4 +1,4 @@
 /**
  * Version.js - Centralized Version Management
  */
-window.APP_VERSION = "v3.12.15"; // Single File Skip, Geometric Grid Snap & Full Layer Pipeline Sync Release
+window.APP_VERSION = "v3.12.16"; // User-Selected Layer Rule Strict Enforcement & Background Layer Consolidation Release

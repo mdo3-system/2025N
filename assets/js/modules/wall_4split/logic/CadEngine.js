@@ -396,9 +396,12 @@ window.CadEngine = {
                             newBgLines.push(e);
                         }
                     } else {
-                        e.floor = floor; 
-                        e.isUnderlay = isBack; // 1F_BACK / 2F_BACK 等は下絵フラグ設定 
-                        e.isUnderlay = isBack; // 1F_BACK / 2F_BACK 等は下絵フラグ設定
+                        // 通り芯・柱・屋根として選ばれていないすべての未割り当てCAD要素（畳、記号、部屋、仕上、データ001等）は「背景図面 (1F_BACK / 2F_BACK)」に一括集約
+                        const backGroupLayer = (floor === '2F' || floor === '2R') ? '2F_BACK' : '1F_BACK';
+                        e.layer = backGroupLayer;
+                        e.floor = (floor === 'ALL') ? '1F' : floor; 
+                        e.isUnderlay = true;
+                        
                         if (e.type === 'LINE') {
                             if (e.start && e.end) e.vertices = [{ x: e.start.x, y: e.start.y }, { x: e.end.x, y: e.end.y }];
                             newBgLines.push(e);
@@ -406,7 +409,7 @@ window.CadEngine = {
                             newBgLines.push(e);
                         } else if (['TEXT', 'MTEXT'].includes(e.type)) {
                             const pos = e.startPoint || e.position || e.insertionPoint || {};
-                            newBgTexts.push({ text: e.text || e.string || "", x: pos.x || 0, y: pos.y || 0, layer: L, floor: f });
+                            newBgTexts.push({ text: e.text || e.string || "", x: pos.x || 0, y: pos.y || 0, layer: backGroupLayer, floor: e.floor });
                         }
                     }
                 }
