@@ -256,19 +256,43 @@ window.DxfLayerMapperController = {
                             } else {
                                 raw = new TextDecoder('UTF-8').decode(buffer);
                             }
-                            const dxf = window.CadEngine ? window.CadEngine.processDxf(raw) : null;
-                            if (dxf && dxf.entities) {
-                                const lSet = new Set();
-                                dxf.entities.forEach(ent => { if (ent.layer) lSet.add(ent.layer.toUpperCase().trim()); });
-                                this.loadedFiles.push({ name: file.name, rawTxt: raw, layers: Array.from(lSet).sort() });
+
+                            const lSet = new Set();
+                            try {
+                                const dxf = window.CadEngine ? window.CadEngine.processDxf(raw) : null;
+                                if (dxf && dxf.entities) {
+                                    dxf.entities.forEach(ent => { if (ent.layer) lSet.add(ent.layer.toUpperCase().trim()); });
+                                }
+                            } catch (err) {
+                                console.warn("CadEngine processDxf skipped in addFile, fallback engaged:", err);
                             }
+
+                            // ダイレクトフォールバックで全レイヤー名を100%モレなく抽出
+                            if (lSet.size === 0) {
+                                const fallbackLines = this.parseDxfRawLinesDirect(raw);
+                                fallbackLines.forEach(l => { if (l.layer) lSet.add(l.layer.toUpperCase().trim()); });
+                            }
+                            if (lSet.size === 0) {
+                                // 生テキストから直接 8 グループコード（レイヤー名）をダイレクト高速スキャン
+                                const layerMatches = raw.match(/(?:^|\r?\n)8\r?\n([^\r\n]+)/g);
+                                if (layerMatches) {
+                                    layerMatches.forEach(m => {
+                                        const parts = m.split(/\r?\n/);
+                                        if (parts[1]) lSet.add(parts[1].toUpperCase().trim());
+                                    });
+                                }
+                            }
+
+                            this.loadedFiles.push({ name: file.name, rawTxt: raw, layers: Array.from(lSet).sort() });
                         } catch (err) {
-                            console.error(err);
+                            console.error("❌ Error adding file:", file.name, err);
                         } finally {
                             readCount++;
                             if (readCount === addFiles.length) {
                                 populateSlotDropdowns();
+                                const countEl = document.getElementById('dxf-file-count-info');
                                 if (countEl) countEl.innerText = `ロード済みファイル: ${this.loadedFiles.length} 件 | 最新ファイルを全スロットで指定可能`;
+                                addFileEl.value = ''; // 連続再追加のためにインプット値をクリア
                             }
                         }
                     };
