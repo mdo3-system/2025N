@@ -103,7 +103,7 @@ window.DxfLayerMapperController = {
             { fileId: 'dxf-file-2f-back', selectId: 'dxf-select-2f-back', selectedKey: 'back2F', isBack: true }
         ];
 
-        // 特定スロットのみのドロップダウン更新関数 (他スロットの選択値を100%保護)
+        // 特定スロットのみのドロップダウン更新関数 (他スロットの選択値および他ファイルレイヤーの非混入を100%保証)
         const populateSingleSlotDropdown = (item) => {
             const fileEl = document.getElementById(item.fileId);
             const selectEl = document.getElementById(item.selectId);
@@ -124,10 +124,10 @@ window.DxfLayerMapperController = {
                 }
             }
 
-            // 選択中ファイルに基づくレイヤー一覧の構築
-            const activeFileIdx = parseInt(fileEl.value || 0, 10);
+            // 選択中ファイル（該当スロットで選ばれたDXF）に厳密に属するレイヤー一覧のみを取得
+            const activeFileIdx = Math.min(Math.max(parseInt(fileEl.value || 0, 10), 0), this.loadedFiles.length - 1);
             const targetFileObj = this.loadedFiles[activeFileIdx] || this.loadedFiles[0];
-            const fileLayers = targetFileObj ? targetFileObj.layers : allLayers;
+            const fileLayers = targetFileObj && targetFileObj.layers ? targetFileObj.layers : [];
 
             const currentLayerVal = selectEl.value;
             selectEl.innerHTML = '';
@@ -149,7 +149,10 @@ window.DxfLayerMapperController = {
                 const opt = document.createElement('option');
                 opt.value = l;
                 opt.text = l;
-                if (currentLayerVal ? (currentLayerVal === l) : (autoMap[item.selectedKey] === l)) {
+                // 現在の選択値または自動推定値が「該当ファイル」のレイヤー一覧に実在する場合のみ選択状態にする
+                if (currentLayerVal) {
+                    if (currentLayerVal === l) opt.selected = true;
+                } else if (autoMap[item.selectedKey] === l) {
                     opt.selected = true;
                 }
                 selectEl.appendChild(opt);
