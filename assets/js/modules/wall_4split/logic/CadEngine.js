@@ -26,8 +26,9 @@ window.CadEngine = {
      */
     detectGridOrigin: function(entities, blocks) {
         let gridLines = [];
-        const isGridLayer = (l) => /(GRID|GLID|通り芯|軸線|軸|芯)/i.test(l) && !/^GL([_-]|$)/i.test(l.trim());
-        const isPillarLayer = (l) => /(COL|COLUMN|柱|柱心)/i.test(l);
+        const isBackLayer = (l) => /(BACK|Rｸﾞﾙｰﾌﾟ|グループ|背景|下図|UNDER)/i.test(l);
+        const isPillarLayer = (l) => !isBackLayer(l) && /(1F_COL|2F_COL|COL|COLUMN|柱|柱心|HASHIRA|HASIRA|角柱|管柱|通し柱|S-COL|H-COL|C105|C120)/i.test(l);
+        const isGridLayer = (l) => !isBackLayer(l) && !isPillarLayer(l) && /(GRID|GLID|通り芯|軸線)/i.test(l) && !/^GL([_-]|$)/i.test(l.trim());
 
         const transformPoint = (pt, tf) => {
             if (!pt || !tf) return pt || { x: 0, y: 0 };
@@ -197,10 +198,10 @@ window.CadEngine = {
             return { x: pt.x + shiftX, y: pt.y + shiftY };
         };
 
-        const isGridLayer = (l, name = "") => ((/(GRID|GLID|通り芯|軸線|軸|芯)/i.test(l) || /(GRID|GLID|通り芯)/i.test(name)) && !/^GL([_-]|$)/i.test(l.trim()));
-        const isPillarLayer = (l, name = "") => /(1F_COL|2F_COL|COL|COLUMN|柱|柱心|HASHIRA|HASIRA|角柱|管柱|通し柱|S-COL|H-COL|C105|C120)/i.test(l) || /(1F_COL|2F_COL|COL|COLUMN|柱|柱心)/i.test(name);
+        const isBackLayer = (l) => /(BACK|Rｸﾞﾙｰﾌﾟ|グループ|背景|下図|UNDER|1F_BACK|2F_BACK|_BACK$)/i.test(l);
+        const isPillarLayer = (l, name = "") => !isBackLayer(l) && (/(1F_COL|2F_COL|COL|COLUMN|柱|柱心|HASHIRA|HASIRA|角柱|管柱|通し柱|S-COL|H-COL|C105|C120)/i.test(l) || /(1F_COL|2F_COL|COL|COLUMN|柱|柱心)/i.test(name));
+        const isGridLayer = (l, name = "") => !isBackLayer(l) && !isPillarLayer(l, name) && ((/(GRID|GLID|通り芯|軸線)/i.test(l) || /(GRID|GLID|通り芯)/i.test(name)) && !/^GL([_-]|$)/i.test(l.trim()));
         const isAreaLayer = (l, name = "") => /(AREA|面積|求積)/i.test(l) || /(AREA|面積)/i.test(name);
-        const isBackLayer = (l) => /(1F_BACK|2F_BACK|_BACK$|BACK|下絵)/i.test(l);
         const isRoofLayer = (l) => /(1F_R|2F_R|_R$)/i.test(l);
 
         const collect = (ents, blks, parentLayer = "", transformStack = []) => {
