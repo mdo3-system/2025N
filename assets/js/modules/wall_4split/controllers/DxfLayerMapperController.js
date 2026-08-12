@@ -198,11 +198,14 @@ window.DxfLayerMapperController = {
         const state = window.AppState || {};
         if (!state.layerVisibility) state.layerVisibility = {};
 
-        // アプリケーション内の全ユニークレイヤー名を収集
+        // アプリケーション内の背景・図面レイヤー名を収集 (COL柱専用レイヤーは除外)
         const layerSet = new Set();
-        (state.bgLinesOriginal || []).forEach(l => { if (l.layer) layerSet.add(l.layer.toUpperCase().trim()); });
-        (state.bgTextsOriginal || []).forEach(t => { if (t.layer) layerSet.add(t.layer.toUpperCase().trim()); });
-        (state.pillars || []).forEach(p => { if (p.layer) layerSet.add(p.layer.toUpperCase().trim()); });
+        (state.bgLinesOriginal || []).forEach(l => { 
+            if (l.layer && !/(COL|COLUMN|柱)/i.test(l.layer)) layerSet.add(l.layer.toUpperCase().trim()); 
+        });
+        (state.bgTextsOriginal || []).forEach(t => { 
+            if (t.layer && !/(COL|COLUMN|柱)/i.test(t.layer)) layerSet.add(t.layer.toUpperCase().trim()); 
+        });
 
         const layers = Array.from(layerSet).sort();
 

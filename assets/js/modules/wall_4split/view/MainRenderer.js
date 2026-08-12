@@ -147,8 +147,8 @@ window.MainRenderer = {
         return true;
     },
 
-    isElementVisibleForFloor: function(elementFloor, currentFloor) {
-        if (!elementFloor || elementFloor === 'ALL') return true;
+    isElementVisibleForFloor: function(elementFloor, currentFloor, isGridLine = false) {
+        if (isGridLine || !elementFloor || elementFloor === 'ALL') return true;
         const cur = currentFloor || '1F';
         if (cur === 'foundation' || cur === '1F') {
             return elementFloor === '1F';
