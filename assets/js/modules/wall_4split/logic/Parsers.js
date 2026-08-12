@@ -126,6 +126,22 @@ window.Parsers = {
             s.docDrawings.div4 = docData;
         }
 
+        if (layerMapping) {
+            s.layerMapping = layerMapping;
+            s.layerVisibility = {};
+            const assignedSet = new Set(
+                Object.values(layerMapping).filter(v => v && typeof v === 'string').map(v => v.toUpperCase().trim())
+            );
+            const allExtracted = new Set();
+            newBgLines.forEach(l => { if (l.layer) allExtracted.add(l.layer.toUpperCase().trim()); });
+            newBgTexts.forEach(t => { if (t.layer) allExtracted.add(t.layer.toUpperCase().trim()); });
+            rawPillarCandidates.forEach(p => { if (p.layer) allExtracted.add(p.layer.toUpperCase().trim()); });
+
+            allExtracted.forEach(l => {
+                s.layerVisibility[l] = assignedSet.has(l);
+            });
+        }
+
         return s;
     },
 

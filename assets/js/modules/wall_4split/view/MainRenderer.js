@@ -139,11 +139,20 @@ window.MainRenderer = {
     },
 
     isLayerVisible: function(layer, state) {
-        if (!state || !state.layerVisibility || !layer) return true;
-        const lv = state.layerVisibility;
-        if (lv[layer] === false) return false;
-        const upperL = String(layer).toUpperCase().trim();
-        if (lv[upperL] === false) return false;
+        if (!state || !layer) return true;
+        const lv = state.layerVisibility || {};
+        const rawL = String(layer).trim();
+        const upperL = rawL.toUpperCase();
+
+        if (lv[rawL] === false || lv[upperL] === false) return false;
+        if (lv[rawL] === true || lv[upperL] === true) return true;
+
+        if (state.layerMapping) {
+            const assignedSet = new Set(
+                Object.values(state.layerMapping).filter(v => v && typeof v === 'string').map(v => v.toUpperCase().trim())
+            );
+            return assignedSet.has(upperL);
+        }
         return true;
     },
 
