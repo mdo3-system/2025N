@@ -139,6 +139,11 @@ window.DxfLayerMapperController = {
 
         this.closeMapper();
 
+        // 割り当てられた指定主要レイヤーの集合を作成
+        const assignedLayers = new Set(
+            Object.values(mapping).filter(v => v && typeof v === 'string').map(v => v.toUpperCase().trim())
+        );
+
         // 段階的プログレスアニメーション表示
         this.showProgress(15, "📂 DXF構造データをメモリにロードしています...");
 
@@ -151,6 +156,25 @@ window.DxfLayerMapperController = {
                 setTimeout(() => {
                     if (typeof this.onConfirmCallback === 'function') {
                         this.onConfirmCallback(mapping, this.currentDxfRaw);
+                    }
+
+                    // [v3.11.11] 読込時点で指定主要レイヤー以外の不要レイヤーをスマート非表示化
+                    const state = window.AppState || {};
+                    state.layerMapping = mapping;
+                    state.layerVisibility = {};
+
+                    const allLayers = new Set();
+                    (state.bgLinesOriginal || []).forEach(l => { if (l.layer) allLayers.add(l.layer.toUpperCase().trim()); });
+                    (state.bgTextsOriginal || []).forEach(t => { if (t.layer) allLayers.add(t.layer.toUpperCase().trim()); });
+                    (state.pillars || []).forEach(p => { if (p.layer) allLayers.add(p.layer.toUpperCase().trim()); });
+
+                    allLayers.forEach(l => {
+                        // モーダルで割り当てられた主要レイヤーは ON、未割り当ての雑レイヤーは OFF
+                        state.layerVisibility[l] = (assignedLayers.size === 0) ? true : assignedLayers.has(l);
+                    });
+
+                    if (window.AppController && window.AppController.refreshAll) {
+                        window.AppController.refreshAll();
                     }
 
                     this.showProgress(100, "🎨 画面描画と計算結果を更新完了！");
