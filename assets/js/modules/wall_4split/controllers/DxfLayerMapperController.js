@@ -36,6 +36,7 @@ window.DxfLayerMapperController = {
      * @param {Function} callback - 確定時に呼び出すコールバック function(mapping, rawTxt)
      */
     openMapper: function(rawTxt, callback) {
+        this.closeProgress();
         this.currentDxfRaw = rawTxt;
         this.onConfirmCallback = callback;
 
