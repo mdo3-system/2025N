@@ -228,12 +228,15 @@ window.Parsers = {
         // 6. Config Synchronization
         s.config = { ...s.config, ...(d.config || {}) };
         
-        // 7. Layer Visibility & Element Visibility
+        // 7. Layer Visibility & Layer Mapping & Element Visibility
         if (d.layerVisibility) {
             s.layerVisibility = d.layerVisibility;
             if (typeof appLayerVisibility !== 'undefined') {
                 window.appLayerVisibility = d.layerVisibility;
             }
+        }
+        if (d.layerMapping) {
+            s.layerMapping = d.layerMapping;
         }
         if (d.elementVisibility) {
             s.elementVisibility = { ...s.elementVisibility, ...d.elementVisibility };

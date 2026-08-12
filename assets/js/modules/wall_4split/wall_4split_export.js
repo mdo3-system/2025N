@@ -156,6 +156,7 @@ window.AppExport = {
             roofGridManualY: state.roofGridManualY || [], // [v2.7.0]
             scale: state.scale, offsetX: state.offsetX, offsetY: state.offsetY, customWalls, customHws,
             layerVisibility: state.layerVisibility || (typeof appLayerVisibility !== 'undefined' ? appLayerVisibility : {}),
+            layerMapping: state.layerMapping || null,
             elementVisibility: state.elementVisibility || {},
             ueGX: state.userEditedGridX, ueGY: state.userEditedGridY,
             docDrawingsRaw: docDrawingsRaw,
