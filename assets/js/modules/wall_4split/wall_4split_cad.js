@@ -60,7 +60,10 @@ function loadDxf(event) {
                     let msgEl = document.getElementById('action-msg');
                     const targetName = targetFloor === 'ALL' ? '全体' : targetFloor;
                     if (msgEl) msgEl.innerText = `✅ [${targetName}] 指定レイヤーでDXFを解析・読み込みました。`;
-                    if (window.AppController) window.AppController.refreshAll();
+                    if (window.AppController) {
+                        window.AppController.refreshAll();
+                        if (window.AppController.zoomFit) window.AppController.zoomFit();
+                    }
                 });
             } else {
                 let isIncremental = true;
@@ -205,6 +208,7 @@ function showAreaInputModal() {
         if (el && (!el.value || el.value == "0" || el.value == "0.00")) el.value = total2F.toFixed(2);
     }
 
+    if (window.AppController && window.AppController.zoomFit) window.AppController.zoomFit();
     const aiM = document.getElementById('modal-area-input');
     if (aiM) aiM.style.display = 'flex';
 }
