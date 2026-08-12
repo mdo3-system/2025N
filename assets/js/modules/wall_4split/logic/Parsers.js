@@ -33,21 +33,40 @@ window.Parsers = {
                 } else {
                     let isGrid = false, isCol = false, floor = 'ALL';
 
+                    const normMap = (v) => (v || "").normalize('NFKC').toUpperCase().trim();
+                    const normL = normMap(L);
+
                     if (layerMapping) {
                         // モーダルで指定された明示的レイヤーマッピング
-                        if (layerMapping.gridLayer && L === layerMapping.gridLayer.toUpperCase().trim()) isGrid = true;
-                        if (layerMapping.col1FLayer && L === layerMapping.col1FLayer.toUpperCase().trim()) { isCol = true; floor = '1F'; }
-                        if (layerMapping.col2FLayer && L === layerMapping.col2FLayer.toUpperCase().trim()) { isCol = true; floor = '2F'; }
-                        if (layerMapping.back1FLayer && L === layerMapping.back1FLayer.toUpperCase().trim()) { floor = '1F'; }
-                        if (layerMapping.back2FLayer && L === layerMapping.back2FLayer.toUpperCase().trim()) { floor = '2F'; }
-                        if (layerMapping.roof1FLayer && L === layerMapping.roof1FLayer.toUpperCase().trim()) { floor = '1F'; ent.isRoof = true; }
-                        if (layerMapping.roof2FLayer && L === layerMapping.roof2FLayer.toUpperCase().trim()) { floor = '2F'; ent.isRoof = true; }
+                        const gridL  = normMap(layerMapping.gridLayer);
+                        const col1L  = normMap(layerMapping.col1FLayer);
+                        const col2L  = normMap(layerMapping.col2FLayer);
+                        const back1L = normMap(layerMapping.back1FLayer);
+                        const back2L = normMap(layerMapping.back2FLayer);
+                        const roof1L = normMap(layerMapping.roof1FLayer);
+                        const roof2L = normMap(layerMapping.roof2FLayer);
+
+                        if (gridL && normL === gridL) isGrid = true;
+                        if ((col1L && normL === col1L) || (col2L && normL === col2L)) isCol = true;
+
+                        if (roof1L && normL === roof1L) { floor = '1R'; ent.isRoof = true; }
+                        else if (roof2L && normL === roof2L) { floor = '2R'; ent.isRoof = true; }
+                        else if (back1L && normL === back1L) { floor = '1F'; }
+                        else if (back2L && normL === back2L) { floor = '2F'; }
+                        else if (col1L && normL === col1L) { floor = '1F'; }
+                        else if (col2L && normL === col2L) { floor = '2F'; }
+                        else if (normL.includes('1F_R') || normL.includes('1R')) { floor = '1R'; }
+                        else if (normL.includes('2F_R') || normL.includes('2R') || normL.includes('RF')) { floor = '2R'; }
+                        else if (normL.startsWith('1F_') || normL.startsWith('1_')) { floor = '1F'; }
+                        else if (normL.startsWith('2F_') || normL.startsWith('2_')) { floor = '2F'; }
                     } else {
                         // 自動レイヤー判定フォールバック
                         const isBgLayer = /(BACK|Rｸﾞﾙｰﾌﾟ|グループ|背景|下図|UNDER)/i.test(L);
                         isCol = /(COL|COLUMN|柱)/i.test(L) && !isBgLayer;
                         isGrid = /(GRID|GLID|通り芯|軸線)/i.test(L) && !isBgLayer && !isCol;
-                        floor = L.includes('2F') ? '2F' : (L.includes('1F') ? '1F' : 'ALL');
+                        if (normL.includes('1F_R') || normL.includes('1R')) floor = '1R';
+                        else if (normL.includes('2F_R') || normL.includes('2R') || normL.includes('RF')) floor = '2R';
+                        else floor = normL.includes('2F') ? '2F' : (normL.includes('1F') ? '1F' : 'ALL');
                     }
                     
                     if (isCol && !isSub) {

@@ -257,19 +257,60 @@ window.CadEngine = {
                         }
                     }
 
-                    const isGrid = isGridLayer(L);
-                    const isPillar = isPillarLayer(L);
-                    const isBack = isBackLayer(L);
-                    const isRoof = isRoofLayer(L);
+                    const normL = L.normalize('NFKC').toUpperCase().trim();
+                    let isGrid = false;
+                    let isPillar = false;
+                    let isBack = false;
+                    let isRoof = false;
 
-                    // 階指定オプションの決定 (1F_COL, 2F_COL, 1F_BACK, 2F_BACK 等から判別)
-                    let floor = targetFloor;
-                    if (!floor || floor === 'ALL') {
-                        floor = (L.includes('2F') || L.includes('RF')) ? (L.includes('RF') ? 'RF' : '2F') : (L.includes('1F') ? '1F' : 'ALL');
+                    let isBack1F = false, isBack2F = false, isRoof1F = false, isRoof2F = false, isCol1F = false, isCol2F = false;
+
+                    const lm = (typeof layerMapping !== 'undefined' && layerMapping) ? layerMapping : (state.layerMapping || null);
+                    if (lm) {
+                        const normMap = (v) => (v || "").normalize('NFKC').toUpperCase().trim();
+                        const gridL  = normMap(lm.gridLayer);
+                        const col1L  = normMap(lm.col1FLayer);
+                        const col2L  = normMap(lm.col2FLayer);
+                        const back1L = normMap(lm.back1FLayer);
+                        const back2L = normMap(lm.back2FLayer);
+                        const roof1L = normMap(lm.roof1FLayer);
+                        const roof2L = normMap(lm.roof2FLayer);
+
+                        if (gridL && normL === gridL) isGrid = true;
+                        else if ((col1L && normL === col1L) || (col2L && normL === col2L)) isPillar = true;
+                        else if ((back1L && normL === back1L) || (back2L && normL === back2L)) isBack = true;
+                        else if ((roof1L && normL === roof1L) || (roof2L && normL === roof2L)) isRoof = true;
+
+                        isBack1F = (back1L && normL === back1L) || normL.startsWith('1F_BACK') || normL.startsWith('1_BACK');
+                        isBack2F = (back2L && normL === back2L) || normL.startsWith('2F_BACK') || normL.startsWith('2_BACK');
+                        isRoof1F = (roof1L && normL === roof1L) || normL.includes('1F_R') || normL.includes('1R');
+                        isRoof2F = (roof2L && normL === roof2L) || normL.includes('2F_R') || normL.includes('2R') || normL.includes('RF');
+                        isCol1F  = (col1L && normL === col1L);
+                        isCol2F  = (col2L && normL === col2L);
+                    } else {
+                        isBack = isBackLayer(L);
+                        isPillar = isPillarLayer(L);
+                        isGrid = isGridLayer(L);
+                        isRoof = isRoofLayer(L);
+
+                        isBack1F = normL.includes('1F_BACK') || normL.includes('1_BACK');
+                        isBack2F = normL.includes('2F_BACK') || normL.includes('2_BACK');
+                        isRoof1F = normL.includes('1F_R') || normL.includes('1R');
+                        isRoof2F = normL.includes('2F_R') || normL.includes('2R') || normL.includes('RF');
                     }
 
-                    if (isPillar) {
-                        const f = targetFloor || (L.includes('2F') ? '2F' : '1F');
+                    // 階指定オプションの決定 (layerMappingからの判別を最優先)
+                    let floor = 'ALL';
+                    if (isRoof1F) floor = '1R';
+                    else if (isRoof2F) floor = '2R';
+                    else if (isBack1F || isCol1F) floor = '1F';
+                    else if (isBack2F || isCol2F) floor = '2F';
+                    else if (normL.startsWith('1F_') || normL.startsWith('1_')) floor = '1F';
+                    else if (normL.startsWith('2F_') || normL.startsWith('2_')) floor = '2F';
+                    else if (targetFloor && targetFloor !== 'ALL') floor = targetFloor;
+
+                    if (isPillar && !isRoof && !isBack && !isGrid) {
+                        const f = floor === 'ALL' ? (normL.includes('2F') ? '2F' : '1F') : floor;
                         let px = 0, py = 0, found = false;
 
                         // 1. 点 (POINT)
@@ -338,9 +379,8 @@ window.CadEngine = {
                             newBgLines.push(e);
                         }
                     } else {
-                        // 下絵(BACK) / 屋根(R) / その他背景線
-                        let f = targetFloor || (L.includes('1F') ? '1F' : (L.includes('2F') || L.includes('RF') ? '2F' : 'ALL'));
-                        e.floor = f; 
+                        e.floor = floor; 
+                        e.isUnderlay = isBack; // 1F_BACK / 2F_BACK 等は下絵フラグ設定 
                         e.isUnderlay = isBack; // 1F_BACK / 2F_BACK 等は下絵フラグ設定
                         if (e.type === 'LINE') {
                             if (e.start && e.end) e.vertices = [{ x: e.start.x, y: e.start.y }, { x: e.end.x, y: e.end.y }];
