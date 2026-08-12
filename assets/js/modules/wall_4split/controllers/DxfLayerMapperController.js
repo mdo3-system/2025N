@@ -160,9 +160,26 @@ window.DxfLayerMapperController = {
         slotKeys.forEach(item => {
             const fileEl = document.getElementById(item.fileId);
             if (fileEl) {
-                fileEl.onchange = () => populateSlotDropdowns();
+                fileEl.onchange = () => {
+                    populateSlotDropdowns();
+                    this.renderPreviewCanvas(parseInt(fileEl.value || 0, 10));
+                };
             }
         });
+
+        // 初回キャンバス描画
+        this.renderPreviewCanvas(0);
+
+        // キャンバスクリックで原点交点を視覚的選択
+        const cvs = document.getElementById('dxf-origin-preview-canvas');
+        if (cvs) {
+            cvs.onclick = (ev) => {
+                const rect = cvs.getBoundingClientRect();
+                const clickX = ev.clientX - rect.left;
+                const clickY = ev.clientY - rect.top;
+                this.handlePreviewCanvasClick(clickX, clickY, cvs.width, cvs.height);
+            };
+        }
 
         // 「📂 別ファイルをスロット追加ロード」ボタンのイベント接続
         const addFileEl = document.getElementById('dxf-slot-add-file');
@@ -391,6 +408,136 @@ window.DxfLayerMapperController = {
                 this.openMapper(this.currentDxfRaw, this.onConfirmCallback);
             };
             container.appendChild(reMapBtn);
+        }
+    },
+
+    /**
+     * モーダル内DXF図面キャンバス描画（ビジュアル原点指定用）
+     */
+    lastPreviewBounds: null,
+    lastGridIntersections: [],
+    selectedVisualOriginPt: null,
+
+    renderPreviewCanvas: function(fileIdx) {
+        const cvs = document.getElementById('dxf-origin-preview-canvas');
+        if (!cvs) return;
+        const ctx = cvs.getContext('2d');
+        ctx.clearRect(0, 0, cvs.width, cvs.height);
+
+        const fileObj = this.loadedFiles[fileIdx] || this.loadedFiles[0];
+        if (!fileObj || !fileObj.rawTxt) return;
+
+        const dxf = window.CadEngine ? window.CadEngine.processDxf(fileObj.rawTxt) : null;
+        if (!dxf || !dxf.entities) return;
+
+        // BoundingBox 算定
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+        const lines = [];
+
+        dxf.entities.forEach(ent => {
+            if (ent.type === 'LINE' && ent.start && ent.end) {
+                lines.push({ x1: ent.start.x, y1: ent.start.y, x2: ent.end.x, y2: ent.end.y });
+                minX = Math.min(minX, ent.start.x, ent.end.x);
+                minY = Math.min(minY, ent.start.y, ent.end.y);
+                maxX = Math.max(maxX, ent.start.x, ent.end.x);
+                maxY = Math.max(maxY, ent.start.y, ent.end.y);
+            }
+        });
+
+        if (minX === Infinity) return;
+        const w = maxX - minX || 1;
+        const h = maxY - minY || 1;
+        const padding = 20;
+        const scale = Math.min((cvs.width - padding * 2) / w, (cvs.height - padding * 2) / h);
+
+        this.lastPreviewBounds = { minX, minY, maxX, maxY, scale, padding };
+
+        // 簡易通り芯交点の解析抽出
+        const xLines = lines.filter(l => Math.abs(l.x1 - l.x2) < 5);
+        const yLines = lines.filter(l => Math.abs(l.y1 - l.y2) < 5);
+        const intersections = [];
+
+        xLines.forEach(xl => {
+            yLines.forEach(yl => {
+                const ix = (xl.x1 + xl.x2) / 2;
+                const iy = (yl.y1 + yl.y2) / 2;
+                if (!intersections.some(pt => Math.hypot(pt.x - ix, pt.y - iy) < 100)) {
+                    intersections.push({ x: ix, y: iy });
+                }
+            });
+        });
+        this.lastGridIntersections = intersections;
+
+        const toCanvas = (x, y) => ({
+            cx: padding + (x - minX) * scale,
+            cy: cvs.height - (padding + (y - minY) * scale)
+        });
+
+        // 1. 線分の描画
+        ctx.strokeStyle = '#334155';
+        ctx.lineWidth = 1;
+        lines.forEach(l => {
+            const p1 = toCanvas(l.x1, l.y1);
+            const p2 = toCanvas(l.x2, l.y2);
+            ctx.beginPath();
+            ctx.moveTo(p1.cx, p1.cy);
+            ctx.lineTo(p2.cx, p2.cy);
+            ctx.stroke();
+        });
+
+        // 2. 通り芯交点の描写 (小さい青マーク)
+        intersections.forEach(pt => {
+            const cp = toCanvas(pt.x, pt.y);
+            ctx.fillStyle = '#38bdf8';
+            ctx.beginPath();
+            ctx.arc(cp.cx, cp.cy, 3, 0, Math.PI * 2);
+            ctx.fill();
+        });
+
+        // 3. 選択中原点ターゲットマーカー (目立つ赤円 🎯)
+        const targetPt = this.selectedVisualOriginPt || (intersections.length > 0 ? intersections[0] : null);
+        if (targetPt) {
+            const cp = toCanvas(targetPt.x, targetPt.y);
+            ctx.strokeStyle = '#ef4444';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(cp.cx, cp.cy, 8, 0, Math.PI * 2);
+            ctx.stroke();
+
+            ctx.fillStyle = '#ef4444';
+            ctx.beginPath();
+            ctx.arc(cp.cx, cp.cy, 3, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    },
+
+    /**
+     * キャンバスクリック時の交点判定 ＆ 原点決定
+     */
+    handlePreviewCanvasClick: function(clickCx, clickCy, cvsW, cvsH) {
+        if (!this.lastPreviewBounds || !this.lastGridIntersections || this.lastGridIntersections.length === 0) return;
+
+        const { minX, minY, scale, padding } = this.lastPreviewBounds;
+        let closestPt = null;
+        let minDist = Infinity;
+
+        this.lastGridIntersections.forEach(pt => {
+            const cx = padding + (pt.x - minX) * scale;
+            const cy = cvsH - (padding + (pt.y - minY) * scale);
+            const d = Math.hypot(cx - clickCx, cy - clickCy);
+            if (d < minDist) {
+                minDist = d;
+                closestPt = pt;
+            }
+        });
+
+        if (closestPt) {
+            this.selectedVisualOriginPt = closestPt;
+            const infoEl = document.getElementById('preview-origin-info');
+            if (infoEl) {
+                infoEl.innerText = `🎯 基準指定交点: X=${Math.round(closestPt.x)}, Y=${Math.round(closestPt.y)}`;
+            }
+            this.renderPreviewCanvas(0);
         }
     }
 };
