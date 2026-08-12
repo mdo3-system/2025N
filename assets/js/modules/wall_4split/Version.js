@@ -1,4 +1,4 @@
 /**
  * Version.js - Centralized Version Management
  */
-window.APP_VERSION = "v3.12.19"; // Parsers.js Main Engine Background Layer Consolidation & 2F Pillar Fix Release
+window.APP_VERSION = "v3.12.20"; // Dual 1F/2F Pillar Generation & Dual 1F_BACK/2F_BACK Background Consolidation Release
