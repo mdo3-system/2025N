@@ -38,6 +38,8 @@ window.Parsers = {
 
                     let isRoof = false;
                     let isCol1F = false, isCol2F = false;
+                    let isRoof1F = false, isRoof2F = false;
+                    let isBack1F = false, isBack2F = false;
 
                     if (layerMapping) {
                         // モーダルで指定された明示的レイヤーマッピング
@@ -52,28 +54,27 @@ window.Parsers = {
                         if (gridL && normL === gridL) isGrid = true;
                         if (col1L && normL === col1L) isCol1F = true;
                         if (col2L && normL === col2L) isCol2F = true;
+                        if (!isCol1F && !isCol2F && (normL.includes('COL') || normL.includes('柱'))) {
+                            isCol1F = true; isCol2F = true;
+                        }
                         if (isCol1F || isCol2F) isCol = true;
 
-                        if (roof1L && (roof1L === '__ALL_LAYERS__' || normL === roof1L)) { floor = '1R'; ent.isRoof = true; isRoof = true; }
-                        else if (roof2L && (roof2L === '__ALL_LAYERS__' || normL === roof2L)) { floor = '2R'; ent.isRoof = true; isRoof = true; }
-                        else if (back1L && (back1L === '__ALL_LAYERS__' || normL === back1L)) { floor = '1F'; }
-                        else if (back2L && (back2L === '__ALL_LAYERS__' || normL === back2L)) { floor = '2F'; }
-                        else if (isCol1F) { floor = '1F'; }
-                        else if (isCol2F) { floor = '2F'; }
-                        else if (normL.includes('1F_R') || normL.includes('1R')) { floor = '1R'; }
-                        else if (normL.includes('2F_R') || normL.includes('2R') || normL.includes('RF')) { floor = '2R'; }
-                        else if (normL.startsWith('1F_') || normL.startsWith('1_')) { floor = '1F'; }
-                        else if (normL.startsWith('2F_') || normL.startsWith('2_')) { floor = '2F'; }
+                        if (roof1L && (roof1L === '__ALL_LAYERS__' || normL === roof1L)) { isRoof1F = true; ent.isRoof = true; isRoof = true; }
+                        if (roof2L && (roof2L === '__ALL_LAYERS__' || normL === roof2L)) { isRoof2F = true; ent.isRoof = true; isRoof = true; }
+                        if (back1L && (back1L === '__ALL_LAYERS__' || normL === back1L)) { isBack1F = true; }
+                        if (back2L && (back2L === '__ALL_LAYERS__' || normL === back2L)) { isBack2F = true; }
                     } else {
                         // 自動レイヤー判定フォールバック
                         const isBgLayer = /(BACK|Rｸﾞﾙｰﾌﾟ|グループ|背景|下図|UNDER)/i.test(L);
                         isCol = /(COL|COLUMN|柱)/i.test(L) && !isBgLayer;
-                        isCol1F = isCol && !normL.includes('2F');
-                        isCol2F = isCol && (normL.includes('2F') || !isCol1F);
+                        isCol1F = isCol;
+                        isCol2F = isCol;
                         isGrid = /(GRID|GLID|通り芯|軸線)/i.test(L) && !isBgLayer && !isCol;
-                        if (normL.includes('1F_R') || normL.includes('1R')) floor = '1R';
-                        else if (normL.includes('2F_R') || normL.includes('2R') || normL.includes('RF')) floor = '2R';
-                        else floor = normL.includes('2F') ? '2F' : (normL.includes('1F') ? '1F' : 'ALL');
+                        isRoof1F = (normL.includes('1F_R') || normL.includes('1R'));
+                        isRoof2F = (normL.includes('2F_R') || normL.includes('2R') || normL.includes('RF'));
+                        isRoof = isRoof1F || isRoof2F;
+                        isBack1F = !isGrid && !isCol && !isRoof && !normL.includes('2F');
+                        isBack2F = !isGrid && !isCol && !isRoof && normL.includes('2F');
                     }
                     
                     if (isCol && !isSub) {
@@ -86,7 +87,6 @@ window.Parsers = {
                             cy = ent.vertices.reduce((sum, v) => sum + v.y, 0) / ent.vertices.length;
                         }
                         if (cx != null && cy != null && !isNaN(cx) && !isNaN(cy)) {
-                            // 1F柱スロットと2F柱スロットの両方にマッチ（または同一指定）の場合は1Fと2Fの両方の柱を生成
                             if (isCol1F) rawPillarCandidates.push({ x: cx, y: cy, floor: '1F', layer: '1F_COL' });
                             if (isCol2F) rawPillarCandidates.push({ x: cx, y: cy, floor: '2F', layer: '2F_COL' });
                         }
@@ -98,16 +98,35 @@ window.Parsers = {
                         } else {
                             newBgLines.push({ ...ent, layer: 'GRID', floor: 'ALL', isUnderlay: false, isGridLine: true });
                         }
-                    } else {
-                        // 通り芯・柱・屋根として指定されていないすべての余剰CADレイヤー（オーバーハングライン、畳、記号、部屋、仕上等）は1F_BACK / 2F_BACKに二層集約
+                    } else if (isRoof) {
+                        const roofLayerName = isRoof2F ? '2F_ROOF' : '1F_ROOF';
+                        const roofFloor = isRoof2F ? '2R' : '1R';
                         if (['TEXT', 'MTEXT'].includes(ent.type)) {
                             const txt = ent.text || ent.string || "";
                             const pos = ent.startPoint || ent.position || ent.insertionPoint || {};
-                            newBgTexts.push({ text: txt, x: pos.x || 0, y: pos.y || 0, floor: '1F', layer: '1F_BACK', isUnderlay: true, isGridText: false });
-                            newBgTexts.push({ text: txt, x: pos.x || 0, y: pos.y || 0, floor: '2F', layer: '2F_BACK', isUnderlay: true, isGridText: false });
+                            newBgTexts.push({ text: txt, x: pos.x || 0, y: pos.y || 0, floor: roofFloor, layer: roofLayerName, isUnderlay: false, isGridText: false });
                         } else {
-                            newBgLines.push({ ...ent, layer: '1F_BACK', floor: '1F', isUnderlay: true, isGridLine: false });
-                            newBgLines.push({ ...ent, layer: '2F_BACK', floor: '2F', isUnderlay: true, isGridLine: false });
+                            newBgLines.push({ ...ent, layer: roofLayerName, floor: roofFloor, isUnderlay: false, isGridLine: false });
+                        }
+                    } else {
+                        // 通り芯・柱・屋根として指定されていない余剰CAD要素は1F_BACK / 2F_BACKの該当階のみに非重複登録
+                        if (isBack2F) {
+                            if (['TEXT', 'MTEXT'].includes(ent.type)) {
+                                const txt = ent.text || ent.string || "";
+                                const pos = ent.startPoint || ent.position || ent.insertionPoint || {};
+                                newBgTexts.push({ text: txt, x: pos.x || 0, y: pos.y || 0, floor: '2F', layer: '2F_BACK', isUnderlay: true, isGridText: false });
+                            } else {
+                                newBgLines.push({ ...ent, layer: '2F_BACK', floor: '2F', isUnderlay: true, isGridLine: false });
+                            }
+                        } else {
+                            // デフォルトは1階背景へ登録
+                            if (['TEXT', 'MTEXT'].includes(ent.type)) {
+                                const txt = ent.text || ent.string || "";
+                                const pos = ent.startPoint || ent.position || ent.insertionPoint || {};
+                                newBgTexts.push({ text: txt, x: pos.x || 0, y: pos.y || 0, floor: '1F', layer: '1F_BACK', isUnderlay: true, isGridText: false });
+                            } else {
+                                newBgLines.push({ ...ent, layer: '1F_BACK', floor: '1F', isUnderlay: true, isGridLine: false });
+                            }
                         }
                     }
                 }

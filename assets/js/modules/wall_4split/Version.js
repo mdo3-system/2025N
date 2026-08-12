@@ -1,4 +1,4 @@
 /**
  * Version.js - Centralized Version Management
  */
-window.APP_VERSION = "v3.12.20"; // Dual 1F/2F Pillar Generation & Dual 1F_BACK/2F_BACK Background Consolidation Release
+window.APP_VERSION = "v3.12.21"; // Strict Independent 1F/2F Backgrounds, Guaranteed 2F Pillar & Roof Layer Consolidation Release
