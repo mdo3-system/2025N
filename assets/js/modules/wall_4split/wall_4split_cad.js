@@ -75,14 +75,6 @@ function loadDxf(event) {
     });
 }
 
-        } catch (err) {
-            console.error(err);
-            alert("❌ DXF解析エラー: " + err.message);
-        }
-    };
-    reader.readAsArrayBuffer(file);
-}
-
 function processDxfData(dxf, isIncremental, rawDxf, targetFloor = 'ALL') {
     const state = window.AppState;
     
