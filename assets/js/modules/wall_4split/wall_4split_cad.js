@@ -43,10 +43,9 @@ function loadDxf(event) {
                         return;
                     }
 
-                    // DXFレイヤー選択・自動解析モーダルを展開（単一 / 複数対応）
+                    // DXFレイヤー選択・自動解析モーダルを展開（実際のファイル名を全件保持）
                     if (window.DxfLayerMapperController) {
-                        const inputData = fileList.length === 1 ? fileList[0].rawTxt : fileList;
-                        window.DxfLayerMapperController.openMapper(inputData, (layerMapping, rawDxfData) => {
+                        window.DxfLayerMapperController.openMapper(fileList, (layerMapping, rawDxfData) => {
                             let isIncremental = true;
                             if ((pillars && pillars.length > 0) || (bgLinesOriginal && bgLinesOriginal.length > 0)) {
                                 if (targetFloor === 'ALL') {

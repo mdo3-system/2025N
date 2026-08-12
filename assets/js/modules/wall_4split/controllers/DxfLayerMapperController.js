@@ -181,6 +181,25 @@ window.DxfLayerMapperController = {
             };
         }
 
+        // 各スロットカードの「🎯 原点指定」ボタン接続
+        document.querySelectorAll('.btn-pick-origin').forEach(btn => {
+            btn.onclick = () => {
+                const slotName = btn.getAttribute('data-slot');
+                const fileSelectId = `dxf-file-${slotName}`;
+                const fileEl = document.getElementById(fileSelectId);
+                const fileIdx = parseInt(fileEl?.value || 0, 10);
+                
+                const infoEl = document.getElementById('preview-origin-info');
+                if (infoEl) {
+                    const slotTitle = btn.parentElement?.innerText || slotName;
+                    infoEl.innerText = `🎯 【${slotTitle}】の原点プレビュー指定モード中`;
+                }
+
+                this.activeOriginSlotKey = slotName;
+                this.renderPreviewCanvas(fileIdx);
+            };
+        });
+
         // 「📂 別ファイルをスロット追加ロード」ボタンのイベント接続
         const addFileEl = document.getElementById('dxf-slot-add-file');
         if (addFileEl) {
