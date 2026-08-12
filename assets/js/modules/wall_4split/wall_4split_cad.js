@@ -10,6 +10,10 @@ function loadDxf(event) {
     const floorSelect = document.getElementById('dxf-target-floor');
     const targetFloor = floorSelect ? floorSelect.value : 'ALL';
 
+    if (window.DxfLayerMapperController && window.DxfLayerMapperController.showProgress) {
+        window.DxfLayerMapperController.showProgress(10, "📂 DXFファイルデータを読み込んでいます...");
+    }
+
     const reader = new FileReader();
     reader.onload = function(ev) {
         try {

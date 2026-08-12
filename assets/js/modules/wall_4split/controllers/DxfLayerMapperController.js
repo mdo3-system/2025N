@@ -1,11 +1,34 @@
 /**
- * controllers/DxfLayerMapperController.js - DXF Layer Mapping Assistant Modal Controller
- * v3.11.5
+ * controllers/DxfLayerMapperController.js - DXF Layer Mapping Assistant Modal Controller & Progress Bar UI
+ * v3.11.6
  */
 
 window.DxfLayerMapperController = {
     currentDxfRaw: "",
     onConfirmCallback: null,
+
+    /**
+     * プログレスバー表示
+     */
+    showProgress: function(percent, message) {
+        const modal = document.getElementById('modal-dxf-loading');
+        const bar = document.getElementById('dxf-loading-bar');
+        const msg = document.getElementById('dxf-loading-msg');
+        const pct = document.getElementById('dxf-loading-percent');
+
+        if (modal) modal.style.display = 'flex';
+        if (bar) bar.style.width = `${percent}%`;
+        if (msg) msg.innerText = message;
+        if (pct) pct.innerText = `${percent}%`;
+    },
+
+    /**
+     * プログレスバー非表示
+     */
+    closeProgress: function() {
+        const modal = document.getElementById('modal-dxf-loading');
+        if (modal) modal.style.display = 'none';
+    },
 
     /**
      * DXFレイヤーマッピングモーダルを開く
@@ -100,7 +123,7 @@ window.DxfLayerMapperController = {
     },
 
     /**
-     * 設定を確定して解析コールバックを実行
+     * 設定を確定して非同期プログレスバー付きで解析を実行
      */
     confirmAndExecute: function() {
         const mapping = {
@@ -115,9 +138,27 @@ window.DxfLayerMapperController = {
 
         this.closeMapper();
 
-        if (typeof this.onConfirmCallback === 'function') {
-            this.onConfirmCallback(mapping, this.currentDxfRaw);
-        }
+        // 段階的プログレスアニメーション表示
+        this.showProgress(15, "📂 DXF構造データをメモリにロードしています...");
+
+        setTimeout(() => {
+            this.showProgress(45, "⚙️ レイヤー構造および直線・柱の幾何要素を抽出中...");
+
+            setTimeout(() => {
+                this.showProgress(75, "📐 通り芯（グリッド）交点へ柱を100%厳密スナップ処理中...");
+
+                setTimeout(() => {
+                    if (typeof this.onConfirmCallback === 'function') {
+                        this.onConfirmCallback(mapping, this.currentDxfRaw);
+                    }
+
+                    this.showProgress(100, "🎨 画面描画と計算結果を更新完了！");
+                    setTimeout(() => {
+                        this.closeProgress();
+                    }, 400);
+                }, 100);
+            }, 100);
+        }, 100);
     }
 };
 
