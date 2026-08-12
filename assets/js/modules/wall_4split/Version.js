@@ -1,4 +1,4 @@
 /**
  * Version.js - Centralized Version Management
  */
-window.APP_VERSION = "v3.11.15"; // Manual Layer Control: Render all layers checked in layerVisibility panel, update UI instructions
+window.APP_VERSION = "v3.12.0"; // Final Consolidated Release: Pure layerPanel control, DXF mapper, Refactored SRP architecture
