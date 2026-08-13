@@ -116,8 +116,8 @@ function renderLayerPanel() {
  * 「🎨 DXFレイヤ表示設定」モーダルパネルの動的描画
  */
 window.renderLayerPanel = function() {
-    const container = document.getElementById('dxf-layer-toggle-container');
-    if (!container) return;
+    const container = document.getElementById('dxf-layer-toggle-container') || document.getElementById('layer-list-container');
+    const container2 = document.getElementById('layer-list-container');
 
     const s = window.AppState;
     if (!s.layerVisibility) s.layerVisibility = {};
@@ -163,16 +163,21 @@ window.renderLayerPanel = function() {
     });
 
     html += '</div>';
-    container.innerHTML = html;
+    if (container) container.innerHTML = html;
+    if (container2 && container2 !== container) container2.innerHTML = html;
 
-    // トグル変更イベントハンドラーバインド
-    container.querySelectorAll('.dxf-layer-toggle-cb').forEach(cb => {
-        cb.onchange = (e) => {
-            const layerKey = e.target.getAttribute('data-layer');
-            s.layerVisibility[layerKey] = e.target.checked;
-            if (window.AppController && window.AppController.refreshAll) {
-                window.AppController.refreshAll();
-            }
-        };
-    });
+    const bindCBs = (targetEl) => {
+        if (!targetEl) return;
+        targetEl.querySelectorAll('.dxf-layer-toggle-cb').forEach(cb => {
+            cb.onchange = (e) => {
+                const layerKey = e.target.getAttribute('data-layer');
+                s.layerVisibility[layerKey] = e.target.checked;
+                if (window.AppController && window.AppController.refreshAll) {
+                    window.AppController.refreshAll();
+                }
+            };
+        });
+    };
+    bindCBs(container);
+    bindCBs(container2);
 };

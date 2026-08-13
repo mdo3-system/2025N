@@ -4,6 +4,15 @@
  */
 
 window.ModalController = {
+
+    openDxfLayerToggleModal: function() {
+        if (typeof window.renderLayerPanel === 'function') {
+            window.renderLayerPanel();
+        }
+        const modal = document.getElementById('modal-dxf-layer-toggle') || document.getElementById('modal-dxf-layer') || document.getElementById('modal-dxf-layer-visibility');
+        if (modal) modal.style.display = 'flex';
+    },
+
     // Aliases for compatibility
     openPropertyModal: function(hit) {
         if (window.PropertyController) window.PropertyController.openGeneralModal(hit);
