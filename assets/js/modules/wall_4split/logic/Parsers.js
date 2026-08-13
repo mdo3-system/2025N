@@ -21,7 +21,7 @@ window.Parsers = {
 
         const rawPillarCandidates = [];
 
-        function collect(entities, blocks, parentLayer = "") {
+        function collect(entities, blocks, parentLayer = "", parentX = 0, parentY = 0) {
             entities.forEach(ent => {
                 let L = (ent.layer || "").toUpperCase().trim();
                 if (!L || L === "0") L = (parentLayer || "0").toUpperCase().trim();
@@ -29,7 +29,9 @@ window.Parsers = {
 
                 if (ent.type === 'INSERT') {
                     const block = blocks[ent.name];
-                    if (block && block.entities) collect(block.entities, blocks, L);
+                    const posX = (ent.position ? ent.position.x : (ent.insertionPoint ? ent.insertionPoint.x : 0));
+                    const posY = (ent.position ? ent.position.y : (ent.insertionPoint ? ent.insertionPoint.y : 0));
+                    if (block && block.entities) collect(block.entities, blocks, L, parentX + posX, parentY + posY);
                 } else {
                     let isGrid = false, isCol = false, floor = 'ALL';
 
@@ -88,45 +90,60 @@ window.Parsers = {
                             cy = ent.vertices.reduce((sum, v) => sum + v.y, 0) / ent.vertices.length;
                         }
                         if (cx != null && cy != null && !isNaN(cx) && !isNaN(cy)) {
+                            cx += parentX; cy += parentY;
                             if (isCol1F) rawPillarCandidates.push({ x: cx, y: cy, floor: '1F', layer: '1F_COL' });
                             if (isCol2F) rawPillarCandidates.push({ x: cx, y: cy, floor: '2F', layer: '2F_COL' });
                         }
-                    } else if (isGrid) {
-                        if (['TEXT', 'MTEXT'].includes(ent.type)) {
-                            const txt = ent.text || ent.string || "";
-                            const pos = ent.startPoint || ent.position || ent.insertionPoint || {};
-                            newBgTexts.push({ text: txt, x: pos.x || 0, y: pos.y || 0, floor: 'ALL', layer: 'GRID', isUnderlay: false, isGridText: true });
-                        } else {
-                            newBgLines.push({ ...ent, layer: 'GRID', floor: 'ALL', isUnderlay: false, isGridLine: true });
-                        }
-                    } else if (isRoof) {
-                        const roofLayerName = isRoof2F ? '2F_ROOF' : '1F_ROOF';
-                        const roofFloor = isRoof2F ? '2R' : '1R';
-                        if (['TEXT', 'MTEXT'].includes(ent.type)) {
-                            const txt = ent.text || ent.string || "";
-                            const pos = ent.startPoint || ent.position || ent.insertionPoint || {};
-                            newBgTexts.push({ text: txt, x: pos.x || 0, y: pos.y || 0, floor: roofFloor, layer: roofLayerName, isUnderlay: false, isGridText: false });
-                        } else {
-                            newBgLines.push({ ...ent, layer: roofLayerName, floor: roofFloor, isUnderlay: false, isGridLine: false });
-                        }
                     } else {
-                        // 通り芯・柱・屋根として指定されていない余剰CAD要素は1F_BACK / 2F_BACKの該当階のみに非重複登録
-                        if (isBack2F) {
-                            if (['TEXT', 'MTEXT'].includes(ent.type)) {
-                                const txt = ent.text || ent.string || "";
-                                const pos = ent.startPoint || ent.position || ent.insertionPoint || {};
-                                newBgTexts.push({ text: txt, x: pos.x || 0, y: pos.y || 0, floor: '2F', layer: '2F_BACK', isUnderlay: true, isGridText: false });
+                        // 線分やテキストのワールド座標オフセット反映
+                        const applyOffset = (e) => {
+                            const clone = JSON.parse(JSON.stringify(e));
+                            if (clone.start) { clone.start.x += parentX; clone.start.y += parentY; }
+                            if (clone.end) { clone.end.x += parentX; clone.end.y += parentY; }
+                            if (clone.vertices) {
+                                clone.vertices.forEach(v => { v.x += parentX; v.y += parentY; });
+                            }
+                            if (clone.center) { clone.center.x += parentX; clone.center.y += parentY; }
+                            if (clone.position) { clone.position.x += parentX; clone.position.y += parentY; }
+                            return clone;
+                        };
+                        const offEnt = (parentX || parentY) ? applyOffset(ent) : ent;
+
+                        if (isGrid) {
+                            if (['TEXT', 'MTEXT'].includes(offEnt.type)) {
+                                const txt = offEnt.text || offEnt.string || "";
+                                const pos = offEnt.startPoint || offEnt.position || offEnt.insertionPoint || {};
+                                newBgTexts.push({ text: txt, x: (pos.x || 0), y: (pos.y || 0), floor: 'ALL', layer: 'GRID', isUnderlay: false, isGridText: true });
                             } else {
-                                newBgLines.push({ ...ent, layer: '2F_BACK', floor: '2F', isUnderlay: true, isGridLine: false });
+                                newBgLines.push({ ...offEnt, layer: 'GRID', floor: 'ALL', isUnderlay: false, isGridLine: true });
+                            }
+                        } else if (isRoof) {
+                            const roofLayerName = isRoof2F ? '2F_ROOF' : '1F_ROOF';
+                            const roofFloor = isRoof2F ? '2R' : '1R';
+                            if (['TEXT', 'MTEXT'].includes(offEnt.type)) {
+                                const txt = offEnt.text || offEnt.string || "";
+                                const pos = offEnt.startPoint || offEnt.position || offEnt.insertionPoint || {};
+                                newBgTexts.push({ text: txt, x: (pos.x || 0), y: (pos.y || 0), floor: roofFloor, layer: roofLayerName, isUnderlay: false, isGridText: false });
+                            } else {
+                                newBgLines.push({ ...offEnt, layer: roofLayerName, floor: roofFloor, isUnderlay: false, isGridLine: false });
                             }
                         } else {
-                            // デフォルトは1階背景へ登録
-                            if (['TEXT', 'MTEXT'].includes(ent.type)) {
-                                const txt = ent.text || ent.string || "";
-                                const pos = ent.startPoint || ent.position || ent.insertionPoint || {};
-                                newBgTexts.push({ text: txt, x: pos.x || 0, y: pos.y || 0, floor: '1F', layer: '1F_BACK', isUnderlay: true, isGridText: false });
+                            if (isBack2F) {
+                                if (['TEXT', 'MTEXT'].includes(offEnt.type)) {
+                                    const txt = offEnt.text || offEnt.string || "";
+                                    const pos = offEnt.startPoint || offEnt.position || offEnt.insertionPoint || {};
+                                    newBgTexts.push({ text: txt, x: (pos.x || 0), y: (pos.y || 0), floor: '2F', layer: '2F_BACK', isUnderlay: true, isGridText: false });
+                                } else {
+                                    newBgLines.push({ ...offEnt, layer: '2F_BACK', floor: '2F', isUnderlay: true, isGridLine: false });
+                                }
                             } else {
-                                newBgLines.push({ ...ent, layer: '1F_BACK', floor: '1F', isUnderlay: true, isGridLine: false });
+                                if (['TEXT', 'MTEXT'].includes(offEnt.type)) {
+                                    const txt = offEnt.text || offEnt.string || "";
+                                    const pos = offEnt.startPoint || offEnt.position || offEnt.insertionPoint || {};
+                                    newBgTexts.push({ text: txt, x: (pos.x || 0), y: (pos.y || 0), floor: '1F', layer: '1F_BACK', isUnderlay: true, isGridText: false });
+                                } else {
+                                    newBgLines.push({ ...offEnt, layer: '1F_BACK', floor: '1F', isUnderlay: true, isGridLine: false });
+                                }
                             }
                         }
                     }
