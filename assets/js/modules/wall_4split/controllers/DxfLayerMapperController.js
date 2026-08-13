@@ -531,6 +531,12 @@ window.DxfLayerMapperController = {
         if (window.AppController && window.AppController.refreshAll) {
             window.AppController.refreshAll();
         }
+        setTimeout(() => {
+            if (typeof window.zoomFit === 'function') {
+                window.zoomFit();
+                console.log('✅ [DXF Wizard] Auto-triggered zoomFit after import completion!');
+            }
+        }, 150);
     },
 
     /**
