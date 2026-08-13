@@ -617,9 +617,9 @@ window.DxfLayerMapperController = {
             if (this.established1FGridLines.length === 0) this.established1FGridLines = rawLines.slice(0, 100);
         }
 
-        // 全交点候補の計算
-        const vertLines = rawLines.filter(l => Math.abs(l.x1 - l.x2) < 80);
-        const horizLines = rawLines.filter(l => Math.abs(l.y1 - l.y2) < 80);
+        // 全交点候補の計算（二重ループ上限40本制限で爆速化＆フリーズ防止）
+        const vertLines = rawLines.filter(l => Math.abs(l.x1 - l.x2) < 80).slice(0, 40);
+        const horizLines = rawLines.filter(l => Math.abs(l.y1 - l.y2) < 80).slice(0, 40);
         const intersections = [];
 
         vertLines.forEach(vl => {
