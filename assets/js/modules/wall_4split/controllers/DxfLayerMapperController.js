@@ -226,7 +226,7 @@ window.DxfLayerMapperController = {
                 const slotName = btn.getAttribute('data-slot');
                 const fileSelectId = `dxf-file-${slotName}`;
                 const fileEl = document.getElementById(fileSelectId);
-                const fileIdx = parseInt(fileEl?.value || 0, 10);
+                const fileIdx = Math.min(Math.max(parseInt(fileEl?.value || 0, 10), 0), (this.loadedFiles?.length || 1) - 1);
                 
                 const infoEl = document.getElementById('preview-origin-info');
                 if (infoEl) {
