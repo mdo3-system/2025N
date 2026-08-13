@@ -480,6 +480,8 @@ closeModal: function() {
 
     /**
      * 高速DXFストリーミングスキャナー (BLOCKS / INSERT 展開対応)
+         /**
+     * 高速DXFストリーミングスキャナー (BLOCKS / INSERT 展開対応)
      */
     parseDxfRawLinesDirect: function(rawTxt) {
         const lines = [];
@@ -491,7 +493,35 @@ closeModal: function() {
         let curBlockName = null;
         let curBlockEnts = [];
         let inserts = [];
+
         let curType = null, curLayer = "", curX1 = null, curY1 = null, curX2 = null, curY2 = null, curR = null;
+
+        const pushBlockEnt = () => {
+            if (!curType) return;
+            if (curType === 'LINE' && curX1 !== null && curY1 !== null && curX2 !== null && curY2 !== null) {
+                curBlockEnts.push({ type: 'LINE', layer: curLayer, x1: curX1, y1: curY1, x2: curX2, y2: curY2 });
+            } else if (curType === 'CIRCLE' && curX1 !== null && curY1 !== null) {
+                const r = curR || 100;
+                curBlockEnts.push({ type: 'CIRCLE', layer: curLayer, x1: curX1 - r, y1: curY1, x2: curX1 + r, y2: curY1 });
+                curBlockEnts.push({ type: 'CIRCLE', layer: curLayer, x1: curX1, y1: curY1 - r, x2: curX1, y2: curY1 + r });
+            }
+        };
+
+        const pushEntity = () => {
+            if (!curType) return;
+            if (curType === 'LINE' && curX1 !== null && curY1 !== null && curX2 !== null && curY2 !== null) {
+                lines.push({ type: 'LINE', layer: curLayer, x1: curX1, y1: curY1, x2: curX2, y2: curY2 });
+            } else if (curType === 'CIRCLE' && curX1 !== null && curY1 !== null) {
+                const r = curR || 100;
+                lines.push({ type: 'CIRCLE', layer: curLayer, x1: curX1 - r, y1: curY1, x2: curX1 + r, y2: curY1 });
+                lines.push({ type: 'CIRCLE', layer: curLayer, x1: curX1, y1: curY1 - r, x2: curX1, y2: curY1 + r });
+            } else if (curType === 'POINT' && curX1 !== null && curY1 !== null) {
+                lines.push({ type: 'POINT', layer: curLayer, x1: curX1 - 50, y1: curY1, x2: curX1 + 50, y2: curY1 });
+                lines.push({ type: 'POINT', layer: curLayer, x1: curX1, y1: curY1 - 50, x2: curX1, y2: curY1 + 50 });
+            } else if (curType === 'INSERT' && curBlockName && curX1 !== null && curY1 !== null) {
+                inserts.push({ name: curBlockName, layer: curLayer, x: curX1, y: curY1 });
+            }
+        };
 
         for (let i = 0; i < rawLines.length - 1; i++) {
             const code = rawLines[i].trim();
@@ -505,20 +535,15 @@ closeModal: function() {
             if (code === '0' && val === 'ENDSEC') section = null;
 
             if (section === 'BLOCKS') {
-                if (code === '0' && val === 'BLOCK') { curBlockName = null; curBlockEnts = []; }
+                if (code === '0' && val === 'BLOCK') { pushBlockEnt(); curBlockName = null; curBlockEnts = []; }
                 if (code === '2' && !curBlockName) curBlockName = val;
                 if (code === '0' && val === 'ENDBLK') {
+                    pushBlockEnt();
                     if (curBlockName) blocks[curBlockName] = curBlockEnts;
-                    curBlockName = null;
+                    curBlockName = null; curBlockEnts = [];
                 }
                 if (curBlockName && code === '0' && val !== 'BLOCK') {
-                    if (curType === 'LINE' && curX1 !== null && curY1 !== null && curX2 !== null && curY2 !== null) {
-                        curBlockEnts.push({ type: 'LINE', layer: curLayer, x1: curX1, y1: curY1, x2: curX2, y2: curY2 });
-                    } else if (curType === 'CIRCLE' && curX1 !== null && curY1 !== null) {
-                        const r = curR || 100;
-                        curBlockEnts.push({ type: 'CIRCLE', layer: curLayer, x1: curX1 - r, y1: curY1, x2: curX1 + r, y2: curY1 });
-                        curBlockEnts.push({ type: 'CIRCLE', layer: curLayer, x1: curX1, y1: curY1 - r, x2: curX1, y2: curY1 + r });
-                    }
+                    pushBlockEnt();
                     curType = val; curLayer = ""; curX1 = null; curY1 = null; curX2 = null; curY2 = null; curR = null;
                 }
                 if (curBlockName) {
@@ -533,18 +558,7 @@ closeModal: function() {
 
             if (section === 'ENTITIES' || (!section && code === '0')) {
                 if (code === '0') {
-                    if (curType === 'LINE' && curX1 !== null && curY1 !== null && curX2 !== null && curY2 !== null) {
-                        lines.push({ type: 'LINE', layer: curLayer, x1: curX1, y1: curY1, x2: curX2, y2: curY2 });
-                    } else if (curType === 'CIRCLE' && curX1 !== null && curY1 !== null) {
-                        const r = curR || 100;
-                        lines.push({ type: 'CIRCLE', layer: curLayer, x1: curX1 - r, y1: curY1, x2: curX1 + r, y2: curY1 });
-                        lines.push({ type: 'CIRCLE', layer: curLayer, x1: curX1, y1: curY1 - r, x2: curX1, y2: curY1 + r });
-                    } else if (curType === 'POINT' && curX1 !== null && curY1 !== null) {
-                        lines.push({ type: 'POINT', layer: curLayer, x1: curX1 - 50, y1: curY1, x2: curX1 + 50, y2: curY1 });
-                        lines.push({ type: 'POINT', layer: curLayer, x1: curX1, y1: curY1 - 50, x2: curX1, y2: curY1 + 50 });
-                    } else if (curType === 'INSERT' && curBlockName && curX1 !== null && curY1 !== null) {
-                        inserts.push({ name: curBlockName, layer: curLayer, x: curX1, y: curY1 });
-                    }
+                    pushEntity();
                     curType = val; curLayer = ""; curBlockName = null; curX1 = null; curY1 = null; curX2 = null; curY2 = null; curR = null;
                 }
                 if (code === '8') curLayer = val;
@@ -556,6 +570,7 @@ closeModal: function() {
                 if (code === '40') curR = parseFloat(val);
             }
         }
+        pushEntity();
 
         inserts.forEach(ins => {
             const blkEnts = blocks[ins.name] || [];
@@ -586,15 +601,15 @@ closeModal: function() {
         let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
         let lines = [];
 
+        const addPt = (x, y) => {
+            if (x == null || y == null || isNaN(x) || isNaN(y)) return;
+            minX = Math.min(minX, x); minY = Math.min(minY, y);
+            maxX = Math.max(maxX, x); maxY = Math.max(maxY, y);
+        };
+
         try {
             const dxf = window.CadEngine ? window.CadEngine.processDxf(fileObj.rawTxt) : null;
             if (dxf && dxf.entities) {
-                const addPt = (x, y) => {
-                    if (x == null || y == null || isNaN(x) || isNaN(y)) return;
-                    minX = Math.min(minX, x); minY = Math.min(minY, y);
-                    maxX = Math.max(maxX, x); maxY = Math.max(maxY, y);
-                };
-
                 function collectEntities(entities, blocks, parentX = 0, parentY = 0, depth = 0) {
                     if (!entities || depth > 5) return;
                     for (let i = 0; i < Math.min(entities.length, 10000); i++) {
@@ -637,8 +652,8 @@ closeModal: function() {
         if (lines.length === 0) {
             lines = this.parseDxfRawLinesDirect(fileObj.rawTxt);
             lines.forEach(l => {
-                minX = Math.min(minX, l.x1, l.x2); minY = Math.min(minY, l.y1, l.y2);
-                maxX = Math.max(maxX, l.x1, l.x2); maxY = Math.max(maxY, l.y1, l.y2);
+                addPt(l.x1, l.y1);
+                addPt(l.x2, l.y2);
             });
         }
 
@@ -751,9 +766,6 @@ closeModal: function() {
         }
     },
 
-    /**
-     * キャンバスイベント初期化（ホイールズーム、ドラッグパン、交点磁石スナップ）
-     */
     initPreviewCanvasEvents: function() {
         const cvs = document.getElementById('dxf-origin-preview-canvas');
         if (!cvs) return;

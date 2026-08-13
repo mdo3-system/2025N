@@ -137,22 +137,15 @@ window.Parsers = {
                                 newBgLines.push({ ...offEnt, layer: roofLayerName, originalLayer: origL, floor: roofFloor, isUnderlay: false, isGridLine: false });
                             }
                         } else {
-                            if (isBack2F) {
-                                if (['TEXT', 'MTEXT'].includes(offEnt.type)) {
-                                    const txt = offEnt.text || offEnt.string || "";
-                                    const pos = offEnt.startPoint || offEnt.position || offEnt.insertionPoint || {};
-                                    newBgTexts.push({ text: txt, x: (pos.x || 0), y: (pos.y || 0), floor: '2F', layer: '2F_BACK', originalLayer: origL, isUnderlay: true, isGridText: false });
-                                } else {
-                                    newBgLines.push({ ...offEnt, layer: '2F_BACK', originalLayer: origL, floor: '2F', isUnderlay: true, isGridLine: false });
-                                }
+                            const isFloor2F = (layerMapping && layerMapping.targetFloor === '2F') || isBack2F;
+                            const targetFloorName = isFloor2F ? '2F' : '1F';
+                            const targetLayerName = isFloor2F ? '2F_BACK' : '1F_BACK';
+                            if (['TEXT', 'MTEXT'].includes(offEnt.type)) {
+                                const txt = offEnt.text || offEnt.string || "";
+                                const pos = offEnt.startPoint || offEnt.position || offEnt.insertionPoint || {};
+                                newBgTexts.push({ text: txt, x: (pos.x || 0), y: (pos.y || 0), floor: targetFloorName, layer: targetLayerName, originalLayer: origL, isUnderlay: true, isGridText: false });
                             } else {
-                                if (['TEXT', 'MTEXT'].includes(offEnt.type)) {
-                                    const txt = offEnt.text || offEnt.string || "";
-                                    const pos = offEnt.startPoint || offEnt.position || offEnt.insertionPoint || {};
-                                    newBgTexts.push({ text: txt, x: (pos.x || 0), y: (pos.y || 0), floor: '1F', layer: '1F_BACK', originalLayer: origL, isUnderlay: true, isGridText: false });
-                                } else {
-                                    newBgLines.push({ ...offEnt, layer: '1F_BACK', originalLayer: origL, floor: '1F', isUnderlay: true, isGridLine: false });
-                                }
+                                newBgLines.push({ ...offEnt, layer: targetLayerName, originalLayer: origL, floor: targetFloorName, isUnderlay: true, isGridLine: false });
                             }
                         }
                     }
