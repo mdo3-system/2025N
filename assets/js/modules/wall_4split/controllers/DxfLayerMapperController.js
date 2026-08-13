@@ -109,24 +109,32 @@ window.DxfLayerMapperController = {
             const selectEl = document.getElementById(item.selectId);
             if (!fileEl || !selectEl) return;
 
-            // 各スロットに最も適合するファイルを自動推定 (Auto File Matching)
+            // 各スロットに最も適合するファイルを自動推定 (Auto File Matching: 1F/2F と 1RF/2RF を厳密分離)
             const autoSelectFileIdxForSlot = (slotKey) => {
                 if (!this.loadedFiles || this.loadedFiles.length === 0) return 0;
-                let patterns = [];
-                if (slotKey === 'col1F' || slotKey === 'back1F') {
-                    patterns = [/1F_COL/i, /1F_BACK/i, /1F/i, /1階/i, /1_BACK/i, /1_COL/i];
-                } else if (slotKey === 'col2F' || slotKey === 'back2F') {
-                    patterns = [/2F_COL/i, /2F_BACK/i, /2F/i, /2階/i, /2_BACK/i, /2_COL/i];
-                } else if (slotKey === 'roof1F') {
-                    patterns = [/1F_R/i, /1R/i, /1RF/i, /1F.*(屋根|下屋)/i, /下屋/i];
-                } else if (slotKey === 'roof2F') {
-                    patterns = [/2F_R/i, /2R/i, /2RF/i, /RF/i, /2F.*屋根/i, /大屋根/i, /屋根/i];
-                } else if (slotKey === 'grid') {
-                    patterns = [/GRID/i, /GLID/i, /通り芯/i, /軸線/i, /1F/i];
+                
+                const isRoofFile = (name) => /(?:1RF|2RF|RF|屋根|下屋|大屋根|\b1R\b|\b2R\b)/i.test(name);
+
+                for (let idx = 0; idx < this.loadedFiles.length; idx++) {
+                    const name = this.loadedFiles[idx].name || "";
+
+                    if (slotKey === 'roof1F') {
+                        if (/(?:1RF|1R|下屋)/i.test(name) || (/(?:1F|1階)/i.test(name) && /(?:屋根|R)/i.test(name))) return idx;
+                    } else if (slotKey === 'roof2F') {
+                        if (/(?:2RF|2R|RF|大屋根|屋根)/i.test(name) || (/(?:2F|2階)/i.test(name) && /(?:屋根|R)/i.test(name))) return idx;
+                    } else if (slotKey === 'col1F' || slotKey === 'back1F') {
+                        if (!isRoofFile(name) && /(?:1F|1階|1_COL|1_BACK)/i.test(name)) return idx;
+                    } else if (slotKey === 'col2F' || slotKey === 'back2F') {
+                        if (!isRoofFile(name) && /(?:2F|2階|2_COL|2_BACK)/i.test(name)) return idx;
+                    } else if (slotKey === 'grid') {
+                        if (/(?:GRID|GLID|通り芯|軸線)/i.test(name)) return idx;
+                    }
                 }
-                for (const pat of patterns) {
-                    const idx = this.loadedFiles.findIndex(f => pat.test(f.name));
-                    if (idx >= 0) return idx;
+
+                // 2周目セカンドフォールバック
+                if (slotKey === 'grid') {
+                    const firstNonRoof = this.loadedFiles.findIndex(f => !isRoofFile(f.name));
+                    if (firstNonRoof >= 0) return firstNonRoof;
                 }
                 return 0;
             };
@@ -165,14 +173,29 @@ window.DxfLayerMapperController = {
                 selectEl.appendChild(allOpt);
             }
 
+            const findAutoLayerInFile = (layers, slotKey) => {
+                if (!layers || layers.length === 0) return "";
+                let pat = null;
+                if (slotKey === 'grid') pat = /(GRID|GLID|通り芯|軸線)/i;
+                else if (slotKey === 'col1F') pat = /(1F_COL|1F.*COL|1F.*柱|COL|COLUMN|柱)/i;
+                else if (slotKey === 'col2F') pat = /(2F_COL|2F.*COL|2F.*柱|COL|COLUMN|柱)/i;
+                else if (slotKey === 'roof1F') pat = /(1F_R|1R|1RF|屋根|下屋)/i;
+                else if (slotKey === 'roof2F') pat = /(2F_R|2R|2RF|RF|大屋根|屋根)/i;
+                else if (slotKey === 'back1F') pat = /(1F_BACK|1_BACK|1F.*背景|1F.*下図|BACK|背景|下図)/i;
+                else if (slotKey === 'back2F') pat = /(2F_BACK|2_BACK|2F.*背景|2F.*下図|BACK|背景|下図)/i;
+                return (pat && layers.find(l => pat.test(l))) || "";
+            };
+
+            const autoMatchedLayer = findAutoLayerInFile(fileLayers, item.selectedKey);
+
             fileLayers.forEach(l => {
                 const opt = document.createElement('option');
                 opt.value = l;
                 opt.text = l;
-                // 現在の選択値または自動推定値が「該当ファイル」のレイヤー一覧に実在する場合のみ選択状態にする
-                if (currentLayerVal) {
+                // 現在の選択値またはファイル内自動マッチング値が実在する場合に選択状態にする
+                if (currentLayerVal && fileLayers.includes(currentLayerVal)) {
                     if (currentLayerVal === l) opt.selected = true;
-                } else if (autoMap[item.selectedKey] === l) {
+                } else if (autoMatchedLayer === l) {
                     opt.selected = true;
                 }
                 selectEl.appendChild(opt);
