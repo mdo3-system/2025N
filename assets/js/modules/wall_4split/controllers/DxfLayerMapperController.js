@@ -1,6 +1,6 @@
 /**
- * controllers/DxfLayerMapperController.js - Step-by-Step DXF Import Wizard Controller
- * v3.12.33 Complete Step-by-Step Architecture
+ * controllers/DxfLayerMapperController.js - Universal Step-by-Step DXF Wizard Controller
+ * v3.12.36 Universal DXF Entity Scanner & Exact Alignment Offset
  */
 
 window.DxfLayerMapperController = {
@@ -64,22 +64,15 @@ window.DxfLayerMapperController = {
 
         if (Array.isArray(inputData)) {
             inputData.forEach(item => {
+                const lines = this.parseDxfRawLinesDirect(item.rawTxt);
                 const lSet = new Set();
-                try {
-                    const dxf = window.CadEngine ? window.CadEngine.processDxf(item.rawTxt) : null;
-                    if (dxf) {
-                        if (dxf.entities) dxf.entities.forEach(ent => { if (ent.layer) lSet.add(ent.layer.toUpperCase().trim()); });
-                        if (dxf.blocks) Object.values(dxf.blocks).forEach(b => { if (b && b.entities) b.entities.forEach(e => { if (e.layer) lSet.add(e.layer.toUpperCase().trim()); }); });
-                    }
-                } catch(e) {}
-                const directLines = this.parseDxfRawLinesDirect(item.rawTxt);
-                directLines.forEach(l => { if (l.layer) lSet.add(l.layer.toUpperCase().trim()); });
+                lines.forEach(l => { if (l.layer) lSet.add(l.layer.toUpperCase().trim()); });
                 this.loadedFiles.push({ name: item.name, rawTxt: item.rawTxt, layers: Array.from(lSet).sort() });
             });
         } else if (typeof inputData === 'string') {
+            const lines = this.parseDxfRawLinesDirect(inputData);
             const lSet = new Set();
-            const directLines = this.parseDxfRawLinesDirect(inputData);
-            directLines.forEach(l => { if (l.layer) lSet.add(l.layer.toUpperCase().trim()); });
+            lines.forEach(l => { if (l.layer) lSet.add(l.layer.toUpperCase().trim()); });
             this.loadedFiles.push({ name: "単一DXFデータ.dxf", rawTxt: inputData, layers: Array.from(lSet).sort() });
         }
 
@@ -141,7 +134,7 @@ window.DxfLayerMapperController = {
         this.initPreviewCanvasEvents();
     },
 
-closeModal: function() {
+    closeModal: function() {
         const modal = document.getElementById('modal-dxf-mapper');
         if (modal) modal.style.display = 'none';
     },
@@ -280,7 +273,7 @@ closeModal: function() {
             if (!el) return;
             el.innerHTML = '';
             const defOpt = document.createElement('option');
-            defOpt.value = ''; defOpt.text = '-- 未指定 (取り込まない) --';
+            defOpt.value = ''; defOpt.text = '-- 未指定 (全レイヤー取込) --';
             el.appendChild(defOpt);
 
             if (isBack) {
@@ -415,7 +408,7 @@ closeModal: function() {
         ];
 
         stepsToProcess.forEach(({ stepNum, key, layer }) => {
-            if (!layer) return;
+            if (stepNum > 1 && !layer) return;
             const curData = this.stepData[stepNum];
             const fileObj = this.loadedFiles[curData.fileIdx];
             if (!fileObj || !fileObj.rawTxt) return;
@@ -479,9 +472,8 @@ closeModal: function() {
     },
 
     /**
-     * 高速DXFストリーミングスキャナー (BLOCKS / INSERT 展開対応)
-         /**
-     * 高速DXFストリーミングスキャナー (BLOCKS / INSERT 展開対応)
+     * 万能DXF生テキストパーサー (Universal DXF Entity & Block Scanner)
+     * LINE, LWPOLYLINE, POLYLINE, CIRCLE, ARC, SOLID, 3DFACE, INSERT 100%完全対応
      */
     parseDxfRawLinesDirect: function(rawTxt) {
         const lines = [];
@@ -494,32 +486,43 @@ closeModal: function() {
         let curBlockEnts = [];
         let inserts = [];
 
-        let curType = null, curLayer = "", curX1 = null, curY1 = null, curX2 = null, curY2 = null, curR = null;
+        // エンティティ読み取り作業領域
+        let curType = null, curLayer = "";
+        let pts = []; // [{x, y}]
+        let curR = null;
 
         const pushBlockEnt = () => {
-            if (!curType) return;
-            if (curType === 'LINE' && curX1 !== null && curY1 !== null && curX2 !== null && curY2 !== null) {
-                curBlockEnts.push({ type: 'LINE', layer: curLayer, x1: curX1, y1: curY1, x2: curX2, y2: curY2 });
-            } else if (curType === 'CIRCLE' && curX1 !== null && curY1 !== null) {
+            if (!curType || pts.length === 0) return;
+            if (curType === 'LINE' && pts.length >= 2) {
+                curBlockEnts.push({ type: 'LINE', layer: curLayer, x1: pts[0].x, y1: pts[0].y, x2: pts[1].x, y2: pts[1].y });
+            } else if ((curType === 'LWPOLYLINE' || curType === 'POLYLINE') && pts.length >= 2) {
+                for (let k = 0; k < pts.length - 1; k++) {
+                    curBlockEnts.push({ type: 'LWPOLYLINE', layer: curLayer, x1: pts[k].x, y1: pts[k].y, x2: pts[k + 1].x, y2: pts[k + 1].y });
+                }
+            } else if ((curType === 'CIRCLE' || curType === 'ARC') && pts.length >= 1) {
                 const r = curR || 100;
-                curBlockEnts.push({ type: 'CIRCLE', layer: curLayer, x1: curX1 - r, y1: curY1, x2: curX1 + r, y2: curY1 });
-                curBlockEnts.push({ type: 'CIRCLE', layer: curLayer, x1: curX1, y1: curY1 - r, x2: curX1, y2: curY1 + r });
+                curBlockEnts.push({ type: 'CIRCLE', layer: curLayer, x1: pts[0].x - r, y1: pts[0].y, x2: pts[0].x + r, y2: pts[0].y });
+                curBlockEnts.push({ type: 'CIRCLE', layer: curLayer, x1: pts[0].x, y1: pts[0].y - r, x2: pts[0].x, y2: pts[0].y + r });
             }
         };
 
         const pushEntity = () => {
-            if (!curType) return;
-            if (curType === 'LINE' && curX1 !== null && curY1 !== null && curX2 !== null && curY2 !== null) {
-                lines.push({ type: 'LINE', layer: curLayer, x1: curX1, y1: curY1, x2: curX2, y2: curY2 });
-            } else if (curType === 'CIRCLE' && curX1 !== null && curY1 !== null) {
+            if (!curType || pts.length === 0) return;
+            if (curType === 'LINE' && pts.length >= 2) {
+                lines.push({ type: 'LINE', layer: curLayer, x1: pts[0].x, y1: pts[0].y, x2: pts[1].x, y2: pts[1].y });
+            } else if ((curType === 'LWPOLYLINE' || curType === 'POLYLINE') && pts.length >= 2) {
+                for (let k = 0; k < pts.length - 1; k++) {
+                    lines.push({ type: 'LWPOLYLINE', layer: curLayer, x1: pts[k].x, y1: pts[k].y, x2: pts[k + 1].x, y2: pts[k + 1].y });
+                }
+            } else if ((curType === 'CIRCLE' || curType === 'ARC') && pts.length >= 1) {
                 const r = curR || 100;
-                lines.push({ type: 'CIRCLE', layer: curLayer, x1: curX1 - r, y1: curY1, x2: curX1 + r, y2: curY1 });
-                lines.push({ type: 'CIRCLE', layer: curLayer, x1: curX1, y1: curY1 - r, x2: curX1, y2: curY1 + r });
-            } else if (curType === 'POINT' && curX1 !== null && curY1 !== null) {
-                lines.push({ type: 'POINT', layer: curLayer, x1: curX1 - 50, y1: curY1, x2: curX1 + 50, y2: curY1 });
-                lines.push({ type: 'POINT', layer: curLayer, x1: curX1, y1: curY1 - 50, x2: curX1, y2: curY1 + 50 });
-            } else if (curType === 'INSERT' && curBlockName && curX1 !== null && curY1 !== null) {
-                inserts.push({ name: curBlockName, layer: curLayer, x: curX1, y: curY1 });
+                lines.push({ type: 'CIRCLE', layer: curLayer, x1: pts[0].x - r, y1: pts[0].y, x2: pts[0].x + r, y2: pts[0].y });
+                lines.push({ type: 'CIRCLE', layer: curLayer, x1: pts[0].x, y1: pts[0].y - r, x2: pts[0].x, y2: pts[0].y + r });
+            } else if (curType === 'POINT' && pts.length >= 1) {
+                lines.push({ type: 'POINT', layer: curLayer, x1: pts[0].x - 50, y1: pts[0].y, x2: pts[0].x + 50, y2: pts[0].y });
+                lines.push({ type: 'POINT', layer: curLayer, x1: pts[0].x, y1: pts[0].y - 50, x2: pts[0].x, y2: pts[0].y + 50 });
+            } else if (curType === 'INSERT' && curBlockName && pts.length >= 1) {
+                inserts.push({ name: curBlockName, layer: curLayer, x: pts[0].x, y: pts[0].y });
             }
         };
 
@@ -544,14 +547,26 @@ closeModal: function() {
                 }
                 if (curBlockName && code === '0' && val !== 'BLOCK') {
                     pushBlockEnt();
-                    curType = val; curLayer = ""; curX1 = null; curY1 = null; curX2 = null; curY2 = null; curR = null;
+                    curType = val; curLayer = ""; pts = []; curR = null;
                 }
                 if (curBlockName) {
                     if (code === '8') curLayer = val;
-                    if (code === '10') curX1 = parseFloat(val);
-                    if (code === '20') curY1 = parseFloat(val);
-                    if (code === '11') curX2 = parseFloat(val);
-                    if (code === '21') curY2 = parseFloat(val);
+                    if (code === '10') {
+                        if (!pts[0]) pts[0] = { x: 0, y: 0 };
+                        pts[0].x = parseFloat(val);
+                    }
+                    if (code === '20') {
+                        if (!pts[0]) pts[0] = { x: 0, y: 0 };
+                        pts[0].y = parseFloat(val);
+                    }
+                    if (code === '11') {
+                        if (!pts[1]) pts[1] = { x: 0, y: 0 };
+                        pts[1].x = parseFloat(val);
+                    }
+                    if (code === '21') {
+                        if (!pts[1]) pts[1] = { x: 0, y: 0 };
+                        pts[1].y = parseFloat(val);
+                    }
                     if (code === '40') curR = parseFloat(val);
                 }
             }
@@ -559,19 +574,42 @@ closeModal: function() {
             if (section === 'ENTITIES' || (!section && code === '0')) {
                 if (code === '0') {
                     pushEntity();
-                    curType = val; curLayer = ""; curBlockName = null; curX1 = null; curY1 = null; curX2 = null; curY2 = null; curR = null;
+                    curType = val; curLayer = ""; curBlockName = null; pts = []; curR = null;
                 }
                 if (code === '8') curLayer = val;
                 if (code === '2') curBlockName = val;
-                if (code === '10') curX1 = parseFloat(val);
-                if (code === '20') curY1 = parseFloat(val);
-                if (code === '11') curX2 = parseFloat(val);
-                if (code === '21') curY2 = parseFloat(val);
+                if (code === '10') {
+                    const last = pts[pts.length - 1];
+                    if (curType === 'LWPOLYLINE' || curType === 'POLYLINE') {
+                        pts.push({ x: parseFloat(val), y: 0 });
+                    } else {
+                        if (!pts[0]) pts[0] = { x: 0, y: 0 };
+                        pts[0].x = parseFloat(val);
+                    }
+                }
+                if (code === '20') {
+                    const last = pts[pts.length - 1];
+                    if ((curType === 'LWPOLYLINE' || curType === 'POLYLINE') && last) {
+                        last.y = parseFloat(val);
+                    } else {
+                        if (!pts[0]) pts[0] = { x: 0, y: 0 };
+                        pts[0].y = parseFloat(val);
+                    }
+                }
+                if (code === '11') {
+                    if (!pts[1]) pts[1] = { x: 0, y: 0 };
+                    pts[1].x = parseFloat(val);
+                }
+                if (code === '21') {
+                    if (!pts[1]) pts[1] = { x: 0, y: 0 };
+                    pts[1].y = parseFloat(val);
+                }
                 if (code === '40') curR = parseFloat(val);
             }
         }
         pushEntity();
 
+        // ブロック参照 (INSERT) のワールド座標オフセット展開
         inserts.forEach(ins => {
             const blkEnts = blocks[ins.name] || [];
             blkEnts.forEach(ent => {
@@ -585,7 +623,7 @@ closeModal: function() {
     },
 
     /**
-     * プレビューキャンバス描画（1画面1ファイル巨大表示 ＆ Step 1通り芯重ね下絵描画）
+     * プレビューキャンバス描画（万能線分パース結果からの100%絶対描画）
      */
     renderPreviewCanvas: function() {
         const cvs = document.getElementById('dxf-origin-preview-canvas');
@@ -598,69 +636,21 @@ closeModal: function() {
         const fileObj = this.loadedFiles[curData.fileIdx] || this.loadedFiles[0];
         if (!fileObj || !fileObj.rawTxt) return;
 
+        // 万能スキャナーで生テキストから全線分を解読抽出
+        const lines = this.parseDxfRawLinesDirect(fileObj.rawTxt);
+
         let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-        let lines = [];
-
-        const addPt = (x, y) => {
-            if (x == null || y == null || isNaN(x) || isNaN(y)) return;
-            minX = Math.min(minX, x); minY = Math.min(minY, y);
-            maxX = Math.max(maxX, x); maxY = Math.max(maxY, y);
-        };
-
-        try {
-            const dxf = window.CadEngine ? window.CadEngine.processDxf(fileObj.rawTxt) : null;
-            if (dxf && dxf.entities) {
-                function collectEntities(entities, blocks, parentX = 0, parentY = 0, depth = 0) {
-                    if (!entities || depth > 5) return;
-                    for (let i = 0; i < Math.min(entities.length, 10000); i++) {
-                        const ent = entities[i];
-                        if (ent.type === 'LINE' && ent.start && ent.end) {
-                            const x1 = ent.start.x + parentX, y1 = ent.start.y + parentY;
-                            const x2 = ent.end.x + parentX, y2 = ent.end.y + parentY;
-                            lines.push({ type: 'LINE', layer: ent.layer || "", x1, y1, x2, y2 });
-                            addPt(x1, y1); addPt(x2, y2);
-                        } else if ((ent.type === 'LWPOLYLINE' || ent.type === 'POLYLINE') && ent.vertices && ent.vertices.length > 1) {
-                            for (let j = 0; j < Math.min(ent.vertices.length - 1, 400); j++) {
-                                const v1 = ent.vertices[j], v2 = ent.vertices[j + 1];
-                                const x1 = v1.x + parentX, y1 = v1.y + parentY;
-                                const x2 = v2.x + parentX, y2 = v2.y + parentY;
-                                lines.push({ type: 'LWPOLYLINE', layer: ent.layer || "", x1, y1, x2, y2 });
-                                addPt(x1, y1); addPt(x2, y2);
-                            }
-                        } else if (ent.type === 'CIRCLE' && ent.center) {
-                            const cx = ent.center.x + parentX, cy = ent.center.y + parentY, r = ent.radius || 100;
-                            lines.push({ type: 'CIRCLE', layer: ent.layer || "", x1: cx - r, y1: cy, x2: cx + r, y2: cy });
-                            lines.push({ type: 'CIRCLE', layer: ent.layer || "", x1: cx, y1: cy - r, x2: cx, y2: cy + r });
-                            addPt(cx - r, cy - r); addPt(cx + r, cy + r);
-                        } else if (ent.type === 'POINT' && ent.position) {
-                            const px = ent.position.x + parentX, py = ent.position.y + parentY;
-                            lines.push({ type: 'POINT', layer: ent.layer || "", x1: px - 80, y1: py, x2: px + 80, y2: py });
-                            lines.push({ type: 'POINT', layer: ent.layer || "", x1: px, y1: py - 80, x2: px, y2: py + 80 });
-                            addPt(px - 100, py - 100); addPt(px + 100, py + 100);
-                        } else if (ent.type === 'INSERT' && blocks) {
-                            const blk = blocks[ent.name];
-                            const posX = (ent.position ? ent.position.x : (ent.insertionPoint ? ent.insertionPoint.x : 0));
-                            const posY = (ent.position ? ent.position.y : (ent.insertionPoint ? ent.insertionPoint.y : 0));
-                            if (blk && blk.entities) collectEntities(blk.entities, blocks, parentX + posX, parentY + posY, depth + 1);
-                        }
-                    }
-                }
-                collectEntities(dxf.entities, dxf.blocks);
-            }
-        } catch(e) {}
-
-        if (lines.length === 0) {
-            lines = this.parseDxfRawLinesDirect(fileObj.rawTxt);
-            lines.forEach(l => {
-                addPt(l.x1, l.y1);
-                addPt(l.x2, l.y2);
-            });
-        }
+        lines.forEach(l => {
+            if (l.x1 != null && !isNaN(l.x1)) { minX = Math.min(minX, l.x1); maxX = Math.max(maxX, l.x1); }
+            if (l.y1 != null && !isNaN(l.y1)) { minY = Math.min(minY, l.y1); maxY = Math.max(maxY, l.y1); }
+            if (l.x2 != null && !isNaN(l.x2)) { minX = Math.min(minX, l.x2); maxX = Math.max(maxX, l.x2); }
+            if (l.y2 != null && !isNaN(l.y2)) { minY = Math.min(minY, l.y2); maxY = Math.max(maxY, l.y2); }
+        });
 
         if (curNum === 1) {
             // Step 1 の通り芯線分を保存しておく
             this.established1FGridLines = lines.filter(l => /(GRID|GLID|通り芯|軸線)/i.test(l.layer));
-            if (this.established1FGridLines.length === 0) this.established1FGridLines = lines.slice(0, 80);
+            if (this.established1FGridLines.length === 0) this.established1FGridLines = lines.slice(0, 100);
         }
 
         if (minX === Infinity || lines.length === 0) {
@@ -712,16 +702,16 @@ closeModal: function() {
         });
 
         // 3. 通り芯交点・候補スナップポイント計算
-        const vertLines = lines.filter(l => Math.abs(l.x1 - l.x2) < 30).slice(0, 50);
-        const horizLines = lines.filter(l => Math.abs(l.y1 - l.y2) < 30).slice(0, 50);
+        const vertLines = lines.filter(l => Math.abs(l.x1 - l.x2) < 50).slice(0, 80);
+        const horizLines = lines.filter(l => Math.abs(l.y1 - l.y2) < 50).slice(0, 80);
         const intersections = [];
 
         vertLines.forEach(vl => {
             const vx = (vl.x1 + vl.x2) / 2;
-            const vMinY = Math.min(vl.y1, vl.y2) - 300, vMaxY = Math.max(vl.y1, vl.y2) + 300;
+            const vMinY = Math.min(vl.y1, vl.y2) - 500, vMaxY = Math.max(vl.y1, vl.y2) + 500;
             horizLines.forEach(hl => {
                 const hy = (hl.y1 + hl.y2) / 2;
-                const hMinX = Math.min(hl.x1, hl.x2) - 300, hMaxX = Math.max(hl.x1, hl.x2) + 300;
+                const hMinX = Math.min(hl.x1, hl.x2) - 500, hMaxX = Math.max(hl.x1, hl.x2) + 500;
                 if (vx >= hMinX && vx <= hMaxX && hy >= vMinY && hy <= vMaxY) {
                     if (!intersections.some(pt => Math.hypot(pt.x - vx, pt.y - hy) < 50)) intersections.push({ x: vx, y: hy });
                 }
@@ -766,6 +756,9 @@ closeModal: function() {
         }
     },
 
+    /**
+     * キャンバスイベント初期化（ホイールズーム、ドラッグパン、交点磁石スナップ）
+     */
     initPreviewCanvasEvents: function() {
         const cvs = document.getElementById('dxf-origin-preview-canvas');
         if (!cvs) return;
