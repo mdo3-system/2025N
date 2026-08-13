@@ -94,13 +94,13 @@ window.DxfLayerMapperController = {
 
         // 7つのスロット設定ID
         const slotKeys = [
-            { fileId: 'dxf-file-grid', selectId: 'dxf-select-grid', selectedKey: 'grid', isBack: false },
-            { fileId: 'dxf-file-1f-col', selectId: 'dxf-select-1f-col', selectedKey: 'col1F', isBack: false },
-            { fileId: 'dxf-file-2f-col', selectId: 'dxf-select-2f-col', selectedKey: 'col2F', isBack: false },
-            { fileId: 'dxf-file-1f-roof', selectId: 'dxf-select-1f-roof', selectedKey: 'roof1F', isBack: true },
-            { fileId: 'dxf-file-2f-roof', selectId: 'dxf-select-2f-roof', selectedKey: 'roof2F', isBack: true },
-            { fileId: 'dxf-file-1f-back', selectId: 'dxf-select-1f-back', selectedKey: 'back1F', isBack: true },
-            { fileId: 'dxf-file-2f-back', selectId: 'dxf-select-2f-back', selectedKey: 'back2F', isBack: true }
+            { fileId: 'dxf-file-grid',   selectId: 'dxf-select-grid',   selectedKey: 'grid',   isBack: false },
+            { fileId: 'dxf-file-col1F',  selectId: 'dxf-select-col1F',  selectedKey: 'col1F',  isBack: false },
+            { fileId: 'dxf-file-col2F',  selectId: 'dxf-select-col2F',  selectedKey: 'col2F',  isBack: false },
+            { fileId: 'dxf-file-roof1F', selectId: 'dxf-select-roof1F', selectedKey: 'roof1F', isBack: true  },
+            { fileId: 'dxf-file-roof2F', selectId: 'dxf-select-roof2F', selectedKey: 'roof2F', isBack: true  },
+            { fileId: 'dxf-file-back1F', selectId: 'dxf-select-back1F', selectedKey: 'back1F', isBack: true  },
+            { fileId: 'dxf-file-back2F', selectId: 'dxf-select-back2F', selectedKey: 'back2F', isBack: true  }
         ];
 
         // 特定スロットのみのドロップダウン更新関数 (他スロットの選択値および他ファイルレイヤーの非混入を100%保証)
@@ -337,21 +337,21 @@ window.DxfLayerMapperController = {
      */
     confirmAndExecute: function() {
         const mapping = {
-            gridLayer: document.getElementById('dxf-select-grid')?.value || "",
-            col1FLayer: document.getElementById('dxf-select-1f-col')?.value || "",
-            col2FLayer: document.getElementById('dxf-select-2f-col')?.value || "",
-            roof1FLayer: document.getElementById('dxf-select-1f-roof')?.value || "",
-            roof2FLayer: document.getElementById('dxf-select-2f-roof')?.value || "",
-            back1FLayer: document.getElementById('dxf-select-1f-back')?.value || "",
-            back2FLayer: document.getElementById('dxf-select-2f-back')?.value || "",
+            gridLayer:   document.getElementById('dxf-select-grid')?.value   || "",
+            col1FLayer:  document.getElementById('dxf-select-col1F')?.value  || "",
+            col2FLayer:  document.getElementById('dxf-select-col2F')?.value  || "",
+            roof1FLayer: document.getElementById('dxf-select-roof1F')?.value || "",
+            roof2FLayer: document.getElementById('dxf-select-roof2F')?.value || "",
+            back1FLayer: document.getElementById('dxf-select-back1F')?.value || "",
+            back2FLayer: document.getElementById('dxf-select-back2F')?.value || "",
             slots: {
-                grid: { fileIdx: parseInt(document.getElementById('dxf-file-grid')?.value || 0, 10), layer: document.getElementById('dxf-select-grid')?.value || "", origin: document.getElementById('dxf-origin-grid')?.value || "auto_min_grid" },
-                col1F: { fileIdx: parseInt(document.getElementById('dxf-file-1f-col')?.value || 0, 10), layer: document.getElementById('dxf-select-1f-col')?.value || "", origin: document.getElementById('dxf-origin-1f-col')?.value || "auto_min_grid" },
-                col2F: { fileIdx: parseInt(document.getElementById('dxf-file-2f-col')?.value || 0, 10), layer: document.getElementById('dxf-select-2f-col')?.value || "", origin: document.getElementById('dxf-origin-2f-col')?.value || "auto_min_grid" },
-                roof1F: { fileIdx: parseInt(document.getElementById('dxf-file-1f-roof')?.value || 0, 10), layer: document.getElementById('dxf-select-1f-roof')?.value || "", origin: document.getElementById('dxf-origin-1f-roof')?.value || "auto_min_grid" },
-                roof2F: { fileIdx: parseInt(document.getElementById('dxf-file-2f-roof')?.value || 0, 10), layer: document.getElementById('dxf-select-2f-roof')?.value || "", origin: document.getElementById('dxf-origin-2f-roof')?.value || "auto_min_grid" },
-                back1F: { fileIdx: parseInt(document.getElementById('dxf-file-1f-back')?.value || 0, 10), layer: document.getElementById('dxf-select-1f-back')?.value || "", origin: document.getElementById('dxf-origin-1f-back')?.value || "auto_min_grid" },
-                back2F: { fileIdx: parseInt(document.getElementById('dxf-file-2f-back')?.value || 0, 10), layer: document.getElementById('dxf-select-2f-back')?.value || "", origin: document.getElementById('dxf-origin-2f-back')?.value || "auto_min_grid" }
+                grid:   { fileIdx: parseInt(document.getElementById('dxf-file-grid')?.value   || 0, 10), layer: document.getElementById('dxf-select-grid')?.value   || "", origin: "auto_min_grid" },
+                col1F:  { fileIdx: parseInt(document.getElementById('dxf-file-col1F')?.value  || 0, 10), layer: document.getElementById('dxf-select-col1F')?.value  || "", origin: "auto_min_grid" },
+                col2F:  { fileIdx: parseInt(document.getElementById('dxf-file-col2F')?.value  || 0, 10), layer: document.getElementById('dxf-select-col2F')?.value  || "", origin: "auto_min_grid" },
+                roof1F: { fileIdx: parseInt(document.getElementById('dxf-file-roof1F')?.value || 0, 10), layer: document.getElementById('dxf-select-roof1F')?.value || "", origin: "auto_min_grid" },
+                roof2F: { fileIdx: parseInt(document.getElementById('dxf-file-roof2F')?.value || 0, 10), layer: document.getElementById('dxf-select-roof2F')?.value || "", origin: "auto_min_grid" },
+                back1F: { fileIdx: parseInt(document.getElementById('dxf-file-back1F')?.value || 0, 10), layer: document.getElementById('dxf-select-back1F')?.value || "", origin: "auto_min_grid" },
+                back2F: { fileIdx: parseInt(document.getElementById('dxf-file-back2F')?.value || 0, 10), layer: document.getElementById('dxf-select-back2F')?.value || "", origin: "auto_min_grid" }
             }
         };
 
@@ -369,13 +369,13 @@ window.DxfLayerMapperController = {
             };
             const unassignedSlots = [];
 
-            if (mapping.gridLayer && (!this.slotOrigins || !this.slotOrigins.grid)) unassignedSlots.push(slotTitleMap.grid);
-            if (mapping.col1FLayer && (!this.slotOrigins || !this.slotOrigins['1f-col'])) unassignedSlots.push(slotTitleMap.col1F);
-            if (mapping.col2FLayer && (!this.slotOrigins || !this.slotOrigins['2f-col'])) unassignedSlots.push(slotTitleMap.col2F);
-            if (mapping.back1FLayer && (!this.slotOrigins || !this.slotOrigins['1f-back'])) unassignedSlots.push(slotTitleMap.back1F);
-            if (mapping.back2FLayer && (!this.slotOrigins || !this.slotOrigins['2f-back'])) unassignedSlots.push(slotTitleMap.back2F);
-            if (mapping.roof1FLayer && (!this.slotOrigins || !this.slotOrigins['1f-roof'])) unassignedSlots.push(slotTitleMap.roof1F);
-            if (mapping.roof2FLayer && (!this.slotOrigins || !this.slotOrigins['2f-roof'])) unassignedSlots.push(slotTitleMap.roof2F);
+            if (mapping.gridLayer   && (!this.slotOrigins || !this.slotOrigins.grid))   unassignedSlots.push(slotTitleMap.grid);
+            if (mapping.col1FLayer  && (!this.slotOrigins || !this.slotOrigins.col1F))  unassignedSlots.push(slotTitleMap.col1F);
+            if (mapping.col2FLayer  && (!this.slotOrigins || !this.slotOrigins.col2F))  unassignedSlots.push(slotTitleMap.col2F);
+            if (mapping.back1FLayer && (!this.slotOrigins || !this.slotOrigins.back1F)) unassignedSlots.push(slotTitleMap.back1F);
+            if (mapping.back2FLayer && (!this.slotOrigins || !this.slotOrigins.back2F)) unassignedSlots.push(slotTitleMap.back2F);
+            if (mapping.roof1FLayer && (!this.slotOrigins || !this.slotOrigins.roof1F)) unassignedSlots.push(slotTitleMap.roof1F);
+            if (mapping.roof2FLayer && (!this.slotOrigins || !this.slotOrigins.roof2F)) unassignedSlots.push(slotTitleMap.roof2F);
 
             if (unassignedSlots.length > 0) {
                 alert(`⚠️ 原点位置の合致基準が未指定のスロットがあります：\n\n・${unassignedSlots.join('\n・')}\n\n対象スロットの「🎯 原点指定」ボタンを押し、キャンバス上の交点を選択してください。`);
