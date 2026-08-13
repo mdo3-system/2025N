@@ -1,6 +1,6 @@
 /**
  * controllers/DxfLayerMapperController.js - Universal Step-by-Step DXF Wizard Controller
- * v3.12.41 Direct Click Origin Selection (Blue Dots Removed) & Real-Time Alignment
+ * v3.12.42 All-Step Grid Layer Slots & Magnetic Snapping to Selected Grid Line Intersections
  */
 
 window.DxfLayerMapperController = {
@@ -11,9 +11,9 @@ window.DxfLayerMapperController = {
 
     stepData: {
         1: { fileIdx: 0, gridLayer: '', colLayer: '', backLayer: '', originPt: null },
-        2: { fileIdx: 0, colLayer: '', backLayer: '', originPt: null },
-        3: { fileIdx: 0, roofLayer: '', originPt: null },
-        4: { fileIdx: 0, roofLayer: '', originPt: null }
+        2: { fileIdx: 0, gridLayer: '', colLayer: '', backLayer: '', originPt: null },
+        3: { fileIdx: 0, gridLayer: '', roofLayer: '', originPt: null },
+        4: { fileIdx: 0, gridLayer: '', roofLayer: '', originPt: null }
     },
 
     established1FOrigin: null,     // Step 1 で確定した 1階基準原点 {x, y}
@@ -22,6 +22,7 @@ window.DxfLayerMapperController = {
     previewZoomScale: 1.0,
     previewPanOffset: { x: 0, y: 0 },
     selectedVisualOriginPt: null,
+    currentStepGridIntersections: [], // 現在ステップの指定通り芯レイヤーの交点リスト
 
     /**
      * プログレスバー表示・非表示
@@ -53,12 +54,12 @@ window.DxfLayerMapperController = {
         this.established1FOrigin = null;
         this.established1FGridLines = [];
 
-        // ステップデータの初期化
+        // ステップデータの初期化（全ステップで gridLayer をサポート）
         this.stepData = {
             1: { fileIdx: 0, gridLayer: '', colLayer: '', backLayer: '', originPt: null },
-            2: { fileIdx: 0, colLayer: '', backLayer: '', originPt: null },
-            3: { fileIdx: 0, roofLayer: '', originPt: null },
-            4: { fileIdx: 0, roofLayer: '', originPt: null }
+            2: { fileIdx: 0, gridLayer: '', colLayer: '', backLayer: '', originPt: null },
+            3: { fileIdx: 0, gridLayer: '', roofLayer: '', originPt: null },
+            4: { fileIdx: 0, gridLayer: '', roofLayer: '', originPt: null }
         };
 
         if (Array.isArray(inputData)) {
@@ -80,7 +81,7 @@ window.DxfLayerMapperController = {
             return;
         }
 
-        // ファイル名の自動マッチング（各ステップへデフォルトファイルを自動セット）
+        // ファイル名の自動マッチング
         const isRoofFile = (name) => /(?:1RF|2RF|RF|屋根|下屋|大屋根|\b1R\b|\b2R\b)/i.test(name);
         
         const findIdx = (pat, excludeRoof = false) => {
@@ -139,7 +140,7 @@ window.DxfLayerMapperController = {
     },
 
     /**
-     * 指定ステップのUIコントロールおよびプレビュー描画
+     * 指定ステップのUIコントロールおよびプレビュー描画 (全ステップ通り芯スロット完備)
      */
     renderStep: function(stepNum) {
         this.currentStep = stepNum;
@@ -167,10 +168,10 @@ window.DxfLayerMapperController = {
         // タイトルテキスト
         const titleEl = document.getElementById('wizard-step-title');
         const titles = {
-            1: '🏠 【Step 1 / 4】1階図面の原点指定 (図面上の任意の場所・交点をクリックして1階基準原点を設定)',
-            2: '🏢 【Step 2 / 4】2階図面の原点指定 (1階基準原点🎯へ合わせる2階の交点・場所をクリック)',
-            3: '🏠 【Step 3 / 4】1階屋根図面の原点指定 (1階基準原点🎯へ合わせる交点・場所をクリック)',
-            4: '🏠 【Step 4 / 4】2階屋根図面の原点指定 (1階基準原点🎯へ合わせる交点・場所をクリック)'
+            1: '🏠 【Step 1 / 4】1階図面の原点指定 (通り芯レイヤーを選択し、交点をクリックして基準原点を設定)',
+            2: '🏢 【Step 2 / 4】2階図面の原点指定 (2階の通り芯レイヤーを選択し、1階原点🎯へ合わせる交点をクリック)',
+            3: '🏠 【Step 3 / 4】1階屋根図面の原点指定 (屋根の通り芯レイヤーを選択し、1階原点🎯へ合わせる交点をクリック)',
+            4: '🏠 【Step 4 / 4】2階屋根図面の原点指定 (屋根の通り芯レイヤーを選択し、1階原点🎯へ合わせる交点をクリック)'
         };
         if (titleEl) titleEl.innerText = titles[stepNum] || '';
 
@@ -182,7 +183,7 @@ window.DxfLayerMapperController = {
         if (btnSkip) btnSkip.style.display = (stepNum >= 2) ? 'inline-block' : 'none';
         if (btnNext) btnNext.innerText = (stepNum === 4) ? '解析・読込完了 🚀' : '確定して次へ ➔';
 
-        // ステップ専用コントロールの自動生成
+        // ステップ専用コントロールの自動生成 (全ステップで通り芯レイヤー選択スロットを設置)
         const container = document.getElementById('wizard-step-control-container');
         if (!container) return;
 
@@ -216,10 +217,14 @@ window.DxfLayerMapperController = {
         } else if (stepNum === 2) {
             container.style.borderLeftColor = '#ff9ff3';
             html = `
-                <div style="display:grid; grid-template-columns: 1.2fr 1fr 1fr; gap:12px; align-items:center;">
+                <div style="display:grid; grid-template-columns: 1.2fr 1fr 1fr 1fr; gap:10px; align-items:center;">
                     <div>
                         <span style="font-size:11px; color:#a4b0be; display:block;">📁 2階対象ファイル:</span>
                         <select id="w-file-select" style="width:100%; padding:6px; background:#1e272e; color:#fff; border:1px solid #485460; border-radius:4px; font-size:12px;"></select>
+                    </div>
+                    <div>
+                        <span style="font-size:11px; color:#00d2d3; font-weight:bold; display:block;">📐 2階通り芯レイヤー:</span>
+                        <select id="w-select-grid" style="width:100%; padding:6px; background:#1e272e; color:#fff; border:1px solid #485460; border-radius:4px; font-size:12px;"></select>
                     </div>
                     <div>
                         <span style="font-size:11px; color:#ff9ff3; font-weight:bold; display:block;">🏛️ 2階柱レイヤー:</span>
@@ -235,10 +240,14 @@ window.DxfLayerMapperController = {
             container.style.borderLeftColor = (stepNum === 3) ? '#feca57' : '#ff6b6b';
             const label = (stepNum === 3) ? '1階屋根 (下屋) レイヤー:' : '2階屋根 (大屋根) レイヤー:';
             html = `
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; align-items:center;">
+                <div style="display:grid; grid-template-columns: 1.2fr 1fr 1fr; gap:10px; align-items:center;">
                     <div>
                         <span style="font-size:11px; color:#a4b0be; display:block;">📁 屋根対象ファイル:</span>
                         <select id="w-file-select" style="width:100%; padding:6px; background:#1e272e; color:#fff; border:1px solid #485460; border-radius:4px; font-size:12px;"></select>
+                    </div>
+                    <div>
+                        <span style="font-size:11px; color:#00d2d3; font-weight:bold; display:block;">📐 通り芯レイヤー:</span>
+                        <select id="w-select-grid" style="width:100%; padding:6px; background:#1e272e; color:#fff; border:1px solid #485460; border-radius:4px; font-size:12px;"></select>
                     </div>
                     <div>
                         <span style="font-size:11px; color:#feca57; font-weight:bold; display:block;">🏠 ${label}</span>
@@ -272,7 +281,7 @@ window.DxfLayerMapperController = {
             if (!el) return;
             el.innerHTML = '';
             const defOpt = document.createElement('option');
-            defOpt.value = ''; defOpt.text = '-- 未指定 (全レイヤー取込) --';
+            defOpt.value = ''; defOpt.text = '-- 未指定 (全レイヤー対象) --';
             el.appendChild(defOpt);
 
             if (isBack) {
@@ -294,10 +303,17 @@ window.DxfLayerMapperController = {
                 }
                 el.appendChild(opt);
             });
+
+            // 変更イベントでプレビューをリアルタイム更新
+            el.onchange = () => {
+                if (elId === 'w-select-grid') curData.gridLayer = el.value;
+                this.renderPreviewCanvas();
+            };
         };
 
+        populateSelect('w-select-grid', /(GRID|GLID|通り芯|軸線|°)/i, curData.gridLayer);
+
         if (stepNum === 1) {
-            populateSelect('w-select-grid', /(GRID|GLID|通り芯|軸線)/i, curData.gridLayer);
             populateSelect('w-select-col', /(1F_COL|1F.*COL|1F.*柱|COL|COLUMN|柱)/i, curData.colLayer);
             populateSelect('w-select-back', /(1F_BACK|1_BACK|1F.*背景|BACK|背景|下図)/i, curData.backLayer, true);
         } else if (stepNum === 2) {
@@ -322,9 +338,9 @@ window.DxfLayerMapperController = {
         // 現在フォームの選択値を収集
         const fileSel = document.getElementById('w-file-select');
         if (fileSel) curData.fileIdx = parseInt(fileSel.value || 0, 10);
+        curData.gridLayer = document.getElementById('w-select-grid')?.value || '';
 
         if (curNum === 1) {
-            curData.gridLayer = document.getElementById('w-select-grid')?.value || '';
             curData.colLayer = document.getElementById('w-select-col')?.value || '';
             curData.backLayer = document.getElementById('w-select-back')?.value || '';
             curData.originPt = this.selectedVisualOriginPt || { x: 0, y: 0 };
@@ -592,7 +608,7 @@ window.DxfLayerMapperController = {
     },
 
     /**
-     * プレビューキャンバス描画（完全ダイレクトな原点移動＆スッキリ背景下絵描画）
+     * プレビューキャンバス描画（選択された通り芯レイヤーの交点磁石吸着＆リアルタイムアライメント描画）
      */
     renderPreviewCanvas: function() {
         const cvs = document.getElementById('dxf-origin-preview-canvas');
@@ -610,17 +626,42 @@ window.DxfLayerMapperController = {
 
         if (curNum === 1) {
             // Step 1 の通り芯線分を保存
-            this.established1FGridLines = rawLines.filter(l => /(GRID|GLID|通り芯|軸線)/i.test(l.layer));
+            const gridL = curData.gridLayer;
+            this.established1FGridLines = rawLines.filter(l => gridL ? (l.layer && l.layer.toUpperCase().trim() === gridL.toUpperCase().trim()) : /(GRID|GLID|通り芯|軸線|°)/i.test(l.layer));
             if (this.established1FGridLines.length === 0) this.established1FGridLines = rawLines.slice(0, 100);
         }
 
-        // デフォルト選択原点（図面内の中央またはユーザーがクリックした正確な座標）
+        // 指定された通り芯レイヤー内の線分同士の交点をリアルタイム抽出
+        const gridL = curData.gridLayer;
+        const targetGridLines = rawLines.filter(l => {
+            if (!gridL) return /(GRID|GLID|通り芯|軸線|°)/i.test(l.layer);
+            return l.layer && (l.layer.toUpperCase().trim() === gridL.toUpperCase().trim());
+        });
+
+        const vertGrid = targetGridLines.filter(l => Math.abs(l.x1 - l.x2) < 80).slice(0, 50);
+        const horizGrid = targetGridLines.filter(l => Math.abs(l.y1 - l.y2) < 80).slice(0, 50);
+        const intersections = [];
+
+        vertGrid.forEach(vl => {
+            const vx = (vl.x1 + vl.x2) / 2;
+            const vMinY = Math.min(vl.y1, vl.y2) - 500, vMaxY = Math.max(vl.y1, vl.y2) + 500;
+            horizGrid.forEach(hl => {
+                const hy = (hl.y1 + hl.y2) / 2;
+                const hMinX = Math.min(hl.x1, hl.x2) - 500, hMaxX = Math.max(hl.x1, hl.x2) + 500;
+                if (vx >= hMinX && vx <= hMaxX && hy >= vMinY && hy <= vMaxY) {
+                    if (!intersections.some(pt => Math.hypot(pt.x - vx, pt.y - hy) < 20)) intersections.push({ x: vx, y: hy });
+                }
+            });
+        });
+        this.currentStepGridIntersections = intersections;
+
+        // デフォルト選択原点（最初の通り芯交点、または図面中央）
         let minRawX = Infinity, minRawY = Infinity, maxRawX = -Infinity, maxRawY = -Infinity;
         rawLines.forEach(l => {
             if (l.x1 != null && !isNaN(l.x1)) { minRawX = Math.min(minRawX, l.x1); maxRawX = Math.max(maxRawX, l.x1); }
             if (l.y1 != null && !isNaN(l.y1)) { minRawY = Math.min(minRawY, l.y1); maxRawY = Math.max(maxRawY, l.y1); }
         });
-        const defaultCenterPt = (minRawX !== Infinity) ? { x: (minRawX + maxRawX) / 2, y: (minRawY + maxRawY) / 2 } : { x: 0, y: 0 };
+        const defaultCenterPt = (intersections.length > 0) ? intersections[0] : ((minRawX !== Infinity) ? { x: (minRawX + maxRawX) / 2, y: (minRawY + maxRawY) / 2 } : { x: 0, y: 0 });
 
         const chosenPt = this.selectedVisualOriginPt || defaultCenterPt;
         curData.originPt = chosenPt;
@@ -688,15 +729,18 @@ window.DxfLayerMapperController = {
             ctx.setLineDash([]);
         }
 
-        // 2. 現在図面の鮮明描画 (アライメント平行移動適用済み)
+        // 2. 現在図面の描画 (アライメント平行移動適用済み。指定された通り芯レイヤーは水色強調表示)
         lines.forEach(l => {
             const p1 = toCanvas(l.x1, l.y1);
             const p2 = toCanvas(l.x2, l.y2);
             ctx.beginPath();
-            if (l.type === 'CIRCLE' || l.type === 'POINT') {
-                ctx.strokeStyle = '#ff7675'; ctx.lineWidth = 1.5;
+            const isSelectedGrid = gridL && l.layer && (l.layer.toUpperCase().trim() === gridL.toUpperCase().trim());
+            if (isSelectedGrid) {
+                ctx.strokeStyle = '#00d2d3'; ctx.lineWidth = 1.5;
+            } else if (l.type === 'CIRCLE' || l.type === 'POINT') {
+                ctx.strokeStyle = '#ff7675'; ctx.lineWidth = 1.2;
             } else {
-                ctx.strokeStyle = '#94a3b8'; ctx.lineWidth = 1;
+                ctx.strokeStyle = '#718093'; ctx.lineWidth = 1.0;
             }
             ctx.moveTo(p1.cx, p1.cy); ctx.lineTo(p2.cx, p2.cy); ctx.stroke();
         });
@@ -712,17 +756,18 @@ window.DxfLayerMapperController = {
 
             const infoEl = document.getElementById('wizard-preview-overlay-info');
             if (infoEl) {
+                const gridNameStr = gridL ? `[通り芯レイヤー: "${gridL}"]` : '[通り芯レイヤー: 未指定]';
                 if (curNum === 1) {
-                    infoEl.innerText = `🎯 【1階基準原点】: (${Math.round(chosenPt.x)}, ${Math.round(chosenPt.y)})`;
+                    infoEl.innerText = `🎯 【1階基準原点】: (${Math.round(chosenPt.x)}, ${Math.round(chosenPt.y)}) ${gridNameStr}`;
                 } else {
-                    infoEl.innerText = `🎯 【1階基準原点🎯へ合致】: 選択場所 (${Math.round(chosenPt.x)}, ${Math.round(chosenPt.y)})  [位置補正量: dx=${Math.round(alignOffset.dx)}, dy=${Math.round(alignOffset.dy)}]`;
+                    infoEl.innerText = `🎯 【1階基準原点🎯へ合致】: 選択通り芯交点 (${Math.round(chosenPt.x)}, ${Math.round(chosenPt.y)})  [位置補正量: dx=${Math.round(alignOffset.dx)}, dy=${Math.round(alignOffset.dy)}]`;
                 }
             }
         }
     },
 
     /**
-     * キャンバスイベント初期化（青点完全排除＆100%ダイレクトクリック原点指定）
+     * キャンバスイベント初期化（指定通り芯レイヤー交点へのスマート磁石スナップ＆100%ダイレクト指定）
      */
     initPreviewCanvasEvents: function() {
         const cvs = document.getElementById('dxf-origin-preview-canvas');
@@ -757,7 +802,7 @@ window.DxfLayerMapperController = {
 
         cvs.onmouseup = cvs.onmouseleave = () => { isDragging = false; };
 
-        // クリックされたキャンバス位置を100%ダイレクトに原点指定座標として採用！
+        // クリックイベント：指定された通り芯レイヤー内の直線交点に優先磁石スナップ！
         cvs.onclick = (ev) => {
             const rect = cvs.getBoundingClientRect();
             const mouseX = ev.clientX - rect.left;
@@ -771,11 +816,24 @@ window.DxfLayerMapperController = {
 
             const alignOffset = bounds.alignOffset || { dx: 0, dy: 0 };
 
-            // クリック位置からワールド生座標を100%正確に逆算
+            // クリック位置のワールド生座標
             const clickedWorldX = bounds.minX + (mouseX - padding - panX) / bounds.scale - alignOffset.dx;
             const clickedWorldY = bounds.minY + (cvs.height - mouseY - padding + panY) / bounds.scale - alignOffset.dy;
 
-            const targetPt = { x: clickedWorldX, y: clickedWorldY };
+            // 指定された通り芯レイヤーの交点リストから、クリック位置近く（画面上45px以内）の交点を探索
+            let closestGridIntersection = null;
+            let minSnapDistWorld = 45 / bounds.scale; // 磁石スナップ半径
+
+            (this.currentStepGridIntersections || []).forEach(pt => {
+                const d = Math.hypot(pt.x - clickedWorldX, pt.y - clickedWorldY);
+                if (d < minSnapDistWorld) {
+                    minSnapDistWorld = d;
+                    closestGridIntersection = pt;
+                }
+            });
+
+            // 通り芯交点が見つかればそれに精密磁石スナップ！なければクリックされた場所を採用
+            const targetPt = closestGridIntersection || { x: clickedWorldX, y: clickedWorldY };
 
             this.selectedVisualOriginPt = targetPt;
             this.stepData[this.currentStep].originPt = targetPt;
