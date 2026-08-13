@@ -7,7 +7,7 @@ window.Parsers = {
     /**
      * Parse raw DXF string and update state
      */
-    parseDxf: function(rawTxt, state, isSub = false, skipEntities = false, layerMapping = null) {
+    parseDxf: function(rawTxt, state, isSub = false, skipEntities = false, layerMapping = null, appendMode = false) {
         const s = state || window.AppState;
         const parser = new window.DxfParser();
         const dxf = parser.parseSync(rawTxt);
@@ -173,9 +173,20 @@ window.Parsers = {
         });
 
         const docData = { entities: [...newBgLines, ...newBgTexts], loaded: true, rawDxf: rawTxt };
-        
+
         if (isSub) {
             s.docDrawings.elev = docData;
+        } else if (appendMode) {
+            // appendMode: 上書きせず既存データに累積追記
+            s.bgLinesOriginal = [...(s.bgLinesOriginal || []), ...newBgLines];
+            s.bgTextsOriginal = [...(s.bgTextsOriginal || []), ...newBgTexts];
+            if (!skipEntities) {
+                s.pillars = [...(s.pillars || []), ...newPillars];
+            }
+            const prevEnts = (s.docDrawings && s.docDrawings.floor && s.docDrawings.floor.entities) || [];
+            const accDocData = { entities: [...prevEnts, ...newBgLines, ...newBgTexts], loaded: true };
+            s.docDrawings.floor = accDocData;
+            s.docDrawings.div4  = accDocData;
         } else {
             s.bgLinesOriginal = newBgLines;
             s.bgTextsOriginal = newBgTexts;
@@ -187,18 +198,18 @@ window.Parsers = {
         }
 
         if (layerMapping) {
-            s.layerMapping = layerMapping;
-            s.layerVisibility = {};
-            const assignedSet = new Set(
-                Object.values(layerMapping).filter(v => v && typeof v === 'string').map(v => v.toUpperCase().trim())
-            );
+            // layerVisibility: appendMode では累積（上書きしない）
+            if (!appendMode) {
+                s.layerMapping = layerMapping;
+                s.layerVisibility = {};
+            }
+            if (!s.layerVisibility) s.layerVisibility = {};
             const allExtracted = new Set();
             newBgLines.forEach(l => { if (l.layer) allExtracted.add(l.layer.toUpperCase().trim()); });
             newBgTexts.forEach(t => { if (t.layer) allExtracted.add(t.layer.toUpperCase().trim()); });
             rawPillarCandidates.forEach(p => { if (p.layer) allExtracted.add(p.layer.toUpperCase().trim()); });
-
             allExtracted.forEach(l => {
-                s.layerVisibility[l] = assignedSet.has(l);
+                s.layerVisibility[l] = true; // 抽出済み内部レイヤーは常に表示
             });
         }
 

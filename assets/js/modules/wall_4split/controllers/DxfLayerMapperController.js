@@ -414,7 +414,13 @@ window.DxfLayerMapperController = {
 
                 setTimeout(() => {
                     if (typeof this.onConfirmCallback === 'function') {
-                        this.onConfirmCallback(mapping, this.currentDxfRaw);
+                        // AppState にレイヤーマッピングを先行記録
+                        if (window.AppState) {
+                            window.AppState.dxfLayerMapping = mapping;
+                            window.AppState.slotOrigins = this.slotOrigins || {};
+                        }
+                        // loadedFiles 全体を渡す（BUG-5修正: currentDxfRaw = loadedFiles[0] 固定を废止）
+                        this.onConfirmCallback(mapping, this.loadedFiles);
                     }
 
                     // [v3.11.11] 読込時点で指定主要レイヤー以外の不要レイヤーをスマート非表示化
@@ -590,6 +596,7 @@ window.DxfLayerMapperController = {
     },
 
     renderPreviewCanvas: function(fileIdx) {
+        this.activePreviewFileIdx = (fileIdx !== undefined && fileIdx !== null) ? fileIdx : (this.activePreviewFileIdx || 0);
         const cvs = document.getElementById('dxf-origin-preview-canvas');
         if (!cvs) return;
         const ctx = cvs.getContext('2d');
@@ -758,7 +765,7 @@ window.DxfLayerMapperController = {
             ev.preventDefault();
             const zoomFactor = ev.deltaY < 0 ? 1.15 : 0.85;
             this.previewZoomScale = Math.max(0.2, Math.min(10.0, (this.previewZoomScale || 1.0) * zoomFactor));
-            this.renderPreviewCanvas(0);
+            this.renderPreviewCanvas(this.activePreviewFileIdx || 0);
         };
 
         cvs.onmousedown = (ev) => {
@@ -774,7 +781,7 @@ window.DxfLayerMapperController = {
                 this.previewPanOffset.x += dx;
                 this.previewPanOffset.y += dy;
                 lastMousePos = { x: ev.clientX, y: ev.clientY };
-                this.renderPreviewCanvas(0);
+                this.renderPreviewCanvas(this.activePreviewFileIdx || 0);
             }
         };
 
