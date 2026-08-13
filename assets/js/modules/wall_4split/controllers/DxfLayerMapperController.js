@@ -1,6 +1,6 @@
 /**
  * controllers/DxfLayerMapperController.js - Step-by-Step DXF Import Wizard Controller
- * v3.13.0 Complete Step-by-Step Architecture
+ * v3.12.32 Complete Step-by-Step Architecture
  */
 
 window.DxfLayerMapperController = {
@@ -32,7 +32,6 @@ window.DxfLayerMapperController = {
         const bar = document.getElementById('dxf-loading-bar');
         const msg = document.getElementById('dxf-loading-msg');
         const pct = document.getElementById('dxf-loading-percent');
-
         if (modal) modal.style.display = 'flex';
         if (bar) bar.style.width = `${percent}%`;
         if (msg) msg.innerText = message;

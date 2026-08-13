@@ -5,6 +5,7 @@
 
 function loadDxf(event) {
     const files = Array.from(event.target.files || []);
+    if (event && event.target) event.target.value = '';
     if (files.length === 0) return;
 
     const floorSelect = document.getElementById('dxf-target-floor');
