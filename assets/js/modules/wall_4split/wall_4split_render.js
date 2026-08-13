@@ -110,3 +110,69 @@ function renderLayerPanel() {
         panel.dataset.listener = "true";
     }
 }
+
+
+/**
+ * 「🎨 DXFレイヤ表示設定」モーダルパネルの動的描画
+ */
+window.renderLayerPanel = function() {
+    const container = document.getElementById('dxf-layer-toggle-container');
+    if (!container) return;
+
+    const s = window.AppState;
+    if (!s.layerVisibility) s.layerVisibility = {};
+
+    const categories = [
+        { id: 'GRID', name: '📐 通り芯 (GRID)', color: '#00d2d3' },
+        { id: '1F_BACK', name: '🖼️ 1階背景 (1F_BACK)', color: '#1dd1a1' },
+        { id: '2F_BACK', name: '🖼️ 2階背景 (2F_BACK)', color: '#54a0ff' },
+        { id: '1F_ROOF', name: '🏠 1階屋根 (1F_ROOF)', color: '#feca57' },
+        { id: '2F_ROOF', name: '🏠 2階屋根 (2F_ROOF)', color: '#ff6b6b' },
+    ];
+
+    // DXF内に存在するユニークなオリジナルレイヤー名を網羅抽出
+    const customLayers = new Set();
+    (s.bgLinesOriginal || []).forEach(l => {
+        if (l.originalLayer && !['GRID','1F_BACK','2F_BACK','1F_ROOF','2F_ROOF'].includes(l.originalLayer)) {
+            customLayers.add(l.originalLayer);
+        } else if (l.layer && !['GRID','1F_BACK','2F_BACK','1F_ROOF','2F_ROOF'].includes(l.layer)) {
+            customLayers.add(l.layer);
+        }
+    });
+
+    let html = '<div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap:10px; padding:10px;">';
+
+    categories.forEach(cat => {
+        const checked = s.layerVisibility[cat.id] !== false ? 'checked' : '';
+        html += `
+            <label style="display:flex; align-items:center; gap:8px; padding:8px 12px; background:#1e272e; border-left:4px solid ${cat.color}; border-radius:4px; color:#fff; font-size:13px; cursor:pointer;">
+                <input type="checkbox" class="dxf-layer-toggle-cb" data-layer="${cat.id}" ${checked} style="width:16px; height:16px; cursor:pointer;">
+                <span style="font-weight:bold;">${cat.name}</span>
+            </label>
+        `;
+    });
+
+    customLayers.forEach(lName => {
+        const checked = s.layerVisibility[lName] !== false ? 'checked' : '';
+        html += `
+            <label style="display:flex; align-items:center; gap:8px; padding:8px 12px; background:#2c3e50; border-left:4px solid #a4b0be; border-radius:4px; color:#ecf0f1; font-size:12px; cursor:pointer;">
+                <input type="checkbox" class="dxf-layer-toggle-cb" data-layer="${lName}" ${checked} style="width:16px; height:16px; cursor:pointer;">
+                <span>🎨 DXF元レイヤ: <strong>${lName}</strong></span>
+            </label>
+        `;
+    });
+
+    html += '</div>';
+    container.innerHTML = html;
+
+    // トグル変更イベントハンドラーバインド
+    container.querySelectorAll('.dxf-layer-toggle-cb').forEach(cb => {
+        cb.onchange = (e) => {
+            const layerKey = e.target.getAttribute('data-layer');
+            s.layerVisibility[layerKey] = e.target.checked;
+            if (window.AppController && window.AppController.refreshAll) {
+                window.AppController.refreshAll();
+            }
+        };
+    });
+};

@@ -373,6 +373,38 @@ window.DxfLayerMapperController = {
     /**
      * ウィザード完了：全ステップのデータを平行移動補正付きで順次パース・AppStateへ追記
      */
+    
+    /**
+     * 合算された通り芯線分の重複排除（デデュープ）処理
+     */
+    deduplicateGridLines: function(bgLines) {
+        if (!Array.isArray(bgLines)) return [];
+        const gridLines = bgLines.filter(l => l.layerCategory === 'GRID' || /(GRID|GLID|通り芯|軸線|°)/i.test(l.layer));
+        const otherLines = bgLines.filter(l => !(l.layerCategory === 'GRID' || /(GRID|GLID|通り芯|軸線|°)/i.test(l.layer)));
+
+        const uniqueGrids = [];
+        gridLines.forEach(line => {
+            const lx1 = Math.min(line.x1, line.x2), ly1 = Math.min(line.y1, line.y2);
+            const lx2 = Math.max(line.x1, line.x2), ly2 = Math.max(line.y1, line.y2);
+
+            const isDuplicate = uniqueGrids.some(u => {
+                const ux1 = Math.min(u.x1, u.x2), uy1 = Math.min(u.y1, u.y2);
+                const ux2 = Math.max(u.x1, u.x2), uy2 = Math.max(u.y1, u.y2);
+                // 幾何学的に端点座標が15mm以内で一致する場合重複とみなす
+                return Math.hypot(lx1 - ux1, ly1 - uy1) < 15 && Math.hypot(lx2 - ux2, ly2 - uy2) < 15;
+            });
+
+            if (!isDuplicate) {
+                line.layerCategory = 'GRID';
+                line.layer = 'GRID';
+                uniqueGrids.push(line);
+            }
+        });
+
+        console.log(`✅ [Grid Dedupe] Reduced ${gridLines.length} grid lines to ${uniqueGrids.length} unique lines`);
+        return [...uniqueGrids, ...otherLines];
+    },
+
     finishWizard: function() {
         this.closeModal();
         this.showProgress(30, "⚙️ ステップ別DXFデータを解析中...");
@@ -469,7 +501,22 @@ window.DxfLayerMapperController = {
             );
         }
 
+        
+        s.bgLinesOriginal = this.deduplicateGridLines(s.bgLinesOriginal);
+        s.layerVisibility = {
+            'GRID': true,
+            '1F_BACK': true,
+            '2F_BACK': true,
+            '1F_ROOF': true,
+            '2F_ROOF': true
+        };
+        // 全オリジナルレイヤーも可視化初期化
+        s.bgLinesOriginal.forEach(l => {
+            if (l.originalLayer) s.layerVisibility[l.originalLayer] = true;
+            if (l.layer) s.layerVisibility[l.layer] = true;
+        });
         s.layerMapping = fullMapping;
+
 
         if (window.GridEngine && window.GridEngine.analyzeGrids) {
             window.GridEngine.analyzeGrids(s);
