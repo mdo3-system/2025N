@@ -53,11 +53,20 @@ function renderLayerPanel() {
     const state = window.AppState || {};
     if (!state.layerVisibility) state.layerVisibility = {};
 
-    // 読み込まれた全要素からレイヤー名を動的抽出
+    // 読み込まれた全要素からレイヤー名および originalLayer 名を網羅抽出
     const foundLayers = new Set(Object.keys(state.layerVisibility));
-    if (state.bgLinesOriginal) state.bgLinesOriginal.forEach(l => { if (l.layer) foundLayers.add(l.layer); });
-    if (state.bgTextsOriginal) state.bgTextsOriginal.forEach(t => { if (t.layer) foundLayers.add(t.layer); });
-    if (state.pillars) state.pillars.forEach(p => { if (p.layer) foundLayers.add(p.layer); });
+    if (state.bgLinesOriginal) state.bgLinesOriginal.forEach(l => { 
+        if (l.layer) foundLayers.add(l.layer); 
+        if (l.originalLayer) foundLayers.add(l.originalLayer);
+    });
+    if (state.bgTextsOriginal) state.bgTextsOriginal.forEach(t => { 
+        if (t.layer) foundLayers.add(t.layer); 
+        if (t.originalLayer) foundLayers.add(t.originalLayer);
+    });
+    if (state.pillars) state.pillars.forEach(p => { 
+        if (p.layer) foundLayers.add(p.layer); 
+        if (p.originalLayer) foundLayers.add(p.originalLayer);
+    });
 
     let layers = Array.from(foundLayers).sort();
     if (layers.length === 0) {

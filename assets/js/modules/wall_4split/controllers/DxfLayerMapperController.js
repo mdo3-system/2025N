@@ -425,6 +425,7 @@ closeModal: function() {
             const dx = orig1F.x - targetOrig.x;
             const dy = orig1F.y - targetOrig.y;
 
+            const targetFloorStr = (stepNum === 1) ? '1F' : ((stepNum === 2) ? '2F' : ((stepNum === 3) ? '1R' : '2R'));
             const singleMapping = {
                 gridLayer:   key === 'grid'   ? layer : '',
                 col1FLayer:  key === 'col1F'  ? layer : '',
@@ -433,6 +434,7 @@ closeModal: function() {
                 back2FLayer: key === 'back2F' ? layer : '',
                 roof1FLayer: key === 'roof1F' ? layer : '',
                 roof2FLayer: key === 'roof2F' ? layer : '',
+                targetFloor: targetFloorStr
             };
 
             try {
