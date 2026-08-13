@@ -739,7 +739,15 @@ window.DxfLayerMapperController = {
                 }
             });
         });
-        // 通り芯交点がない場合は線分端点を交点候補に採用
+        // 通り芯交点がない場合は CIRCLE / POINT の中心点または線分端点を候補に採用
+        if (intersections.length === 0) {
+            lines.forEach(l => {
+                if (l.type === 'CIRCLE' || l.type === 'POINT') {
+                    const cx = (l.x1 + l.x2) / 2, cy = (l.y1 + l.y2) / 2;
+                    if (!intersections.some(pt => Math.hypot(pt.x - cx, pt.y - cy) < 50)) intersections.push({ x: cx, y: cy });
+                }
+            });
+        }
         if (intersections.length === 0) {
             lines.slice(0, 50).forEach(l => {
                 if (!intersections.some(pt => Math.hypot(pt.x - l.x1, pt.y - l.y1) < 500)) intersections.push({ x: l.x1, y: l.y1 });
@@ -755,40 +763,67 @@ window.DxfLayerMapperController = {
             cy: cvs.height - (padding + (y - minY) * scale) + panY
         });
 
-        // 1. 線分要素のプレビュー描画
-        ctx.strokeStyle = '#475569';
-        ctx.lineWidth = 1;
+        // 1. 通り芯（GRID）スロットが別ファイルで指定されている場合、背景に重ね描画 (参照下絵)
+        const gridFileEl = document.getElementById('dxf-file-grid');
+        const gridFileIdx = gridFileEl ? parseInt(gridFileEl.value || 0, 10) : 0;
+        if (gridFileIdx !== fileIdx && this.loadedFiles[gridFileIdx] && this.loadedFiles[gridFileIdx].rawTxt) {
+            try {
+                const gridDxf = window.CadEngine ? window.CadEngine.processDxf(this.loadedFiles[gridFileIdx].rawTxt) : null;
+                if (gridDxf && gridDxf.entities) {
+                    ctx.strokeStyle = '#334155';
+                    ctx.lineWidth = 1;
+                    ctx.setLineDash([4, 4]);
+                    gridDxf.entities.forEach(ent => {
+                        if (ent.type === 'LINE' && ent.start && ent.end) {
+                            const p1 = toCanvas(ent.start.x, ent.start.y);
+                            const p2 = toCanvas(ent.end.x, ent.end.y);
+                            ctx.beginPath(); ctx.moveTo(p1.cx, p1.cy); ctx.lineTo(p2.cx, p2.cy); ctx.stroke();
+                        }
+                    });
+                    ctx.setLineDash([]); // 点線リセット
+                }
+            } catch(e) {}
+        }
+
+        // 2. 現在ファイルの CAD 線分・柱・要素のクリアな描画
         lines.forEach(l => {
             const p1 = toCanvas(l.x1, l.y1);
             const p2 = toCanvas(l.x2, l.y2);
             ctx.beginPath();
+            if (l.type === 'CIRCLE' || l.type === 'POINT') {
+                ctx.strokeStyle = '#ff7675'; // 柱・点要素は明るいピンク
+                ctx.lineWidth = 1.5;
+            } else {
+                ctx.strokeStyle = '#94a3b8'; // 通常の図面線分は明るいグレー
+                ctx.lineWidth = 1;
+            }
             ctx.moveTo(p1.cx, p1.cy);
             ctx.lineTo(p2.cx, p2.cy);
             ctx.stroke();
         });
 
-        // 2. 通り芯交点（青いスナップポイント）の描画
+        // 3. 交点・中心点スナップポイントの明確な描画
         intersections.forEach(pt => {
             const cp = toCanvas(pt.x, pt.y);
             ctx.fillStyle = '#00d2d3';
             ctx.beginPath();
-            ctx.arc(cp.cx, cp.cy, 3, 0, Math.PI * 2);
+            ctx.arc(cp.cx, cp.cy, 4, 0, Math.PI * 2);
             ctx.fill();
         });
 
-        // 3. 選択中の基準原点ターゲットマーカー (赤い 🎯 マーカー)
+        // 4. 選択中の基準原点ターゲットマーカー (🎯 赤いダブルリング)
         const targetPt = this.selectedVisualOriginPt || (intersections.length > 0 ? intersections[0] : null);
         if (targetPt) {
             const cp = toCanvas(targetPt.x, targetPt.y);
             ctx.strokeStyle = '#ff6b6b';
             ctx.lineWidth = 2;
             ctx.beginPath();
-            ctx.arc(cp.cx, cp.cy, 8, 0, Math.PI * 2);
+            ctx.arc(cp.cx, cp.cy, 9, 0, Math.PI * 2);
             ctx.stroke();
 
             ctx.fillStyle = '#ff6b6b';
             ctx.beginPath();
-            ctx.arc(cp.cx, cp.cy, 3, 0, Math.PI * 2);
+            ctx.arc(cp.cx, cp.cy, 4, 0, Math.PI * 2);
             ctx.fill();
         }
     },

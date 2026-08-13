@@ -54,7 +54,8 @@ window.Parsers = {
                         if (gridL && normL === gridL) isGrid = true;
                         if (col1L && normL === col1L) isCol1F = true;
                         if (col2L && normL === col2L) isCol2F = true;
-                        if (!isCol1F && !isCol2F && (normL.includes('COL') || normL.includes('柱'))) {
+                        // 明示的マッピングで col1FLayer / col2FLayer のいずれかが指定されている場合はフォールバックによる両階重複を回避
+                        if (!isCol1F && !isCol2F && !col1L && !col2L && (normL.includes('COL') || normL.includes('柱'))) {
                             isCol1F = true; isCol2F = true;
                         }
                         if (isCol1F || isCol2F) isCol = true;
