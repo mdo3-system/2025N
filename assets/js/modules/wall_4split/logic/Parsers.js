@@ -7,7 +7,7 @@ window.Parsers = {
     /**
      * Parse raw DXF string and update state
      */
-    parseDxf: function(rawTxt, state, isSub = false, skipEntities = false, layerMapping = null, appendMode = false) {
+    parseDxf: function(rawTxt, state, isSub = false, skipEntities = false, layerMapping = null, appendMode = false, offsetX = 0, offsetY = 0) {
         const s = state || window.AppState;
         const parser = new window.DxfParser();
         const dxf = parser.parseSync(rawTxt);
@@ -151,7 +151,7 @@ window.Parsers = {
             });
         }
 
-        collect(dxf.entities, dxf.blocks || {});
+        collect(dxf.entities, dxf.blocks || {}, "", offsetX, offsetY);
 
         // 柱要素のクラスタリング（近接する200mm以内の幾何要素群を1本の柱に集約）
         const pillarClusters = [];

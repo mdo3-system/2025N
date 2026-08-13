@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>上善如水 - 壁量計算WEB (v3.12.29)</title>
+    <title>上善如水 - 壁量計算WEB (v3.13.0)</title>
     <script src="https://cdn.jsdelivr.net/npm/dxf-parser@1.1.2/dist/dxf-parser.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/encoding-japanese/2.0.0/encoding.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/clipper-lib@6.4.2/clipper.js"></script>
@@ -641,178 +641,15 @@
         </div>
     </div>
 
-    <!-- DXFレイヤー選択・自動解析モーダル (modal-dxf-layer-mapper) -->
-    <div id="modal-dxf-layer-mapper" class="modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.75); z-index:20000; align-items:center; justify-content:center; backdrop-filter:blur(4px);">
-        <div class="modal-content" style="max-width:880px; width:95%; max-height:90vh; display:flex; flex-direction:column; background:#1e272e; color:#f5f6fa; border-radius:12px; padding:20px; box-shadow:0 20px 50px rgba(0,0,0,0.6); font-family:sans-serif; border:1px solid #353b48; box-sizing:border-box;">
-            <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #485460; padding-bottom:10px; margin-bottom:10px; flex-shrink:0;">
+    <!-- DXFステップバイステップ読込ウィザードモーダル (modal-dxf-mapper) -->
+    <div id="modal-dxf-mapper" class="modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.85); z-index:25000; align-items:center; justify-content:center; backdrop-filter:blur(6px);">
+        <div class="modal-content" style="max-width:920px; width:92%; max-height:95vh; background:#1e272e; color:#f5f6fa; border-radius:12px; padding:20px; box-shadow:0 20px 50px rgba(0,0,0,0.8); border:1px solid #485460; font-family:sans-serif; display:flex; flex-direction:column;">
+            
+            <!-- ウィザードヘッダー -->
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; border-bottom:1px solid #485460; padding-bottom:10px; flex-shrink:0;">
                 <h3 style="margin:0; font-size:18px; color:#00d2d3; display:flex; align-items:center; gap:8px;">
-                    📂 DXF 7スロット個別設定・原点合致マッパー (v3.12版)
+                    📂 DXF図面 階層別ステップバイステップ読込ウィザード
                 </h3>
-                <span id="dxf-mapper-layer-count" style="background:#00d2d3; color:#1e272e; padding:3px 10px; border-radius:12px; font-weight:bold; font-size:12px;">ロード済みファイル: 1件</span>
-            </div>
-
-            <!-- ルート切替タブ (単一ファイル vs 複数ファイル) -->
-            <div style="display:flex; gap:8px; margin-bottom:12px; border-bottom:2px solid #353b48; padding-bottom:8px; flex-shrink:0;">
-                <button type="button" id="tab-mode-single" style="flex:1; padding:8px 12px; background:#00d2d3; color:#1e272e; border:none; border-radius:6px; font-weight:bold; font-size:12px; cursor:pointer; text-align:center; box-shadow:0 2px 5px rgba(0,0,0,0.3);">
-                    📄 単一ファイルモード (全レイヤー一括割り当て・原点設定不要)
-                </button>
-                <button type="button" id="tab-mode-multi" style="flex:1; padding:8px 12px; background:#353b48; color:#a4b0be; border:none; border-radius:6px; font-weight:bold; font-size:12px; cursor:pointer; text-align:center;">
-                    📂 複数別ファイルモード (7スロット個別のファイル・レイヤー・原点指定)
-                </button>
-            </div>
-
-            <div style="flex:1; overflow-y:auto; padding-right:5px;">
-                <p style="font-size:12px; color:#dcdde1; line-height:1.4; margin-bottom:10px; background:#2f3640; padding:8px 10px; border-radius:6px; border-left:4px solid #feca57;">
-                    💡 <b>【ビジュアル原点指定】</b> 下記のキャンバス上の<b>通り芯交点（赤い標的 🎯）をクリック</b>すると、選択中スロットの基準原点 (0,0) を直感的に一発設定できます。（※マウスホイールで拡大縮小、ドラッグで移動）
-                </p>
-
-                <!-- プレビューキャンバス ＆ ビジュアル原点選択パネル -->
-                <div style="background:#0f172a; padding:10px; border-radius:8px; margin-bottom:12px; border:1px solid #334155; display:flex; gap:12px; align-items:center; position:relative;">
-                    <div style="flex:1; position:relative;">
-                        <canvas id="dxf-origin-preview-canvas" width="480" height="180" style="background:#020617; border-radius:6px; border:1px solid #1e293b; cursor:crosshair; width:100%; height:160px; display:block;"></canvas>
-                        <button type="button" id="btn-preview-zoom-fit" style="position:absolute; top:6px; right:6px; background:#334155; color:#fff; border:none; padding:4px 8px; border-radius:4px; font-size:11px; cursor:pointer; font-weight:bold; box-shadow:0 2px 4px rgba(0,0,0,0.5);">🔍 全体表示 (Fit)</button>
-                    </div>
-                    <div style="width:240px; font-size:11px; color:#cbd5e1; line-height:1.5;">
-                        <b style="color:#38bdf8; font-size:12px;">🎯 原点ポイント (0,0) プレビュー</b><br>
-                        画面上の交点をクリックすると、スロットの合致基準座標がリアルタイム変更されます。<br>
-                        <div id="preview-origin-info" style="margin-top:8px; background:#1e293b; padding:8px; border-radius:4px; color:#38bdf8; font-weight:bold; font-size:11px; border:1px solid #0284c7;">
-                            📍 基準交点: 最左下通り芯交点
-                        </div>
-                    </div>
-                </div>
-
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:14px; max-height:60vh; overflow-y:auto; padding-right:5px;">
-                <!-- 1. 通り芯スロット -->
-                <div style="grid-column: span 2; background:#2f3640; padding:12px; border-radius:8px; border-left:5px solid #00d2d3;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-                        <div style="font-weight:bold; font-size:14px; color:#00d2d3;">📐 ① 通り芯（グリッド）スロット</div>
-                        <button type="button" class="btn-pick-origin" data-slot="grid" style="background:#00d2d3; color:#1e272e; border:none; padding:4px 10px; border-radius:4px; font-weight:bold; font-size:11px; cursor:pointer;">🎯 プレビュー画面で原点指定</button>
-                    </div>
-                    <div style="display:grid; grid-template-columns: 1.2fr 1.2fr 1fr; gap:8px; align-items:center;">
-                        <div>
-                            <span style="font-size:11px; color:#a4b0be; display:block;">📁 対象ファイル (読み込み名):</span>
-                            <select id="dxf-file-grid" class="dxf-slot-file-select" style="width:100%; padding:6px; background:#1e272e; color:#fff; border:1px solid #485460; border-radius:4px; font-size:12px;"></select>
-                        </div>
-                        <div>
-                            <span style="font-size:11px; color:#a4b0be; display:block;">🏷️ 対象レイヤー (明示指定):</span>
-                            <select id="dxf-select-grid" class="dxf-slot-layer-select" style="width:100%; padding:6px; background:#1e272e; color:#fff; border:1px solid #485460; border-radius:4px; font-size:12px;"></select>
-                        </div>
-                        <div>
-                            <span style="font-size:11px; color:#a4b0be; display:block;">🎯 基準原点 (0,0) ポイント:</span>
-                            <span id="slot-origin-badge-grid" class="slot-origin-badge" style="display:block; padding:6px; background:#1e272e; color:#ff6b6b; border:1px solid #ff6b6b; border-radius:4px; font-size:11px; font-weight:bold; text-align:center;">⚠️ 未指定 (クリック指定)</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- 2. 1階 柱スロット -->
-                <div style="background:#2f3640; padding:12px; border-radius:8px; border-left:5px solid #48dbfb;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-                        <div style="font-weight:bold; font-size:13px; color:#48dbfb;">🏛️ ② 1階 柱スロット</div>
-                        <button type="button" class="btn-pick-origin" data-slot="col1F" style="background:#48dbfb; color:#1e272e; border:none; padding:3px 8px; border-radius:4px; font-weight:bold; font-size:10px; cursor:pointer;">🎯 原点指定</button>
-                    </div>
-                    <div style="margin-bottom:6px;">
-                        <span style="font-size:11px; color:#a4b0be;">📁 対象ファイル:</span>
-                        <select id="dxf-file-col1F" class="dxf-slot-file-select" style="width:100%; padding:6px; background:#1e272e; color:#fff; border:1px solid #485460; border-radius:4px; font-size:12px;"></select>
-                    </div>
-                    <div style="margin-bottom:6px;">
-                        <span style="font-size:11px; color:#a4b0be;">🏷️ 対象柱レイヤー:</span>
-                        <select id="dxf-select-col1F" class="dxf-slot-layer-select" style="width:100%; padding:6px; background:#1e272e; color:#fff; border:1px solid #485460; border-radius:4px; font-size:12px;"></select>
-                    </div>
-                    <div>
-                        <span style="font-size:11px; color:#a4b0be;">🎯 基準原点 (0,0) ポイント:</span>
-                        <span id="slot-origin-badge-col1F" class="slot-origin-badge" style="display:block; padding:5px; background:#1e272e; color:#ff6b6b; border:1px solid #ff6b6b; border-radius:4px; font-size:11px; font-weight:bold; text-align:center;">⚠️ 未指定</span>
-                    </div>
-                </div>
-
-                <!-- 3. 2階 柱スロット -->
-                <div style="background:#2f3640; padding:12px; border-radius:8px; border-left:5px solid #ff9ff3;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-                        <div style="font-weight:bold; font-size:13px; color:#ff9ff3;">🏛️ ③ 2階 柱スロット</div>
-                        <button type="button" class="btn-pick-origin" data-slot="col2F" style="background:#ff9ff3; color:#1e272e; border:none; padding:3px 8px; border-radius:4px; font-weight:bold; font-size:10px; cursor:pointer;">🎯 原点指定</button>
-                    </div>
-                    <div style="margin-bottom:6px;">
-                        <span style="font-size:11px; color:#a4b0be;">📁 対象ファイル:</span>
-                        <select id="dxf-file-col2F" class="dxf-slot-file-select" style="width:100%; padding:6px; background:#1e272e; color:#fff; border:1px solid #485460; border-radius:4px; font-size:12px;"></select>
-                    </div>
-                    <div style="margin-bottom:6px;">
-                        <span style="font-size:11px; color:#a4b0be;">🏷️ 対象柱レイヤー:</span>
-                        <select id="dxf-select-col2F" class="dxf-slot-layer-select" style="width:100%; padding:6px; background:#1e272e; color:#fff; border:1px solid #485460; border-radius:4px; font-size:12px;"></select>
-                    </div>
-                    <div>
-                        <span style="font-size:11px; color:#a4b0be;">🎯 基準原点 (0,0) ポイント:</span>
-                        <span id="slot-origin-badge-col2F" class="slot-origin-badge" style="display:block; padding:5px; background:#1e272e; color:#ff6b6b; border:1px solid #ff6b6b; border-radius:4px; font-size:11px; font-weight:bold; text-align:center;">⚠️ 未指定</span>
-                    </div>
-                </div>
-
-                <!-- 4. 1階 背景スロット -->
-                <div style="background:#2f3640; padding:12px; border-radius:8px; border-left:5px solid #1dd1a1;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-                        <div style="font-weight:bold; font-size:13px; color:#1dd1a1;">🖼️ ④ 1階 背景図面スロット</div>
-                        <button type="button" class="btn-pick-origin" data-slot="back1F" style="background:#1dd1a1; color:#1e272e; border:none; padding:3px 8px; border-radius:4px; font-weight:bold; font-size:10px; cursor:pointer;">🎯 原点指定</button>
-                    </div>
-                    <div style="margin-bottom:6px;">
-                        <span style="font-size:11px; color:#a4b0be;">📁 対象ファイル:</span>
-                        <select id="dxf-file-back1F" class="dxf-slot-file-select" style="width:100%; padding:6px; background:#1e272e; color:#fff; border:1px solid #485460; border-radius:4px; font-size:12px;"></select>
-                    </div>
-                    <div style="margin-bottom:6px;">
-                        <span style="font-size:11px; color:#a4b0be;">🏷️ 対象レイヤー:</span>
-                        <select id="dxf-select-back1F" class="dxf-slot-layer-select" style="width:100%; padding:6px; background:#1e272e; color:#fff; border:1px solid #485460; border-radius:4px; font-size:12px;"></select>
-                    </div>
-                    <div>
-                        <span style="font-size:11px; color:#a4b0be;">🎯 基準原点 (0,0) ポイント:</span>
-                        <span id="slot-origin-badge-back1F" class="slot-origin-badge" style="display:block; padding:5px; background:#1e272e; color:#ff6b6b; border:1px solid #ff6b6b; border-radius:4px; font-size:11px; font-weight:bold; text-align:center;">⚠️ 未指定</span>
-                    </div>
-                </div>
-
-                <!-- 5. 2階 背景スロット -->
-                <div style="background:#2f3640; padding:12px; border-radius:8px; border-left:5px solid #54a0ff;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-                        <div style="font-weight:bold; font-size:13px; color:#54a0ff;">🖼️ ⑤ 2階 背景図面スロット</div>
-                        <button type="button" class="btn-pick-origin" data-slot="back2F" style="background:#54a0ff; color:#1e272e; border:none; padding:3px 8px; border-radius:4px; font-weight:bold; font-size:10px; cursor:pointer;">🎯 原点指定</button>
-                    </div>
-                    <div style="margin-bottom:6px;">
-                        <span style="font-size:11px; color:#a4b0be;">📁 対象ファイル:</span>
-                        <select id="dxf-file-back2F" class="dxf-slot-file-select" style="width:100%; padding:6px; background:#1e272e; color:#fff; border:1px solid #485460; border-radius:4px; font-size:12px;"></select>
-                    </div>
-                    <div style="margin-bottom:6px;">
-                        <span style="font-size:11px; color:#a4b0be;">🏷️ 対象レイヤー:</span>
-                        <select id="dxf-select-back2F" class="dxf-slot-layer-select" style="width:100%; padding:6px; background:#1e272e; color:#fff; border:1px solid #485460; border-radius:4px; font-size:12px;"></select>
-                    </div>
-                    <div>
-                        <span style="font-size:11px; color:#a4b0be;">🎯 基準原点 (0,0) ポイント:</span>
-                        <span id="slot-origin-badge-back2F" class="slot-origin-badge" style="display:block; padding:5px; background:#1e272e; color:#ff6b6b; border:1px solid #ff6b6b; border-radius:4px; font-size:11px; font-weight:bold; text-align:center;">⚠️ 未指定</span>
-                    </div>
-                </div>
-
-                <!-- 6. 1階 屋根スロット -->
-                <div style="background:#2f3640; padding:12px; border-radius:8px; border-left:5px solid #feca57;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-                        <div style="font-weight:bold; font-size:13px; color:#feca57;">🏠 ⑥ 1階 屋根伏スロット</div>
-                        <button type="button" class="btn-pick-origin" data-slot="roof1F" style="background:#feca57; color:#1e272e; border:none; padding:3px 8px; border-radius:4px; font-weight:bold; font-size:10px; cursor:pointer;">🎯 原点指定</button>
-                    </div>
-                    <div style="margin-bottom:6px;">
-                        <span style="font-size:11px; color:#a4b0be;">📁 対象ファイル:</span>
-                        <select id="dxf-file-roof1F" class="dxf-slot-file-select" style="width:100%; padding:6px; background:#1e272e; color:#fff; border:1px solid #485460; border-radius:4px; font-size:12px;"></select>
-                    </div>
-                    <div style="margin-bottom:6px;">
-                        <span style="font-size:11px; color:#a4b0be;">🏷️ 対象レイヤー:</span>
-                        <select id="dxf-select-roof1F" class="dxf-slot-layer-select" style="width:100%; padding:6px; background:#1e272e; color:#fff; border:1px solid #485460; border-radius:4px; font-size:12px;"></select>
-                    </div>
-                    <div>
-                        <span style="font-size:11px; color:#a4b0be;">🎯 基準原点 (0,0) ポイント:</span>
-                        <span id="slot-origin-badge-roof1F" class="slot-origin-badge" style="display:block; padding:5px; background:#1e272e; color:#ff6b6b; border:1px solid #ff6b6b; border-radius:4px; font-size:11px; font-weight:bold; text-align:center;">⚠️ 未指定</span>
-                    </div>
-                </div>
-
-                <!-- 7. 2階 屋根スロット -->
-                <div style="background:#2f3640; padding:12px; border-radius:8px; border-left:5px solid #ff6b6b;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-                        <div style="font-weight:bold; font-size:13px; color:#ff6b6b;">🏠 ⑦ 2階 屋根伏スロット</div>
-                        <button type="button" class="btn-pick-origin" data-slot="roof2F" style="background:#ff6b6b; color:#1e272e; border:none; padding:3px 8px; border-radius:4px; font-weight:bold; font-size:10px; cursor:pointer;">🎯 原点指定</button>
-                    </div>
-                    <div style="margin-bottom:6px;">
-                        <span style="font-size:11px; color:#a4b0be;">📁 対象ファイル:</span>
-                        <select id="dxf-file-roof2F" class="dxf-slot-file-select" style="width:100%; padding:6px; background:#1e272e; color:#fff; border:1px solid #485460; border-radius:4px; font-size:12px;"></select>
                     </div>
                     <div style="margin-bottom:6px;">
                         <span style="font-size:11px; color:#a4b0be;">🏷️ 対象レイヤー:</span>
@@ -993,7 +830,7 @@
     <!-- 左パネル -->
     <div id="left-panel">
         <h1 style="font-size:16px; margin:0 0 10px 0; color:#2c3e50; border-bottom:2px solid #2ecc71; padding-bottom:5px; display:flex; justify-content:space-between; align-items:center;">
-            <span>上善如水 <span style="font-size:12px; color:#7f8c8d;">壁量計算WEB <span id="app-version-title">v3.12.29</span></span></span>
+            <span>上善如水 <span style="font-size:12px; color:#7f8c8d;">壁量計算WEB <span id="app-version-title">v3.13.0</span></span></span>
         </h1>
 
         <div style="display:flex; gap:5px; margin-bottom:15px;">
@@ -1397,67 +1234,67 @@
     </div>
 
     <!-- JavaScript モジュール群 -->
-    <script src="assets/js/modules/wall_4split/Version.js?v=3.12.29"></script>
-    <script src="assets/js/modules/wall_4split/state/Specs.js?v=3.12.29"></script>
-    <script src="assets/js/modules/wall_4split/state/AppState.js?v=3.12.29"></script>
-    <script src="assets/js/modules/wall_4split/wall_4split_bridge.js?v=3.12.29"></script>
-    <script src="assets/js/modules/wall_4split/logic/ServiceContainer.js?v=3.12.29"></script>
-    <script src="assets/js/modules/wall_4split/logic/MathUtils.js?v=3.12.29"></script>
-    <script src="assets/js/modules/wall_4split/logic/Parsers.js?v=3.12.29"></script>
-    <script src="assets/js/modules/wall_4split/logic/WallEngine.js?v=3.12.29"></script>
-    <script src="assets/js/modules/wall_4split/logic/CadEngine.js?v=3.12.29"></script>
-    <script src="assets/js/modules/wall_4split/logic/GridEngine.js?v=3.12.29"></script>
-    <script src="assets/js/modules/wall_4split/logic/StructuralEngine.js?v=3.12.29"></script>
-    <script src="assets/js/modules/wall_4split/logic/DocumentEngine.js?v=3.12.29"></script>
-    <script src="assets/js/modules/wall_4split/logic/NValueEngine.js?v=3.12.29"></script>
-    <script src="assets/js/modules/wall_4split/logic/AreaEngine.js?v=3.12.29"></script>
-    <script src="assets/js/modules/wall_4split/logic/AxialEngine.js?v=3.12.29"></script>
-    <script src="assets/js/modules/wall_4split/logic/SlabBeamSynchronizer.js?v=3.12.29"></script>
-    <script src="assets/js/modules/wall_4split/logic/FoundationSlabAnalysisEngine.js?v=3.12.29"></script>
-    <script src="assets/js/modules/wall_4split/logic/FoundationBeamEngine.js?v=3.12.29"></script>
-    <script src="assets/js/modules/wall_4split/logic/FoundationEngine.js?v=3.12.29"></script>
-    <script src="assets/js/modules/wall_4split/logic/ReportEngine.js?v=3.12.29"></script>
-    <script src="assets/js/modules/wall_4split/logic/RoofEngine.js?v=3.12.29"></script>
-    <script src="assets/js/modules/wall_4split/logic/MitsukeEngine.js?v=3.12.29"></script>
-    <script src="assets/js/modules/wall_4split/controllers/PropertyController.js?v=3.12.29"></script>
-    <script src="assets/js/modules/wall_4split/controllers/PillarPropertyController.js?v=3.12.29"></script>
-    <script src="assets/js/modules/wall_4split/controllers/WallPropertyController.js?v=3.12.29"></script>
-    <script src="assets/js/modules/wall_4split/controllers/FoundationPropertyController.js?v=3.12.29"></script>
-    <script src="assets/js/modules/wall_4split/controllers/RoofPropertyController.js?v=3.12.29"></script>
-    <script src="assets/js/modules/wall_4split/controllers/FoundationPropertyHandler.js?v=3.12.29"></script>
-    <script src="assets/js/modules/wall_4split/controllers/PillarPropertyHandler.js?v=3.12.29"></script>
-    <script src="assets/js/modules/wall_4split/controllers/WallPropertyHandler.js?v=3.12.29"></script>
-    <script src="assets/js/modules/wall_4split/controllers/InputController.js?v=3.12.29"></script>
-    <script src="assets/js/modules/wall_4split/controllers/ModalController.js?v=3.12.29"></script>
-    <script src="assets/js/modules/wall_4split/controllers/DxfLayerMapperController.js?v=3.12.29"></script>
-    <script src="assets/js/modules/wall_4split/controllers/AppController.js?v=3.12.29"></script>
-    <script src="assets/js/modules/wall_4split/controllers/FoundationInputController.js?v=3.12.29"></script>
-    <script src="assets/js/modules/wall_4split/controllers/RoofInputController.js?v=3.12.29"></script>
-    <script src="assets/js/modules/wall_4split/view/UIView.js?v=3.12.29"></script>
-    <script src="assets/js/modules/wall_4split/view/GridRenderer.js?v=3.12.29"></script>
-    <script src="assets/js/modules/wall_4split/view/WallCadRenderer.js?v=3.12.29"></script>
-    <script src="assets/js/modules/wall_4split/view/PillarCadRenderer.js?v=3.12.29"></script>
-    <script src="assets/js/modules/wall_4split/view/MainRenderer.js?v=3.12.29"></script>
-    <script src="assets/js/modules/wall_4split/view/FoundationSvgGenerator.js?v=3.12.29"></script>
-    <script src="assets/js/modules/wall_4split/view/FoundationRenderer.js?v=3.12.29"></script>
-    <script src="assets/js/modules/wall_4split/view/DocumentRenderer.js?v=3.12.29"></script>
-    <script src="assets/js/modules/wall_4split/view/ElevationRenderer.js?v=3.12.29"></script>
-    <script src="assets/js/modules/wall_4split/view/RoofRenderer.js?v=3.12.29"></script>
-    <script src="assets/js/modules/wall_4split/view/ReportHeaderView.js?v=3.12.29"></script>
-    <script src="assets/js/modules/wall_4split/view/ReportAreaView.js?v=3.12.29"></script>
-    <script src="assets/js/modules/wall_4split/view/ReportWallTableView.js?v=3.12.29"></script>
-    <script src="assets/js/modules/wall_4split/view/ReportWallView.js?v=3.12.29"></script>
-    <script src="assets/js/modules/wall_4split/view/ReportNValueView.js?v=3.12.29"></script>
-    <script src="assets/js/modules/wall_4split/view/ReportMitsukeView.js?v=3.12.29"></script>
-    <script src="assets/js/modules/wall_4split/view/FoundationBeamReportView.js?v=3.12.29"></script>
-    <script src="assets/js/modules/wall_4split/view/ThreeDPreviewController.js?v=3.12.29"></script>
-    <script src="assets/js/modules/wall_4split/wall_4split_export.js?v=3.12.29"></script>
-    <script src="assets/js/modules/wall_4split/wall_4split_cad.js?v=3.12.29"></script>
-    <script src="assets/js/modules/wall_4split/wall_4split_render.js?v=3.12.29"></script>
-    <script src="assets/js/modules/wall_4split/view/PdfReportView.js?v=3.12.29"></script>
-    <script src="assets/js/modules/wall_4split/wall_4split_pdf.js?v=3.12.29"></script>
-    <script src="assets/js/modules/wall_4split/wall_4split_calc.js?v=3.12.29"></script>
-    <script src="assets/js/modules/wall_4split/wall_4split_foundation_engine.js?v=3.12.29"></script>
+    <script src="assets/js/modules/wall_4split/Version.js?v=3.13.0"></script>
+    <script src="assets/js/modules/wall_4split/state/Specs.js?v=3.13.0"></script>
+    <script src="assets/js/modules/wall_4split/state/AppState.js?v=3.13.0"></script>
+    <script src="assets/js/modules/wall_4split/wall_4split_bridge.js?v=3.13.0"></script>
+    <script src="assets/js/modules/wall_4split/logic/ServiceContainer.js?v=3.13.0"></script>
+    <script src="assets/js/modules/wall_4split/logic/MathUtils.js?v=3.13.0"></script>
+    <script src="assets/js/modules/wall_4split/logic/Parsers.js?v=3.13.0"></script>
+    <script src="assets/js/modules/wall_4split/logic/WallEngine.js?v=3.13.0"></script>
+    <script src="assets/js/modules/wall_4split/logic/CadEngine.js?v=3.13.0"></script>
+    <script src="assets/js/modules/wall_4split/logic/GridEngine.js?v=3.13.0"></script>
+    <script src="assets/js/modules/wall_4split/logic/StructuralEngine.js?v=3.13.0"></script>
+    <script src="assets/js/modules/wall_4split/logic/DocumentEngine.js?v=3.13.0"></script>
+    <script src="assets/js/modules/wall_4split/logic/NValueEngine.js?v=3.13.0"></script>
+    <script src="assets/js/modules/wall_4split/logic/AreaEngine.js?v=3.13.0"></script>
+    <script src="assets/js/modules/wall_4split/logic/AxialEngine.js?v=3.13.0"></script>
+    <script src="assets/js/modules/wall_4split/logic/SlabBeamSynchronizer.js?v=3.13.0"></script>
+    <script src="assets/js/modules/wall_4split/logic/FoundationSlabAnalysisEngine.js?v=3.13.0"></script>
+    <script src="assets/js/modules/wall_4split/logic/FoundationBeamEngine.js?v=3.13.0"></script>
+    <script src="assets/js/modules/wall_4split/logic/FoundationEngine.js?v=3.13.0"></script>
+    <script src="assets/js/modules/wall_4split/logic/ReportEngine.js?v=3.13.0"></script>
+    <script src="assets/js/modules/wall_4split/logic/RoofEngine.js?v=3.13.0"></script>
+    <script src="assets/js/modules/wall_4split/logic/MitsukeEngine.js?v=3.13.0"></script>
+    <script src="assets/js/modules/wall_4split/controllers/PropertyController.js?v=3.13.0"></script>
+    <script src="assets/js/modules/wall_4split/controllers/PillarPropertyController.js?v=3.13.0"></script>
+    <script src="assets/js/modules/wall_4split/controllers/WallPropertyController.js?v=3.13.0"></script>
+    <script src="assets/js/modules/wall_4split/controllers/FoundationPropertyController.js?v=3.13.0"></script>
+    <script src="assets/js/modules/wall_4split/controllers/RoofPropertyController.js?v=3.13.0"></script>
+    <script src="assets/js/modules/wall_4split/controllers/FoundationPropertyHandler.js?v=3.13.0"></script>
+    <script src="assets/js/modules/wall_4split/controllers/PillarPropertyHandler.js?v=3.13.0"></script>
+    <script src="assets/js/modules/wall_4split/controllers/WallPropertyHandler.js?v=3.13.0"></script>
+    <script src="assets/js/modules/wall_4split/controllers/InputController.js?v=3.13.0"></script>
+    <script src="assets/js/modules/wall_4split/controllers/ModalController.js?v=3.13.0"></script>
+    <script src="assets/js/modules/wall_4split/controllers/DxfLayerMapperController.js?v=3.13.0"></script>
+    <script src="assets/js/modules/wall_4split/controllers/AppController.js?v=3.13.0"></script>
+    <script src="assets/js/modules/wall_4split/controllers/FoundationInputController.js?v=3.13.0"></script>
+    <script src="assets/js/modules/wall_4split/controllers/RoofInputController.js?v=3.13.0"></script>
+    <script src="assets/js/modules/wall_4split/view/UIView.js?v=3.13.0"></script>
+    <script src="assets/js/modules/wall_4split/view/GridRenderer.js?v=3.13.0"></script>
+    <script src="assets/js/modules/wall_4split/view/WallCadRenderer.js?v=3.13.0"></script>
+    <script src="assets/js/modules/wall_4split/view/PillarCadRenderer.js?v=3.13.0"></script>
+    <script src="assets/js/modules/wall_4split/view/MainRenderer.js?v=3.13.0"></script>
+    <script src="assets/js/modules/wall_4split/view/FoundationSvgGenerator.js?v=3.13.0"></script>
+    <script src="assets/js/modules/wall_4split/view/FoundationRenderer.js?v=3.13.0"></script>
+    <script src="assets/js/modules/wall_4split/view/DocumentRenderer.js?v=3.13.0"></script>
+    <script src="assets/js/modules/wall_4split/view/ElevationRenderer.js?v=3.13.0"></script>
+    <script src="assets/js/modules/wall_4split/view/RoofRenderer.js?v=3.13.0"></script>
+    <script src="assets/js/modules/wall_4split/view/ReportHeaderView.js?v=3.13.0"></script>
+    <script src="assets/js/modules/wall_4split/view/ReportAreaView.js?v=3.13.0"></script>
+    <script src="assets/js/modules/wall_4split/view/ReportWallTableView.js?v=3.13.0"></script>
+    <script src="assets/js/modules/wall_4split/view/ReportWallView.js?v=3.13.0"></script>
+    <script src="assets/js/modules/wall_4split/view/ReportNValueView.js?v=3.13.0"></script>
+    <script src="assets/js/modules/wall_4split/view/ReportMitsukeView.js?v=3.13.0"></script>
+    <script src="assets/js/modules/wall_4split/view/FoundationBeamReportView.js?v=3.13.0"></script>
+    <script src="assets/js/modules/wall_4split/view/ThreeDPreviewController.js?v=3.13.0"></script>
+    <script src="assets/js/modules/wall_4split/wall_4split_export.js?v=3.13.0"></script>
+    <script src="assets/js/modules/wall_4split/wall_4split_cad.js?v=3.13.0"></script>
+    <script src="assets/js/modules/wall_4split/wall_4split_render.js?v=3.13.0"></script>
+    <script src="assets/js/modules/wall_4split/view/PdfReportView.js?v=3.13.0"></script>
+    <script src="assets/js/modules/wall_4split/wall_4split_pdf.js?v=3.13.0"></script>
+    <script src="assets/js/modules/wall_4split/wall_4split_calc.js?v=3.13.0"></script>
+    <script src="assets/js/modules/wall_4split/wall_4split_foundation_engine.js?v=3.13.0"></script>
     <script src="assets/js/modules/wall_4split/wall_4split_report.js?v=3.10.10"></script>
     <script src="assets/js/modules/wall_4split/wall_4split_input.js?v=3.10.10"></script>
     <script src="assets/js/modules/wall_4split/wall_4split_main.js?v=3.10.10"></script>

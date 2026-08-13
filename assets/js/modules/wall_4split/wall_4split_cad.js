@@ -44,91 +44,12 @@ function loadDxf(event) {
                     }
 
                     window.DxfLayerMapperController.openMapper(fileList, (layerMapping, loadedFilesArg) => {
-                            // loadedFilesArg は Array<{name, rawTxt}> (BUG-5修正後) または後方互換で string
-                            const loadedFiles = Array.isArray(loadedFilesArg)
-                                ? loadedFilesArg
-                                : [{ rawTxt: loadedFilesArg || (fileList[0] && fileList[0].rawTxt) || '' }];
+                        console.log("🎉 [Step-by-Step Wizard] All DXF steps successfully parsed and merged into AppState!");
+                        if (window.AppController && window.AppController.refreshAll) {
+                            window.AppController.refreshAll();
+                        }
+                    });
 
-                            const s = window.AppState;
-
-                            // ① AppState をリセット（手動入力データのみ保持）
-                            s.bgLinesOriginal = [];
-                            s.bgTextsOriginal = [];
-                            s.pillars = (s.pillars || []).filter(p => p.isManual);
-                            if (s.docDrawings) {
-                                s.docDrawings.floor = { entities: [], loaded: false };
-                                s.docDrawings.div4  = { entities: [], loaded: false };
-                            }
-                            s.layerVisibility = {};
-
-                            // ② スロット定義（通り芯を最初に処理し基準座標を先行確立）
-                            const slotDefs = [
-                                { key: 'grid',   layerProp: 'gridLayer'   },
-                                { key: 'col1F',  layerProp: 'col1FLayer'  },
-                                { key: 'col2F',  layerProp: 'col2FLayer'  },
-                                { key: 'back1F', layerProp: 'back1FLayer' },
-                                { key: 'back2F', layerProp: 'back2FLayer' },
-                                { key: 'roof1F', layerProp: 'roof1FLayer' },
-                                { key: 'roof2F', layerProp: 'roof2FLayer' },
-                            ];
-
-                            // ③ スロット別ループ: 各スロットを指定ファイル・指定レイヤーでパース
-                            if (window.Parsers && window.Parsers.parseDxf) {
-                                slotDefs.forEach(({ key, layerProp }) => {
-                                    const layerVal = layerMapping[layerProp];
-                                    if (!layerVal) return; // 未選択スロットはスキップ
-
-                                    const slotInfo = layerMapping.slots && layerMapping.slots[key];
-                                    const fileIdx  = slotInfo ? Math.max(0, parseInt(slotInfo.fileIdx || 0, 10)) : 0;
-                                    const fileObj  = loadedFiles[fileIdx] || loadedFiles[0];
-                                    if (!fileObj || !fileObj.rawTxt) return;
-
-                                    // このスロット専用の単一レイヤーマッピング（他スロットは空文字で無効化）
-                                    const singleMapping = {
-                                        gridLayer:   key === 'grid'   ? layerVal : '',
-                                        col1FLayer:  key === 'col1F'  ? layerVal : '',
-                                        col2FLayer:  key === 'col2F'  ? layerVal : '',
-                                        back1FLayer: key === 'back1F' ? layerVal : '',
-                                        back2FLayer: key === 'back2F' ? layerVal : '',
-                                        roof1FLayer: key === 'roof1F' ? layerVal : '',
-                                        roof2FLayer: key === 'roof2F' ? layerVal : '',
-                                        slots: layerMapping.slots
-                                    };
-
-                                    try {
-                                        window.Parsers.parseDxf(
-                                            fileObj.rawTxt,
-                                            s,
-                                            false,  // isSub
-                                            false,  // skipEntities
-                                            singleMapping,
-                                            true    // appendMode: 各スロット結果を AppState に累積
-                                        );
-                                        console.log(`✅ [Slot:${key}] fileIdx=${fileIdx} layer="${layerVal}" → parsed from "${fileObj.name || 'file#'+fileIdx}"`);
-                                    } catch(e) {
-                                        console.error(`❌ [parseDxf] Slot "${key}" 解析エラー:`, e);
-                                    }
-                                });
-                            }
-
-                            // ④ 柱の重複除去（同座標・同階の重複を 10mm 以内で除去）
-                            if (s.pillars) {
-                                s.pillars = s.pillars.filter((p, idx, self) =>
-                                    idx === self.findIndex(t => t.floor === p.floor && Math.hypot(t.x - p.x, t.y - p.y) < 10)
-                                );
-                            }
-
-                            // ⑤ layerMapping 最終書込 & グリッド再解析
-                            s.layerMapping = layerMapping;
-
-                            if (window.GridEngine && window.GridEngine.analyzeGrids) {
-                                window.GridEngine.analyzeGrids(s);
-                            }
-
-                            if (window.AppController && window.AppController.refreshAll) {
-                                window.AppController.refreshAll();
-                            }
-                        });
 
                 }
             }

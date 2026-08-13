@@ -1,14 +1,31 @@
 /**
- * controllers/DxfLayerMapperController.js - DXF Layer Mapping Assistant Modal Controller & Progress Bar UI
- * v3.11.6
+ * controllers/DxfLayerMapperController.js - Step-by-Step DXF Import Wizard Controller
+ * v3.13.0 Complete Step-by-Step Architecture
  */
 
 window.DxfLayerMapperController = {
-    currentDxfRaw: "",
+    loadedFiles: [], // [{ name, rawTxt, layers }]
     onConfirmCallback: null,
 
+    currentStep: 1, // 1: 1F, 2: 2F, 3: 1F_ROOF, 4: 2F_ROOF
+
+    stepData: {
+        1: { fileIdx: 0, gridLayer: '', colLayer: '', backLayer: '', originPt: null },
+        2: { fileIdx: 0, colLayer: '', backLayer: '', originPt: null },
+        3: { fileIdx: 0, roofLayer: '', originPt: null },
+        4: { fileIdx: 0, roofLayer: '', originPt: null }
+    },
+
+    established1FOrigin: null,     // Step 1 で確定した 1階基準原点 {x, y}
+    established1FGridLines: [],    // Step 1 で抽出した 1階通り芯線分（Step 2以降で下絵として重ね描画）
+
+    previewZoomScale: 1.0,
+    previewPanOffset: { x: 0, y: 0 },
+    lastGridIntersections: [],
+    selectedVisualOriginPt: null,
+
     /**
-     * プログレスバー表示
+     * プログレスバー表示・非表示
      */
     showProgress: function(percent, message) {
         const modal = document.getElementById('modal-dxf-loading');
