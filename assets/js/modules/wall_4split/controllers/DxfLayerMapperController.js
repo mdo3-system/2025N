@@ -109,8 +109,29 @@ window.DxfLayerMapperController = {
             const selectEl = document.getElementById(item.selectId);
             if (!fileEl || !selectEl) return;
 
+            // 各スロットに最も適合するファイルを自動推定 (Auto File Matching)
+            const autoSelectFileIdxForSlot = (slotKey) => {
+                if (!this.loadedFiles || this.loadedFiles.length === 0) return 0;
+                let patterns = [];
+                if (slotKey === 'col1F' || slotKey === 'back1F') {
+                    patterns = [/1F_COL/i, /1F_BACK/i, /1F/i, /1階/i, /1_BACK/i, /1_COL/i];
+                } else if (slotKey === 'col2F' || slotKey === 'back2F') {
+                    patterns = [/2F_COL/i, /2F_BACK/i, /2F/i, /2階/i, /2_BACK/i, /2_COL/i];
+                } else if (slotKey === 'roof1F') {
+                    patterns = [/1F_R/i, /1R/i, /1RF/i, /1F.*(屋根|下屋)/i, /下屋/i];
+                } else if (slotKey === 'roof2F') {
+                    patterns = [/2F_R/i, /2R/i, /2RF/i, /RF/i, /2F.*屋根/i, /大屋根/i, /屋根/i];
+                } else if (slotKey === 'grid') {
+                    patterns = [/GRID/i, /GLID/i, /通り芯/i, /軸線/i, /1F/i];
+                }
+                for (const pat of patterns) {
+                    const idx = this.loadedFiles.findIndex(f => pat.test(f.name));
+                    if (idx >= 0) return idx;
+                }
+                return 0;
+            };
+
             // ファイル選択オプションの設定
-            const currentFileVal = fileEl.value;
             if (fileEl.options.length === 0) {
                 fileEl.innerHTML = '';
                 this.loadedFiles.forEach((f, idx) => {
@@ -119,9 +140,8 @@ window.DxfLayerMapperController = {
                     opt.text = f.name;
                     fileEl.appendChild(opt);
                 });
-                if (currentFileVal && fileEl.options[currentFileVal]) {
-                    fileEl.value = currentFileVal;
-                }
+                const defaultAutoIdx = autoSelectFileIdxForSlot(item.selectedKey);
+                fileEl.value = defaultAutoIdx;
             }
 
             // 選択中ファイル（該当スロットで選ばれたDXF）に厳密に属するレイヤー一覧のみを取得
@@ -551,7 +571,7 @@ window.DxfLayerMapperController = {
     previewPanOffset: { x: 0, y: 0 },
 
     /**
-     * ステートマシン型高速DXFストリーミングスキャナー (1f.dxf実機構造完全対応)
+     * ステートマシン型高速DXFストリーミングスキャナー (全CAD要素・1f.dxf実機構造完全対応)
      */
     parseDxfRawLinesDirect: function(rawTxt) {
         const lines = [];
@@ -561,7 +581,7 @@ window.DxfLayerMapperController = {
         let inEntities = false;
         let curType = null;
         let curLayer = "";
-        let curX1 = null, curY1 = null, curX2 = null, curY2 = null;
+        let curX1 = null, curY1 = null, curX2 = null, curY2 = null, curR = null;
 
         for (let i = 0; i < rawLines.length - 1; i++) {
             const code = rawLines[i].trim();
@@ -573,24 +593,34 @@ window.DxfLayerMapperController = {
             if (inEntities && code === '0') {
                 if (curType === 'LINE' && curX1 !== null && curY1 !== null && curX2 !== null && curY2 !== null) {
                     lines.push({ type: 'LINE', layer: curLayer, x1: curX1, y1: curY1, x2: curX2, y2: curY2 });
+                } else if (curType === 'CIRCLE' && curX1 !== null && curY1 !== null) {
+                    const r = curR || 100;
+                    lines.push({ type: 'CIRCLE', layer: curLayer, x1: curX1 - r, y1: curY1, x2: curX1 + r, y2: curY1 });
+                    lines.push({ type: 'CIRCLE', layer: curLayer, x1: curX1, y1: curY1 - r, x2: curX1, y2: curY1 + r });
+                } else if (curType === 'POINT' && curX1 !== null && curY1 !== null) {
+                    lines.push({ type: 'POINT', layer: curLayer, x1: curX1 - 50, y1: curY1, x2: curX1 + 50, y2: curY1 });
+                    lines.push({ type: 'POINT', layer: curLayer, x1: curX1, y1: curY1 - 50, x2: curX1, y2: curY1 + 50 });
                 }
                 curType = val;
                 curLayer = "";
-                curX1 = null; curY1 = null; curX2 = null; curY2 = null;
+                curX1 = null; curY1 = null; curX2 = null; curY2 = null; curR = null;
             }
 
             if (inEntities) {
                 if (code === '8') curLayer = val;
-                if (curType === 'LINE') {
-                    if (code === '10') curX1 = parseFloat(val);
-                    if (code === '20') curY1 = parseFloat(val);
-                    if (code === '11') curX2 = parseFloat(val);
-                    if (code === '21') curY2 = parseFloat(val);
-                }
+                if (code === '10') curX1 = parseFloat(val);
+                if (code === '20') curY1 = parseFloat(val);
+                if (code === '11') curX2 = parseFloat(val);
+                if (code === '21') curY2 = parseFloat(val);
+                if (code === '40') curR = parseFloat(val);
             }
         }
         if (curType === 'LINE' && curX1 !== null && curY1 !== null && curX2 !== null && curY2 !== null) {
             lines.push({ type: 'LINE', layer: curLayer, x1: curX1, y1: curY1, x2: curX2, y2: curY2 });
+        } else if (curType === 'CIRCLE' && curX1 !== null && curY1 !== null) {
+            const r = curR || 100;
+            lines.push({ type: 'CIRCLE', layer: curLayer, x1: curX1 - r, y1: curY1, x2: curX1 + r, y2: curY1 });
+            lines.push({ type: 'CIRCLE', layer: curLayer, x1: curX1, y1: curY1 - r, x2: curX1, y2: curY1 + r });
         }
         return lines;
     },
@@ -611,26 +641,47 @@ window.DxfLayerMapperController = {
         try {
             const dxf = window.CadEngine ? window.CadEngine.processDxf(fileObj.rawTxt) : null;
             if (dxf && dxf.entities) {
-                function collectEntities(entities, blocks) {
-                    if (!entities) return;
-                    for (let i = 0; i < Math.min(entities.length, 5000); i++) {
+                const addPt = (x, y) => {
+                    if (x == null || y == null || isNaN(x) || isNaN(y)) return;
+                    minX = Math.min(minX, x);
+                    minY = Math.min(minY, y);
+                    maxX = Math.max(maxX, x);
+                    maxY = Math.max(maxY, y);
+                };
+
+                function collectEntities(entities, blocks, depth = 0) {
+                    if (!entities || depth > 5) return;
+                    for (let i = 0; i < Math.min(entities.length, 8000); i++) {
                         const ent = entities[i];
                         if (ent.type === 'LINE' && ent.start && ent.end) {
                             lines.push({ type: 'LINE', layer: ent.layer || "", x1: ent.start.x, y1: ent.start.y, x2: ent.end.x, y2: ent.end.y });
-                            minX = Math.min(minX, ent.start.x, ent.end.x);
-                            minY = Math.min(minY, ent.start.y, ent.end.y);
-                            maxX = Math.max(maxX, ent.start.x, ent.end.x);
-                            maxY = Math.max(maxY, ent.start.y, ent.end.y);
+                            addPt(ent.start.x, ent.start.y);
+                            addPt(ent.end.x, ent.end.y);
                         } else if ((ent.type === 'LWPOLYLINE' || ent.type === 'POLYLINE') && ent.vertices && ent.vertices.length > 1) {
-                            for (let j = 0; j < Math.min(ent.vertices.length - 1, 200); j++) {
+                            for (let j = 0; j < Math.min(ent.vertices.length - 1, 300); j++) {
                                 const v1 = ent.vertices[j];
                                 const v2 = ent.vertices[j + 1];
                                 lines.push({ type: 'LWPOLYLINE', layer: ent.layer || "", x1: v1.x, y1: v1.y, x2: v2.x, y2: v2.y });
-                                minX = Math.min(minX, v1.x, v2.x);
-                                minY = Math.min(minY, v1.y, v2.y);
-                                maxX = Math.max(maxX, v1.x, v2.x);
-                                maxY = Math.max(maxY, v1.y, v2.y);
+                                addPt(v1.x, v1.y);
+                                addPt(v2.x, v2.y);
                             }
+                        } else if (ent.type === 'CIRCLE' && ent.center) {
+                            const cx = ent.center.x, cy = ent.center.y, r = ent.radius || 100;
+                            lines.push({ type: 'CIRCLE', layer: ent.layer || "", x1: cx - r, y1: cy, x2: cx + r, y2: cy });
+                            lines.push({ type: 'CIRCLE', layer: ent.layer || "", x1: cx, y1: cy - r, x2: cx, y2: cy + r });
+                            addPt(cx - r, cy - r);
+                            addPt(cx + r, cy + r);
+                        } else if (ent.type === 'POINT' && ent.position) {
+                            const px = ent.position.x, py = ent.position.y;
+                            lines.push({ type: 'POINT', layer: ent.layer || "", x1: px - 80, y1: py, x2: px + 80, y2: py });
+                            lines.push({ type: 'POINT', layer: ent.layer || "", x1: px, y1: py - 80, x2: px, y2: py + 80 });
+                            addPt(px - 100, py - 100);
+                            addPt(px + 100, py + 100);
+                        } else if (ent.type === 'INSERT' && blocks && blocks[ent.name] && blocks[ent.name].entities) {
+                            collectEntities(blocks[ent.name].entities, blocks, depth + 1);
+                        } else if (['TEXT', 'MTEXT'].includes(ent.type)) {
+                            const pos = ent.startPoint || ent.position || ent.insertionPoint || {};
+                            if (pos.x != null && pos.y != null) addPt(pos.x, pos.y);
                         }
                     }
                 }
