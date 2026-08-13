@@ -1,6 +1,6 @@
 /**
  * controllers/DxfLayerMapperController.js - Universal Step-by-Step DXF Wizard Controller
- * v3.12.37 Interactive Real-Time Origin Alignment Preview & Exact Offset Calculation
+ * v3.12.38 Unrestricted Direct Grid Line Intersection Snapping & Real-Time Alignment
  */
 
 window.DxfLayerMapperController = {
@@ -21,6 +21,7 @@ window.DxfLayerMapperController = {
 
     previewZoomScale: 1.0,
     previewPanOffset: { x: 0, y: 0 },
+    lastRawLines: [],
     lastGridIntersections: [],
     selectedVisualOriginPt: null,
 
@@ -168,10 +169,10 @@ window.DxfLayerMapperController = {
         // タイトルテキスト
         const titleEl = document.getElementById('wizard-step-title');
         const titles = {
-            1: '🏠 【Step 1 / 4】1階図面の原点指定 (通り芯交点をタップして1階基準原点を設定)',
-            2: '🏢 【Step 2 / 4】2階図面の原点指定 (1階基準原点🎯へ合わせる2階通り芯交点をタップ)',
-            3: '🏠 【Step 3 / 4】1階屋根図面の原点指定 (1階基準原点🎯へ合わせる交点をタップ)',
-            4: '🏠 【Step 4 / 4】2階屋根図面の原点指定 (1階基準原点🎯へ合わせる交点をタップ)'
+            1: '🏠 【Step 1 / 4】1階図面の原点指定 (図面上の通り芯交点を自由クリックで1階基準原点を設定)',
+            2: '🏢 【Step 2 / 4】2階図面の原点指定 (1階基準原点🎯へ合わせる2階の通り芯交点をタップ)',
+            3: '🏠 【Step 3 / 4】1階屋根図面の原点指定 (1階基準原点🎯へ合わせる通り芯交点をタップ)',
+            4: '🏠 【Step 4 / 4】2階屋根図面の原点指定 (1階基準原点🎯へ合わせる通り芯交点をタップ)'
         };
         if (titleEl) titleEl.innerText = titles[stepNum] || '';
 
@@ -608,6 +609,7 @@ window.DxfLayerMapperController = {
 
         // 万能スキャナーで生テキストから全線分を解読抽出
         const rawLines = this.parseDxfRawLinesDirect(fileObj.rawTxt);
+        this.lastRawLines = rawLines;
 
         if (curNum === 1) {
             // Step 1 の通り芯線分を保存
@@ -615,9 +617,9 @@ window.DxfLayerMapperController = {
             if (this.established1FGridLines.length === 0) this.established1FGridLines = rawLines.slice(0, 100);
         }
 
-        // 交点候補（生座標系）の計算
-        const vertLines = rawLines.filter(l => Math.abs(l.x1 - l.x2) < 50).slice(0, 80);
-        const horizLines = rawLines.filter(l => Math.abs(l.y1 - l.y2) < 50).slice(0, 80);
+        // 全交点候補の計算
+        const vertLines = rawLines.filter(l => Math.abs(l.x1 - l.x2) < 80);
+        const horizLines = rawLines.filter(l => Math.abs(l.y1 - l.y2) < 80);
         const intersections = [];
 
         vertLines.forEach(vl => {
@@ -627,7 +629,7 @@ window.DxfLayerMapperController = {
                 const hy = (hl.y1 + hl.y2) / 2;
                 const hMinX = Math.min(hl.x1, hl.x2) - 500, hMaxX = Math.max(hl.x1, hl.x2) + 500;
                 if (vx >= hMinX && vx <= hMaxX && hy >= vMinY && hy <= vMaxY) {
-                    if (!intersections.some(pt => Math.hypot(pt.x - vx, pt.y - hy) < 50)) intersections.push({ x: vx, y: hy });
+                    if (!intersections.some(pt => Math.hypot(pt.x - vx, pt.y - hy) < 20)) intersections.push({ x: vx, y: hy });
                 }
             });
         });
@@ -636,7 +638,7 @@ window.DxfLayerMapperController = {
             rawLines.forEach(l => {
                 if (l.type === 'CIRCLE' || l.type === 'POINT') {
                     const cx = (l.x1 + l.x2) / 2, cy = (l.y1 + l.y2) / 2;
-                    if (!intersections.some(pt => Math.hypot(pt.x - cx, pt.y - cy) < 50)) intersections.push({ x: cx, y: cy });
+                    if (!intersections.some(pt => Math.hypot(pt.x - cx, pt.y - cy) < 20)) intersections.push({ x: cx, y: cy });
                 }
             });
         }
@@ -733,11 +735,11 @@ window.DxfLayerMapperController = {
             ctx.moveTo(p1.cx, p1.cy); ctx.lineTo(p2.cx, p2.cy); ctx.stroke();
         });
 
-        // 3. 青いスナップ点描画 (アライメント移動後)
+        // 3. 青いスナップ点描画 (全交点可視化)
         alignedIntersections.forEach(item => {
             const cp = toCanvas(item.x, item.y);
             ctx.fillStyle = '#00d2d3';
-            ctx.beginPath(); ctx.arc(cp.cx, cp.cy, 5, 0, Math.PI * 2); ctx.fill();
+            ctx.beginPath(); ctx.arc(cp.cx, cp.cy, 4, 0, Math.PI * 2); ctx.fill();
         });
 
         // 4. 赤い基準原点 🎯 マーカー（1階基準原点位置に完全固定表示）
@@ -754,14 +756,14 @@ window.DxfLayerMapperController = {
                 if (curNum === 1) {
                     infoEl.innerText = `🎯 【1階基準原点】: (${Math.round(chosenPt.x)}, ${Math.round(chosenPt.y)})`;
                 } else {
-                    infoEl.innerText = `🎯 【1階基準原点🎯へ一致合致】: 選択交点 (${Math.round(chosenPt.x)}, ${Math.round(chosenPt.y)})  [移動量: dx=${Math.round(alignOffset.dx)}, dy=${Math.round(alignOffset.dy)}]`;
+                    infoEl.innerText = `🎯 【1階基準原点🎯へ合致】: 選択通り芯交点 (${Math.round(chosenPt.x)}, ${Math.round(chosenPt.y)})  [位置補正量: dx=${Math.round(alignOffset.dx)}, dy=${Math.round(alignOffset.dy)}]`;
                 }
             }
         }
     },
 
     /**
-     * キャンバスイベント初期化（ホイールズーム、ドラッグパン、交点磁石スナップ＆リアルタイム原点一致）
+     * キャンバスイベント初期化（無制限ダイレクト・グリッド交点精度スナップ＆リアルタイム位置合わせ）
      */
     initPreviewCanvasEvents: function() {
         const cvs = document.getElementById('dxf-origin-preview-canvas');
@@ -796,7 +798,7 @@ window.DxfLayerMapperController = {
 
         cvs.onmouseup = cvs.onmouseleave = () => { isDragging = false; };
 
-        // クリックによる基準原点スナップ選択＆リアルタイム1階原点合致移動
+        // クリックによる無制限グリッド交点精度スナップ選択＆リアルタイム1階原点合致移動
         cvs.onclick = (ev) => {
             const rect = cvs.getBoundingClientRect();
             const mouseX = ev.clientX - rect.left;
@@ -805,30 +807,36 @@ window.DxfLayerMapperController = {
             const padding = 25;
             const panX = this.previewPanOffset ? this.previewPanOffset.x : 0;
             const panY = this.previewPanOffset ? this.previewPanOffset.y : 0;
+            const bounds = this.lastPreviewBounds;
+            if (!bounds || !bounds.scale) return;
 
-            const alignOffset = this.lastPreviewBounds?.alignOffset || { dx: 0, dy: 0 };
+            const alignOffset = bounds.alignOffset || { dx: 0, dy: 0 };
 
-            let closest = null, minDist = 35;
-            this.lastGridIntersections.forEach(rawPt => {
-                // アライメント移動後のキャンバス座標
-                const alignedX = rawPt.x + alignOffset.dx;
-                const alignedY = rawPt.y + alignOffset.dy;
-                const cp = {
-                    cx: padding + (alignedX - this.lastPreviewBounds?.minX) * this.lastPreviewBounds?.scale + panX,
-                    cy: cvs.height - (padding + (alignedY - this.lastPreviewBounds?.minY) * this.lastPreviewBounds?.scale) + panY
-                };
-                const dist = Math.hypot(cp.cx - mouseX, cp.cy - mouseY);
-                if (dist < minDist) { minDist = dist; closest = rawPt; }
+            // クリック位置からワールド生座標を逆算
+            const clickedWorldX = bounds.minX + (mouseX - padding - panX) / bounds.scale - alignOffset.dx;
+            const clickedWorldY = bounds.minY + (cvs.height - mouseY - padding + panY) / bounds.scale - alignOffset.dy;
+
+            // 無制限グリッド交点スナップ探索（すべての交点・線分から最も近い交点を検索）
+            let closestPt = null;
+            let minDistWorld = 1200 / bounds.scale; // 画面上の広い探索範囲
+
+            (this.lastGridIntersections || []).forEach(pt => {
+                const d = Math.hypot(pt.x - clickedWorldX, pt.y - clickedWorldY);
+                if (d < minDistWorld) {
+                    minDistWorld = d;
+                    closestPt = pt;
+                }
             });
 
-            if (closest) {
-                this.selectedVisualOriginPt = closest;
-                this.stepData[this.currentStep].originPt = closest;
-                if (this.currentStep === 1) {
-                    this.established1FOrigin = closest;
-                }
-                this.renderPreviewCanvas();
+            // 万一幾何交点が遠い場合でも、クリックされた正確なワールド座標をダイレクト採用！
+            const targetPt = closestPt || { x: clickedWorldX, y: clickedWorldY };
+
+            this.selectedVisualOriginPt = targetPt;
+            this.stepData[this.currentStep].originPt = targetPt;
+            if (this.currentStep === 1) {
+                this.established1FOrigin = targetPt;
             }
+            this.renderPreviewCanvas();
         };
     }
 };
