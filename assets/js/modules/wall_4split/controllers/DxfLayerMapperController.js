@@ -1,6 +1,6 @@
 /**
  * controllers/DxfLayerMapperController.js - Universal Step-by-Step DXF Wizard Controller
- * v3.12.36 Universal DXF Entity Scanner & Exact Alignment Offset
+ * v3.12.37 Interactive Real-Time Origin Alignment Preview & Exact Offset Calculation
  */
 
 window.DxfLayerMapperController = {
@@ -168,10 +168,10 @@ window.DxfLayerMapperController = {
         // タイトルテキスト
         const titleEl = document.getElementById('wizard-step-title');
         const titles = {
-            1: '🏠 【Step 1 / 4】1階図面の読込（通り芯・1階柱・1階背景）',
-            2: '🏢 【Step 2 / 4】2階図面の読込（2階柱・2階背景）',
-            3: '🏠 【Step 3 / 4】1階屋根伏図面の読込 (任意)',
-            4: '🏠 【Step 4 / 4】2階屋根伏図面の読込 (任意)'
+            1: '🏠 【Step 1 / 4】1階図面の原点指定 (通り芯交点をタップして1階基準原点を設定)',
+            2: '🏢 【Step 2 / 4】2階図面の原点指定 (1階基準原点🎯へ合わせる2階通り芯交点をタップ)',
+            3: '🏠 【Step 3 / 4】1階屋根図面の原点指定 (1階基準原点🎯へ合わせる交点をタップ)',
+            4: '🏠 【Step 4 / 4】2階屋根図面の原点指定 (1階基準原点🎯へ合わせる交点をタップ)'
         };
         if (titleEl) titleEl.innerText = titles[stepNum] || '';
 
@@ -473,7 +473,6 @@ window.DxfLayerMapperController = {
 
     /**
      * 万能DXF生テキストパーサー (Universal DXF Entity & Block Scanner)
-     * LINE, LWPOLYLINE, POLYLINE, CIRCLE, ARC, SOLID, 3DFACE, INSERT 100%完全対応
      */
     parseDxfRawLinesDirect: function(rawTxt) {
         const lines = [];
@@ -486,9 +485,8 @@ window.DxfLayerMapperController = {
         let curBlockEnts = [];
         let inserts = [];
 
-        // エンティティ読み取り作業領域
         let curType = null, curLayer = "";
-        let pts = []; // [{x, y}]
+        let pts = [];
         let curR = null;
 
         const pushBlockEnt = () => {
@@ -551,22 +549,10 @@ window.DxfLayerMapperController = {
                 }
                 if (curBlockName) {
                     if (code === '8') curLayer = val;
-                    if (code === '10') {
-                        if (!pts[0]) pts[0] = { x: 0, y: 0 };
-                        pts[0].x = parseFloat(val);
-                    }
-                    if (code === '20') {
-                        if (!pts[0]) pts[0] = { x: 0, y: 0 };
-                        pts[0].y = parseFloat(val);
-                    }
-                    if (code === '11') {
-                        if (!pts[1]) pts[1] = { x: 0, y: 0 };
-                        pts[1].x = parseFloat(val);
-                    }
-                    if (code === '21') {
-                        if (!pts[1]) pts[1] = { x: 0, y: 0 };
-                        pts[1].y = parseFloat(val);
-                    }
+                    if (code === '10') { if (!pts[0]) pts[0] = { x: 0, y: 0 }; pts[0].x = parseFloat(val); }
+                    if (code === '20') { if (!pts[0]) pts[0] = { x: 0, y: 0 }; pts[0].y = parseFloat(val); }
+                    if (code === '11') { if (!pts[1]) pts[1] = { x: 0, y: 0 }; pts[1].x = parseFloat(val); }
+                    if (code === '21') { if (!pts[1]) pts[1] = { x: 0, y: 0 }; pts[1].y = parseFloat(val); }
                     if (code === '40') curR = parseFloat(val);
                 }
             }
@@ -579,37 +565,21 @@ window.DxfLayerMapperController = {
                 if (code === '8') curLayer = val;
                 if (code === '2') curBlockName = val;
                 if (code === '10') {
-                    const last = pts[pts.length - 1];
-                    if (curType === 'LWPOLYLINE' || curType === 'POLYLINE') {
-                        pts.push({ x: parseFloat(val), y: 0 });
-                    } else {
-                        if (!pts[0]) pts[0] = { x: 0, y: 0 };
-                        pts[0].x = parseFloat(val);
-                    }
+                    if (curType === 'LWPOLYLINE' || curType === 'POLYLINE') pts.push({ x: parseFloat(val), y: 0 });
+                    else { if (!pts[0]) pts[0] = { x: 0, y: 0 }; pts[0].x = parseFloat(val); }
                 }
                 if (code === '20') {
                     const last = pts[pts.length - 1];
-                    if ((curType === 'LWPOLYLINE' || curType === 'POLYLINE') && last) {
-                        last.y = parseFloat(val);
-                    } else {
-                        if (!pts[0]) pts[0] = { x: 0, y: 0 };
-                        pts[0].y = parseFloat(val);
-                    }
+                    if ((curType === 'LWPOLYLINE' || curType === 'POLYLINE') && last) last.y = parseFloat(val);
+                    else { if (!pts[0]) pts[0] = { x: 0, y: 0 }; pts[0].y = parseFloat(val); }
                 }
-                if (code === '11') {
-                    if (!pts[1]) pts[1] = { x: 0, y: 0 };
-                    pts[1].x = parseFloat(val);
-                }
-                if (code === '21') {
-                    if (!pts[1]) pts[1] = { x: 0, y: 0 };
-                    pts[1].y = parseFloat(val);
-                }
+                if (code === '11') { if (!pts[1]) pts[1] = { x: 0, y: 0 }; pts[1].x = parseFloat(val); }
+                if (code === '21') { if (!pts[1]) pts[1] = { x: 0, y: 0 }; pts[1].y = parseFloat(val); }
                 if (code === '40') curR = parseFloat(val);
             }
         }
         pushEntity();
 
-        // ブロック参照 (INSERT) のワールド座標オフセット展開
         inserts.forEach(ins => {
             const blkEnts = blocks[ins.name] || [];
             blkEnts.forEach(ent => {
@@ -623,7 +593,7 @@ window.DxfLayerMapperController = {
     },
 
     /**
-     * プレビューキャンバス描画（万能線分パース結果からの100%絶対描画）
+     * プレビューキャンバス描画（リアルタイム対話型原点アライメント描画）
      */
     renderPreviewCanvas: function() {
         const cvs = document.getElementById('dxf-origin-preview-canvas');
@@ -637,73 +607,17 @@ window.DxfLayerMapperController = {
         if (!fileObj || !fileObj.rawTxt) return;
 
         // 万能スキャナーで生テキストから全線分を解読抽出
-        const lines = this.parseDxfRawLinesDirect(fileObj.rawTxt);
-
-        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-        lines.forEach(l => {
-            if (l.x1 != null && !isNaN(l.x1)) { minX = Math.min(minX, l.x1); maxX = Math.max(maxX, l.x1); }
-            if (l.y1 != null && !isNaN(l.y1)) { minY = Math.min(minY, l.y1); maxY = Math.max(maxY, l.y1); }
-            if (l.x2 != null && !isNaN(l.x2)) { minX = Math.min(minX, l.x2); maxX = Math.max(maxX, l.x2); }
-            if (l.y2 != null && !isNaN(l.y2)) { minY = Math.min(minY, l.y2); maxY = Math.max(maxY, l.y2); }
-        });
+        const rawLines = this.parseDxfRawLinesDirect(fileObj.rawTxt);
 
         if (curNum === 1) {
-            // Step 1 の通り芯線分を保存しておく
-            this.established1FGridLines = lines.filter(l => /(GRID|GLID|通り芯|軸線)/i.test(l.layer));
-            if (this.established1FGridLines.length === 0) this.established1FGridLines = lines.slice(0, 100);
+            // Step 1 の通り芯線分を保存
+            this.established1FGridLines = rawLines.filter(l => /(GRID|GLID|通り芯|軸線)/i.test(l.layer));
+            if (this.established1FGridLines.length === 0) this.established1FGridLines = rawLines.slice(0, 100);
         }
 
-        if (minX === Infinity || lines.length === 0) {
-            ctx.fillStyle = '#64748b'; ctx.font = '12px sans-serif';
-            ctx.fillText('※プレビュー描画用エンティティがありません', 20, cvs.height / 2);
-            return;
-        }
-
-        const w = maxX - minX || 1;
-        const h = maxY - minY || 1;
-        const padding = 25;
-        const baseScale = Math.min((cvs.width - padding * 2) / w, (cvs.height - padding * 2) / h);
-        const scale = baseScale * (this.previewZoomScale || 1.0);
-
-        this.lastPreviewBounds = { minX, minY, maxX, maxY, scale, padding };
-
-        const panX = this.previewPanOffset ? this.previewPanOffset.x : 0;
-        const panY = this.previewPanOffset ? this.previewPanOffset.y : 0;
-
-        const toCanvas = (x, y) => ({
-            cx: padding + (x - minX) * scale + panX,
-            cy: cvs.height - (padding + (y - minY) * scale) + panY
-        });
-
-        // 1. Step 2 以降の場合、1階通り芯を背景オーバーレイ描画
-        if (curNum >= 2 && this.established1FGridLines.length > 0) {
-            ctx.strokeStyle = '#0284c7';
-            ctx.lineWidth = 1;
-            ctx.setLineDash([4, 4]);
-            this.established1FGridLines.forEach(l => {
-                const p1 = toCanvas(l.x1, l.y1);
-                const p2 = toCanvas(l.x2, l.y2);
-                ctx.beginPath(); ctx.moveTo(p1.cx, p1.cy); ctx.lineTo(p2.cx, p2.cy); ctx.stroke();
-            });
-            ctx.setLineDash([]);
-        }
-
-        // 2. 現在図面の鮮明な描画
-        lines.forEach(l => {
-            const p1 = toCanvas(l.x1, l.y1);
-            const p2 = toCanvas(l.x2, l.y2);
-            ctx.beginPath();
-            if (l.type === 'CIRCLE' || l.type === 'POINT') {
-                ctx.strokeStyle = '#ff7675'; ctx.lineWidth = 1.5;
-            } else {
-                ctx.strokeStyle = '#94a3b8'; ctx.lineWidth = 1;
-            }
-            ctx.moveTo(p1.cx, p1.cy); ctx.lineTo(p2.cx, p2.cy); ctx.stroke();
-        });
-
-        // 3. 通り芯交点・候補スナップポイント計算
-        const vertLines = lines.filter(l => Math.abs(l.x1 - l.x2) < 50).slice(0, 80);
-        const horizLines = lines.filter(l => Math.abs(l.y1 - l.y2) < 50).slice(0, 80);
+        // 交点候補（生座標系）の計算
+        const vertLines = rawLines.filter(l => Math.abs(l.x1 - l.x2) < 50).slice(0, 80);
+        const horizLines = rawLines.filter(l => Math.abs(l.y1 - l.y2) < 50).slice(0, 80);
         const intersections = [];
 
         vertLines.forEach(vl => {
@@ -719,7 +633,7 @@ window.DxfLayerMapperController = {
         });
 
         if (intersections.length === 0) {
-            lines.forEach(l => {
+            rawLines.forEach(l => {
                 if (l.type === 'CIRCLE' || l.type === 'POINT') {
                     const cx = (l.x1 + l.x2) / 2, cy = (l.y1 + l.y2) / 2;
                     if (!intersections.some(pt => Math.hypot(pt.x - cx, pt.y - cy) < 50)) intersections.push({ x: cx, y: cy });
@@ -727,37 +641,127 @@ window.DxfLayerMapperController = {
             });
         }
         if (intersections.length === 0) {
-            lines.slice(0, 50).forEach(l => {
+            rawLines.slice(0, 50).forEach(l => {
                 if (!intersections.some(pt => Math.hypot(pt.x - l.x1, pt.y - l.y1) < 500)) intersections.push({ x: l.x1, y: l.y1 });
             });
         }
         this.lastGridIntersections = intersections;
 
-        // 青スナップ描画
-        intersections.forEach(pt => {
-            const cp = toCanvas(pt.x, pt.y);
+        // 基準原点ターゲット設定
+        const chosenPt = this.selectedVisualOriginPt || (intersections[0] || { x: 0, y: 0 });
+        curData.originPt = chosenPt;
+
+        // 平行移動オフセット計算: Step 2以降ではクリックした交点 chosenPt が 1階基準原点 1FOrigin へ重ね合わさるようにシフト
+        const orig1F = this.established1FOrigin || (this.stepData[1].originPt || { x: 0, y: 0 });
+        const alignOffset = (curNum >= 2 && orig1F) ? {
+            dx: orig1F.x - chosenPt.x,
+            dy: orig1F.y - chosenPt.y
+        } : { dx: 0, dy: 0 };
+
+        // 描画用座標にアライメントシフトを反映
+        const lines = rawLines.map(l => ({
+            ...l,
+            x1: l.x1 + alignOffset.dx, y1: l.y1 + alignOffset.dy,
+            x2: l.x2 + alignOffset.dx, y2: l.y2 + alignOffset.dy
+        }));
+
+        const alignedIntersections = intersections.map(pt => ({
+            x: pt.x + alignOffset.dx,
+            y: pt.y + alignOffset.dy,
+            rawPt: pt
+        }));
+
+        // 描画バウンディングボックスの計算（1階基準座標系）
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+        lines.forEach(l => {
+            minX = Math.min(minX, l.x1, l.x2); maxX = Math.max(maxX, l.x1, l.x2);
+            minY = Math.min(minY, l.y1, l.y2); maxY = Math.max(maxY, l.y1, l.y2);
+        });
+
+        if (curNum >= 2 && this.established1FGridLines.length > 0) {
+            this.established1FGridLines.forEach(l => {
+                minX = Math.min(minX, l.x1, l.x2); maxX = Math.max(maxX, l.x1, l.x2);
+                minY = Math.min(minY, l.y1, l.y2); maxY = Math.max(maxY, l.y1, l.y2);
+            });
+        }
+
+        if (minX === Infinity || lines.length === 0) {
+            ctx.fillStyle = '#64748b'; ctx.font = '12px sans-serif';
+            ctx.fillText('※プレビュー描画用エンティティがありません', 20, cvs.height / 2);
+            return;
+        }
+
+        const w = maxX - minX || 1;
+        const h = maxY - minY || 1;
+        const padding = 25;
+        const baseScale = Math.min((cvs.width - padding * 2) / w, (cvs.height - padding * 2) / h);
+        const scale = baseScale * (this.previewZoomScale || 1.0);
+
+        this.lastPreviewBounds = { minX, minY, maxX, maxY, scale, padding, alignOffset };
+
+        const panX = this.previewPanOffset ? this.previewPanOffset.x : 0;
+        const panY = this.previewPanOffset ? this.previewPanOffset.y : 0;
+
+        const toCanvas = (x, y) => ({
+            cx: padding + (x - minX) * scale + panX,
+            cy: cvs.height - (padding + (y - minY) * scale) + panY
+        });
+
+        // 1. Step 2 以降の場合、1階通り芯を背景オーバーレイ描画
+        if (curNum >= 2 && this.established1FGridLines.length > 0) {
+            ctx.strokeStyle = '#0284c7';
+            ctx.lineWidth = 1.2;
+            ctx.setLineDash([5, 5]);
+            this.established1FGridLines.forEach(l => {
+                const p1 = toCanvas(l.x1, l.y1);
+                const p2 = toCanvas(l.x2, l.y2);
+                ctx.beginPath(); ctx.moveTo(p1.cx, p1.cy); ctx.lineTo(p2.cx, p2.cy); ctx.stroke();
+            });
+            ctx.setLineDash([]);
+        }
+
+        // 2. 現在図面の鮮明描画 (アライメント平行移動適用済み)
+        lines.forEach(l => {
+            const p1 = toCanvas(l.x1, l.y1);
+            const p2 = toCanvas(l.x2, l.y2);
+            ctx.beginPath();
+            if (l.type === 'CIRCLE' || l.type === 'POINT') {
+                ctx.strokeStyle = '#ff7675'; ctx.lineWidth = 1.5;
+            } else {
+                ctx.strokeStyle = '#94a3b8'; ctx.lineWidth = 1;
+            }
+            ctx.moveTo(p1.cx, p1.cy); ctx.lineTo(p2.cx, p2.cy); ctx.stroke();
+        });
+
+        // 3. 青いスナップ点描画 (アライメント移動後)
+        alignedIntersections.forEach(item => {
+            const cp = toCanvas(item.x, item.y);
             ctx.fillStyle = '#00d2d3';
             ctx.beginPath(); ctx.arc(cp.cx, cp.cy, 5, 0, Math.PI * 2); ctx.fill();
         });
 
-        // 4. 赤い原点ターゲット 🎯 マーカー
-        const targetPt = this.selectedVisualOriginPt || (intersections[0] || null);
-        if (targetPt) {
-            const cp = toCanvas(targetPt.x, targetPt.y);
-            ctx.strokeStyle = '#ff6b6b'; ctx.lineWidth = 2.5;
-            ctx.beginPath(); ctx.arc(cp.cx, cp.cy, 10, 0, Math.PI * 2); ctx.stroke();
+        // 4. 赤い基準原点 🎯 マーカー（1階基準原点位置に完全固定表示）
+        const targetPtWorld = (curNum >= 2 && orig1F) ? orig1F : chosenPt;
+        if (targetPtWorld) {
+            const cp = toCanvas(targetPtWorld.x, targetPtWorld.y);
+            ctx.strokeStyle = '#ff6b6b'; ctx.lineWidth = 3.0;
+            ctx.beginPath(); ctx.arc(cp.cx, cp.cy, 12, 0, Math.PI * 2); ctx.stroke();
             ctx.fillStyle = '#ff6b6b';
-            ctx.beginPath(); ctx.arc(cp.cx, cp.cy, 4, 0, Math.PI * 2); ctx.fill();
+            ctx.beginPath(); ctx.arc(cp.cx, cp.cy, 5, 0, Math.PI * 2); ctx.fill();
 
             const infoEl = document.getElementById('wizard-preview-overlay-info');
             if (infoEl) {
-                infoEl.innerText = `🎯 基準原点: (${Math.round(targetPt.x)}, ${Math.round(targetPt.y)})`;
+                if (curNum === 1) {
+                    infoEl.innerText = `🎯 【1階基準原点】: (${Math.round(chosenPt.x)}, ${Math.round(chosenPt.y)})`;
+                } else {
+                    infoEl.innerText = `🎯 【1階基準原点🎯へ一致合致】: 選択交点 (${Math.round(chosenPt.x)}, ${Math.round(chosenPt.y)})  [移動量: dx=${Math.round(alignOffset.dx)}, dy=${Math.round(alignOffset.dy)}]`;
+                }
             }
         }
     },
 
     /**
-     * キャンバスイベント初期化（ホイールズーム、ドラッグパン、交点磁石スナップ）
+     * キャンバスイベント初期化（ホイールズーム、ドラッグパン、交点磁石スナップ＆リアルタイム原点一致）
      */
     initPreviewCanvasEvents: function() {
         const cvs = document.getElementById('dxf-origin-preview-canvas');
@@ -792,7 +796,7 @@ window.DxfLayerMapperController = {
 
         cvs.onmouseup = cvs.onmouseleave = () => { isDragging = false; };
 
-        // クリックによる基準原点スナップ選択
+        // クリックによる基準原点スナップ選択＆リアルタイム1階原点合致移動
         cvs.onclick = (ev) => {
             const rect = cvs.getBoundingClientRect();
             const mouseX = ev.clientX - rect.left;
@@ -802,19 +806,27 @@ window.DxfLayerMapperController = {
             const panX = this.previewPanOffset ? this.previewPanOffset.x : 0;
             const panY = this.previewPanOffset ? this.previewPanOffset.y : 0;
 
+            const alignOffset = this.lastPreviewBounds?.alignOffset || { dx: 0, dy: 0 };
+
             let closest = null, minDist = 35;
-            this.lastGridIntersections.forEach(pt => {
+            this.lastGridIntersections.forEach(rawPt => {
+                // アライメント移動後のキャンバス座標
+                const alignedX = rawPt.x + alignOffset.dx;
+                const alignedY = rawPt.y + alignOffset.dy;
                 const cp = {
-                    cx: padding + (pt.x - this.lastPreviewBounds?.minX) * this.lastPreviewBounds?.scale + panX,
-                    cy: cvs.height - (padding + (pt.y - this.lastPreviewBounds?.minY) * this.lastPreviewBounds?.scale) + panY
+                    cx: padding + (alignedX - this.lastPreviewBounds?.minX) * this.lastPreviewBounds?.scale + panX,
+                    cy: cvs.height - (padding + (alignedY - this.lastPreviewBounds?.minY) * this.lastPreviewBounds?.scale) + panY
                 };
                 const dist = Math.hypot(cp.cx - mouseX, cp.cy - mouseY);
-                if (dist < minDist) { minDist = dist; closest = pt; }
+                if (dist < minDist) { minDist = dist; closest = rawPt; }
             });
 
             if (closest) {
                 this.selectedVisualOriginPt = closest;
                 this.stepData[this.currentStep].originPt = closest;
+                if (this.currentStep === 1) {
+                    this.established1FOrigin = closest;
+                }
                 this.renderPreviewCanvas();
             }
         };
