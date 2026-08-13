@@ -4,8 +4,8 @@
  */
 
 function loadDxf(event) {
-    const files = Array.from(event.target.files || []);
-    if (event && event.target) event.target.value = '';
+    const targetEl = event ? event.target : null;
+    const files = Array.from((targetEl && targetEl.files) || []);
     if (files.length === 0) return;
 
     const floorSelect = document.getElementById('dxf-target-floor');
@@ -39,6 +39,7 @@ function loadDxf(event) {
             } finally {
                 readCount++;
                 if (readCount === files.length) {
+                    if (targetEl) targetEl.value = '';
                     if (fileList.length === 0) {
                         alert("❌ DXFの解析に失敗しました。ファイル形式を確認してください。");
                         return;
@@ -50,8 +51,6 @@ function loadDxf(event) {
                             window.AppController.refreshAll();
                         }
                     });
-
-
                 }
             }
         };
