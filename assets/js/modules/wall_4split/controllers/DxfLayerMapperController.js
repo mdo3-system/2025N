@@ -460,6 +460,9 @@ window.DxfLayerMapperController = {
             const fileObj = this.loadedFiles[curData.fileIdx];
             if (!fileObj || !fileObj.rawTxt) return;
 
+            const startLineCount = (s.bgLinesOriginal || []).length;
+            const startTextCount = (s.bgTextsOriginal || []).length;
+
             // 原点平行移動オフセット計算: dx = origin1F.x - targetOrigin.x
             const targetOrig = curData.originPt || orig1F;
             const dx = orig1F.x - targetOrig.x;
@@ -488,7 +491,29 @@ window.DxfLayerMapperController = {
                     dx,     // offsetX
                     dy      // offsetY
                 );
-                console.log(`✅ [Step:${stepNum} Key:${key}] parsed from "${fileObj.name}" offset=(${Math.round(dx)}, ${Math.round(dy)})`);
+
+                // パースで追加された全要素に対し、ステップの目的カテゴリを直接注入
+                const targetCat = (stepNum === 1) ? '1F_BACK' : ((stepNum === 2) ? '2F_BACK' : ((stepNum === 3) ? '1F_ROOF' : '2F_ROOF'));
+                if (s.bgLinesOriginal) {
+                    for (let i = startLineCount; i < s.bgLinesOriginal.length; i++) {
+                        const l = s.bgLinesOriginal[i];
+                        if (key !== 'grid' && l.layerCategory !== 'GRID') {
+                            l.layerCategory = targetCat;
+                            l.floor = targetFloorStr;
+                        }
+                    }
+                }
+                if (s.bgTextsOriginal) {
+                    for (let i = startTextCount; i < s.bgTextsOriginal.length; i++) {
+                        const t = s.bgTextsOriginal[i];
+                        if (key !== 'grid' && t.layerCategory !== 'GRID') {
+                            t.layerCategory = targetCat;
+                            t.floor = targetFloorStr;
+                        }
+                    }
+                }
+
+                console.log(`✅ [Step:${stepNum} Key:${key}] parsed ${(s.bgLinesOriginal||[]).length - startLineCount} lines with category ${targetCat}`);
             } catch(e) {
                 console.error(`❌ [Wizard] Step ${stepNum} parse error:`, e);
             }

@@ -1,4 +1,4 @@
 /**
  * Version.js - Centralized Version Management
  */
-window.APP_VERSION = "v3.12.55"; // Fix INSERT block entity layer inheritance for 1RF.dxf and 2RF.dxf roof rendering
+window.APP_VERSION = "v3.12.56"; // Directly tag step-based layerCategory to all imported background entities for guaranteed 1F_ROOF and 2F_ROOF rendering

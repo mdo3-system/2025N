@@ -142,40 +142,28 @@ window.MainRenderer = {
         if (!state) return true;
         const lv = state.layerVisibility || {};
         
-        // 1. レイヤー可視化トグル（GRID, 1F_BACK, 2F_BACK, 1F_ROOF, 2F_ROOF）のチェック
+        // 1. カテゴリごとのトグル可視性チェック（チェックが外れていれば非表示）
         if (element && element.layerCategory) {
             if (lv[element.layerCategory] === false) return false;
         }
 
         const curFloor = state.currentFloor || '1F';
 
-        // 2. 通り芯・グリッドは全階共通で表示
-        if (element && element.layerCategory === 'GRID') {
+        // 2. 通り芯・グリッドは全階共通表示
+        if (element && (element.layerCategory === 'GRID' || element.floor === 'ALL')) {
             return lv['GRID'] !== false;
         }
 
-        // 3. 選択されている作図階（タブ）に応じた厳格な背景分離
-        if (element && element.layerCategory) {
+        // 3. 選択タブ（1F, 2F, 1R, 2R）と一致する背景カテゴリおよびフロアを表示
+        if (element) {
             const cat = element.layerCategory;
-            if (curFloor === '1F' && cat !== '1F_BACK') return false;
-            if (curFloor === '2F' && cat !== '2F_BACK') return false;
-            if (curFloor === '1R' && cat !== '1F_ROOF') return false;
-            if (curFloor === '2R' && cat !== '2F_ROOF') return false;
+            const fl = element.floor;
+            if (curFloor === '1F') return cat === '1F_BACK' || fl === '1F';
+            if (curFloor === '2F') return cat === '2F_BACK' || fl === '2F';
+            if (curFloor === '1R') return cat === '1F_ROOF' || fl === '1R';
+            if (curFloor === '2R') return cat === '2F_ROOF' || fl === '2R';
         }
 
-        // 4. フロア一致の二重チェック
-        if (element && element.floor) {
-            if (curFloor === '1F' && element.floor !== '1F') return false;
-            if (curFloor === '2F' && element.floor !== '2F') return false;
-            if (curFloor === '1R' && element.floor !== '1R') return false;
-            if (curFloor === '2R' && element.floor !== '2R') return false;
-        }
-
-        if (!layer) return true;
-        const rawL = String(layer).trim();
-        const upperL = rawL.toUpperCase();
-
-        if (lv[rawL] === false || lv[upperL] === false) return false;
         return true;
     },
 
