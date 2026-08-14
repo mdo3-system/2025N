@@ -1,4 +1,4 @@
 /**
  * Version.js - Centralized Version Management
  */
-window.APP_VERSION = "v3.12.57"; // Fix: setRoofFloor passes '1R'/'2R' as currentFloor - root cause of all roof background rendering failures
+window.APP_VERSION = "v3.12.58"; // Fix: isLayerVisible - DXF layer toggle ON now overrides floor filter (2F_BACK visible in 1F mode, roofs visible across floors)

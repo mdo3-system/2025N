@@ -141,7 +141,7 @@ window.MainRenderer = {
     isLayerVisible: function(layer, state, element) {
         if (!state) return true;
         const lv = state.layerVisibility || {};
-        
+
         // 1. カテゴリごとのトグル可視性チェック（チェックが外れていれば非表示）
         if (element && element.layerCategory) {
             if (lv[element.layerCategory] === false) return false;
@@ -154,10 +154,17 @@ window.MainRenderer = {
             return lv['GRID'] !== false;
         }
 
-        // 3. 選択タブ（1F, 2F, 1R, 2R）と一致する背景カテゴリおよびフロアを表示
+        // 3. ユーザーが明示的にチェックONにしたカテゴリは、作図フロアに関係なく表示する
+        //    （lv[cat] === true は「ユーザーが手動でONにした」状態）
+        //    lv[cat] === undefined（未設定）の場合のみデフォルトのフロアフィルタを適用
         if (element) {
             const cat = element.layerCategory;
             const fl = element.floor;
+
+            // ユーザーが明示的にONにしたカテゴリは無条件表示
+            if (cat && lv[cat] === true) return true;
+
+            // デフォルト（lv[cat]が未設定）の場合は現在の作図フロアで自動フィルタリング
             if (curFloor === '1F') return cat === '1F_BACK' || fl === '1F';
             if (curFloor === '2F') return cat === '2F_BACK' || fl === '2F';
             if (curFloor === '1R') return cat === '1F_ROOF' || fl === '1R';
