@@ -62,7 +62,8 @@ window.InputController = {
         bC('btn-undo', () => { if (typeof undoLastAction === 'function') undoLastAction(); });
         bC('btn-redo', () => { if (typeof redoLastAction === 'function') redoLastAction(); });
         
-        bC('btn-toggle-layer', () => {
+        bC('btn-toggle-layer', (e) => {
+            if (e) { e.preventDefault(); e.stopPropagation(); }
             if (typeof window.toggleLayerPanelDirect === 'function') {
                 window.toggleLayerPanelDirect();
             }
