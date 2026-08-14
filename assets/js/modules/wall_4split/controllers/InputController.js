@@ -63,13 +63,8 @@ window.InputController = {
         bC('btn-redo', () => { if (typeof redoLastAction === 'function') redoLastAction(); });
         
         bC('btn-toggle-layer', () => {
-            if (typeof window.renderLayerPanel === 'function') {
-                window.renderLayerPanel();
-            }
-            const panel = document.getElementById('dxf-layer-panel');
-            if (panel) {
-                const currentDisp = window.getComputedStyle(panel).display;
-                panel.style.display = (currentDisp === 'none') ? 'block' : 'none';
+            if (typeof window.toggleLayerPanelDirect === 'function') {
+                window.toggleLayerPanelDirect();
             }
         });
 
