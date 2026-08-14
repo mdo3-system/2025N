@@ -178,7 +178,7 @@ window.FoundationRenderer = {
     drawExteriorWalls: function(state, toCanvas, fdSel) {
         if (!state.elementVisibility || !state.elementVisibility.f_ext_walls) return;
         const ctx = state.ctx;
-        (state.exteriorWalls || []).filter(ew => ew.floor === state.currentFloor).forEach(ew => {
+        (state.exteriorWalls || []).filter(ew => window.isFloorMatched(ew.floor, state.currentFloor)).forEach(ew => {
             if (!ew.vertices || ew.vertices.length < 2) return;
             ctx.save();
             const isSelected = fdSel.type === 'ext_wall' && fdSel.item?.id === ew.id;

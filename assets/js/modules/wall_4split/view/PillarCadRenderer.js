@@ -1,10 +1,17 @@
-/**
- * view/PillarCadRenderer.js - Pillar CAD Drawing Module
- * v3.3.0 Refactoring: Single Responsibility Principle
- * 
- * Responsible for: Drawing pillar symbols, N-value labels, tributary area polygons on canvas.
- * Extracted from: MainRenderer.js (drawPillars, drawPillarNValue methods)
- */
+if (typeof window.isFloorMatched !== 'function') {
+    window.isFloorMatched = function(itemFloor, currentFloor) {
+        if (!itemFloor || itemFloor === 'ALL') return true;
+        if (itemFloor === currentFloor) return true;
+        const cur = String(currentFloor || '1F').toUpperCase().trim();
+        const item = String(itemFloor).toUpperCase().trim();
+        if (cur === item) return true;
+        const is1FGroup = (f) => f === '1F' || f === '1R' || f === '1RF' || f === '1F_R';
+        const is2FGroup = (f) => f === '2F' || f === '2R' || f === '2RF' || f === '2F_R' || f === 'RF';
+        if (is1FGroup(cur) && is1FGroup(item)) return true;
+        if (is2FGroup(cur) && is2FGroup(item)) return true;
+        return false;
+    };
+}
 
 window.PillarCadRenderer = {
     /**
@@ -17,7 +24,7 @@ window.PillarCadRenderer = {
         const isPrintMode = state.isPrintMode;
 
         state.pillars
-            .filter(p => !p.isDeleted && !p.isInvalidPos && (p.floor === state.currentFloor || p.floor === 'ALL' || !p.floor))
+            .filter(p => !p.isDeleted && !p.isInvalidPos && window.isFloorMatched(p.floor, state.currentFloor))
             .forEach(p => {
                 const renderer = window.MainRenderer;
                 const pt = renderer ? renderer.toCanvas(p, null, state) : { cx: null, cy: null };
@@ -95,7 +102,7 @@ window.PillarCadRenderer = {
         const renderer = window.MainRenderer;
 
         state.pillars
-            .filter(p => !p.isDeleted && !p.isInvalidPos && p.floor === state.currentFloor)
+            .filter(p => !p.isDeleted && !p.isInvalidPos && window.isFloorMatched(p.floor, state.currentFloor))
             .forEach(p => {
                 if (!p.tributaryPolygon || p.tributaryPolygon.length === 0) return;
 

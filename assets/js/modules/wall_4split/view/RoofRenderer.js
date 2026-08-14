@@ -13,7 +13,7 @@ window.RoofRenderer = {
         const isPrintMode = state.isPrintMode || false;
 
         faces.forEach(face => {
-            if (face.floor !== floor) return;
+            if (!window.isFloorMatched(face.floor, floor)) return;
             if (!face.vertices || face.vertices.length < 3) return;
 
             // 1. Draw the polygon face

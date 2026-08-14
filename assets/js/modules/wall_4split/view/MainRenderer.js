@@ -1,7 +1,25 @@
-/**
- * view/MainRenderer.js - メイン描画エンジン
- * v2.3.19 リファクタリング
- */
+window.isFloorMatched = function(itemFloor, currentFloor) {
+    if (!itemFloor || itemFloor === 'ALL') return true;
+    if (itemFloor === currentFloor) return true;
+
+    const cur = String(currentFloor || '1F').toUpperCase().trim();
+    const item = String(itemFloor).toUpperCase().trim();
+    if (cur === item) return true;
+
+    const is1FGroup = (f) => f === '1F' || f === '1R' || f === '1RF' || f === '1F_R';
+    const is2FGroup = (f) => f === '2F' || f === '2R' || f === '2RF' || f === '2F_R' || f === 'RF';
+
+    if (is1FGroup(cur) && is1FGroup(item)) return true;
+    if (is2FGroup(cur) && is2FGroup(item)) return true;
+
+    return false;
+};
+
+window.drawRoofGrids = function(state) {
+    if (window.MainRenderer && typeof window.MainRenderer.drawRoofGrids === 'function') {
+        window.MainRenderer.drawRoofGrids(state);
+    }
+};
 
 window.MainRenderer = {
     /**
@@ -605,7 +623,7 @@ window.MainRenderer = {
     drawAreas: function(state) {
         if (!state.elementVisibility.areas) return;
         const ctx = state.ctx;
-        state.areaLines.filter(a => a.floor === state.currentFloor).forEach((a, index) => {
+        state.areaLines.filter(a => window.isFloorMatched(a.floor, state.currentFloor)).forEach((a, index) => {
             if ((state.layerVisibility || {})[a.layer] === false) return;
             ctx.beginPath();
             a.vertices.forEach((v, i) => {
@@ -654,7 +672,7 @@ window.MainRenderer = {
         if (!state.elementVisibility.windows) return;
         const ctx = state.ctx;
         const winC = state.isPrintMode ? 'rgba(52,152,219,0.2)' : 'rgba(52,152,219,0.4)';
-        state.windowsArr.filter(w => w.floor === state.currentFloor).forEach(w => {
+        state.windowsArr.filter(w => window.isFloorMatched(w.floor, state.currentFloor)).forEach(w => {
             const p1 = this.toCanvas(w.p1, null, state), p2 = this.toCanvas(w.p2, null, state);
             if (p1.cx != null) {
                 ctx.lineWidth = 15; ctx.strokeStyle = winC; ctx.beginPath(); ctx.moveTo(p1.cx, p1.cy); ctx.lineTo(p2.cx, p2.cy); ctx.stroke();
@@ -668,7 +686,7 @@ window.MainRenderer = {
         if (!state.elementVisibility.walls) return;
         const ctx = state.ctx;
         const w1C = state.isPrintMode ? '#27ae60' : '#2ecc71', w2C = state.isPrintMode ? '#d35400' : '#f39c12';
-        state.walls.filter(w => w.floor === state.currentFloor).forEach(w => {
+        state.walls.filter(w => window.isFloorMatched(w.floor, state.currentFloor)).forEach(w => {
             const p1 = this.toCanvas(w.p1, null, state), p2 = this.toCanvas(w.p2, null, state);
             if (p1.cx != null) {
                 ctx.lineWidth = 5; ctx.strokeStyle = state.currentFloor === '1F' ? w1C : w2C;

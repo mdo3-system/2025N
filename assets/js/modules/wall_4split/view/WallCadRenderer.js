@@ -14,7 +14,7 @@ window.WallCadRenderer = {
         if (!ctx) return;
 
         const isPrintMode = state.isPrintMode;
-        const walls = (state.walls || []).filter(w => w.floor === state.currentFloor);
+        const walls = (state.walls || []).filter(w => window.isFloorMatched(w.floor, state.currentFloor));
         const w1C = isPrintMode ? '#27ae60' : '#2ecc71';
         const w2C = isPrintMode ? '#d35400' : '#f39c12';
 

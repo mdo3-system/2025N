@@ -24,8 +24,12 @@ window.GridRenderer = {
         }
         
         // 2. 屋根グリッドの描画
-        if (state.currentAppMode === 'roof' && typeof window.drawRoofGrids === 'function') {
-            window.drawRoofGrids(state);
+        if (state.currentAppMode === 'roof') {
+            if (typeof window.drawRoofGrids === 'function') {
+                window.drawRoofGrids(state);
+            } else if (window.MainRenderer && typeof window.MainRenderer.drawRoofGrids === 'function') {
+                window.MainRenderer.drawRoofGrids(state);
+            }
         }
     },
 
