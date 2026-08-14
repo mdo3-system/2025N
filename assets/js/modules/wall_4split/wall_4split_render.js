@@ -34,92 +34,32 @@ function initViewForce() {
     }
 }
 
-function renderLayerPanel() {
-    let container = document.getElementById('cad-container');
-    if (!container) return;
-    let panel = document.getElementById('dxf-layer-panel');
-    if (!panel) {
-        panel = document.createElement('div');
-        panel.id = 'dxf-layer-panel';
-        panel.style.cssText = `
-            position: absolute; top: 10px; right: 10px; width: 220px; max-height: 80%;
-            background: rgba(255,255,255,0.95); border: 1px solid #0056b3; border-radius: 8px;
-            padding: 10px; overflow-y: auto; z-index: 1000; font-family: sans-serif;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3); font-size: 11px;
-        `;
-        container.appendChild(panel);
-    }
 
-    const state = window.AppState || {};
-    if (!state.layerVisibility) state.layerVisibility = {};
-
-    // 読み込まれた全要素からレイヤー名および originalLayer 名を網羅抽出
-    const foundLayers = new Set(Object.keys(state.layerVisibility));
-    if (state.bgLinesOriginal) state.bgLinesOriginal.forEach(l => { 
-        if (l.layer) foundLayers.add(l.layer); 
-        if (l.originalLayer) foundLayers.add(l.originalLayer);
-    });
-    if (state.bgTextsOriginal) state.bgTextsOriginal.forEach(t => { 
-        if (t.layer) foundLayers.add(t.layer); 
-        if (t.originalLayer) foundLayers.add(t.originalLayer);
-    });
-    if (state.pillars) state.pillars.forEach(p => { 
-        if (p.layer) foundLayers.add(p.layer); 
-        if (p.originalLayer) foundLayers.add(p.originalLayer);
-    });
-
-    let layers = Array.from(foundLayers).sort();
-    if (layers.length === 0) {
-        panel.innerHTML = `<div style="font-weight:bold; margin-bottom:6px; color:#555;">🎨 DXFレイヤ表示設定</div><div style="color:#888;">DXF図面が読み込まれていません</div>`;
-        panel.style.display = 'block';
-        return;
-    }
-
-    // デフォルト全有効化
-    layers.forEach(ln => {
-        if (state.layerVisibility[ln] === undefined) state.layerVisibility[ln] = true;
-    });
-
-    panel.style.display = 'block';
-
-    let html = `<div style="font-weight:bold; margin-bottom:8px; border-bottom:2px solid #0056b3; padding-bottom:4px; display:flex; justify-content:space-between; align-items:center; color:#0056b3;">
-        <span>🎨 DXFレイヤ表示設定 (${layers.length})</span>
-        <button onclick="document.getElementById('dxf-layer-panel').style.display='none'" style="border:none; background:none; cursor:pointer; font-size:16px; font-weight:bold; color:#e74c3c;">×</button>
-    </div>`;
-
-    layers.forEach(ln => {
-        let checked = state.layerVisibility[ln] !== false ? 'checked' : '';
-        html += `<label style="display:flex; align-items:center; margin-bottom:4px; cursor:pointer; font-weight:normal; color:#333; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
-            <input type="checkbox" data-layer="${ln}" ${checked} style="margin-right:6px;">
-            ${ln}
-        </label>`;
-    });
-
-    panel.innerHTML = html;
-
-    if (!panel.dataset.listener) {
-        panel.addEventListener('change', (e) => {
-            const cb = e.target.closest('input[type="checkbox"]');
-            if (!cb) return;
-            const ln = cb.getAttribute('data-layer');
-            state.layerVisibility[ln] = cb.checked;
-            if (typeof appLayerVisibility !== 'undefined') appLayerVisibility[ln] = cb.checked;
-            if (window.AppController) window.AppController.refreshAll();
-            else draw();
-        });
-        panel.dataset.listener = "true";
-    }
-}
 
 
 /**
  * 「🎨 DXFレイヤ表示設定」モーダルパネルの動的描画
  */
 window.renderLayerPanel = function() {
-    const container = document.getElementById('dxf-layer-toggle-container') || document.getElementById('layer-list-container');
-    const container2 = document.getElementById('layer-list-container');
+    let panel = document.getElementById('dxf-layer-panel');
+    let listContainer = document.getElementById('layer-list-container');
+    
+    // パネル要素がない場合は #cad-container に作成
+    if (!panel) {
+        const container = document.getElementById('cad-container');
+        if (container) {
+            panel = document.createElement('div');
+            panel.id = 'dxf-layer-panel';
+            panel.style.cssText = `
+                position: absolute; top: 45px; right: 20px; z-index: 4000;
+                background: #ffffff; border: 1px solid #0056b3; border-radius: 6px;
+                box-shadow: 0 4px 15px rgba(0,0,0,0.2); width: 280px; padding: 12px;
+            `;
+            container.appendChild(panel);
+        }
+    }
 
-    const s = window.AppState;
+    const s = window.AppState || {};
     if (!s.layerVisibility) s.layerVisibility = {};
 
     const categories = [
@@ -140,13 +80,13 @@ window.renderLayerPanel = function() {
         }
     });
 
-    let html = '<div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap:10px; padding:10px;">';
+    let html = '<div style="display:flex; flex-direction:column; gap:6px; max-height:300px; overflow-y:auto; font-size:12px;">';
 
     categories.forEach(cat => {
         const checked = s.layerVisibility[cat.id] !== false ? 'checked' : '';
         html += `
-            <label style="display:flex; align-items:center; gap:8px; padding:8px 12px; background:#1e272e; border-left:4px solid ${cat.color}; border-radius:4px; color:#fff; font-size:13px; cursor:pointer;">
-                <input type="checkbox" class="dxf-layer-toggle-cb" data-layer="${cat.id}" ${checked} style="width:16px; height:16px; cursor:pointer;">
+            <label style="display:flex; align-items:center; gap:8px; padding:6px 10px; background:#f8f9fa; border-left:4px solid ${cat.color}; border-radius:4px; color:#2c3e50; font-size:12px; cursor:pointer;">
+                <input type="checkbox" class="dxf-layer-toggle-cb" data-layer="${cat.id}" ${checked} style="width:15px; height:15px; cursor:pointer;">
                 <span style="font-weight:bold;">${cat.name}</span>
             </label>
         `;
@@ -155,20 +95,34 @@ window.renderLayerPanel = function() {
     customLayers.forEach(lName => {
         const checked = s.layerVisibility[lName] !== false ? 'checked' : '';
         html += `
-            <label style="display:flex; align-items:center; gap:8px; padding:8px 12px; background:#2c3e50; border-left:4px solid #a4b0be; border-radius:4px; color:#ecf0f1; font-size:12px; cursor:pointer;">
-                <input type="checkbox" class="dxf-layer-toggle-cb" data-layer="${lName}" ${checked} style="width:16px; height:16px; cursor:pointer;">
+            <label style="display:flex; align-items:center; gap:8px; padding:6px 10px; background:#ffffff; border:1px solid #e1e8ed; border-left:4px solid #95a5a6; border-radius:4px; color:#34495e; font-size:11px; cursor:pointer;">
+                <input type="checkbox" class="dxf-layer-toggle-cb" data-layer="${lName}" ${checked} style="width:15px; height:15px; cursor:pointer;">
                 <span>🎨 DXF元レイヤ: <strong>${lName}</strong></span>
             </label>
         `;
     });
 
     html += '</div>';
-    if (container) container.innerHTML = html;
-    if (container2 && container2 !== container) container2.innerHTML = html;
 
-    const bindCBs = (targetEl) => {
-        if (!targetEl) return;
-        targetEl.querySelectorAll('.dxf-layer-toggle-cb').forEach(cb => {
+    const modalContainer = document.getElementById('dxf-layer-toggle-container');
+    if (modalContainer) modalContainer.innerHTML = html;
+
+    if (listContainer) {
+        listContainer.innerHTML = html;
+    } else if (panel) {
+        let fullHtml = `
+            <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #eee; padding-bottom:6px; margin-bottom:8px;">
+                <span style="font-weight:bold; font-size:13px; color:#0056b3;">🎨 DXFレイヤ表示設定</span>
+                <button onclick="document.getElementById('dxf-layer-panel').style.display='none'" style="background:none; border:none; font-size:14px; cursor:pointer; color:#666;">✖</button>
+            </div>
+            <div id="layer-list-container">${html}</div>
+        `;
+        panel.innerHTML = fullHtml;
+    }
+
+    const bindEvents = (el) => {
+        if (!el) return;
+        el.querySelectorAll('.dxf-layer-toggle-cb').forEach(cb => {
             cb.onchange = (e) => {
                 const layerKey = e.target.getAttribute('data-layer');
                 s.layerVisibility[layerKey] = e.target.checked;
@@ -178,6 +132,8 @@ window.renderLayerPanel = function() {
             };
         });
     };
-    bindCBs(container);
-    bindCBs(container2);
+
+    bindEvents(modalContainer);
+    bindEvents(listContainer);
+    bindEvents(panel);
 };

@@ -63,14 +63,13 @@ window.InputController = {
         bC('btn-redo', () => { if (typeof redoLastAction === 'function') redoLastAction(); });
         
         bC('btn-toggle-layer', () => {
-            if (typeof window.openOrToggleDxfLayerPanel === 'function') {
-                window.openOrToggleDxfLayerPanel();
-            } else if (typeof window.renderLayerPanel === 'function') {
+            if (typeof window.renderLayerPanel === 'function') {
                 window.renderLayerPanel();
-                const modal = document.getElementById('modal-dxf-layer-toggle');
-                if (modal) modal.style.display = (modal.style.display === 'none' || !modal.style.display) ? 'flex' : 'none';
-                const panel = document.getElementById('dxf-layer-panel');
-                if (panel) panel.style.display = (panel.style.display === 'none' || !panel.style.display) ? 'block' : 'none';
+            }
+            const panel = document.getElementById('dxf-layer-panel');
+            if (panel) {
+                const currentDisp = window.getComputedStyle(panel).display;
+                panel.style.display = (currentDisp === 'none') ? 'block' : 'none';
             }
         });
 

@@ -150,21 +150,17 @@ window.updateRoofModeUI = function(mode) {
  */
 function animationLoop() {
     // 驕ｸ謚樒憾諷九↑縺ｩ縲∝虚逧�↑謠冗判縺悟ｿ�ｦ√↑蝣ｴ蜷医↓螳溯｡�
+    // 驕ｸ謚樒憾諷九↑縺ｩ縲∝虚逧↑謠冗判縺悟ｿｦ√↑蝣ｴ蜷医↓螳溯｡
     if (window.AppState.selectedElement || window.AppState.snapPoint || window.AppState.isDragging || window.getMode() === 'draw-area') {
         if (window.MainRenderer) window.MainRenderer.render(window.AppState);
     }
     requestAnimationFrame(animationLoop);
 }
 
-// DXF繝ｬ繧､繝､繝ｼ繝代ロ繝ｫ縺ｮ繝医げ繝ｫ��nputController 縺九ｉ蜻ｼ縺ｰ繧後ｋ��
-function renderLayerPanel() {
-    if (typeof window.UIView !== 'undefined' && window.UIView.renderLayerPanel) {
-        window.UIView.renderLayerPanel();
-    }
-}
+// DXF繝ｬ繧､繝､繝ｼ繝代ロ繝ｫ縺ｮ繝医げ繝ｫ
 
 /**
- * 蝓ｺ遉弱Δ繝ｼ繝峨�菴懷峙繧ｵ繝悶Δ繝ｼ繝牙�繧頑崛縺�
+ * 蝓ｺ遉弱Δ繝ｼ繝峨菴懷峙繧ｵ繝悶Δ繝ｼ繝牙繧頑崛縺
  */
 function updateFdModeUI(mode) {
     if (window.AppState) {
