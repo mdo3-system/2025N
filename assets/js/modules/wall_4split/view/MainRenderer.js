@@ -142,17 +142,33 @@ window.MainRenderer = {
         if (!state) return true;
         const lv = state.layerVisibility || {};
         
-        // 5つの標準カテゴリの判定
+        // 1. レイヤー可視化トグル（GRID, 1F_BACK, 2F_BACK, 1F_ROOF, 2F_ROOF）のチェック
         if (element && element.layerCategory) {
             if (lv[element.layerCategory] === false) return false;
         }
 
-        if (element && element.floor && element.layerCategory !== 'GRID') {
-            const curFloor = state.currentFloor || '1F';
+        const curFloor = state.currentFloor || '1F';
+
+        // 2. 通り芯・グリッドは全階共通で表示
+        if (element && element.layerCategory === 'GRID') {
+            return lv['GRID'] !== false;
+        }
+
+        // 3. 選択されている作図階（タブ）に応じた厳格な背景分離
+        if (element && element.layerCategory) {
+            const cat = element.layerCategory;
+            if (curFloor === '1F' && cat !== '1F_BACK') return false;
+            if (curFloor === '2F' && cat !== '2F_BACK') return false;
+            if (curFloor === '1R' && cat !== '1F_ROOF') return false;
+            if (curFloor === '2R' && cat !== '2F_ROOF') return false;
+        }
+
+        // 4. フロア一致の二重チェック
+        if (element && element.floor) {
             if (curFloor === '1F' && element.floor !== '1F') return false;
             if (curFloor === '2F' && element.floor !== '2F') return false;
-            if (curFloor === '1R' && element.floor !== '1R' && element.layerCategory !== '1F_ROOF') return false;
-            if (curFloor === '2R' && element.floor !== '2R' && element.layerCategory !== '2F_ROOF') return false;
+            if (curFloor === '1R' && element.floor !== '1R') return false;
+            if (curFloor === '2R' && element.floor !== '2R') return false;
         }
 
         if (!layer) return true;

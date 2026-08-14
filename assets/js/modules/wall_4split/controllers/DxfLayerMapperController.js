@@ -470,10 +470,10 @@ window.DxfLayerMapperController = {
                 gridLayer:   key === 'grid'   ? layer : '',
                 col1FLayer:  key === 'col1F'  ? layer : '',
                 col2FLayer:  key === 'col2F'  ? layer : '',
-                back1FLayer: key === 'back1F' ? layer : '',
-                back2FLayer: key === 'back2F' ? layer : '',
-                roof1FLayer: key === 'roof1F' ? layer : '',
-                roof2FLayer: key === 'roof2F' ? layer : '',
+                back1FLayer: key === 'back1F' ? (layer || '__ALL_LAYERS__') : '',
+                back2FLayer: key === 'back2F' ? (layer || '__ALL_LAYERS__') : '',
+                roof1FLayer: key === 'roof1F' ? (layer || '__ALL_LAYERS__') : '',
+                roof2FLayer: key === 'roof2F' ? (layer || '__ALL_LAYERS__') : '',
                 targetFloor: targetFloorStr
             };
 

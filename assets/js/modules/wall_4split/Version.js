@@ -1,4 +1,4 @@
 /**
  * Version.js - Centralized Version Management
  */
-window.APP_VERSION = "v3.12.52"; // Completely remove customLayers loop to restrict DXF layer panel strictly to 5 core categories
+window.APP_VERSION = "v3.12.53"; // Fix 1F/2F roof background parsing and enforce strict floor-specific background isolation
