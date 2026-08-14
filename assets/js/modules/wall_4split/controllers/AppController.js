@@ -343,8 +343,8 @@ window.AppController = {
         if (tf) tf.className = 'tab-btn';
         if (t1) t1.className = (floor === '1F' && mode === 'wall') ? 'tab-btn active' : 'tab-btn';
         if (t2) t2.className = (floor === '2F' && mode === 'wall') ? 'tab-btn active' : 'tab-btn';
-        if (t1r) t1r.className = (floor === '1F' && mode === 'roof') ? 'tab-btn active' : 'tab-btn';
-        if (t2r) t2r.className = (floor === '2F' && mode === 'roof') ? 'tab-btn active' : 'tab-btn';
+        if (t1r) t1r.className = (floor === '1R' && mode === 'roof') ? 'tab-btn active' : 'tab-btn';
+        if (t2r) t2r.className = (floor === '2R' && mode === 'roof') ? 'tab-btn active' : 'tab-btn';
 
         const vis = window.AppState.elementVisibility;
         if (vis) {
@@ -440,8 +440,8 @@ window.AppController = {
         const targetFloor = floor || state.currentFloor || '1F';
         const is1F = targetFloor === '1F' || state.currentAppMode === 'foundation';
         const is2F = targetFloor === '2F';
-        const is1R = targetFloor === '1RF' || targetFloor === '1F_R';
-        const is2R = targetFloor === '2RF' || targetFloor === 'RF' || targetFloor === '2F_R';
+        const is1R = targetFloor === '1R' || targetFloor === '1RF' || targetFloor === '1F_R';
+        const is2R = targetFloor === '2R' || targetFloor === '2RF' || targetFloor === 'RF' || targetFloor === '2F_R';
 
         const foundLayers = new Set(Object.keys(state.layerVisibility));
         (state.bgLinesOriginal || []).forEach(l => { if (l.layer) foundLayers.add(l.layer); });
@@ -465,15 +465,15 @@ window.AppController = {
                     state.layerVisibility[L] = false;
                 }
             } else if (is1R) {
-                if (uL.includes('1F_R') || uL.includes('1RF') || uL.includes('R_1F')) {
+                if (uL === '1F_ROOF' || uL.includes('1F_R') || uL.includes('1RF') || uL.includes('R_1F')) {
                     state.layerVisibility[L] = true;
-                } else if (uL.includes('2F') || uL.includes('2F_R') || uL.includes('RF')) {
+                } else if (uL === '2F_ROOF' || uL.includes('2F') || uL.includes('2F_R') || uL.includes('RF')) {
                     state.layerVisibility[L] = false;
                 }
             } else if (is2R) {
-                if (uL.includes('2F_R') || uL.includes('RF_R') || uL.includes('2RF') || uL.includes('RF')) {
+                if (uL === '2F_ROOF' || uL.includes('2F_R') || uL.includes('RF_R') || uL.includes('2RF') || uL.includes('RF')) {
                     state.layerVisibility[L] = true;
-                } else if (uL.includes('1F') || uL.includes('1F_R')) {
+                } else if (uL === '1F_ROOF' || uL.includes('1F') || uL.includes('1F_R')) {
                     state.layerVisibility[L] = false;
                 }
             }

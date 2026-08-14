@@ -107,8 +107,8 @@ window.InputController = {
         bC('tab-foundation', () => window.AppController.switchAppMode('foundation'));
         bC('tab-1f', () => window.AppController.setFloor('1F'));
         bC('tab-2f', () => window.AppController.setFloor('2F'));
-        bC('tab-1r', () => window.AppController.setRoofFloor('1F'));
-        bC('tab-2r', () => window.AppController.setRoofFloor('2F'));
+        bC('tab-1r', () => window.AppController.setRoofFloor('1R'));
+        bC('tab-2r', () => window.AppController.setRoofFloor('2R'));
 
         // 面積・壁仕様変更モーダルボタン (重複ID・同名クラス要素すべてにイベントを確実に登録)
         document.querySelectorAll('#btn-open-area-settings, .btn-open-area-settings').forEach(btn => {
