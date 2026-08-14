@@ -138,9 +138,24 @@ window.MainRenderer = {
         drawRect({ minX: b.minX, maxX: b.maxX, minY: b.yLineB, maxY: b.maxY }, 'rgba(231,76,60,0.25)');
     },
 
-    isLayerVisible: function(layer, state) {
-        if (!state || !layer) return true;
+    isLayerVisible: function(layer, state, element) {
+        if (!state) return true;
         const lv = state.layerVisibility || {};
+        
+        // 5つの標準カテゴリの判定
+        if (element && element.layerCategory) {
+            if (lv[element.layerCategory] === false) return false;
+        }
+
+        if (element && element.floor && element.layerCategory !== 'GRID') {
+            const curFloor = state.currentFloor || '1F';
+            if (curFloor === '1F' && element.floor !== '1F') return false;
+            if (curFloor === '2F' && element.floor !== '2F') return false;
+            if (curFloor === '1R' && element.floor !== '1R' && element.layerCategory !== '1F_ROOF') return false;
+            if (curFloor === '2R' && element.floor !== '2R' && element.layerCategory !== '2F_ROOF') return false;
+        }
+
+        if (!layer) return true;
         const rawL = String(layer).trim();
         const upperL = rawL.toUpperCase();
 
@@ -154,7 +169,7 @@ window.MainRenderer = {
         ctx.strokeStyle = state.isPrintMode ? '#aaa' : 'rgba(170, 170, 170, 0.5)';
         
         state.bgLinesOriginal.forEach(e => {
-            if (!this.isLayerVisible(e.layer, state)) return;
+            if (!this.isLayerVisible(e.layer, state, e)) return;
             if (e.isGridLine) return; // スナップ用GRID線は除外
 
             ctx.beginPath();
