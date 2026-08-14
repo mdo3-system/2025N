@@ -1,4 +1,4 @@
 /**
  * Version.js - Centralized Version Management
  */
-window.APP_VERSION = "v3.12.54"; // Fix targetFloor priority in Parsers.js to resolve 1RF/2RF roof background mapping bug
+window.APP_VERSION = "v3.12.55"; // Fix INSERT block entity layer inheritance for 1RF.dxf and 2RF.dxf roof rendering

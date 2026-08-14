@@ -31,7 +31,8 @@ window.Parsers = {
                     const block = blocks[ent.name];
                     const posX = (ent.position ? ent.position.x : (ent.insertionPoint ? ent.insertionPoint.x : 0));
                     const posY = (ent.position ? ent.position.y : (ent.insertionPoint ? ent.insertionPoint.y : 0));
-                    if (block && block.entities) collect(block.entities, blocks, L, parentX + posX, parentY + posY);
+                    const effectiveLayer = ent.layer || L;
+                    if (block && block.entities) collect(block.entities, blocks, effectiveLayer, parentX + posX, parentY + posY);
                 } else {
                     let isGrid = false, isCol = false, floor = 'ALL';
 
