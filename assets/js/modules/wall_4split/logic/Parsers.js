@@ -126,20 +126,26 @@ window.Parsers = {
                             } else {
                                 newBgLines.push({ ...offEnt, layer: 'GRID', layerCategory: 'GRID', originalLayer: origL, floor: 'ALL', isUnderlay: false, isGridLine: true });
                             }
-                        } else if (isRoof) {
-                            const roofLayerName = isRoof2F ? '2F_ROOF' : '1F_ROOF';
-                            const roofFloor = isRoof2F ? '2R' : '1R';
-                            if (['TEXT', 'MTEXT'].includes(offEnt.type)) {
-                                const txt = offEnt.text || offEnt.string || "";
-                                const pos = offEnt.startPoint || offEnt.position || offEnt.insertionPoint || {};
-                                newBgTexts.push({ text: txt, x: (pos.x || 0), y: (pos.y || 0), floor: roofFloor, layer: roofLayerName, layerCategory: roofLayerName, originalLayer: origL, isUnderlay: false, isGridText: false });
-                            } else {
-                                newBgLines.push({ ...offEnt, layer: roofLayerName, layerCategory: roofLayerName, originalLayer: origL, floor: roofFloor, isUnderlay: false, isGridLine: false });
-                            }
                         } else {
-                            const isFloor2F = (layerMapping && layerMapping.targetFloor === '2F') || isBack2F;
-                            const targetFloorName = isFloor2F ? '2F' : '1F';
-                            const targetLayerName = isFloor2F ? '2F_BACK' : '1F_BACK';
+                            // targetFloor または判定フラグに基づく厳格なカテゴリ割り当て
+                            const tf = (layerMapping && layerMapping.targetFloor) ? layerMapping.targetFloor : '';
+                            let targetFloorName = '1F';
+                            let targetLayerName = '1F_BACK';
+
+                            if (tf === '1R' || isRoof1F) {
+                                targetFloorName = '1R';
+                                targetLayerName = '1F_ROOF';
+                            } else if (tf === '2R' || isRoof2F) {
+                                targetFloorName = '2R';
+                                targetLayerName = '2F_ROOF';
+                            } else if (tf === '2F' || isBack2F) {
+                                targetFloorName = '2F';
+                                targetLayerName = '2F_BACK';
+                            } else {
+                                targetFloorName = '1F';
+                                targetLayerName = '1F_BACK';
+                            }
+
                             if (['TEXT', 'MTEXT'].includes(offEnt.type)) {
                                 const txt = offEnt.text || offEnt.string || "";
                                 const pos = offEnt.startPoint || offEnt.position || offEnt.insertionPoint || {};
