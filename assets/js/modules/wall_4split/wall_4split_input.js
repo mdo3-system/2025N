@@ -55,8 +55,8 @@ function initCanvasInput(canvas) {
             return;
         }
 
-        // 屋根モードへの委譲
-        if (state.currentAppMode === 'roof' && e.button === 0 && !['add-grid', 'del-grid', 'edit-text', 'add-diag-grid', 'roof-add-grid', 'roof-del-grid'].includes(mode)) {
+        // 屋根モードへの委譲（選択・削除モード等は共通処理を通す）
+        if (state.currentAppMode === 'roof' && e.button === 0 && !['select', 'delete-unified', 'add-grid', 'del-grid', 'edit-text', 'add-diag-grid', 'roof-add-grid', 'roof-del-grid'].includes(mode)) {
             if (window.RoofInputController) window.RoofInputController.handleMouseDown(e, state);
             return;
         }
@@ -167,7 +167,15 @@ function handleSelectMode(e, state) {
     let hit = findHitElement(e.offsetX, e.offsetY, state);
     if (hit) {
         state.selectedElement = hit;
-        window.PropertyController.openGeneralModal(hit);
+        if (hit.type === 'roof') {
+            if (window.RoofInputController && typeof window.RoofInputController.showPropertyPopup === 'function') {
+                window.RoofInputController.showPropertyPopup(state, hit.item);
+            } else if (window.RoofPropertyController && typeof window.RoofPropertyController.showRoofPopup === 'function') {
+                window.RoofPropertyController.showRoofPopup(hit.item, { x: e.clientX, y: e.clientY });
+            }
+        } else {
+            window.PropertyController.openGeneralModal(hit);
+        }
     } else {
         state.selectedElement = null;
         window.selectedPillar = null; // Clear visual highlight
@@ -228,6 +236,14 @@ function handleUnifiedDeletion(e, state) {
     if (!hit) return;
 
     console.log(`🗑️ Deletion Attempt: type=${hit.type}, id=${hit.item.id}`);
+
+    if (hit.type === 'roof') {
+        if (confirm(`屋根面 (${hit.item.label || '屋根'}) を削除しますか？`)) {
+            state.roofFaces = (state.roofFaces || []).filter(f => f.id !== hit.item.id);
+            window.AppController.refreshAll();
+        }
+        return;
+    }
 
     if (hit.type === 'pillar') {
         const pid = hit.item.id;
@@ -710,18 +726,19 @@ function handleGeneralMouseMove(mx, my, state) {
 function findHitElement(mx, my, state) {
     const wp = window.toWorldCoord(mx, my);
     const floor = state.currentFloor;
+    const isMatched = (f) => window.isFloorMatched ? window.isFloorMatched(f, floor) : (f === floor || f === 'ALL' || !f);
 
     // 1. 柱 (判定優先度 高)
     // 画面上で 20px 以内ならヒットとする (20 / scale [mm])
     const pillarHitRadius = 20 / state.scale;
-    for (const p of state.pillars.filter(p => !p.isDeleted && (p.floor === floor || p.floor === 'ALL'))) {
+    for (const p of state.pillars.filter(p => !p.isDeleted && isMatched(p.floor))) {
         if (Math.hypot(wp.x - p.x, wp.y - p.y) < pillarHitRadius) return { type: 'pillar', item: p };
     }
 
     // 2. 耐力壁・開口部
     // 画面上で 40px 以内ならヒットとする (40 / scale [mm])
     const wallHitRadius = 40 / state.scale;
-    const allWalls = [...state.walls, ...state.windowsArr].filter(w => w.floor === floor);
+    const allWalls = [...state.walls, ...state.windowsArr].filter(w => isMatched(w.floor));
     for (const w of allWalls) {
         if (!w.p1 || !w.p2) continue;
         const dist = window.MathUtils.distToBeamLine(wp.x, wp.y, w.p1.x, w.p1.y, w.p2.x, w.p2.y);
@@ -733,7 +750,7 @@ function findHitElement(mx, my, state) {
     }
 
     // 3. 面積ポリゴン
-    for (const a of state.areaLines.filter(a => a.floor === floor)) {
+    for (const a of state.areaLines.filter(a => isMatched(a.floor))) {
         if (!a.vertices || a.vertices.length < 2) continue;
         
         // 3-a. 内部判定 (クリックが中にある場合)
@@ -753,13 +770,20 @@ function findHitElement(mx, my, state) {
 
     // 3.5. 外壁線
     const extWallHitRadius = 25 / state.scale;
-    const activeFloor = state.currentFloor;
-    for (const ew of (state.exteriorWalls || []).filter(ew => ew.floor === activeFloor)) {
+    for (const ew of (state.exteriorWalls || []).filter(ew => isMatched(ew.floor))) {
         if (!ew.vertices || ew.vertices.length < 2) continue;
         const vts = ew.closed ? [...ew.vertices, ew.vertices[0]] : ew.vertices;
         for (let i = 0; i < vts.length - 1; i++) {
             const dist = window.MathUtils.distToBeamLine(wp.x, wp.y, vts[i].x, vts[i].y, vts[i+1].x, vts[i+1].y);
             if (dist < extWallHitRadius) return { type: 'ext_wall', item: ew };
+        }
+    }
+
+    // 3.8. 屋根ポリゴン
+    for (const rf of (state.roofFaces || []).filter(rf => isMatched(rf.floor))) {
+        if (!rf.vertices || rf.vertices.length < 3) continue;
+        if (window.MathUtils && window.MathUtils.isPointInPolygon(wp, rf.vertices)) {
+            return { type: 'roof', item: rf };
         }
     }
 
