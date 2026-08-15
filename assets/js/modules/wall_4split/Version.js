@@ -1,4 +1,4 @@
 /**
  * Version.js - Centralized Version Management
  */
-window.APP_VERSION = "v3.12.61"; // Fix: Integrated roof_select & delete-roof mode in input handlers and fixed default floor choice for 1R/2R roof faces
+window.APP_VERSION = "v3.12.62"; // Fix: In roof mode, handleSelectMode now fully delegates to RoofInputController.handleSelectRoofClick to prevent area polygon from intercepting roof selection

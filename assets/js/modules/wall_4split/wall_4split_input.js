@@ -164,6 +164,18 @@ function initCanvasInput(canvas) {
  */
 
 function handleSelectMode(e, state) {
+    const mode = window.getMode ? window.getMode() : '';
+    const isRoofMode = (state.currentAppMode === 'roof' || mode === 'roof_select');
+
+    // 屋根モード時は RoofInputController に完全委譲（面積ポリゴン等に邪魔させない）
+    if (isRoofMode) {
+        if (window.RoofInputController && typeof window.RoofInputController.handleSelectRoofClick === 'function') {
+            window.RoofInputController.handleSelectRoofClick(e, state);
+        }
+        window.AppController.refreshAll();
+        return;
+    }
+
     let hit = findHitElement(e.offsetX, e.offsetY, state);
     if (hit) {
         state.selectedElement = hit;
