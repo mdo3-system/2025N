@@ -740,6 +740,10 @@ function findHitElement(mx, my, state) {
     const floor = state.currentFloor;
     const isMatched = (f) => window.isFloorMatched ? window.isFloorMatched(f, floor) : (f === floor || f === 'ALL' || !f);
 
+    // 屋根モード判定（getMode は main.js のものが使われる）
+    const currentMode = (typeof getMode === 'function') ? getMode() : '';
+    const isRoofMode = (state.currentAppMode === 'roof' || currentMode === 'roof_select');
+
     // 1. 柱 (判定優先度 高)
     // 画面上で 20px 以内ならヒットとする (20 / scale [mm])
     const pillarHitRadius = 20 / state.scale;
@@ -761,14 +765,25 @@ function findHitElement(mx, my, state) {
         }
     }
 
-    // 3. 面積ポリゴン
+    // 3. 屋根モード時: 屋根ポリゴンを最優先（面積ポリゴン・外壁線より前に判定）
+    if (isRoofMode) {
+        for (const rf of (state.roofFaces || []).filter(rf => isMatched(rf.floor))) {
+            if (!rf.vertices || rf.vertices.length < 3) continue;
+            if (window.MathUtils && window.MathUtils.isPointInPolygon(wp, rf.vertices)) {
+                return { type: 'roof', item: rf };
+            }
+        }
+        return null; // 屋根モードでは面積・外壁線は絶対にヒットさせない
+    }
+
+    // 4. 面積ポリゴン（屋根モード以外のみ）
     for (const a of state.areaLines.filter(a => isMatched(a.floor))) {
         if (!a.vertices || a.vertices.length < 2) continue;
         
-        // 3-a. 内部判定 (クリックが中にある場合)
+        // 4-a. 内部判定 (クリックが中にある場合)
         if (window.MathUtils.isPointInPolygon(wp, a.vertices)) return { type: 'area', item: a };
         
-        // 3-b. 境界線（エッジ）判定 [v2.5.14 追加] - ユーザーは枠線をクリックしたいため
+        // 4-b. 境界線（エッジ）判定 [v2.5.14 追加] - ユーザーは枠線をクリックしたいため
         const edgeTolerance = 25 / state.scale;
         const len = a.vertices.length;
         for (let i = 0; i < len; i++) {
@@ -780,7 +795,7 @@ function findHitElement(mx, my, state) {
         }
     }
 
-    // 3.5. 外壁線
+    // 4.5. 外壁線（屋根モード以外のみ）
     const extWallHitRadius = 25 / state.scale;
     for (const ew of (state.exteriorWalls || []).filter(ew => isMatched(ew.floor))) {
         if (!ew.vertices || ew.vertices.length < 2) continue;
@@ -791,7 +806,7 @@ function findHitElement(mx, my, state) {
         }
     }
 
-    // 3.8. 屋根ポリゴン
+    // 4.8. 屋根ポリゴン（通常モード）
     for (const rf of (state.roofFaces || []).filter(rf => isMatched(rf.floor))) {
         if (!rf.vertices || rf.vertices.length < 3) continue;
         if (window.MathUtils && window.MathUtils.isPointInPolygon(wp, rf.vertices)) {
