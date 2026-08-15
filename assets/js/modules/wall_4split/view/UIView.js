@@ -111,6 +111,13 @@ window.UIView = {
         }
         this.updateWallSpecSummary();
         document.getElementById('modal-wall-settings').style.display = 'none';
+
+        // 自動的に壁配置モードへ切り替え
+        const wallRadio = document.querySelector('input[name="mode"][value="wall"]');
+        if (wallRadio) {
+            wallRadio.checked = true;
+            if (typeof handleModeChange === 'function') handleModeChange({ target: wallRadio });
+        }
         
         if (window.AppController) window.AppController.refreshAll();
     },

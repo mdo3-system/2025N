@@ -1,4 +1,4 @@
 /**
  * Version.js - Centralized Version Management
  */
-window.APP_VERSION = "v3.12.68"; // Fix: Prevent wall/opening overlap, fix manual v3.12 button, fix wall multiplier & brace selection sync
+window.APP_VERSION = "v3.12.69"; // Fix: Initial mode 1F/select, auto wall mode switch after settings, and robust concave polygon support for pillar load area

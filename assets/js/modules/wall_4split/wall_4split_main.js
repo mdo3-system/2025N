@@ -58,8 +58,15 @@ document.addEventListener('DOMContentLoaded', () => {
             if (canvas) window.InputController.initCanvas(canvas);
         }
 
-        // 4. 蛻晏屓縺ｮ隗｣譫舌→謠冗判
+        // 4. 初回モード設定 (1階 / 選択・プロパティ編集モード)
         if (window.AppController) {
+            window.AppController.setFloor('1F');
+            window.AppController.switchAppMode('wall');
+            const selRadio = document.querySelector('input[name="mode"][value="select"]');
+            if (selRadio) {
+                selRadio.checked = true;
+                if (typeof handleModeChange === 'function') handleModeChange({ target: selRadio });
+            }
             window.AppController.refreshAll();
         }
 

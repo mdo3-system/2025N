@@ -120,8 +120,10 @@ window.AreaEngine = {
         const isSeinou = (mode === 'seinou');
         const areaLines = s.areaLines || [];
 
+        const isFloorMatched = (f1, f2) => window.isFloorMatched ? window.isFloorMatched(f1, f2) : (String(f1).toUpperCase().trim() === String(f2).toUpperCase().trim());
+
         ['1F', '2F'].forEach(f => {
-            const ap = s.pillars.filter(p => !p.isDeleted && !p.isInvalidPos && p.floor === f);
+            const ap = s.pillars.filter(p => !p.isDeleted && !p.isInvalidPos && isFloorMatched(p.floor, f));
             if (ap.length === 0) return;
 
             // 各階に応じた負担ポリゴンリスト { poly, ratio, type }
@@ -129,7 +131,7 @@ window.AreaEngine = {
 
             const addAreaPolys = (targetFloor, targetType, ratio) => {
                 areaLines.filter(a => {
-                    if (a.floor !== targetFloor || !a.vertices || a.vertices.length < 3) return false;
+                    if (!isFloorMatched(a.floor, targetFloor) || !a.vertices || a.vertices.length < 3) return false;
                     const aType = a.areaType || 'floor';
                     return aType === targetType;
                 }).forEach(a => {
@@ -165,6 +167,14 @@ window.AreaEngine = {
                 }
             }
 
+            // もしポリゴンが登録されていない場合のフォールバック（柱の外郭バウンディングボックス）
+            if (targetPolys.length === 0) {
+                const fallbackPolys = this.getBuildingPolygons(f, ap, s);
+                fallbackPolys.forEach(poly => {
+                    targetPolys.push({ poly: poly, ratio: 1.0, type: 'floor' });
+                });
+            }
+
             ap.forEach(p => {
                 let cell = [
                     { x: p.x - INF, y: p.y - INF },
@@ -183,11 +193,17 @@ window.AreaEngine = {
                 let tributaryPolygons = [];
                 
                 targetPolys.forEach(tp => {
-                    const intersected = M.clipPolygonByPolygon(cell, tp.poly);
-                    if (intersected.length >= 3) {
-                        totalAreaVal += M.polygonArea(intersected) * tp.ratio;
-                        tributaryPolygons.push(intersected);
-                    }
+                    // 凹ポリゴン（L字型等）でも正確にクリッピングできるよう三角形分割（Triangulation）して交差計算
+                    const triangles = (tp.poly.length === 3) ? [tp.poly] : (M.triangulate ? M.triangulate(tp.poly) : [tp.poly]);
+                    triangles.forEach(tri => {
+                        const triCCW = tri.map(v => ({ x: v.x, y: v.y }));
+                        M.ensureCCW(triCCW);
+                        const intersected = M.clipPolygonByPolygon(cell, triCCW);
+                        if (intersected && intersected.length >= 3) {
+                            totalAreaVal += M.polygonArea(intersected) * tp.ratio;
+                            tributaryPolygons.push(intersected);
+                        }
+                    });
                 });
 
                 p.tributaryPolygon = tributaryPolygons; 
