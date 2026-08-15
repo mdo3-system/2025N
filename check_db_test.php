@@ -2,15 +2,18 @@
 require_once __DIR__ . '/config/db.php';
 try {
     $pdo = getPDOConnection();
-    echo "DB_OK\n";
-    $r = $pdo->query("SELECT email FROM users LIMIT 5");
-    foreach ($r as $row) { echo "USER: " . $row['email'] . "\n"; }
-    $s = $pdo->query("SELECT COUNT(*) as cnt FROM sessions WHERE expires_at > NOW()");
-    $sc = $s->fetch();
-    echo "ACTIVE_SESSIONS: " . $sc['cnt'] . "\n";
-    $m = $pdo->query("SELECT COUNT(*) as cnt FROM magic_tokens WHERE used=0 AND expires_at > NOW()");
-    $mc = $m->fetch();
-    echo "ACTIVE_TOKENS: " . $mc['cnt'] . "\n";
+    // 有効セッション一覧
+    $r = $pdo->query("SELECT s.session_token, u.email, s.expires_at FROM sessions s JOIN users u ON s.user_id = u.id WHERE s.expires_at > NOW() ORDER BY s.expires_at DESC LIMIT 10");
+    echo "=== 有効セッション ===\n";
+    foreach ($r as $row) {
+        echo "email: " . $row['email'] . " | token(先頭8): " . substr($row['session_token'], 0, 8) . "... | 有効期限: " . $row['expires_at'] . "\n";
+    }
+    // 最新magic_tokens
+    $r2 = $pdo->query("SELECT email, token, expires_at, used FROM magic_tokens ORDER BY id DESC LIMIT 5");
+    echo "\n=== 最新マジックトークン ===\n";
+    foreach ($r2 as $row) {
+        echo "email: " . $row['email'] . " | used: " . $row['used'] . " | 有効期限: " . $row['expires_at'] . "\n";
+    }
 } catch (Exception $e) {
-    echo "DB_ERROR: " . $e->getMessage() . "\n";
+    echo "ERROR: " . $e->getMessage() . "\n";
 }
