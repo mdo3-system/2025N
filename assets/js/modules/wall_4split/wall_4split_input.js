@@ -56,14 +56,14 @@ function initCanvasInput(canvas) {
         }
 
         // 屋根モードへの委譲（選択・削除モード等は共通処理を通す）
-        if (state.currentAppMode === 'roof' && e.button === 0 && !['select', 'delete-unified', 'add-grid', 'del-grid', 'edit-text', 'add-diag-grid', 'roof-add-grid', 'roof-del-grid'].includes(mode)) {
+        if (state.currentAppMode === 'roof' && e.button === 0 && !['select', 'roof_select', 'delete-unified', 'delete-roof', 'add-grid', 'del-grid', 'edit-text', 'add-diag-grid', 'roof-add-grid', 'roof-del-grid'].includes(mode)) {
             if (window.RoofInputController) window.RoofInputController.handleMouseDown(e, state);
             return;
         }
 
         // ドラッグ（パン）開始
         // 左クリック時は、作図・選択・削除のいずれのモードでもない場合にのみドラッグを開始する
-        const interactionModes = ['add-pillar', 'draw-area', 'select', 'delete-unified', 'wall', 'window', 'add-grid', 'del-grid', 'add-diag-grid', 'edit-text', 'roof-add-grid', 'roof-del-grid'];
+        const interactionModes = ['add-pillar', 'draw-area', 'select', 'roof_select', 'delete-unified', 'delete-roof', 'wall', 'window', 'add-grid', 'del-grid', 'add-diag-grid', 'edit-text', 'roof-add-grid', 'roof-del-grid', 'draw-roof'];
         if (e.button === 1 || e.button === 2 || (e.button === 0 && !hoveredPillar && !interactionModes.includes(mode))) {
             isDragging = true; lastMouseX = e.clientX; lastMouseY = e.clientY;
             return;
@@ -71,14 +71,14 @@ function initCanvasInput(canvas) {
 
         if (e.button === 0) {
             const mx = e.offsetX, my = e.offsetY;
-            // 統合選択モード
-            if (mode === 'select') {
+            // 統合選択モード (select および 左パネルの roof_select 両対応)
+            if (mode === 'select' || mode === 'roof_select') {
                 handleSelectMode(e, state);
                 return;
             }
 
-            // 統合削除モード
-            if (mode === 'delete-unified') {
+            // 統合削除モード (delete-unified および 左パネルの delete-roof 両対応)
+            if (mode === 'delete-unified' || mode === 'delete-roof') {
                 handleUnifiedDeletion(e, state);
                 return;
             }

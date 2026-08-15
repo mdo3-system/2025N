@@ -74,22 +74,35 @@ window.RoofInputController = {
         const mx = e.offsetX;
         const my = e.offsetY;
         
-        const toC = (x, y) => ({ cx: x * state.scale + state.offsetX, cy: state.canvas.height - (y * state.scale + state.offsetY) });
-        
         let hitFace = null;
-        let bestArea = Infinity;
 
-        const faces = state.roofFaces || [];
-        faces.forEach(face => {
-            const canvasPts = face.vertices.map(v => toC(v.x, v.y));
-            if (this.isPointInPolygon(mx, my, canvasPts)) {
-                const area = window.RoofEngine.calculatePolygonArea2D(face.vertices.map(v => ({ u: v.x/1000, v: v.y/1000 })));
-                if (area < bestArea) {
-                    bestArea = area;
-                    hitFace = face;
-                }
+        if (typeof findHitElement === 'function') {
+            const hit = findHitElement(mx, my, state);
+            if (hit && hit.type === 'roof') {
+                hitFace = hit.item;
             }
-        });
+        }
+
+        if (!hitFace) {
+            const toC = (x, y) => {
+                if (window.toCanvasPixel) return window.toCanvasPixel(x, y);
+                return { cx: x * state.scale + state.offsetX, cy: state.canvas.height - (y * state.scale + state.offsetY) };
+            };
+            
+            let bestArea = Infinity;
+            const faces = state.roofFaces || [];
+            faces.forEach(face => {
+                if (window.isFloorMatched && !window.isFloorMatched(face.floor, state.currentFloor)) return;
+                const canvasPts = face.vertices.map(v => toC(v.x, v.y));
+                if (this.isPointInPolygon(mx, my, canvasPts)) {
+                    const area = window.RoofEngine ? window.RoofEngine.calculatePolygonArea2D(face.vertices.map(v => ({ u: v.x/1000, v: v.y/1000 }))) : 0;
+                    if (area < bestArea) {
+                        bestArea = area;
+                        hitFace = face;
+                    }
+                }
+            });
+        }
 
         if (hitFace) {
             this.showPropertyPopup(state, hitFace);
@@ -103,23 +116,35 @@ window.RoofInputController = {
         const mx = e.offsetX;
         const my = e.offsetY;
         
-        // Find which roof face polygon contains the click point using inside-polygon test
-        const toC = (x, y) => ({ cx: x * state.scale + state.offsetX, cy: state.canvas.height - (y * state.scale + state.offsetY) });
-        
         let hitFace = null;
-        let bestArea = Infinity;
 
-        const faces = state.roofFaces || [];
-        faces.forEach(face => {
-            const canvasPts = face.vertices.map(v => toC(v.x, v.y));
-            if (this.isPointInPolygon(mx, my, canvasPts)) {
-                const area = window.RoofEngine.calculatePolygonArea2D(face.vertices.map(v => ({ u: v.x/1000, v: v.y/1000 })));
-                if (area < bestArea) {
-                    bestArea = area;
-                    hitFace = face;
-                }
+        if (typeof findHitElement === 'function') {
+            const hit = findHitElement(mx, my, state);
+            if (hit && hit.type === 'roof') {
+                hitFace = hit.item;
             }
-        });
+        }
+
+        if (!hitFace) {
+            const toC = (x, y) => {
+                if (window.toCanvasPixel) return window.toCanvasPixel(x, y);
+                return { cx: x * state.scale + state.offsetX, cy: state.canvas.height - (y * state.scale + state.offsetY) };
+            };
+            
+            let bestArea = Infinity;
+            const faces = state.roofFaces || [];
+            faces.forEach(face => {
+                if (window.isFloorMatched && !window.isFloorMatched(face.floor, state.currentFloor)) return;
+                const canvasPts = face.vertices.map(v => toC(v.x, v.y));
+                if (this.isPointInPolygon(mx, my, canvasPts)) {
+                    const area = window.RoofEngine ? window.RoofEngine.calculatePolygonArea2D(face.vertices.map(v => ({ u: v.x/1000, v: v.y/1000 }))) : 0;
+                    if (area < bestArea) {
+                        bestArea = area;
+                        hitFace = face;
+                    }
+                }
+            });
+        }
 
         if (hitFace) {
             if (confirm(`屋根面 (${hitFace.label || '屋根'}) を削除しますか？`)) {
@@ -155,9 +180,19 @@ window.RoofInputController = {
         const defaultSlope = existingFace ? existingFace.slope : 4.5;
         const defaultThickness = existingFace ? existingFace.roofThickness : 150;
         const defaultDelta = existingFace ? existingFace.baseHeightDelta : 0;
-        const defaultFloor = existingFace ? existingFace.floor : state.currentFloor;
-        const is2F = defaultFloor === '2F' ? 'selected' : '';
-        const is1F = defaultFloor === '1F' ? 'selected' : '';
+        
+        const currentFl = state.currentFloor || '1F';
+        const is1FGroup = (f) => ['1F', '1R', '1RF', '1F_R'].includes(String(f).toUpperCase().trim());
+        
+        let defaultFloorChoice = '2F';
+        if (existingFace) {
+            defaultFloorChoice = is1FGroup(existingFace.floor) ? '1F' : '2F';
+        } else {
+            defaultFloorChoice = is1FGroup(currentFl) ? '1F' : '2F';
+        }
+
+        const is2F = defaultFloorChoice === '2F' ? 'selected' : '';
+        const is1F = defaultFloorChoice === '1F' ? 'selected' : '';
         
         const popupTitle = existingFace ? "屋根面の編集" : "屋根面の新規登録";
         const btnText = existingFace ? "💾 更新" : "💾 登録";
@@ -260,6 +295,10 @@ window.RoofInputController = {
         const thickness = parseFloat(thicknessStr) || parseFloat(defaultThickness);
         const delta = parseFloat(deltaStr) || parseFloat(defaultDelta);
 
+        const currentFl = state.currentFloor || '1F';
+        const is1FGroup = (f) => ['1F', '1R', '1RF', '1F_R'].includes(String(f).toUpperCase().trim());
+        const defaultFloorChoice = is1FGroup(currentFl) ? '1F' : '2F';
+
         if (existingFace) {
             existingFace.label = label;
             existingFace.slope = slope;
@@ -274,7 +313,7 @@ window.RoofInputController = {
                 slope: slope,
                 roofThickness: thickness,
                 baseHeightDelta: delta,
-                floor: state.currentFloor
+                floor: defaultFloorChoice
             };
             if (!state.roofFaces) state.roofFaces = [];
             state.roofFaces.push(face);
