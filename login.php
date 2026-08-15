@@ -54,10 +54,11 @@ try {
     $stmt->execute([$sessionToken, $userId, $expiresAt]);
 
     // 4. Cookie の発行 (30日間)
+    $hostDomain = isset($_SERVER['HTTP_HOST']) ? preg_replace('/:\d+$/', '', $_SERVER['HTTP_HOST']) : '2025.eie.jp';
     setcookie('auth_session', $sessionToken, [
         'expires'  => time() + (86400 * 30),
         'path'     => '/',
-        'domain'   => '', // 2025.eie.jp
+        'domain'   => $hostDomain,
         'secure'   => true,
         'httponly' => true,
         'samesite' => 'Lax'
