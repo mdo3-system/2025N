@@ -1319,9 +1319,6 @@
             const authModal = document.getElementById('modal-auth-login');
             if (authModal) authModal.style.display = 'none';
             console.log('🔧 [Test Mode] Auth bypass enabled. Direct access granted.');
-        } catch (e) {
-                console.error('Auth check error:', e);
-            }
         }
 
         async function handleSendMagicLink(e) {
