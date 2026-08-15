@@ -75,6 +75,9 @@ window.WallPropertyController = {
         if (window.UIView && typeof window.UIView.updateWallSpecSummary === 'function') {
             window.UIView.updateWallSpecSummary();
         }
+        if (typeof window.updateWallSelects === 'function') {
+            window.updateWallSelects();
+        }
     }
 };
 

@@ -1,4 +1,4 @@
 /**
  * Version.js - Centralized Version Management
  */
-window.APP_VERSION = "v3.12.67"; // Fix: Restored 100% clean UTF-8 Japanese UI in index.html from clean master with auth bypass
+window.APP_VERSION = "v3.12.68"; // Fix: Prevent wall/opening overlap, fix manual v3.12 button, fix wall multiplier & brace selection sync

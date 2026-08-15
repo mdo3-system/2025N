@@ -48,6 +48,10 @@ window.UIView = {
         const m = document.getElementById('modal-wall-settings');
         if (!m) return;
         
+        if (typeof window.updateWallSelects === 'function') {
+            window.updateWallSelects();
+        }
+
         // メインの設定値をモーダルへ同期
         const p1 = document.getElementById('wall-p1');
         const p2 = document.getElementById('wall-p2');
@@ -57,9 +61,9 @@ window.UIView = {
         const m2 = document.getElementById('wall-p2-modal');
         const mb = document.getElementById('wall-b-modal');
         
-        if (m1 && p1) m1.value = p1.value;
-        if (m2 && p2) m2.value = p2.value;
-        if (mb && b) mb.value = b.value;
+        if (m1 && p1 && p1.value) m1.value = p1.value;
+        if (m2 && p2 && p2.value) m2.value = p2.value;
+        if (mb && b && b.value) mb.value = b.value;
         
         this.updateModalWallTotal();
         m.style.display = 'flex';
@@ -102,6 +106,9 @@ window.UIView = {
         if (p2 && m2) p2.value = m2.value;
         if (b && mb) b.value = mb.value;
         
+        if (typeof window.updateWallSelects === 'function') {
+            window.updateWallSelects();
+        }
         this.updateWallSpecSummary();
         document.getElementById('modal-wall-settings').style.display = 'none';
         
@@ -112,15 +119,19 @@ window.UIView = {
      * 右パネルの仕様概要表示を更新
      */
     updateWallSpecSummary: function() {
-        const p1 = document.getElementById('wall-p1-modal');
-        const p2 = document.getElementById('wall-p2-modal');
-        const b = document.getElementById('wall-b-modal');
+        const p1Val = document.getElementById('wall-p1')?.value || document.getElementById('wall-p1-modal')?.value || 'opt0';
+        const p2Val = document.getElementById('wall-p2')?.value || document.getElementById('wall-p2-modal')?.value || 'opt0';
+        const bVal  = document.getElementById('wall-b')?.value  || document.getElementById('wall-b-modal')?.value  || 'b0';
         
+        const s1 = window.WallEngine ? window.WallEngine.getWallSpec(p1Val) : { text: 'なし' };
+        const s2 = window.WallEngine ? window.WallEngine.getWallSpec(p2Val) : { text: 'なし' };
+        const sb = window.WallEngine ? window.WallEngine.getBraceSpec(bVal) : { text: 'なし' };
+
         const summary = document.getElementById('wall-spec-summary');
-        if (summary && p1 && p2 && b) {
-            const n1 = p1.options[p1.selectedIndex]?.text.split(' ')[0] || 'なし';
-            const n2 = p2.options[p2.selectedIndex]?.text.split(' ')[0] || 'なし';
-            const nb = b.options[b.selectedIndex]?.text.split(' ')[0] || 'なし';
+        if (summary) {
+            const n1 = (s1.text || 'なし').split(' ')[0];
+            const n2 = (s2.text || 'なし').split(' ')[0];
+            const nb = (sb.text || 'なし').split(' ')[0];
             summary.innerHTML = `面材1: ${n1} / 面材2: ${n2}<br>筋交: ${nb}`;
         }
         

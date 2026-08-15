@@ -840,16 +840,22 @@ window.updateWallSelects = function(overrideItem = null) {
         
         if (sel) {
             const oldVal = sel.value;
-            sel.innerHTML = html;
-            if (overrideItem) sel.value = (target.type === 'p1') ? overrideItem.outPanelId : (target.type === 'p2' ? overrideItem.inPanelId : overrideItem.braceId);
-            else if (oldVal) sel.value = oldVal;
-            if (!sel.value && sel.options.length > 0) sel.selectedIndex = 0;
+            if (sel.tagName === 'SELECT') {
+                sel.innerHTML = html;
+                if (overrideItem) sel.value = (target.type === 'p1') ? overrideItem.outPanelId : (target.type === 'p2' ? overrideItem.inPanelId : overrideItem.braceId);
+                else if (oldVal) sel.value = oldVal;
+                if (!sel.value && sel.options && sel.options.length > 0) sel.selectedIndex = 0;
+            } else {
+                // <input type="hidden">
+                if (overrideItem) sel.value = (target.type === 'p1') ? (overrideItem.outPanelId || 'opt0') : (target.type === 'p2' ? (overrideItem.inPanelId || 'opt0') : (overrideItem.braceId || 'b0'));
+                else if (!oldVal) sel.value = (target.type === 'b') ? 'b0' : 'opt0';
+            }
         }
         if (modSel) {
             const oldVal = modSel.value;
             modSel.innerHTML = html;
             modSel.setAttribute('onchange', 'syncWallModalToMain()'); // Ensure listener is present
-            if (sel) modSel.value = sel.value;
+            if (sel && sel.value) modSel.value = sel.value;
             else if (oldVal) modSel.value = oldVal;
             if (!modSel.value && modSel.options.length > 0) modSel.selectedIndex = 0;
         }
@@ -857,11 +863,15 @@ window.updateWallSelects = function(overrideItem = null) {
 
     const getPV = (id) => {
         const el = document.getElementById(id);
-        return (el && el.selectedIndex >= 0) ? parseFloat(el.options[el.selectedIndex].dataset.val || 0) : 0;
+        if (!el) return 0;
+        const val = el.value || (el.options && el.selectedIndex >= 0 ? el.options[el.selectedIndex].value : null);
+        return window.WallEngine ? (window.WallEngine.getWallSpec(val).val || 0) : 0;
     };
     const getBV = (id) => {
-        const spec = state.getMasterBraceList().find(b => b.id === (document.getElementById(id)?.value));
-        return spec ? spec.val : 0;
+        const el = document.getElementById(id);
+        if (!el) return 0;
+        const val = el.value || (el.options && el.selectedIndex >= 0 ? el.options[el.selectedIndex].value : null);
+        return window.WallEngine ? (window.WallEngine.getBraceSpec(val).val || 0) : 0;
     };
 
     const t = getPV('wall-p1') + getPV('wall-p2') + getBV('wall-b');
@@ -870,11 +880,12 @@ window.updateWallSelects = function(overrideItem = null) {
     const totalEl = document.getElementById('total-val');
     if (totalEl) {
         totalEl.innerText = t.toFixed(1);
-        totalEl.style.color = (t > 7.0) ? "red" : "#0056b3";
+        totalEl.style.color = (t > 7.0) ? "red" : "#27ae60";
     }
     const totalModalEl = document.getElementById('total-val-modal');
     if (totalModalEl) {
         totalModalEl.innerText = t.toFixed(1);
+        totalModalEl.style.color = (t > 7.0) ? "red" : "#27ae60";
     }
     
     if (window.UIView && window.UIView.updateWallSpecSummary) {

@@ -200,11 +200,31 @@ function handleWallPillarInput(mode, state) {
         selectedPillar = hoveredPillar;
     } else if (selectedPillar.id !== hoveredPillar.id) {
         const p1 = selectedPillar, p2 = hoveredPillar;
-        const len = Math.hypot(p1.x - p2.x, p1.y - p2.y);
+        const isMatched = (f) => window.isFloorMatched ? window.isFloorMatched(f, state.currentFloor) : (f === state.currentFloor);
+        const isSameSpan = (w) => (w.p1 && w.p2 && isMatched(w.floor) && 
+            ((w.p1.id == p1.id && w.p2.id == p2.id) || (w.p1.id == p2.id && w.p2.id == p1.id)));
+
         if (mode === 'wall') {
+            // 1. 開口部との重複チェック
+            const hasWindow = (state.windowsArr || []).some(isSameSpan);
+            if (hasWindow) {
+                alert('開口部が設定されている区間には耐力壁を配置できません。\n配置する場合は、先に開口部を削除してください。');
+                selectedPillar = null;
+                window.AppController.refreshAll();
+                return;
+            }
+            // 2. 既存の耐力壁との重複チェック
+            const hasWall = (state.walls || []).some(isSameSpan);
+            if (hasWall) {
+                alert('この区間には既に耐力壁が配置されています。');
+                selectedPillar = null;
+                window.AppController.refreshAll();
+                return;
+            }
+
             const p1Id = document.getElementById('wall-p1')?.value || 'opt0';
             const p2Id = document.getElementById('wall-p2')?.value || 'opt0';
-            const bId = document.getElementById('wall-b')?.value || 'b0';
+            const bId  = document.getElementById('wall-b')?.value  || 'b0';
             
             const nw = { 
                 id: Date.now(), p1, p2, floor: state.currentFloor, 
@@ -212,7 +232,24 @@ function handleWallPillarInput(mode, state) {
                 totalVal: 0 // Will be updated by refreshAll -> WallEngine
             };
             state.walls.push(nw);
-        } else {
+        } else if (mode === 'window') {
+            // 1. 耐力壁との重複チェック
+            const hasWall = (state.walls || []).some(isSameSpan);
+            if (hasWall) {
+                alert('耐力壁が配置されている区間には開口部を設定できません。\n設定する場合は、先に耐力壁を削除してください。');
+                selectedPillar = null;
+                window.AppController.refreshAll();
+                return;
+            }
+            // 2. 既存の開口部との重複チェック
+            const hasWindow = (state.windowsArr || []).some(isSameSpan);
+            if (hasWindow) {
+                alert('この区間には既に開口部が設定されています。');
+                selectedPillar = null;
+                window.AppController.refreshAll();
+                return;
+            }
+
             state.windowsArr.push({ id: Date.now(), p1, p2, floor: state.currentFloor });
         }
         selectedPillar = null;
