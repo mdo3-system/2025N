@@ -58,14 +58,14 @@ document.addEventListener('DOMContentLoaded', () => {
             if (canvas) window.InputController.initCanvas(canvas);
         }
 
-        // 4. 初回モード設定 (1階 / 選択・プロパティ編集モード)
+        // 4. 初回モード設定 (1階作図モード: 1F / 壁の配置)
         if (window.AppController) {
             window.AppController.setFloor('1F');
             window.AppController.switchAppMode('wall');
-            const selRadio = document.querySelector('input[name="mode"][value="select"]');
-            if (selRadio) {
-                selRadio.checked = true;
-                if (typeof handleModeChange === 'function') handleModeChange({ target: selRadio });
+            const wallRadio = document.querySelector('input[name="mode"][value="wall"]');
+            if (wallRadio) {
+                wallRadio.checked = true;
+                if (typeof handleModeChange === 'function') handleModeChange({ target: wallRadio });
             }
             window.AppController.refreshAll();
         }

@@ -1,4 +1,4 @@
 /**
  * Version.js - Centralized Version Management
  */
-window.APP_VERSION = "v3.12.69"; // Fix: Initial mode 1F/select, auto wall mode switch after settings, and robust concave polygon support for pillar load area
+window.APP_VERSION = "v3.12.70"; // Fix: 1F wall drawing mode as strictly active on initial load, and tributary area fix
