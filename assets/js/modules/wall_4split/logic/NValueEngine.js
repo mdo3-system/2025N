@@ -139,6 +139,13 @@ window.NValueEngine = {
                 let usedArea = p.manualArea != null ? p.manualArea : (p.autoArea || 0);
                 let isDetail = p.lCalcMode === 'detail';
 
+                // 細長比 (令第43条6項: λ <= 150) & 負担面積プロパティを柱オブジェクトに保存
+                p.d = parseFloat(p_d) || 105;
+                p.l_0 = parseFloat(p_h) || 2.7;
+                p.lambda = Math.round(((p.l_0 * 1000 * Math.sqrt(12)) / p.d) * 10) / 10;
+                p.lambdaOK = (p.lambda <= 150);
+                p.usedArea = usedArea;
+
                 if (f === '1F') {
                     const upper = map2FByName[window.getPillarName(p, s)] || null;
                     const underUpper = has2FAbove(p);

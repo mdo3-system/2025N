@@ -248,25 +248,23 @@ window.AppExport = {
                 if (degY > 75 && L_wall < 1.82) effY = 0;
                 let isDiag = (degX > 0.1 && degX < 89.9) ? ' [✔斜]' : '';
 
-                let bV = w.braceVal || 0;
-                let outV = w.outPanelVal !== undefined ? w.outPanelVal : 0;
-                let inV = w.inPanelVal || 0;
+                let outSpec = (window.WallEngine && w.outPanelId) ? window.WallEngine.getWallSpec(w.outPanelId) : null;
+                let inSpec  = (window.WallEngine && w.inPanelId)  ? window.WallEngine.getWallSpec(w.inPanelId)  : null;
+                let braceSpec = (window.WallEngine && w.braceId) ? window.WallEngine.getBraceSpec(w.braceId)  : null;
 
-                let mark1 = (w.outPanelName && !w.outPanelName.includes('なし')) ? w.outPanelName.charAt(0) : '';
-                let mark2 = (w.inPanelName && !w.inPanelName.includes('なし')) ? w.inPanelName.charAt(0) : '';
+                let mark1 = (outSpec && outSpec.id !== 'opt0') ? outSpec.text.charAt(0) : ((w.outPanelName && !w.outPanelName.includes('なし')) ? w.outPanelName.charAt(0) : '');
+                let mark2 = (inSpec && inSpec.id !== 'opt0') ? inSpec.text.charAt(0) : ((w.inPanelName && !w.inPanelName.includes('なし')) ? w.inPanelName.charAt(0) : '');
 
                 let marks = [];
                 if (mark1) marks.push(mark1);
                 if (mark2) marks.push(mark2);
-
                 let mark = marks.join('+');
-                if (!mark && (outV > 0 || inV > 0)) {
-                    let panelSum = outV + inV;
-                    mark = window._currentLegendDic ? window._currentLegendDic[panelSum.toFixed(2)] || '' : '';
-                }
+
+                let braceName = braceSpec ? braceSpec.text : w.braceName;
+                let braceVal = braceSpec ? (braceSpec.val || 0) : (w.braceVal || 0);
+                let braceLabel = (window.WallEngine && window.WallEngine.getBraceLabel) ? window.WallEngine.getBraceLabel(braceName, braceVal, w) : '';
 
                 let tvStr = '';
-                let braceLabel = (window.WallEngine && window.WallEngine.getBraceLabel) ? window.WallEngine.getBraceLabel(w.braceName, bV, w) : '';
                 if (mark && braceLabel) tvStr = `${mark} + ${braceLabel}`;
                 else if (mark) tvStr = mark;
                 else if (braceLabel) tvStr = braceLabel;

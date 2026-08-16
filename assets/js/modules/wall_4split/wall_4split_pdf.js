@@ -706,24 +706,43 @@ window._zoomMitsukeImg = function(src, title) {
 
 
 window.buildWallLegendData = function () {
+    const s = window.AppState;
+    const masterList = (s && typeof s.getMasterWallList === 'function') ? s.getMasterWallList() : [];
     let panelNames = new Set();
 
-    walls.forEach(w => {
-        if (w.outPanelName && !w.outPanelName.startsWith('なし')) panelNames.add(w.outPanelName);
-        if (w.inPanelName && !w.inPanelName.startsWith('なし')) panelNames.add(w.inPanelName);
+    // 1. マスター仕様リストの全面材仕様（①〜⑧、⑨〜）を追加
+    masterList.forEach(m => {
+        if (m.id !== 'opt0' && m.text && !m.text.startsWith('なし')) {
+            panelNames.add(m.text);
+        }
     });
 
-    // 文字コード順でソート（①②③…の順序になる）
+    // 2. 現在配置されている壁の仕様を追加
+    const wallsList = (s && s.walls) ? s.walls : (window.walls || []);
+    wallsList.forEach(w => {
+        if (w.outPanelId && window.WallEngine) {
+            const spec = window.WallEngine.getWallSpec(w.outPanelId);
+            if (spec && spec.id !== 'opt0' && spec.text && !spec.text.startsWith('なし')) panelNames.add(spec.text);
+        } else if (w.outPanelName && !w.outPanelName.startsWith('なし')) {
+            panelNames.add(w.outPanelName);
+        }
+
+        if (w.inPanelId && window.WallEngine) {
+            const spec = window.WallEngine.getWallSpec(w.inPanelId);
+            if (spec && spec.id !== 'opt0' && spec.text && !spec.text.startsWith('なし')) panelNames.add(spec.text);
+        } else if (w.inPanelName && !w.inPanelName.startsWith('なし')) {
+            panelNames.add(w.inPanelName);
+        }
+    });
+
+    // 文字コード順でソート（①②③…の順序）
     let sortedNames = Array.from(panelNames).sort();
 
-    // 記号（先頭1文字）→フルネーム のマップ（旧データ互換フォールバック用）
     let panelDic = {};
     sortedNames.forEach(name => {
         let sym = name.charAt(0);
         if (sym) panelDic[sym] = name;
     });
-
-    let legendParts = sortedNames.map(name => name);
 
     let htmlStr = "";
     if (sortedNames.length > 0) {
@@ -734,13 +753,12 @@ window.buildWallLegendData = function () {
         <th style="border:1px solid #333; padding:4px; width:15%;">壁倍率</th>
     </tr>`;
         sortedNames.forEach(name => {
-            // 例: "① 構造用合板 (大壁) N50@150 2.5倍" または "①構造用面材 大壁・受材共 N50＠150 (2.5倍)" を解体
-            let parts = name.match(/^(①|②|③|④|⑤|⑥|⑦|⑧|⑨|⑩|⑪|⑫|⑬|⑭|⑮|⑯|⑰|⑱|⑲|⑳|\[任意\])\s*(.*?)\s*\(?([\d.]+\s*倍)\)?$/);
-            if (parts) {
+            let parts = name.match(/^(①|②|③|④|⑤|⑥|⑦|⑧|⑨|⑩|⑪|⑫|⑬|⑭|⑮|⑯|⑰|⑱|⑲|⑳|\[任意\]|[0-9]+)\s*(.*?)\s*\(?([\d.]+\s*倍)?\)?$/);
+            if (parts && parts[1]) {
                 htmlStr += `<tr>
-            <td style="border:1px solid #333; padding:4px; text-align:center;">${parts[1]}</td>
-            <td style="border:1px solid #333; padding:4px;">${parts[2]}</td>
-            <td style="border:1px solid #333; padding:4px; text-align:center;">${parts[3]}</td>
+            <td style="border:1px solid #333; padding:4px; text-align:center; font-weight:bold;">${parts[1]}</td>
+            <td style="border:1px solid #333; padding:4px;">${parts[2] || name}</td>
+            <td style="border:1px solid #333; padding:4px; text-align:center; font-weight:bold;">${parts[3] || '-'}</td>
         </tr>`;
             } else {
                 htmlStr += `<tr>
@@ -1177,28 +1195,23 @@ async function generateDoc() {
                 if (degY > 75 && L_wall < 1.82) effY = 0;
                 let isDiag = (degX > 0.1 && degX < 89.9) ? ' [✔斜]' : '';
 
-                let tV = window.getWallTotalVal(w);
-                let bV = w.braceVal || 0;
-                let outV = w.outPanelVal !== undefined ? w.outPanelVal : 0;
-                let inV = w.inPanelVal || 0;
+                let outSpec = (window.WallEngine && w.outPanelId) ? window.WallEngine.getWallSpec(w.outPanelId) : null;
+                let inSpec  = (window.WallEngine && w.inPanelId)  ? window.WallEngine.getWallSpec(w.inPanelId)  : null;
+                let braceSpec = (window.WallEngine && w.braceId) ? window.WallEngine.getBraceSpec(w.braceId)  : null;
 
-                let mark1 = (w.outPanelName && !w.outPanelName.includes('なし')) ? w.outPanelName.charAt(0) : '';
-                let mark2 = (w.inPanelName && !w.inPanelName.includes('なし')) ? w.inPanelName.charAt(0) : '';
+                let mark1 = (outSpec && outSpec.id !== 'opt0') ? outSpec.text.charAt(0) : ((w.outPanelName && !w.outPanelName.includes('なし')) ? w.outPanelName.charAt(0) : '');
+                let mark2 = (inSpec && inSpec.id !== 'opt0') ? inSpec.text.charAt(0) : ((w.inPanelName && !w.inPanelName.includes('なし')) ? w.inPanelName.charAt(0) : '');
 
                 let marks = [];
                 if (mark1) marks.push(mark1);
                 if (mark2) marks.push(mark2);
-
                 let mark = marks.join('+');
 
-                // 旧データ互換フォールバック
-                if (!mark && (outV > 0 || inV > 0)) {
-                    let panelSum = outV + inV;
-                    mark = window._currentLegendDic ? window._currentLegendDic[panelSum.toFixed(2)] || '' : '';
-                }
+                let braceName = braceSpec ? braceSpec.text : w.braceName;
+                let braceVal = braceSpec ? (braceSpec.val || 0) : (w.braceVal || 0);
+                let braceLabel = (window.WallEngine && window.WallEngine.getBraceLabel) ? window.WallEngine.getBraceLabel(braceName, braceVal, w) : '';
 
                 let tvStr = '';
-                let braceLabel = window.WallEngine.getBraceLabel(w.braceName, bV, w);
                 if (mark && braceLabel) tvStr = `${mark} + ${braceLabel}`;
                 else if (mark) tvStr = mark;
                 else if (braceLabel) tvStr = braceLabel;

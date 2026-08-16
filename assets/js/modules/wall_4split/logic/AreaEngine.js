@@ -197,6 +197,7 @@ window.AreaEngine = {
                 p.tributaryPolygon = totalTributaryParts;
                 p.loadArea = Math.round(((totalArea / 1000000) + extraArea) * 100) / 100;
                 p.autoArea = p.loadArea;
+                p.usedArea = (p.manualArea != null && !isNaN(p.manualArea)) ? parseFloat(p.manualArea) : p.loadArea;
             });
         });
     },

@@ -81,13 +81,14 @@ window.DocumentRenderer = {
         });
 
         // 1. Draw Background CAD & DXF Underlay Lines (State bgLinesOriginal fallback)
-        const bgEnts = filteredEnts.filter(e => e.isBg);
+        const isElevMitsuke = (docType === 'elev' || floorStr === 'mitsuke' || floorStr === 'elev');
+        const bgEnts = isElevMitsuke ? [] : filteredEnts.filter(e => e.isBg);
         if (bgEnts.length > 0 && typeof _drawCADEntities === 'function') {
             _drawCADEntities(ctx, bgEnts, toC, true, sfFinal, true);
         }
         
-        // Ensure manual DXF & AppState background underlay lines (walls, pillars, floor grids) are always rendered
-        if (state.bgLinesOriginal && state.bgLinesOriginal.length > 0) {
+        // Ensure manual DXF & AppState background underlay lines (walls, pillars, floor grids) are rendered (Skip for Mitsuke)
+        if (!isElevMitsuke && state.bgLinesOriginal && state.bgLinesOriginal.length > 0) {
             ctx.save();
             ctx.lineWidth = 1.2;
             ctx.strokeStyle = '#cccccc';

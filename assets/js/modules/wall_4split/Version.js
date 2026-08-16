@@ -1,4 +1,4 @@
 /**
  * Version.js - Centralized Version Management
  */
-window.APP_VERSION = "v3.12.74"; // Fix: Floor height slot UI, pillar-height-linked wall multiplier reduction, and exclude roof layers from area report
+window.APP_VERSION = "v3.12.75"; // Fix: Mitsuke elevation DXF exclude, slenderness ratio & tributary area list restore, wall legend (1-8+) restore, and roof/solar weight calculation spec
