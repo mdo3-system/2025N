@@ -61,30 +61,47 @@ window.StructuralEngine = {
     calculateRequiredWallAmounts: function(state) {
         const s = state || window.AppState;
         const c = s.config;
+
+        // 左パネルの単位必要壁量スロットから最新値を取得・同期
+        const cq1Input = document.getElementById('c-q1');
+        const cq2Input = document.getElementById('c-q2');
+        const cwInput = document.getElementById('c-w');
+        if (cq1Input && c.reqWallCoeffs && c.reqWallCoeffs['1F']) c.reqWallCoeffs['1F'].seismic = parseFloat(cq1Input.value) || 0.29;
+        if (cq2Input && c.reqWallCoeffs && c.reqWallCoeffs['2F']) c.reqWallCoeffs['2F'].seismic = parseFloat(cq2Input.value) || 0.15;
+        if (cwInput && c.reqWallCoeffs) {
+            const cwVal = parseFloat(cwInput.value) || 0.50;
+            if (c.reqWallCoeffs['1F']) c.reqWallCoeffs['1F'].wind = cwVal;
+            if (c.reqWallCoeffs['2F']) c.reqWallCoeffs['2F'].wind = cwVal;
+        }
+
+        // 基準法または性能表示モードに応じた有効算定面積を取得
+        if (window.AreaEngine && typeof window.AreaEngine.calculateRequiredWallAreas === 'function') {
+            s.requiredAreas = window.AreaEngine.calculateRequiredWallAreas(s);
+        }
         const r = s.requiredAreas;
 
         ['1F', '2F'].forEach(f => {
-            const cq = c.reqWallCoeffs[f].seismic;
-            const cw = c.reqWallCoeffs[f].wind; // AppState.initで共通化済み
-            const triMult = c.triangleMultiplier || 1.33;
+            const cq = (c.reqWallCoeffs && c.reqWallCoeffs[f]) ? c.reqWallCoeffs[f].seismic : 0.29;
+            const cw = (c.reqWallCoeffs && c.reqWallCoeffs[f]) ? c.reqWallCoeffs[f].wind : 0.50;
 
             // 見付面積 (1階は2階の見付も加算)
-            const awx = c.projectedAreas[f].x + (f === '1F' ? c.projectedAreas['2F'].x : 0);
-            const awy = c.projectedAreas[f].y + (f === '1F' ? c.projectedAreas['2F'].y : 0);
+            const awx = (c.projectedAreas && c.projectedAreas[f] ? c.projectedAreas[f].x : 0) + (f === '1F' ? (c.projectedAreas && c.projectedAreas['2F'] ? c.projectedAreas['2F'].x : 0) : 0);
+            const awy = (c.projectedAreas && c.projectedAreas[f] ? c.projectedAreas[f].y : 0) + (f === '1F' ? (c.projectedAreas && c.projectedAreas['2F'] ? c.projectedAreas['2F'].y : 0) : 0);
 
-            const rawArea = (r && r[f] && r[f].seismic != null) ? r[f].seismic : (s.reqWall[f].a_eff || 0);
-            const eq = rawArea * cq;
-            const wx = awx * cw;
-            const wy = awy * cw;
+            // 基準法/性能表示モードに応じた算定面積
+            const rawArea = (r && r[f] && r[f].seismic != null) ? r[f].seismic : (s.reqWall && s.reqWall[f] ? s.reqWall[f].a_eff || 0 : 0);
+            const eq = Math.round(rawArea * cq * 100) / 100;
+            const wx = Math.round(awx * cw * 100) / 100;
+            const wy = Math.round(awy * cw * 100) / 100;
 
+            if (!s.reqWall[f]) s.reqWall[f] = {};
             const rw = s.reqWall[f];
             rw.qX = Math.max(eq, wx);
             rw.qY = Math.max(eq, wy);
             rw.eq = eq;
             rw.wx = wx;
             rw.wy = wy;
-            // rw.a_eff and rw.basis are preserved from WallEngine if called
-            if (r && r[f]) rw.a_eff = r[f].seismic;
+            rw.a_eff = rawArea;
         });
     },
 

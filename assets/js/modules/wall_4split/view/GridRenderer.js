@@ -207,9 +207,9 @@ window.GridRenderer = {
 
         const tickSize = 4;
 
-        // --- X方向 グリッド間寸法 (下側) ---
+        // --- X方向 グリッド間寸法 (下側最外周) ---
         if (sortedXIndices && sortedXIndices.length >= 2) {
-            const dimY = botY + 15;
+            const dimY = Math.min(botY + 20, (state.canvas?.height || 800) - 35);
             const totalDimY = dimY + fontSize + 8;
 
             // スパン個別寸法
@@ -221,6 +221,20 @@ window.GridRenderer = {
                 const cx1 = toCanvas(x1, 0).cx;
                 const cx2 = toCanvas(x2, 0).cx;
                 const span = Math.round(x2 - x1);
+
+                // 引き出し補助線（グリッド下端から寸法線まで）
+                ctx.save();
+                ctx.strokeStyle = state.isPrintMode ? '#bbb' : 'rgba(41, 128, 185, 0.4)';
+                ctx.setLineDash([2, 2]);
+                ctx.beginPath();
+                ctx.moveTo(cx1, botY);
+                ctx.lineTo(cx1, totalDimY + 4);
+                if (k === sortedXIndices.length - 2) {
+                    ctx.moveTo(cx2, botY);
+                    ctx.lineTo(cx2, totalDimY + 4);
+                }
+                ctx.stroke();
+                ctx.restore();
 
                 // 寸法線
                 ctx.beginPath();
@@ -272,12 +286,12 @@ window.GridRenderer = {
             ctx.fillText(`全体 ${totalSpanX}`, (startCx + endCx) / 2, totalDimY - 2);
         }
 
-        // --- Y方向 グリッド間寸法 (右側) ---
+        // --- Y方向 グリッド間寸法 (右側最外周) ---
         if (sortedYIndices && sortedYIndices.length >= 2) {
-            const dimX = rightX + 15;
+            const dimX = Math.min(rightX + 20, (state.canvas?.width || 1200) - 50);
             const totalDimX = dimX + fontSize * 3 + 12;
 
-            // スパン個別寸法 (CAD座標系: 上が大きい)
+            // スパン個別寸法
             for (let k = 0; k < sortedYIndices.length - 1; k++) {
                 const i1 = sortedYIndices[k];
                 const i2 = sortedYIndices[k + 1];
@@ -286,6 +300,20 @@ window.GridRenderer = {
                 const cy1 = toCanvas(0, y1).cy;
                 const cy2 = toCanvas(0, y2).cy;
                 const span = Math.round(Math.abs(y2 - y1));
+
+                // 引き出し補助線（グリッド右端から寸法線まで）
+                ctx.save();
+                ctx.strokeStyle = state.isPrintMode ? '#bbb' : 'rgba(41, 128, 185, 0.4)';
+                ctx.setLineDash([2, 2]);
+                ctx.beginPath();
+                ctx.moveTo(rightX, cy1);
+                ctx.lineTo(totalDimX + 4, cy1);
+                if (k === sortedYIndices.length - 2) {
+                    ctx.moveTo(rightX, cy2);
+                    ctx.lineTo(totalDimX + 4, cy2);
+                }
+                ctx.stroke();
+                ctx.restore();
 
                 // 寸法線
                 ctx.beginPath();
