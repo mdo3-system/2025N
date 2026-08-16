@@ -126,54 +126,33 @@ window.AreaEngine = {
             const ap = s.pillars.filter(p => !p.isDeleted && !p.isInvalidPos && isFloorMatched(p.floor, f));
             if (ap.length === 0) return;
 
-            // 各階に応じた負担ポリゴンリスト { poly, ratio, type }
-            const targetPolys = [];
+            // 1. 建物外郭（床面積）ポリゴン群
+            let buildingPolys = this.getBuildingPolygons(f, ap, s);
+            if (buildingPolys.length === 0) return;
 
-            const addAreaPolys = (targetFloor, targetType, ratio) => {
-                areaLines.filter(a => {
-                    if (!isFloorMatched(a.floor, targetFloor) || !a.vertices || a.vertices.length < 3) return false;
-                    const aType = a.areaType || 'floor';
-                    return aType === targetType;
-                }).forEach(a => {
-                    let p = a.vertices.map(v => ({ x: v.x, y: v.y }));
-                    M.ensureCCW(p);
-                    targetPolys.push({ poly: p, ratio: ratio, type: targetType });
-                });
-            };
-
-            if (!isSeinou) {
-                // 【基準法モード（見下げ）】: バルコニー、ポーチ、吹き抜けは一切除外
-                if (f === '1F') {
-                    addAreaPolys('1F', 'floor', 1.0);
-                    addAreaPolys('1F', 'attic', atticRatio);
-                    addAreaPolys('2F', 'attic', atticRatio);
-                } else { // 2F
-                    addAreaPolys('2F', 'floor', 1.0);
-                    addAreaPolys('2F', 'attic', atticRatio);
+            // 2. 階とモードに応じた追加ポリゴン（バルコニー・小屋裏など）の定義
+            let extraTypes = [];
+            if (f === '1F') {
+                extraTypes.push({ type: 'attic', floor: '1F', ratio: atticRatio });
+                if (isSeinou) {
+                    extraTypes.push({ type: 'attic', floor: '2F', ratio: atticRatio });
+                    extraTypes.push({ type: 'void', floor: '2F', ratio: 1.0 });
+                    extraTypes.push({ type: 'porch', floor: '1F', ratio: 1.0 });
+                    extraTypes.push({ type: 'balcony', floor: '1F', ratio: 0.4 });
                 }
-            } else {
-                // 【性能表示モード（見上げ）】: ポーチ, バルコニー(0.4倍), 吹き抜けを含める
-                if (f === '1F') {
-                    addAreaPolys('1F', 'floor', 1.0);
-                    addAreaPolys('1F', 'attic', atticRatio);
-                    addAreaPolys('2F', 'attic', atticRatio);
-                    addAreaPolys('2F', 'void', 1.0);
-                    addAreaPolys('1F', 'porch', 1.0);
-                    addAreaPolys('1F', 'balcony', 0.4);
-                } else { // 2F
-                    addAreaPolys('2F', 'floor', 1.0);
-                    addAreaPolys('2F', 'attic', atticRatio);
-                    addAreaPolys('2F', 'void', 1.0);
+            } else if (f === '2F') {
+                extraTypes.push({ type: 'attic', floor: '2F', ratio: atticRatio });
+                if (isSeinou) {
+                    extraTypes.push({ type: 'void', floor: '2F', ratio: 1.0 });
                 }
             }
 
-            // もしポリゴンが登録されていない場合のフォールバック（柱の外郭バウンディングボックス）
-            if (targetPolys.length === 0) {
-                const fallbackPolys = this.getBuildingPolygons(f, ap, s);
-                fallbackPolys.forEach(poly => {
-                    targetPolys.push({ poly: poly, ratio: 1.0, type: 'floor' });
-                });
-            }
+            const extraPolysByType = extraTypes.map(et => ({
+                ...et,
+                polys: areaLines
+                    .filter(a => isFloorMatched(a.floor, et.floor) && a.areaType === et.type && a.vertices && a.vertices.length >= 3)
+                    .map(a => { let poly = a.vertices.map(v => ({ x: v.x, y: v.y })); M.ensureCCW(poly); return poly; })
+            }));
 
             ap.forEach(p => {
                 let cell = [
@@ -183,32 +162,41 @@ window.AreaEngine = {
                     { x: p.x - INF, y: p.y + INF }
                 ];
                 M.ensureCCW(cell);
-                ap.forEach(op => { 
-                    if (op.id !== p.id && Math.hypot(op.x - p.x, op.y - p.y) >= 1) {
-                        cell = M.clipPolygonByHalfPlane(cell, p, op); 
+
+                ap.forEach(op => {
+                    if (op.id === p.id) return;
+                    if (Math.hypot(op.x - p.x, op.y - p.y) < 1) return;
+                    cell = M.clipPolygonByHalfPlane(cell, p, op);
+                });
+
+                let totalTributaryParts = [];
+                let totalArea = 0;
+
+                // [1] 床面積ポリゴンのクリッピング (subject: bp, clip: cell)
+                buildingPolys.forEach(bp => {
+                    let part = M.clipByVoronoi(bp, cell);
+                    if (part && part.length >= 3) {
+                        totalTributaryParts.push(part);
+                        totalArea += M.polygonArea(part);
                     }
                 });
 
-                let totalAreaVal = 0;
-                let tributaryPolygons = [];
-                
-                targetPolys.forEach(tp => {
-                    // 凹ポリゴン（L字型等）でも正確にクリッピングできるよう三角形分割（Triangulation）して交差計算
-                    const triangles = (tp.poly.length === 3) ? [tp.poly] : (M.triangulate ? M.triangulate(tp.poly) : [tp.poly]);
-                    triangles.forEach(tri => {
-                        const triCCW = tri.map(v => ({ x: v.x, y: v.y }));
-                        M.ensureCCW(triCCW);
-                        const intersected = M.clipPolygonByPolygon(cell, triCCW);
-                        if (intersected && intersected.length >= 3) {
-                            totalAreaVal += M.polygonArea(intersected) * tp.ratio;
-                            tributaryPolygons.push(intersected);
+                // [2] 追加ポリゴン（バルコニー・小屋裏等）のクリッピング
+                let extraArea = 0;
+                extraPolysByType.forEach(et => {
+                    et.polys.forEach(bp => {
+                        let part = M.clipByVoronoi(bp, cell);
+                        if (part && part.length >= 3) {
+                            totalTributaryParts.push(part);
+                            extraArea += (M.polygonArea(part) / 1000000) * et.ratio;
                         }
                     });
                 });
 
-                p.tributaryPolygon = tributaryPolygons; 
-                p.loadArea = Math.round(totalAreaVal / 10000) / 100;
-                p.autoArea = p.loadArea; 
+                p.tributaryPolygons = totalTributaryParts;
+                p.tributaryPolygon = totalTributaryParts;
+                p.loadArea = Math.round(((totalArea / 1000000) + extraArea) * 100) / 100;
+                p.autoArea = p.loadArea;
             });
         });
     },

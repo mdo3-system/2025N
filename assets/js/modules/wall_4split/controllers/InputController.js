@@ -34,18 +34,24 @@ window.InputController = {
             const reader = new FileReader();
             reader.onload = (ev) => {
                 if (window.Parsers) {
-                    const loadedState = window.Parsers.parseJson(ev.target.result, window.AppState);
-                    // 復元されたモードに切り替える
-                    if (window.AppController && loadedState.currentAppMode) {
-                        window.AppController.switchAppMode(loadedState.currentAppMode);
+                    window.Parsers.parseJson(ev.target.result, window.AppState);
+                }
+                // 復元後も確実に「1階 作図モード (1F / 壁の配置)」へ設定
+                if (window.AppController) {
+                    window.AppController.setFloor('1F');
+                    window.AppController.switchAppMode('wall');
+                    const wallRadio = document.querySelector('input[name="mode"][value="wall"]');
+                    if (wallRadio) {
+                        wallRadio.checked = true;
+                        if (typeof handleModeChange === 'function') handleModeChange({ target: wallRadio });
                     }
+                    if (typeof window.AppController.zoomFit === 'function') {
+                        window.AppController.zoomFit();
+                    } else if (typeof initViewForce === 'function') {
+                        initViewForce();
+                    }
+                    window.AppController.refreshAll();
                 }
-                if (window.AppController && typeof window.AppController.zoomFit === 'function') {
-                    window.AppController.zoomFit();
-                } else if (typeof initViewForce === 'function') {
-                    initViewForce();
-                }
-                if (window.AppController) window.AppController.refreshAll();
             };
             reader.readAsText(file);
         });

@@ -95,19 +95,23 @@ window.PillarCadRenderer = {
     drawTributaryAreas: function(state) {
         const ctx = state.ctx;
         ctx.save();
-        ctx.lineWidth    = 2.0;
-        ctx.strokeStyle  = '#27ae60';
-        ctx.setLineDash([]); // [v3.3.0] 破線を廃止し、ボロノイ境界分割線をクッキリした実線で可視化
+        ctx.lineWidth   = 1.0;
+        ctx.strokeStyle = '#27ae60';
+        ctx.setLineDash([4, 4]); // v1.16b 準拠の緑破線
 
         const renderer = window.MainRenderer;
 
         state.pillars
             .filter(p => !p.isDeleted && !p.isInvalidPos && window.isFloorMatched(p.floor, state.currentFloor))
             .forEach(p => {
-                if (!p.tributaryPolygon || p.tributaryPolygon.length === 0) return;
+                const polys = p.tributaryPolygons || (p.tributaryPolygon ? (Array.isArray(p.tributaryPolygon[0]) ? p.tributaryPolygon : [p.tributaryPolygon]) : []);
+                if (polys.length === 0) return;
 
-                ctx.fillStyle = 'rgba(46, 204, 113, 0.15)';
-                p.tributaryPolygon.forEach(poly => {
+                // ボロノイ境界線（破線）の描画
+                ctx.fillStyle = 'rgba(46, 204, 113, 0.08)';
+                ctx.setLineDash([4, 4]);
+                polys.forEach(poly => {
+                    if (!poly || poly.length < 3) return;
                     ctx.beginPath();
                     poly.forEach((v, i) => {
                         const c = renderer ? renderer.toCanvas(v, null, state) : { cx: 0, cy: 0 };
@@ -118,34 +122,34 @@ window.PillarCadRenderer = {
                     ctx.stroke();
                 });
 
-                // 負担面積数値
+                // 負担面積数値ラベル（白背景バッジ＋緑文字）
                 const areaVal = p.loadArea || 0;
                 if (areaVal > 0) {
+                    ctx.setLineDash([]); // バッジ枠は実線
                     const pt  = renderer ? renderer.toCanvas(p, null, state) : { cx: 0, cy: 0 };
                     const txt = areaVal.toFixed(2) + ' ㎡';
-                    ctx.font          = 'bold 13px sans-serif';
-                    ctx.textAlign     = 'center';
-                    ctx.textBaseline  = 'middle';
+                    ctx.font         = 'bold 12px sans-serif';
+                    ctx.textAlign    = 'center';
+                    ctx.textBaseline = 'middle';
 
                     const metrics = ctx.measureText(txt);
-                    const padding = 4;
+                    const padding = 3;
                     const rectW   = metrics.width + padding * 2;
-                    const rectH   = 18;
+                    const rectH   = 16;
                     const rx      = pt.cx - rectW / 2;
-                    const ry      = pt.cy + 12;
+                    const ry      = pt.cy + 10;
 
                     ctx.fillStyle = '#ffffff';
                     ctx.beginPath();
-                    if (ctx.roundRect) ctx.roundRect(rx, ry, rectW, rectH, 4);
+                    if (ctx.roundRect) ctx.roundRect(rx, ry, rectW, rectH, 3);
                     else ctx.rect(rx, ry, rectW, rectH);
                     ctx.fill();
 
-                    ctx.strokeStyle = '#2ecc71';
-                    ctx.lineWidth   = 1.5;
+                    ctx.strokeStyle = '#27ae60';
+                    ctx.lineWidth   = 1.0;
                     ctx.stroke();
 
-                    ctx.fillStyle = '#2ecc71';
-                    ctx.font      = 'bold 13px sans-serif';
+                    ctx.fillStyle = '#27ae60';
                     ctx.fillText(txt, pt.cx, ry + rectH / 2);
                 }
             });
