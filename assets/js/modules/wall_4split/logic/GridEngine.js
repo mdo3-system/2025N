@@ -10,8 +10,6 @@ window.GridEngine = {
      */
     analyzeGrids: function(state) {
         let validPillars = state.pillars.filter(p => !p.isDeleted);
-        
-        let gridLineXs = [], gridLineYs = [];
         const TOL_SNAP = 3; // 近接グリッドのマージ制限 (105mm等のダブル壁偏芯通り芯を保持するため3mmに厳密化)
 
         // 座標を標準モジュール(455mm)に「近い場合のみ」吸着させる補助関数
@@ -24,85 +22,93 @@ window.GridEngine = {
             return Math.round(val);
         };
 
-        // 1. 背景図面(DXF)のグリッド線から座標を抽出
-        const addGridCoord = (p1, p2) => {
-            if (!p1 || !p2) return;
-            let dx = Math.abs(p1.x - p2.x), dy = Math.abs(p1.y - p2.y);
-            if (Math.hypot(dx, dy) > 500) {
-                if (dx < 15) gridLineXs.push(snapToModule((p1.x + p2.x) / 2));
-                if (dy < 15) gridLineYs.push(snapToModule((p1.y + p2.y) / 2));
-            }
-        };
-
-        state.bgLinesOriginal.forEach(e => {
-            if (e.isGridLine) {
-                if (e.type === 'LINE' && e.vertices && e.vertices.length === 2) {
-                    addGridCoord(e.vertices[0], e.vertices[1]);
-                } else if (['LWPOLYLINE', 'POLYLINE'].includes(e.type) && e.vertices && e.vertices.length >= 2) {
-                    for (let i = 0; i < e.vertices.length - 1; i++) {
-                        addGridCoord(e.vertices[i], e.vertices[i + 1]);
-                    }
-                }
-            }
-        });
-
-        // 2. 柱の座標を標準モジュールに揃える & グリッド線にスナップ
-        validPillars.forEach(p => {
-            p.x = snapToModule(p.x);
-            p.y = snapToModule(p.y);
-            
-            let gx = gridLineXs.find(x => Math.abs(x - p.x) < TOL_SNAP);
-            if (gx !== undefined) p.x = gx;
-            let gy = gridLineYs.find(y => Math.abs(y - p.y) < TOL_SNAP);
-            if (gy !== undefined) p.y = gy;
-        });
-
-        // 3. 通り芯の座標マスターリストを作成（純粋なGRID線および手動追加グリッドのみで構成）
         let masterXs = [], masterYs = [];
 
-        gridLineXs.forEach(x => { 
-            let sx = snapToModule(x);
-            if (!masterXs.some(mx => Math.abs(mx - sx) < TOL_SNAP)) masterXs.push(sx); 
-        });
-        gridLineYs.forEach(y => { 
-            let sy = snapToModule(y);
-            if (!masterYs.some(my => Math.abs(my - sy) < TOL_SNAP)) masterYs.push(sy); 
-        });
+        if (state.isGridFixed && state.gridXCoords && state.gridXCoords.length > 0 && state.gridYCoords && state.gridYCoords.length > 0) {
+            // スパン修正または手動確定済みのグリッド座標を最優先で維持
+            masterXs = [...state.gridXCoords];
+            masterYs = [...state.gridYCoords];
+        } else {
+            let gridLineXs = [], gridLineYs = [];
 
-        // 手動追加グリッド
-        state.manualGridX.forEach(m => { 
-            let sx = snapToModule(m.coord);
-            if (!masterXs.some(x => Math.abs(x - sx) < TOL_SNAP)) masterXs.push(sx); 
-        });
-        state.manualGridY.forEach(m => { 
-            let sy = snapToModule(m.coord);
-            if (!masterYs.some(y => Math.abs(y - sy) < TOL_SNAP)) masterYs.push(sy); 
-        });
+            // 1. 背景図面(DXF)のグリッド線から座標を抽出
+            const addGridCoord = (p1, p2) => {
+                if (!p1 || !p2) return;
+                let dx = Math.abs(p1.x - p2.x), dy = Math.abs(p1.y - p2.y);
+                if (Math.hypot(dx, dy) > 500) {
+                    if (dx < 15) gridLineXs.push(snapToModule((p1.x + p2.x) / 2));
+                    if (dy < 15) gridLineYs.push(snapToModule((p1.y + p2.y) / 2));
+                }
+            };
 
-        // 基礎梁の端点（基礎モード時の通り芯維持）
-        (state.foundationBeams || []).forEach(b => {
-            let s1x = snapToModule(b.p1.x), s1y = snapToModule(b.p1.y);
-            let s2x = snapToModule(b.p2.x), s2y = snapToModule(b.p2.y);
-            if (!masterXs.some(x => Math.abs(x - s1x) < TOL_SNAP)) masterXs.push(s1x);
-            if (!masterYs.some(y => Math.abs(y - s1y) < TOL_SNAP)) masterYs.push(s1y);
-            if (!masterXs.some(x => Math.abs(x - s2x) < TOL_SNAP)) masterXs.push(s2x);
-            if (!masterYs.some(y => Math.abs(y - s2y) < TOL_SNAP)) masterYs.push(s2y);
-        });
+            state.bgLinesOriginal.forEach(e => {
+                if (e.isGridLine) {
+                    if (e.type === 'LINE' && e.vertices && e.vertices.length === 2) {
+                        addGridCoord(e.vertices[0], e.vertices[1]);
+                    } else if (['LWPOLYLINE', 'POLYLINE'].includes(e.type) && e.vertices && e.vertices.length >= 2) {
+                        for (let i = 0; i < e.vertices.length - 1; i++) {
+                            addGridCoord(e.vertices[i], e.vertices[i + 1]);
+                        }
+                    }
+                }
+            });
 
-        masterXs.sort((a, b) => a - b); masterYs.sort((a, b) => a - b);
-        
-        // ブラックリスト（削除済みグリッド）を除外
-        const manualXCoords = state.manualGridX.map(m => snapToModule(m.coord));
-        masterXs = masterXs.filter(mx => {
-            if (manualXCoords.includes(mx)) return true;
-            return !state.deletedGridX.some(dx => Math.abs(dx - mx) < TOL_SNAP);
-        });
+            // 2. 柱の座標を標準モジュールに揃える & グリッド線にスナップ
+            validPillars.forEach(p => {
+                p.x = snapToModule(p.x);
+                p.y = snapToModule(p.y);
+                
+                let gx = gridLineXs.find(x => Math.abs(x - p.x) < TOL_SNAP);
+                if (gx !== undefined) p.x = gx;
+                let gy = gridLineYs.find(y => Math.abs(y - p.y) < TOL_SNAP);
+                if (gy !== undefined) p.y = gy;
+            });
 
-        const manualYCoords = state.manualGridY.map(m => snapToModule(m.coord));
-        masterYs = masterYs.filter(my => {
-            if (manualYCoords.includes(my)) return true;
-            return !state.deletedGridY.some(dy => Math.abs(dy - my) < TOL_SNAP);
-        });
+            // 3. 通り芯の座標マスターリストを作成
+            gridLineXs.forEach(x => { 
+                let sx = snapToModule(x);
+                if (!masterXs.some(mx => Math.abs(mx - sx) < TOL_SNAP)) masterXs.push(sx); 
+            });
+            gridLineYs.forEach(y => { 
+                let sy = snapToModule(y);
+                if (!masterYs.some(my => Math.abs(my - sy) < TOL_SNAP)) masterYs.push(sy); 
+            });
+
+            // 手動追加グリッド
+            state.manualGridX.forEach(m => { 
+                let sx = snapToModule(m.coord);
+                if (!masterXs.some(x => Math.abs(x - sx) < TOL_SNAP)) masterXs.push(sx); 
+            });
+            state.manualGridY.forEach(m => { 
+                let sy = snapToModule(m.coord);
+                if (!masterYs.some(y => Math.abs(y - sy) < TOL_SNAP)) masterYs.push(sy); 
+            });
+
+            // 基礎梁の端点（基礎モード時の通り芯維持）
+            (state.foundationBeams || []).forEach(b => {
+                let s1x = snapToModule(b.p1.x), s1y = snapToModule(b.p1.y);
+                let s2x = snapToModule(b.p2.x), s2y = snapToModule(b.p2.y);
+                if (!masterXs.some(x => Math.abs(x - s1x) < TOL_SNAP)) masterXs.push(s1x);
+                if (!masterYs.some(y => Math.abs(y - s1y) < TOL_SNAP)) masterYs.push(s1y);
+                if (!masterXs.some(x => Math.abs(x - s2x) < TOL_SNAP)) masterXs.push(s2x);
+                if (!masterYs.some(y => Math.abs(y - s2y) < TOL_SNAP)) masterYs.push(s2y);
+            });
+
+            masterXs.sort((a, b) => a - b); masterYs.sort((a, b) => a - b);
+            
+            // ブラックリスト（削除済みグリッド）を除外
+            const manualXCoords = state.manualGridX.map(m => snapToModule(m.coord));
+            masterXs = masterXs.filter(mx => {
+                if (manualXCoords.includes(mx)) return true;
+                return !state.deletedGridX.some(dx => Math.abs(dx - mx) < TOL_SNAP);
+            });
+
+            const manualYCoords = state.manualGridY.map(m => snapToModule(m.coord));
+            masterYs = masterYs.filter(my => {
+                if (manualYCoords.includes(my)) return true;
+                return !state.deletedGridY.some(dy => Math.abs(dy - my) < TOL_SNAP);
+            });
+        }
 
         state.masterXs = masterXs; 
         state.masterYs = masterYs;
@@ -114,7 +120,7 @@ window.GridEngine = {
         state.gridXCoords = masterXs; state.gridXNames = nx;
         state.gridYCoords = masterYs; state.gridYNames = ny;
 
-        // 4. すべての柱をマスター通り芯の交点に100%厳密に吸着配置
+        // 4. すべての柱をマスター通り芯の交点に厳密に吸着配置（削除防止）
         validPillars.forEach(p => {
             let bestXIdx = -1, minDx = Infinity;
             masterXs.forEach((mx, idx) => {
@@ -128,15 +134,7 @@ window.GridEngine = {
                 if (d < minDy) { minDy = d; bestYIdx = idx; }
             });
 
-            if (bestXIdx >= 0 && bestYIdx >= 0 && minDx <= 800 && minDy <= 800) {
-                p.x = masterXs[bestXIdx];
-                p.y = masterYs[bestYIdx];
-                p.gx = nx[bestXIdx];
-                p.gy = ny[bestYIdx];
-                p.gName = `${p.gx}${p.gy}`;
-                p.isInvalidPos = false;
-            } else if (bestXIdx >= 0 && bestYIdx >= 0) {
-                // 誤差が大きい場合でも消去せず最寄り交点に吸着
+            if (bestXIdx >= 0 && bestYIdx >= 0) {
                 p.x = masterXs[bestXIdx];
                 p.y = masterYs[bestYIdx];
                 p.gx = nx[bestXIdx];
@@ -148,11 +146,9 @@ window.GridEngine = {
     },
 
     /**
-     * グリッド間隔（スパン）を変更し、以降のグリッドおよび全配置要素を自動追従再配置
-     * @param {'X'|'Y'} axis - 対象の軸 ('X' または 'Y')
-     * @param {number} spanIndex - スパンの開始インデックス (0 <= spanIndex < coords.length - 1)
-     * @param {number} newSpan - 新しいスパン長 (mm)
-     * @param {Object} state - アプリケーション状態
+     * グリッド間隔（スパン）を変更
+     * - 中間スパンの場合は境界通り芯を移動（右隣のスパンが自動増減し元幅を維持）
+     * - 端部スパンの場合は全体幅を増減
      */
     updateGridSpan: function(axis, spanIndex, newSpan, state) {
         const s = state || window.AppState;
@@ -169,23 +165,24 @@ window.GridEngine = {
         const delta = newSpan - oldSpan;
         if (delta === 0) return;
 
-        // spanIndex + 1 以降の全グリッドを delta 分シフト
+        // 境界通り芯 targetIdx = spanIndex + 1 を delta 移動
+        const targetIdx = spanIndex + 1;
         const newCoords = coords.map((c, idx) => {
-            if (idx <= spanIndex) return c;
-            return c + delta;
+            if (idx === targetIdx) return c + delta;
+            return c;
         });
 
         // 1. 全要素の座標を新グリッド交点へ再配置
         this.rebindAllElements(isX ? 'X' : 'Y', oldCoords, newCoords, s);
 
-        // 2. 手動グリッド・ユーザー編集名称辞書の座標キーを更新
+        // 2. グリッド座標の固定と更新
+        s.isGridFixed = true;
         if (isX) {
             s.gridXCoords = newCoords;
             s.masterXs = newCoords;
             if (s.manualGridX) {
                 s.manualGridX.forEach(m => {
-                    const idx = oldCoords.findIndex(c => Math.abs(c - m.coord) < 3);
-                    if (idx !== -1 && idx > spanIndex) m.coord += delta;
+                    if (Math.abs(m.coord - oldCoords[targetIdx]) < 3) m.coord = newCoords[targetIdx];
                 });
             }
             if (s.userEditedGridX) {
@@ -193,8 +190,7 @@ window.GridEngine = {
                 Object.keys(s.userEditedGridX).forEach(k => {
                     const val = s.userEditedGridX[k];
                     const numK = parseFloat(k);
-                    const idx = oldCoords.findIndex(c => Math.abs(c - numK) < 3);
-                    if (idx !== -1 && idx > spanIndex) newEdited[numK + delta] = val;
+                    if (Math.abs(numK - oldCoords[targetIdx]) < 3) newEdited[newCoords[targetIdx]] = val;
                     else newEdited[k] = val;
                 });
                 s.userEditedGridX = newEdited;
@@ -204,8 +200,7 @@ window.GridEngine = {
             s.masterYs = newCoords;
             if (s.manualGridY) {
                 s.manualGridY.forEach(m => {
-                    const idx = oldCoords.findIndex(c => Math.abs(c - m.coord) < 3);
-                    if (idx !== -1 && idx > spanIndex) m.coord += delta;
+                    if (Math.abs(m.coord - oldCoords[targetIdx]) < 3) m.coord = newCoords[targetIdx];
                 });
             }
             if (s.userEditedGridY) {
@@ -213,8 +208,7 @@ window.GridEngine = {
                 Object.keys(s.userEditedGridY).forEach(k => {
                     const val = s.userEditedGridY[k];
                     const numK = parseFloat(k);
-                    const idx = oldCoords.findIndex(c => Math.abs(c - numK) < 3);
-                    if (idx !== -1 && idx > spanIndex) newEdited[numK + delta] = val;
+                    if (Math.abs(numK - oldCoords[targetIdx]) < 3) newEdited[newCoords[targetIdx]] = val;
                     else newEdited[k] = val;
                 });
                 s.userEditedGridY = newEdited;
