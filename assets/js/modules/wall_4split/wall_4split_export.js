@@ -221,7 +221,8 @@ window.AppExport = {
         const reqWall = state.reqWall || {};
         const getVal = window.MathUtils ? window.MathUtils.getVal : ((id) => parseFloat(document.getElementById(id)?.value) || 0);
 
-        let globalLegendHtml = `
+        const legendObj = (typeof window.buildWallLegendData === 'function') ? window.buildWallLegendData() : { htmlStr: '' };
+        let globalLegendHtml = legendObj.htmlStr || `
         <div style="font-size:11px; margin-top:8px; margin-bottom:12px; background:#f8f9fa; padding:8px; border:1px solid #e9ecef; border-radius:4px; line-height:1.6;">
             <b>【凡例・記号】</b><br>
             面材記号: <b>P</b>(構造用合板等) / <b>P1</b>(1面) / <b>P2</b>(2面) / <b>P+P</b>(両面張)<br>

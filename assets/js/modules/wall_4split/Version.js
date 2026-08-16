@@ -1,4 +1,4 @@
 /**
  * Version.js - Centralized Version Management
  */
-window.APP_VERSION = "v3.12.75"; // Fix: Mitsuke elevation DXF exclude, slenderness ratio & tributary area list restore, wall legend (1-8+) restore, and roof/solar weight calculation spec
+window.APP_VERSION = "v3.12.76"; // Fix: Wall summary modal legend display, left panel weight specifications box (roof, wall, solar, insulation)
