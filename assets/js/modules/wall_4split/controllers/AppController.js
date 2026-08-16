@@ -288,6 +288,11 @@ window.AppController = {
         if (t1r) t1r.className = 'tab-btn';
         if (t2r) t2r.className = 'tab-btn';
 
+        const curFdMode = window.AppState.foundationMode || 'f_slab';
+        if (typeof window.updateFdModeUI === 'function') {
+            window.updateFdModeUI(curFdMode);
+        }
+
         const vis = window.AppState.elementVisibility;
         if (vis) {
             // 基礎モード時の初期状態レイヤー制御：

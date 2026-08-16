@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>上善如水 - 壁量計算WEB (v3.12.76)</title>
+    <title>上善如水 - 壁量計算WEB (v3.12.77)</title>
     <script src="https://cdn.jsdelivr.net/npm/dxf-parser@1.1.2/dist/dxf-parser.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/encoding-japanese/2.0.0/encoding.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/clipper-lib@6.4.2/clipper.js"></script>
@@ -952,6 +952,93 @@
         <!-- [v3.0.42] 基礎計算モード専用パネル -->
         <div id="foundation-mode-panel" style="display:none;">
             <h2 style="color:#8e44ad;">🏗️ 基礎構造計算 プロパティ</h2>
+
+            <!-- 作図サブモード切替 -->
+            <div style="padding:10px; background:#4a235a; border-radius:6px; margin-bottom:12px;">
+                <div style="font-size:11px; font-weight:bold; color:#d7bde2; margin-bottom:8px;">🖊 作図サブモード</div>
+                <div style="display:flex; flex-direction:column; gap:5px;" id="fd-mode-selector">
+                    <label class="fd-mode-label" style="display:flex; align-items:center; gap:7px; cursor:pointer; font-size:12px; color:#ecf0f1; background:#4a235a; padding:6px 8px; border-radius:4px;">
+                        <input type="radio" name="f_mode" value="f_select" onchange="if(window.updateFdModeUI) updateFdModeUI('f_select')">
+                        👆 選択・プロパティ
+                    </label>
+                    <label class="fd-mode-label" style="display:flex; align-items:center; gap:7px; cursor:pointer; font-size:12px; color:#ecf0f1; background:#6c3483; padding:6px 8px; border-radius:4px; font-weight:bold;">
+                        <input type="radio" name="f_mode" value="f_slab" checked onchange="if(window.updateFdModeUI) updateFdModeUI('f_slab')">
+                        🟦 スラブを引く（多角形）
+                    </label>
+                    <label class="fd-mode-label" style="display:flex; align-items:center; gap:7px; cursor:pointer; font-size:12px; color:#ecf0f1; background:#4a235a; padding:6px 8px; border-radius:4px;">
+                        <input type="radio" name="f_mode" value="f_beam" onchange="if(window.updateFdModeUI) updateFdModeUI('f_beam')">
+                        🏗 基礎梁を引く (2点クリック)
+                    </label>
+                    <label class="fd-mode-label" style="display:flex; align-items:center; gap:7px; cursor:pointer; font-size:12px; color:#ecf0f1; background:#4a235a; padding:6px 8px; border-radius:4px;">
+                        <input type="radio" name="f_mode" value="f_manhole" onchange="if(window.updateFdModeUI) updateFdModeUI('f_manhole')">
+                        🚪 人通口を配置
+                    </label>
+                    <label class="fd-mode-label" style="display:flex; align-items:center; gap:7px; cursor:pointer; font-size:12px; color:#f1948a; background:#4a235a; padding:6px 8px; border-radius:4px; border:1px solid #e74c3c;">
+                        <input type="radio" name="f_mode" value="f_delete" onchange="if(window.updateFdModeUI) updateFdModeUI('f_delete')">
+                        ❌ 削除（クリックした要素）
+                    </label>
+                </div>
+                <div style="font-size:10px; color:#a569bd; margin-top:8px; line-height:1.5;">
+                    💡 ヒント：<b>右クリック</b> or <b>Escキー</b>で作図キャンセル。<br>
+                    基礎梁は2点クリック。スラブは頂点を順次クリックし<b>始点に戻って確定</b>。
+                </div>
+            </div>
+
+            <!-- 基礎計算 デフォルト設定 -->
+            <div style="padding:12px; background:#f5eef8; border:1px solid #d2b4de; border-radius:6px; margin-bottom:15px;">
+                <div style="font-size:12px; font-weight:bold; color:#8e44ad; margin-bottom:10px;">⚙️ 基礎計算 デフォルト設定</div>
+                
+                <div class="calc-row">
+                    <label>スラブ仕様</label>
+                    <div style="display: flex; gap: 4px; flex: 1;">
+                        <button type="button" id="btn-preset-fs1" onclick="if(window.setSlabPresetBtn) setSlabPresetBtn('FS1')" style="flex:1; padding:5px 2px; font-size:10px; font-weight:bold; border-radius:4px; border:1px solid #8e44ad; background:#8e44ad; color:#fff; cursor:pointer;">FS1</button>
+                        <button type="button" id="btn-preset-fs2" onclick="if(window.setSlabPresetBtn) setSlabPresetBtn('FS2')" style="flex:1; padding:5px 2px; font-size:10px; font-weight:bold; border-radius:4px; border:1px solid #d2b4de; background:#fff; color:#8e44ad; cursor:pointer;">FS2</button>
+                        <button type="button" id="btn-preset-fs3" onclick="if(window.setSlabPresetBtn) setSlabPresetBtn('FS3')" style="flex:1; padding:5px 2px; font-size:10px; font-weight:bold; border-radius:4px; border:1px solid #d2b4de; background:#fff; color:#8e44ad; cursor:pointer;">FS3</button>
+                    </div>
+                </div>
+                <div class="calc-row"><label>スラブ 符号</label><input type="text" id="fd-slab-symbol" value="FS1" style="text-align:left;"></div>
+                <div class="calc-row"><label>スラブ厚さ(mm)</label><input type="number" id="fd-slab-thickness" value="150" step="10" min="120"></div>
+                <div class="calc-row"><label>スラブ天端高(mm)</label><input type="number" id="fd-slab-top-height" value="50" step="10"></div>
+                <div class="calc-row">
+                    <label>短辺主筋</label>
+                    <select id="fd-slab-short-type" style="width:70px;">
+                        <option value="D13" selected>D13</option>
+                        <option value="D10">D10</option>
+                        <option value="D16">D16</option>
+                    </select>
+                    <span style="font-size:10px; margin:0 2px;">@</span>
+                    <input type="number" id="fd-slab-short-pitch" value="150" style="width:45px;">
+                </div>
+                <div class="calc-row">
+                    <label>長辺主筋</label>
+                    <select id="fd-slab-long-type" style="width:70px;">
+                        <option value="D13" selected>D13</option>
+                        <option value="D10">D10</option>
+                        <option value="D16">D16</option>
+                    </select>
+                    <span style="font-size:10px; margin:0 2px;">@</span>
+                    <input type="number" id="fd-slab-long-pitch" value="300" style="width:45px;">
+                </div>
+                
+                <hr style="border:0; border-top:1px dashed #d2b4de; margin:10px 0;">
+                
+                <div class="calc-row">
+                    <label>基礎梁仕様</label>
+                    <div style="display: flex; gap: 4px; flex: 1;">
+                        <button type="button" id="btn-preset-fg1" onclick="if(window.setBeamPresetBtn) setBeamPresetBtn('FG1')" style="flex:1; padding:5px 2px; font-size:10px; font-weight:bold; border-radius:4px; border:1px solid #8e44ad; background:#8e44ad; color:#fff; cursor:pointer;">FG1</button>
+                        <button type="button" id="btn-preset-fg2" onclick="if(window.setBeamPresetBtn) setBeamPresetBtn('FG2')" style="flex:1; padding:5px 2px; font-size:10px; font-weight:bold; border-radius:4px; border:1px solid #d2b4de; background:#fff; color:#8e44ad; cursor:pointer;">FG2</button>
+                        <button type="button" id="btn-preset-fg3" onclick="if(window.setBeamPresetBtn) setBeamPresetBtn('FG3')" style="flex:1; padding:5px 2px; font-size:10px; font-weight:bold; border-radius:4px; border:1px solid #d2b4de; background:#fff; color:#8e44ad; cursor:pointer;">FG3</button>
+                    </div>
+                </div>
+                <div class="calc-row"><label>梁 符号</label><input type="text" id="fd-beam-symbol" value="FG1" style="text-align:left;"></div>
+                <div class="calc-row"><label>梁幅 W(mm)</label><input type="number" id="fd-beam-width" value="150" step="5" min="120"></div>
+                <div class="calc-row"><label>梁成 H(mm)</label><input type="number" id="fd-beam-height" value="640" step="10" min="350"></div>
+
+                <div class="calc-row"><label>上主筋</label><input type="text" id="fd-top-rebar" value="1-D13" style="text-align:left;"></div>
+                <div class="calc-row"><label>下主筋</label><input type="text" id="fd-bot-rebar" value="1-D13" style="text-align:left;"></div>
+                <div class="calc-row"><label>ST筋</label><input type="text" id="fd-stirrup" value="1-D10@200" style="text-align:left;"></div>
+            </div>
+
             <div id="fd-element-list-panel" style="width:100%; margin-top:8px; background:#f4f6f7; border:1px solid #bdc3c7; border-radius:5px; padding:8px; box-sizing:border-box;">
                 <div style="font-size:11px; font-weight:bold; color:#2c3e50; margin-bottom:5px; display:flex; justify-content:space-between; align-items:center;">
                     <span>🏗️ 基礎要素 一覧・選択 (帳票No.対応)</span>
@@ -1332,70 +1419,70 @@
     </div>
 
     <!-- JavaScript モジュール群 -->
-    <script src="assets/js/modules/wall_4split/Version.js?v=3.12.76"></script>
-    <script src="assets/js/modules/wall_4split/state/Specs.js?v=3.12.76"></script>
-    <script src="assets/js/modules/wall_4split/state/AppState.js?v=3.12.76"></script>
-    <script src="assets/js/modules/wall_4split/wall_4split_bridge.js?v=3.12.76"></script>
-    <script src="assets/js/modules/wall_4split/logic/ServiceContainer.js?v=3.12.76"></script>
-    <script src="assets/js/modules/wall_4split/logic/MathUtils.js?v=3.12.76"></script>
-    <script src="assets/js/modules/wall_4split/logic/Parsers.js?v=3.12.76"></script>
-    <script src="assets/js/modules/wall_4split/logic/WallEngine.js?v=3.12.76"></script>
-    <script src="assets/js/modules/wall_4split/logic/CadEngine.js?v=3.12.76"></script>
-    <script src="assets/js/modules/wall_4split/logic/GridEngine.js?v=3.12.76"></script>
-    <script src="assets/js/modules/wall_4split/logic/StructuralEngine.js?v=3.12.76"></script>
-    <script src="assets/js/modules/wall_4split/logic/DocumentEngine.js?v=3.12.76"></script>
-    <script src="assets/js/modules/wall_4split/logic/NValueEngine.js?v=3.12.76"></script>
-    <script src="assets/js/modules/wall_4split/logic/AreaEngine.js?v=3.12.76"></script>
-    <script src="assets/js/modules/wall_4split/logic/AxialEngine.js?v=3.12.76"></script>
-    <script src="assets/js/modules/wall_4split/logic/SlabBeamSynchronizer.js?v=3.12.76"></script>
-    <script src="assets/js/modules/wall_4split/logic/FoundationSlabAnalysisEngine.js?v=3.12.76"></script>
-    <script src="assets/js/modules/wall_4split/logic/FoundationBeamEngine.js?v=3.12.76"></script>
-    <script src="assets/js/modules/wall_4split/logic/FoundationEngine.js?v=3.12.76"></script>
-    <script src="assets/js/modules/wall_4split/logic/ReportEngine.js?v=3.12.76"></script>
-    <script src="assets/js/modules/wall_4split/logic/RoofEngine.js?v=3.12.76"></script>
-    <script src="assets/js/modules/wall_4split/logic/MitsukeEngine.js?v=3.12.76"></script>
-    <script src="assets/js/modules/wall_4split/controllers/PropertyController.js?v=3.12.76"></script>
-    <script src="assets/js/modules/wall_4split/controllers/PillarPropertyController.js?v=3.12.76"></script>
-    <script src="assets/js/modules/wall_4split/controllers/WallPropertyController.js?v=3.12.76"></script>
-    <script src="assets/js/modules/wall_4split/controllers/FoundationPropertyController.js?v=3.12.76"></script>
-    <script src="assets/js/modules/wall_4split/controllers/RoofPropertyController.js?v=3.12.76"></script>
-    <script src="assets/js/modules/wall_4split/controllers/FoundationPropertyHandler.js?v=3.12.76"></script>
-    <script src="assets/js/modules/wall_4split/controllers/PillarPropertyHandler.js?v=3.12.76"></script>
-    <script src="assets/js/modules/wall_4split/controllers/WallPropertyHandler.js?v=3.12.76"></script>
-    <script src="assets/js/modules/wall_4split/controllers/InputController.js?v=3.12.76"></script>
-    <script src="assets/js/modules/wall_4split/controllers/ModalController.js?v=3.12.76"></script>
-    <script src="assets/js/modules/wall_4split/controllers/DxfLayerMapperController.js?v=3.12.76"></script>
-    <script src="assets/js/modules/wall_4split/controllers/AppController.js?v=3.12.76"></script>
-    <script src="assets/js/modules/wall_4split/controllers/FoundationInputController.js?v=3.12.76"></script>
-    <script src="assets/js/modules/wall_4split/controllers/RoofInputController.js?v=3.12.76"></script>
-    <script src="assets/js/modules/wall_4split/view/UIView.js?v=3.12.76"></script>
-    <script src="assets/js/modules/wall_4split/view/GridRenderer.js?v=3.12.76"></script>
-    <script src="assets/js/modules/wall_4split/view/WallCadRenderer.js?v=3.12.76"></script>
-    <script src="assets/js/modules/wall_4split/view/PillarCadRenderer.js?v=3.12.76"></script>
-    <script src="assets/js/modules/wall_4split/view/MainRenderer.js?v=3.12.76"></script>
-    <script src="assets/js/modules/wall_4split/view/FoundationSvgGenerator.js?v=3.12.76"></script>
-    <script src="assets/js/modules/wall_4split/view/FoundationRenderer.js?v=3.12.76"></script>
-    <script src="assets/js/modules/wall_4split/view/DocumentRenderer.js?v=3.12.76"></script>
-    <script src="assets/js/modules/wall_4split/view/ElevationRenderer.js?v=3.12.76"></script>
-    <script src="assets/js/modules/wall_4split/view/RoofRenderer.js?v=3.12.76"></script>
-    <script src="assets/js/modules/wall_4split/view/ReportHeaderView.js?v=3.12.76"></script>
-    <script src="assets/js/modules/wall_4split/view/ReportAreaView.js?v=3.12.76"></script>
-    <script src="assets/js/modules/wall_4split/view/ReportWallTableView.js?v=3.12.76"></script>
-    <script src="assets/js/modules/wall_4split/view/ReportWallView.js?v=3.12.76"></script>
-    <script src="assets/js/modules/wall_4split/view/ReportNValueView.js?v=3.12.76"></script>
-    <script src="assets/js/modules/wall_4split/view/ReportMitsukeView.js?v=3.12.76"></script>
-    <script src="assets/js/modules/wall_4split/view/FoundationBeamReportView.js?v=3.12.76"></script>
-    <script src="assets/js/modules/wall_4split/view/ThreeDPreviewController.js?v=3.12.76"></script>
-    <script src="assets/js/modules/wall_4split/wall_4split_export.js?v=3.12.76"></script>
-    <script src="assets/js/modules/wall_4split/wall_4split_cad.js?v=3.12.76"></script>
-    <script src="assets/js/modules/wall_4split/wall_4split_render.js?v=3.12.76"></script>
-    <script src="assets/js/modules/wall_4split/view/PdfReportView.js?v=3.12.76"></script>
-    <script src="assets/js/modules/wall_4split/wall_4split_pdf.js?v=3.12.76"></script>
-    <script src="assets/js/modules/wall_4split/wall_4split_calc.js?v=3.12.76"></script>
-    <script src="assets/js/modules/wall_4split/wall_4split_foundation_engine.js?v=3.12.76"></script>
-    <script src="assets/js/modules/wall_4split/wall_4split_report.js?v=3.12.76"></script>
-    <script src="assets/js/modules/wall_4split/wall_4split_input.js?v=3.12.76"></script>
-    <script src="assets/js/modules/wall_4split/wall_4split_main.js?v=3.12.76"></script>
+    <script src="assets/js/modules/wall_4split/Version.js?v=3.12.77"></script>
+    <script src="assets/js/modules/wall_4split/state/Specs.js?v=3.12.77"></script>
+    <script src="assets/js/modules/wall_4split/state/AppState.js?v=3.12.77"></script>
+    <script src="assets/js/modules/wall_4split/wall_4split_bridge.js?v=3.12.77"></script>
+    <script src="assets/js/modules/wall_4split/logic/ServiceContainer.js?v=3.12.77"></script>
+    <script src="assets/js/modules/wall_4split/logic/MathUtils.js?v=3.12.77"></script>
+    <script src="assets/js/modules/wall_4split/logic/Parsers.js?v=3.12.77"></script>
+    <script src="assets/js/modules/wall_4split/logic/WallEngine.js?v=3.12.77"></script>
+    <script src="assets/js/modules/wall_4split/logic/CadEngine.js?v=3.12.77"></script>
+    <script src="assets/js/modules/wall_4split/logic/GridEngine.js?v=3.12.77"></script>
+    <script src="assets/js/modules/wall_4split/logic/StructuralEngine.js?v=3.12.77"></script>
+    <script src="assets/js/modules/wall_4split/logic/DocumentEngine.js?v=3.12.77"></script>
+    <script src="assets/js/modules/wall_4split/logic/NValueEngine.js?v=3.12.77"></script>
+    <script src="assets/js/modules/wall_4split/logic/AreaEngine.js?v=3.12.77"></script>
+    <script src="assets/js/modules/wall_4split/logic/AxialEngine.js?v=3.12.77"></script>
+    <script src="assets/js/modules/wall_4split/logic/SlabBeamSynchronizer.js?v=3.12.77"></script>
+    <script src="assets/js/modules/wall_4split/logic/FoundationSlabAnalysisEngine.js?v=3.12.77"></script>
+    <script src="assets/js/modules/wall_4split/logic/FoundationBeamEngine.js?v=3.12.77"></script>
+    <script src="assets/js/modules/wall_4split/logic/FoundationEngine.js?v=3.12.77"></script>
+    <script src="assets/js/modules/wall_4split/logic/ReportEngine.js?v=3.12.77"></script>
+    <script src="assets/js/modules/wall_4split/logic/RoofEngine.js?v=3.12.77"></script>
+    <script src="assets/js/modules/wall_4split/logic/MitsukeEngine.js?v=3.12.77"></script>
+    <script src="assets/js/modules/wall_4split/controllers/PropertyController.js?v=3.12.77"></script>
+    <script src="assets/js/modules/wall_4split/controllers/PillarPropertyController.js?v=3.12.77"></script>
+    <script src="assets/js/modules/wall_4split/controllers/WallPropertyController.js?v=3.12.77"></script>
+    <script src="assets/js/modules/wall_4split/controllers/FoundationPropertyController.js?v=3.12.77"></script>
+    <script src="assets/js/modules/wall_4split/controllers/RoofPropertyController.js?v=3.12.77"></script>
+    <script src="assets/js/modules/wall_4split/controllers/FoundationPropertyHandler.js?v=3.12.77"></script>
+    <script src="assets/js/modules/wall_4split/controllers/PillarPropertyHandler.js?v=3.12.77"></script>
+    <script src="assets/js/modules/wall_4split/controllers/WallPropertyHandler.js?v=3.12.77"></script>
+    <script src="assets/js/modules/wall_4split/controllers/InputController.js?v=3.12.77"></script>
+    <script src="assets/js/modules/wall_4split/controllers/ModalController.js?v=3.12.77"></script>
+    <script src="assets/js/modules/wall_4split/controllers/DxfLayerMapperController.js?v=3.12.77"></script>
+    <script src="assets/js/modules/wall_4split/controllers/AppController.js?v=3.12.77"></script>
+    <script src="assets/js/modules/wall_4split/controllers/FoundationInputController.js?v=3.12.77"></script>
+    <script src="assets/js/modules/wall_4split/controllers/RoofInputController.js?v=3.12.77"></script>
+    <script src="assets/js/modules/wall_4split/view/UIView.js?v=3.12.77"></script>
+    <script src="assets/js/modules/wall_4split/view/GridRenderer.js?v=3.12.77"></script>
+    <script src="assets/js/modules/wall_4split/view/WallCadRenderer.js?v=3.12.77"></script>
+    <script src="assets/js/modules/wall_4split/view/PillarCadRenderer.js?v=3.12.77"></script>
+    <script src="assets/js/modules/wall_4split/view/MainRenderer.js?v=3.12.77"></script>
+    <script src="assets/js/modules/wall_4split/view/FoundationSvgGenerator.js?v=3.12.77"></script>
+    <script src="assets/js/modules/wall_4split/view/FoundationRenderer.js?v=3.12.77"></script>
+    <script src="assets/js/modules/wall_4split/view/DocumentRenderer.js?v=3.12.77"></script>
+    <script src="assets/js/modules/wall_4split/view/ElevationRenderer.js?v=3.12.77"></script>
+    <script src="assets/js/modules/wall_4split/view/RoofRenderer.js?v=3.12.77"></script>
+    <script src="assets/js/modules/wall_4split/view/ReportHeaderView.js?v=3.12.77"></script>
+    <script src="assets/js/modules/wall_4split/view/ReportAreaView.js?v=3.12.77"></script>
+    <script src="assets/js/modules/wall_4split/view/ReportWallTableView.js?v=3.12.77"></script>
+    <script src="assets/js/modules/wall_4split/view/ReportWallView.js?v=3.12.77"></script>
+    <script src="assets/js/modules/wall_4split/view/ReportNValueView.js?v=3.12.77"></script>
+    <script src="assets/js/modules/wall_4split/view/ReportMitsukeView.js?v=3.12.77"></script>
+    <script src="assets/js/modules/wall_4split/view/FoundationBeamReportView.js?v=3.12.77"></script>
+    <script src="assets/js/modules/wall_4split/view/ThreeDPreviewController.js?v=3.12.77"></script>
+    <script src="assets/js/modules/wall_4split/wall_4split_export.js?v=3.12.77"></script>
+    <script src="assets/js/modules/wall_4split/wall_4split_cad.js?v=3.12.77"></script>
+    <script src="assets/js/modules/wall_4split/wall_4split_render.js?v=3.12.77"></script>
+    <script src="assets/js/modules/wall_4split/view/PdfReportView.js?v=3.12.77"></script>
+    <script src="assets/js/modules/wall_4split/wall_4split_pdf.js?v=3.12.77"></script>
+    <script src="assets/js/modules/wall_4split/wall_4split_calc.js?v=3.12.77"></script>
+    <script src="assets/js/modules/wall_4split/wall_4split_foundation_engine.js?v=3.12.77"></script>
+    <script src="assets/js/modules/wall_4split/wall_4split_report.js?v=3.12.77"></script>
+    <script src="assets/js/modules/wall_4split/wall_4split_input.js?v=3.12.77"></script>
+    <script src="assets/js/modules/wall_4split/wall_4split_main.js?v=3.12.77"></script>
 
     <!-- マジックリンク認証制御JS -->
     <script>

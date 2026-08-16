@@ -172,8 +172,21 @@ function animationLoop() {
 function updateFdModeUI(mode) {
     if (window.AppState) {
         window.AppState.foundationMode = mode;
-        // console.log("�売 Foundation Mode switched to:", mode);
-        // 蜈ｨ菴薙ｒ繝ｪ繝輔Ξ繝�す繝･縺励※謠冗判迥ｶ諷九ｒ蜷梧悄
+        const selector = document.getElementById('fd-mode-selector');
+        if (selector) {
+            const labels = selector.querySelectorAll('.fd-mode-label');
+            labels.forEach(lbl => {
+                const radio = lbl.querySelector('input[type="radio"]');
+                if (radio && radio.value === mode) {
+                    radio.checked = true;
+                    lbl.style.background = '#6c3483';
+                    lbl.style.fontWeight = 'bold';
+                } else if (lbl) {
+                    lbl.style.background = (radio && radio.value === 'f_delete') ? '#4a235a' : '#4a235a';
+                    lbl.style.fontWeight = 'normal';
+                }
+            });
+        }
         if (window.AppController) window.AppController.refreshAll();
     }
 }
@@ -187,3 +200,107 @@ function hideFdPropertyPopup() {
         window.PropertyController.hideFdPopup();
     }
 }
+
+window.setBeamPresetBtn = function(preset) {
+    const btns = ['FG1', 'FG2', 'FG3'];
+    btns.forEach(b => {
+        const btn = document.getElementById('btn-preset-' + b.toLowerCase());
+        if (btn) {
+            if (b === preset) {
+                btn.style.background = '#8e44ad';
+                btn.style.color = '#fff';
+                btn.style.borderColor = '#8e44ad';
+            } else {
+                btn.style.background = '#fff';
+                btn.style.color = '#8e44ad';
+                btn.style.borderColor = '#d2b4de';
+            }
+        }
+    });
+    window.applyBeamPreset(preset);
+};
+
+window.setSlabPresetBtn = function(preset) {
+    const btns = ['FS1', 'FS2', 'FS3'];
+    btns.forEach(b => {
+        const btn = document.getElementById('btn-preset-' + b.toLowerCase());
+        if (btn) {
+            if (b === preset) {
+                btn.style.background = '#8e44ad';
+                btn.style.color = '#fff';
+                btn.style.borderColor = '#8e44ad';
+            } else {
+                btn.style.background = '#fff';
+                btn.style.color = '#8e44ad';
+                btn.style.borderColor = '#d2b4de';
+            }
+        }
+    });
+    window.applySlabPreset(preset);
+};
+
+window.applyBeamPreset = function(preset) {
+    const sym = document.getElementById('fd-beam-symbol');
+    const w = document.getElementById('fd-beam-width');
+    const h = document.getElementById('fd-beam-height');
+    const tr = document.getElementById('fd-top-rebar');
+    const br = document.getElementById('fd-bot-rebar');
+    const st = document.getElementById('fd-stirrup');
+    if (preset === 'FG1') {
+        if(sym) sym.value = 'FG1';
+        if(w) w.value = 150;
+        if(h) h.value = 640;
+        if(tr) tr.value = '1-D13';
+        if(br) br.value = '1-D13';
+        if(st) st.value = '1-D10@200';
+    } else if (preset === 'FG2') {
+        if(sym) sym.value = 'FG2';
+        if(w) w.value = 150;
+        if(h) h.value = 490;
+        if(tr) tr.value = '1-D13';
+        if(br) br.value = '1-D13';
+        if(st) st.value = '1-D10@200';
+    } else if (preset === 'FG3') {
+        if(sym) sym.value = 'FG3';
+        if(w) w.value = 150;
+        if(h) h.value = 300;
+        if(tr) tr.value = '1-D13';
+        if(br) br.value = '1-D13';
+        if(st) st.value = '1-D10@200';
+    }
+};
+
+window.applySlabPreset = function(preset) {
+    const sym = document.getElementById('fd-slab-symbol');
+    const thick = document.getElementById('fd-slab-thickness');
+    const th = document.getElementById('fd-slab-top-height');
+    const stype = document.getElementById('fd-slab-short-type');
+    const spitch = document.getElementById('fd-slab-short-pitch');
+    const ltype = document.getElementById('fd-slab-long-type');
+    const lpitch = document.getElementById('fd-slab-long-pitch');
+    if (preset === 'FS1') {
+        if(sym) sym.value = 'FS1';
+        if(thick) thick.value = 150;
+        if(th) th.value = 50;
+        if(stype) stype.value = 'D13';
+        if(spitch) spitch.value = 150;
+        if(ltype) ltype.value = 'D13';
+        if(lpitch) lpitch.value = 300;
+    } else if (preset === 'FS2') {
+        if(sym) sym.value = 'FS2';
+        if(thick) thick.value = 150;
+        if(th) th.value = 50;
+        if(stype) stype.value = 'D10';
+        if(spitch) spitch.value = 150;
+        if(ltype) ltype.value = 'D10';
+        if(lpitch) lpitch.value = 300;
+    } else if (preset === 'FS3') {
+        if(sym) sym.value = 'FS3';
+        if(thick) thick.value = 120;
+        if(th) th.value = 50;
+        if(stype) stype.value = 'D10';
+        if(spitch) spitch.value = 200;
+        if(ltype) ltype.value = 'D10';
+        if(lpitch) lpitch.value = 200;
+    }
+};
