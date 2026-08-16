@@ -128,21 +128,145 @@ window.GridEngine = {
                 if (d < minDy) { minDy = d; bestYIdx = idx; }
             });
 
-            if (bestXIdx >= 0 && bestYIdx >= 0 && minDx <= 500 && minDy <= 500) {
+            if (bestXIdx >= 0 && bestYIdx >= 0 && minDx <= 800 && minDy <= 800) {
                 p.x = masterXs[bestXIdx];
                 p.y = masterYs[bestYIdx];
                 p.gx = nx[bestXIdx];
                 p.gy = ny[bestYIdx];
                 p.gName = `${p.gx}${p.gy}`;
                 p.isInvalidPos = false;
-            } else {
-                p.gx = '?'; p.gy = '?'; p.gName = '位置不明';
-                p.isInvalidPos = true;
+            } else if (bestXIdx >= 0 && bestYIdx >= 0) {
+                // 誤差が大きい場合でも消去せず最寄り交点に吸着
+                p.x = masterXs[bestXIdx];
+                p.y = masterYs[bestYIdx];
+                p.gx = nx[bestXIdx];
+                p.gy = ny[bestYIdx];
+                p.gName = `${p.gx}${p.gy}`;
+                p.isInvalidPos = false;
             }
         });
+    },
 
-        // 通り芯交点上にない位置不明な柱を除外
-        state.pillars = state.pillars.filter(p => !p.isInvalidPos);
+    /**
+     * グリッド間隔（スパン）を変更し、以降のグリッドおよび全配置要素を自動追従再配置
+     * @param {'X'|'Y'} axis - 対象の軸 ('X' または 'Y')
+     * @param {number} spanIndex - スパンの開始インデックス (0 <= spanIndex < coords.length - 1)
+     * @param {number} newSpan - 新しいスパン長 (mm)
+     * @param {Object} state - アプリケーション状態
+     */
+    updateGridSpan: function(axis, spanIndex, newSpan, state) {
+        const s = state || window.AppState;
+        if (!s) return;
+        newSpan = Math.round(parseFloat(newSpan));
+        if (isNaN(newSpan) || newSpan <= 0) return;
+
+        const isX = (axis.toUpperCase() === 'X');
+        let coords = isX ? [...(s.gridXCoords || [])] : [...(s.gridYCoords || [])];
+        if (spanIndex < 0 || spanIndex >= coords.length - 1) return;
+
+        const oldCoords = [...coords];
+        const oldSpan = coords[spanIndex + 1] - coords[spanIndex];
+        const delta = newSpan - oldSpan;
+        if (delta === 0) return;
+
+        // spanIndex + 1 以降の全グリッドを delta 分シフト
+        const newCoords = coords.map((c, idx) => {
+            if (idx <= spanIndex) return c;
+            return c + delta;
+        });
+
+        // 1. 全要素の座標を新グリッド交点へ再配置
+        this.rebindAllElements(isX ? 'X' : 'Y', oldCoords, newCoords, s);
+
+        // 2. 手動グリッド・ユーザー編集名称辞書の座標キーを更新
+        if (isX) {
+            s.gridXCoords = newCoords;
+            s.masterXs = newCoords;
+            if (s.manualGridX) {
+                s.manualGridX.forEach(m => {
+                    const idx = oldCoords.findIndex(c => Math.abs(c - m.coord) < 3);
+                    if (idx !== -1 && idx > spanIndex) m.coord += delta;
+                });
+            }
+            if (s.userEditedGridX) {
+                const newEdited = {};
+                Object.keys(s.userEditedGridX).forEach(k => {
+                    const val = s.userEditedGridX[k];
+                    const numK = parseFloat(k);
+                    const idx = oldCoords.findIndex(c => Math.abs(c - numK) < 3);
+                    if (idx !== -1 && idx > spanIndex) newEdited[numK + delta] = val;
+                    else newEdited[k] = val;
+                });
+                s.userEditedGridX = newEdited;
+            }
+        } else {
+            s.gridYCoords = newCoords;
+            s.masterYs = newCoords;
+            if (s.manualGridY) {
+                s.manualGridY.forEach(m => {
+                    const idx = oldCoords.findIndex(c => Math.abs(c - m.coord) < 3);
+                    if (idx !== -1 && idx > spanIndex) m.coord += delta;
+                });
+            }
+            if (s.userEditedGridY) {
+                const newEdited = {};
+                Object.keys(s.userEditedGridY).forEach(k => {
+                    const val = s.userEditedGridY[k];
+                    const numK = parseFloat(k);
+                    const idx = oldCoords.findIndex(c => Math.abs(c - numK) < 3);
+                    if (idx !== -1 && idx > spanIndex) newEdited[numK + delta] = val;
+                    else newEdited[k] = val;
+                });
+                s.userEditedGridY = newEdited;
+            }
+        }
+
+        // 3. 通り芯・要素全体の再解析と描画更新
+        this.analyzeGrids(s);
+        if (window.AppController) window.AppController.refreshAll();
+    },
+
+    /**
+     * グリッド座標変更に伴い、配置されている全要素の座標をマッピングして再配置
+     */
+    rebindAllElements: function(axis, oldCoords, newCoords, state) {
+        const isX = (axis === 'X');
+        const mapCoord = (val) => {
+            let bestIdx = -1, minD = Infinity;
+            oldCoords.forEach((oc, idx) => {
+                const d = Math.abs(oc - val);
+                if (d < minD) { minD = d; bestIdx = idx; }
+            });
+            if (bestIdx !== -1 && minD < 200) {
+                return newCoords[bestIdx] + (val - oldCoords[bestIdx]);
+            }
+            return val;
+        };
+
+        const mapPoint = (p) => {
+            if (!p) return;
+            if (isX) p.x = mapCoord(p.x);
+            else p.y = mapCoord(p.y);
+        };
+
+        // 柱
+        (state.pillars || []).forEach(p => mapPoint(p));
+        // 壁
+        (state.walls || []).forEach(w => { mapPoint(w.p1); mapPoint(w.p2); });
+        // 開口部
+        (state.windows || []).forEach(win => { mapPoint(win.p1); mapPoint(win.p2); });
+        // 面積ポリゴン
+        (state.areaLines || []).forEach(a => {
+            (a.vertices || []).forEach(v => mapPoint(v));
+        });
+        // 基礎梁
+        (state.foundationBeams || []).forEach(b => { mapPoint(b.p1); mapPoint(b.p2); });
+        // 基礎スラブ
+        (state.foundationSlabs || []).forEach(sl => {
+            (sl.vertices || []).forEach(v => mapPoint(v));
+        });
+        // 人通口
+        (state.manholes || []).forEach(mh => mapPoint(mh));
     },
 
     /**

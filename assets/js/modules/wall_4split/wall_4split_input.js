@@ -71,6 +71,26 @@ function initCanvasInput(canvas) {
 
         if (e.button === 0) {
             const mx = e.offsetX, my = e.offsetY;
+
+            // 通り芯間寸法線クリックによるスパン距離変更
+            if (state.gridDimHitBoxes && state.gridDimHitBoxes.length > 0) {
+                const hitDim = state.gridDimHitBoxes.find(b => {
+                    return Math.abs(mx - b.x) <= b.w / 2 && Math.abs(my - b.y) <= b.h / 2;
+                });
+                if (hitDim) {
+                    const axisName = hitDim.axis === 'X' ? 'X方向 (間口)' : 'Y方向 (奥行)';
+                    const valStr = prompt(`【${axisName}】 通り芯間スパン距離を入力してください (mm):\n（※指定スパン以降のグリッドおよび配置要素が自動追従再配置されます）`, `${hitDim.span}`);
+                    if (valStr !== null) {
+                        const newSpan = parseFloat(valStr);
+                        if (!isNaN(newSpan) && newSpan > 0 && window.GridEngine) {
+                            window.GridEngine.updateGridSpan(hitDim.axis, hitDim.spanIndex, newSpan, state);
+                            return;
+                        }
+                    }
+                    return;
+                }
+            }
+
             // 統合選択モード (select および 左パネルの roof_select 両対応)
             if (mode === 'select' || mode === 'roof_select') {
                 handleSelectMode(e, state);

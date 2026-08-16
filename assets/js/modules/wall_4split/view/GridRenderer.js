@@ -186,6 +186,157 @@ window.GridRenderer = {
             });
         }
 
+        // 5. 通り芯間寸法線（X方向下側、Y方向右側）の描画
+        this.drawGridDimensions(state, ctx, toCanvas, sortedXIndices, sortedYIndices, botY, rightX);
+
+        ctx.restore();
+    },
+
+    /**
+     * 通り芯（グリッド）間寸法線の描画 (X方向: 下側, Y方向: 右側)
+     */
+    drawGridDimensions: function(state, ctx, toCanvas, sortedXIndices, sortedYIndices, botY, rightX) {
+        state.gridDimHitBoxes = [];
+        const fontSize = Math.max(9, Math.min(13, 11 / (state.scale || 1)));
+        ctx.save();
+        ctx.font = `bold ${fontSize}px sans-serif`;
+        ctx.strokeStyle = state.isPrintMode ? '#333' : '#2980b9';
+        ctx.fillStyle = state.isPrintMode ? '#111' : '#1b4f72';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([]); // 実線
+
+        const tickSize = 4;
+
+        // --- X方向 グリッド間寸法 (下側) ---
+        if (sortedXIndices && sortedXIndices.length >= 2) {
+            const dimY = botY + 15;
+            const totalDimY = dimY + fontSize + 8;
+
+            // スパン個別寸法
+            for (let k = 0; k < sortedXIndices.length - 1; k++) {
+                const i1 = sortedXIndices[k];
+                const i2 = sortedXIndices[k + 1];
+                const x1 = state.gridXCoords[i1];
+                const x2 = state.gridXCoords[i2];
+                const cx1 = toCanvas(x1, 0).cx;
+                const cx2 = toCanvas(x2, 0).cx;
+                const span = Math.round(x2 - x1);
+
+                // 寸法線
+                ctx.beginPath();
+                ctx.moveTo(cx1, dimY);
+                ctx.lineTo(cx2, dimY);
+                // 45度スラッシュ目盛り
+                ctx.moveTo(cx1 - tickSize, dimY + tickSize);
+                ctx.lineTo(cx1 + tickSize, dimY - tickSize);
+                ctx.moveTo(cx2 - tickSize, dimY + tickSize);
+                ctx.lineTo(cx2 + tickSize, dimY - tickSize);
+                ctx.stroke();
+
+                // 寸法テキスト
+                const midX = (cx1 + cx2) / 2;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'bottom';
+                ctx.fillText(`${span}`, midX, dimY - 2);
+
+                // クリック判定領域を登録
+                state.gridDimHitBoxes.push({
+                    axis: 'X',
+                    spanIndex: k,
+                    span: span,
+                    x: midX,
+                    y: dimY - 7,
+                    w: Math.max(30, Math.abs(cx2 - cx1)),
+                    h: fontSize + 10
+                });
+            }
+
+            // 全体総スパン寸法
+            const firstIdx = sortedXIndices[0];
+            const lastIdx = sortedXIndices[sortedXIndices.length - 1];
+            const startCx = toCanvas(state.gridXCoords[firstIdx], 0).cx;
+            const endCx = toCanvas(state.gridXCoords[lastIdx], 0).cx;
+            const totalSpanX = Math.round(state.gridXCoords[lastIdx] - state.gridXCoords[firstIdx]);
+
+            ctx.beginPath();
+            ctx.moveTo(startCx, totalDimY);
+            ctx.lineTo(endCx, totalDimY);
+            ctx.moveTo(startCx - tickSize, totalDimY + tickSize);
+            ctx.lineTo(startCx + tickSize, totalDimY - tickSize);
+            ctx.moveTo(endCx - tickSize, totalDimY + tickSize);
+            ctx.lineTo(endCx + tickSize, totalDimY - tickSize);
+            ctx.stroke();
+
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'bottom';
+            ctx.fillText(`全体 ${totalSpanX}`, (startCx + endCx) / 2, totalDimY - 2);
+        }
+
+        // --- Y方向 グリッド間寸法 (右側) ---
+        if (sortedYIndices && sortedYIndices.length >= 2) {
+            const dimX = rightX + 15;
+            const totalDimX = dimX + fontSize * 3 + 12;
+
+            // スパン個別寸法 (CAD座標系: 上が大きい)
+            for (let k = 0; k < sortedYIndices.length - 1; k++) {
+                const i1 = sortedYIndices[k];
+                const i2 = sortedYIndices[k + 1];
+                const y1 = state.gridYCoords[i1];
+                const y2 = state.gridYCoords[i2];
+                const cy1 = toCanvas(0, y1).cy;
+                const cy2 = toCanvas(0, y2).cy;
+                const span = Math.round(Math.abs(y2 - y1));
+
+                // 寸法線
+                ctx.beginPath();
+                ctx.moveTo(dimX, cy1);
+                ctx.lineTo(dimX, cy2);
+                // 45度スラッシュ目盛り
+                ctx.moveTo(dimX - tickSize, cy1 + tickSize);
+                ctx.lineTo(dimX + tickSize, cy1 - tickSize);
+                ctx.moveTo(dimX - tickSize, cy2 + tickSize);
+                ctx.lineTo(dimX + tickSize, cy2 - tickSize);
+                ctx.stroke();
+
+                // 寸法テキスト
+                const midY = (cy1 + cy2) / 2;
+                ctx.textAlign = 'left';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(`${span}`, dimX + 5, midY);
+
+                // クリック判定領域を登録
+                state.gridDimHitBoxes.push({
+                    axis: 'Y',
+                    spanIndex: k,
+                    span: span,
+                    x: dimX + 15,
+                    y: midY,
+                    w: fontSize * 3 + 10,
+                    h: Math.max(20, Math.abs(cy2 - cy1))
+                });
+            }
+
+            // 全体総スパン寸法
+            const firstIdx = sortedYIndices[0];
+            const lastIdx = sortedYIndices[sortedYIndices.length - 1];
+            const startCy = toCanvas(0, state.gridYCoords[firstIdx]).cy;
+            const endCy = toCanvas(0, state.gridYCoords[lastIdx]).cy;
+            const totalSpanY = Math.round(Math.abs(state.gridYCoords[lastIdx] - state.gridYCoords[firstIdx]));
+
+            ctx.beginPath();
+            ctx.moveTo(totalDimX, startCy);
+            ctx.lineTo(totalDimX, endCy);
+            ctx.moveTo(totalDimX - tickSize, startCy + tickSize);
+            ctx.lineTo(totalDimX + tickSize, startCy - tickSize);
+            ctx.moveTo(totalDimX - tickSize, endCy + tickSize);
+            ctx.lineTo(totalDimX + tickSize, endCy - tickSize);
+            ctx.stroke();
+
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(`全体 ${totalSpanY}`, totalDimX + 5, (startCy + endCy) / 2);
+        }
+
         ctx.restore();
     }
 };
