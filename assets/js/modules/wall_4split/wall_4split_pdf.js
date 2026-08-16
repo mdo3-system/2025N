@@ -1440,16 +1440,47 @@ async function generateDoc() {
         h += `<div class="doc-section" id="sec-fd-slab" style="margin-bottom:30px;">
             ${getHeader(`■ ${secNum++}. 基礎スラブ 構造検定`)}`;
         
+        const fc = window.AppState.config?.fc || 21;
+        const fc_comp = (fc / 3).toFixed(2);
+        const fc_shear = (fc / 30).toFixed(2);
+        const fc_comp_s = (fc * 2 / 3).toFixed(2);
+        const fc_shear_s = (fc / 15).toFixed(2);
+
+        // 材料仕様・許容応力度カード
+        h += `
+        <div style="background:#fdfefe; border:1px solid #bdc3c7; border-left:4px solid #8e44ad; border-radius:4px; padding:10px 14px; margin-bottom:15px; font-size:11px; line-height:1.6;">
+            <div style="font-weight:bold; font-size:12px; color:#2c3e50; margin-bottom:6px; border-bottom:1px solid #ecf0f1; padding-bottom:4px;">
+                【基礎構造 材料仕様および許容応力度】
+            </div>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
+                <div style="background:#f8f9f9; padding:6px 10px; border-radius:4px; border:1px solid #ebedef;">
+                    <div style="font-weight:bold; color:#1a5276; margin-bottom:4px;">🧱 コンクリート仕様: Fc${fc}</div>
+                    <div>・設計基準強度: <b>Fc = ${fc}</b> N/㎟</div>
+                    <div>・長期許容曲げ圧縮応力度 fc: <b>${fc_comp}</b> N/㎟ (Fc/3)</div>
+                    <div>・長期許容せん断応力度 fs: <b>${fc_shear}</b> N/㎟ (Fc/30)</div>
+                    <div>・短期許容応力度: 圧縮 <b>${fc_comp_s}</b> N/㎟ / せん断 <b>${fc_shear_s}</b> N/㎟</div>
+                </div>
+                <div style="background:#f8f9f9; padding:6px 10px; border-radius:4px; border:1px solid #ebedef;">
+                    <div style="font-weight:bold; color:#1a5276; margin-bottom:4px;">⛓️ 鉄筋仕様: SD295</div>
+                    <div>・規格・種類: <b>SD295 (D10, D13, D16)</b></div>
+                    <div>・降伏点強度: <b>Fy = 295</b> N/㎟</div>
+                    <div>・長期許容引張応力度 ft: <b>195</b> N/㎟</div>
+                    <div>・長期許容せん断補強応力度 fw: <b>195</b> N/㎟</div>
+                    <div>・短期許容引張応力度 ft: <b>295</b> N/㎟</div>
+                </div>
+            </div>
+        </div>`;
+
         const slabs = window.AppState.foundationSlabs || [];
         if (slabs.length === 0) {
             h += `<div style="padding:15px; background:#f8f9fa; border:1px dashed #bdc3c7; border-radius:4px; color:#7f8c8d; font-size:12px; margin-bottom:15px;">
                 ※ 基礎スラブが未配置（未設定）です。基礎計算モードで作図・配置を行うと自動算定・検定結果がここに反映されます。
             </div>`;
         } else {
-            h += `<table class="report-table" style="width:100%; font-size:12px; margin-bottom:15px;">
+            h += `<table class="report-table" style="width:100%; font-size:11px; margin-bottom:15px;">
                 <thead>
                     <tr style="background:#8e44ad; color:#fff;">
-                        <th>No</th><th>固定条件</th><th>スラブ厚 d(mm)</th><th>短辺/長辺 (m)</th><th>接地圧 w(kN/㎡)</th><th>曲げ M(kN·m)</th><th>せん断 V(kN)</th><th>配筋要件</th><th>判定</th>
+                        <th>No</th><th>符号</th><th>固定条件</th><th>スラブ厚 (mm)</th><th>短辺/長辺 (m)</th><th>接地圧 w (kN/㎡)</th><th>設計曲げ M (kNm/m)</th><th>配筋仕様 (短/長)</th><th>許容曲げ Ma (kNm/m)</th><th>検定比</th><th>判定</th>
                     </tr>
                 </thead>
                 <tbody>`;
@@ -1465,18 +1496,25 @@ async function generateDoc() {
                 const mx = Math.max(fs.Mx_center || 0, fs.Mx_end || 0);
                 const my = Math.max(fs.My_center || 0, fs.My_end || 0);
                 const mMax = Math.max(mx, my);
-                const thick = props.slabThickness || 150;
+                const thick = props.slabThickness || props.thickness || 150;
                 const fixType = props.support || '4辺固定';
+                const name = props.name || `FS${idx+1}`;
+                const shortRebar = `${props.rebarShort?.type || 'D13'}@${props.rebarShort?.pitch || 150}`;
+                const longRebar = `${props.rebarLong?.type || 'D13'}@${props.rebarLong?.pitch || 300}`;
+                const maShort = fs.Ma_short || 0;
+                const ratioMax = Math.max(fs.ratioShort || 0, fs.ratioLong || 0);
                 
                 h += `<tr>
                     <td style="font-weight:bold;">No.${idx+1}</td>
+                    <td style="font-weight:bold; color:#1a5276;">${name}</td>
                     <td>${fixType}</td>
                     <td>${thick}</td>
-                    <td>${lx.toFixed(2)} × ${ly.toFixed(2)}</td>
+                    <td>${lx > 0 ? `${lx.toFixed(2)} × ${ly.toFixed(2)}` : (fs.cantileverLength ? `L=${fs.cantileverLength.toFixed(2)}` : '-')}</td>
                     <td>${w.toFixed(2)}</td>
                     <td>${mMax.toFixed(2)}</td>
-                    <td>${(w * lx / 2).toFixed(2)}</td>
-                    <td>D13@200 (同等)</td>
+                    <td>${shortRebar} / ${longRebar}</td>
+                    <td>${maShort.toFixed(2)}</td>
+                    <td style="font-weight:bold; color:${isOk ? '#27ae60' : '#c0392b'};">${(ratioMax * 100).toFixed(1)}%</td>
                     <td>${okStr}</td>
                 </tr>`;
             });

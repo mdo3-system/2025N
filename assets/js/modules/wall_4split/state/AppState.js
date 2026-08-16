@@ -33,6 +33,7 @@ window.AppState = {
         floorHeight2F: 2.7,      // m
         pillarDepth1F: 105,      // mm
         pillarDepth2F: 105,      // mm
+        fc: 21,                  // N/mm2 (設計基準強度 Fc18, Fc21, Fc24, Fc27, Fc30)
         triangleMultiplier: 1.33,
         eavesLen: 300,           // mm
         wallThickness: 150,      // mm
