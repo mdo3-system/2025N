@@ -15,10 +15,37 @@ window.FoundationPropertyHandler = {
             const slab = (s.foundationSlabs || []).find(x => x.id === id);
             if (slab) {
                 if (!slab.props) slab.props = {};
-                if (key === 'slabThickness') slab.props.slabThickness = parseFloat(val) || 150;
-                else if (key === 'support') slab.props.support = val;
-                else if (key === 'rebar') slab.props.rebar = val;
-                else slab.props[key] = val;
+                if (key === 'slabThickness' || key === 'thickness') {
+                    const numT = parseFloat(val) || 150;
+                    slab.props.slabThickness = numT;
+                    slab.props.thickness = numT;
+                } else if (key === 'slabTopHeight') {
+                    slab.props.slabTopHeight = parseFloat(val) || 0;
+                } else if (key === 'coverDepth') {
+                    slab.props.coverDepth = parseFloat(val) || 70;
+                } else if (key === 'support') {
+                    slab.props.support = val;
+                } else if (key === 'cantileverLength') {
+                    slab.props.cantileverLength = parseFloat(val) || 0.9;
+                } else if (key.startsWith('rebarShort.')) {
+                    if (!slab.props.rebarShort) slab.props.rebarShort = { type: 'D13', pitch: 150 };
+                    const subK = key.split('.')[1];
+                    slab.props.rebarShort[subK] = subK === 'pitch' ? (parseFloat(val) || 150) : val;
+                } else if (key.startsWith('rebarLong.')) {
+                    if (!slab.props.rebarLong) slab.props.rebarLong = { type: 'D13', pitch: 300 };
+                    const subK = key.split('.')[1];
+                    slab.props.rebarLong[subK] = subK === 'pitch' ? (parseFloat(val) || 300) : val;
+                } else {
+                    slab.props[key] = val;
+                }
+
+                // スラブ解析および基礎全体の再計算
+                if (window.FoundationEngine && typeof window.FoundationEngine.runAnalysis === 'function') {
+                    window.FoundationEngine.runAnalysis(s);
+                }
+                if (window.AppController && typeof window.AppController.refreshAll === 'function') {
+                    window.AppController.refreshAll();
+                }
             }
         } else if (type === 'beam' || type === 'beam_span') {
             const beam = (s.foundationBeams || []).find(x => x.id === id);

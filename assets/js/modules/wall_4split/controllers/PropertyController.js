@@ -479,11 +479,13 @@ window.PropertyController = {
             '1辺固定3辺ピン（長辺固定）', '1辺固定3辺ピン（短辺固定）', '4辺ピン', '片持ち'
         ];
         const rebars = ['D10', 'D10/D13', 'D13', 'D16', 'D13/D16'];
+        const thickness = p.slabThickness || p.thickness || 150;
 
         return `
             <div class="calc-box" style="padding:15px; height:100%; overflow:auto; box-sizing:border-box; font-family:sans-serif; background:#ffffff; border-radius:10px;">
-                <div style="font-size:14px; font-weight:bold; color:#1e293b; border-bottom:3px solid #27ae60; margin-bottom:12px; padding-bottom:8px; display:flex; align-items:center; gap:6px;">
-                    <span style="font-size:16px;">📐</span> 基礎スラブ設定・検定
+                <div style="font-size:14px; font-weight:bold; color:#1e293b; border-bottom:3px solid #27ae60; margin-bottom:12px; padding-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
+                    <span style="display:flex; align-items:center; gap:6px;"><span style="font-size:16px;">📐</span> 基礎スラブ設定・検定</span>
+                    <button type="button" onclick="window.PropertyController.saveSlabModalProps(${item.id})" style="padding:5px 12px; background:#27ae60; color:#fff; font-weight:bold; font-size:12px; border:none; border-radius:4px; cursor:pointer; box-shadow:0 2px 4px rgba(0,0,0,0.1);">💾 設定を保存して再計算</button>
                 </div>
                 <!-- 2. 個別スラブ基本設定カード -->
                 <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:12px; margin-bottom:15px; box-shadow:0 1px 3px rgba(0,0,0,0.02);">
@@ -494,11 +496,11 @@ window.PropertyController = {
                     <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px;">
                         <div style="display:flex; flex-direction:column;">
                             <label style="font-size:11px; color:#475569; margin-bottom:3px; font-weight:500;">符号 (スラブ名)</label>
-                            <input type="text" value="${p.name || 'S1'}" onchange="window.PropertyController.updateFdProp('slab', ${item.id}, 'name', this.value)" style="padding:4px; border:1px solid #cbd5e1; border-radius:4px; font-size:11px; color:#1e293b; font-weight:bold; background:#fff;">
+                            <input type="text" id="slab-prop-name-${item.id}" value="${p.name || 'FS1'}" onchange="window.PropertyController.updateFdProp('slab', ${item.id}, 'name', this.value)" style="padding:4px; border:1px solid #cbd5e1; border-radius:4px; font-size:11px; color:#1e293b; font-weight:bold; background:#fff;">
                         </div>
                         <div style="display:flex; flex-direction:column;">
                             <label style="font-size:11px; color:#475569; margin-bottom:3px; font-weight:500;">支持条件</label>
-                            <select onchange="window.PropertyController.updateFdProp('slab', ${item.id}, 'support', this.value)" style="padding:4px; border:1px solid #cbd5e1; border-radius:4px; font-size:11px; color:#1e293b; background:#fff;">
+                            <select id="slab-prop-support-${item.id}" onchange="window.PropertyController.updateFdProp('slab', ${item.id}, 'support', this.value)" style="padding:4px; border:1px solid #cbd5e1; border-radius:4px; font-size:11px; color:#1e293b; background:#fff;">
                                 ${supports.map(s => `<option value="${s}" ${p.support === s ? 'selected' : ''}>${s}</option>`).join('')}
                             </select>
                         </div>
@@ -508,7 +510,7 @@ window.PropertyController = {
                     <div style="display:flex; flex-direction:column; margin-bottom:10px; background:#fffbeb; border:1px solid #fde68a; border-radius:4px; padding:6px;">
                         <label style="font-size:10px; color:#b45309; margin-bottom:3px; font-weight:500;">片持ち長さ (m)</label>
                         <div style="display:flex; align-items:center; gap:5px;">
-                            <input type="number" step="0.1" value="${p.cantileverLength || 0.9}" onchange="window.PropertyController.updateFdProp('slab', ${item.id}, 'cantileverLength', this.value)" style="width:70px; padding:3px; border:1px solid #cbd5e1; border-radius:4px; font-size:11px;">
+                            <input type="number" id="slab-prop-cantilever-${item.id}" step="0.1" value="${p.cantileverLength || 0.9}" onchange="window.PropertyController.updateFdProp('slab', ${item.id}, 'cantileverLength', this.value)" style="width:70px; padding:3px; border:1px solid #cbd5e1; border-radius:4px; font-size:11px;">
                             <span style="font-size:11px; color:#4b5563;">m</span>
                         </div>
                     </div>
@@ -518,21 +520,21 @@ window.PropertyController = {
                         <div style="display:flex; flex-direction:column;">
                             <label style="font-size:10px; color:#64748b; margin-bottom:3px; font-weight:500;">厚さ (mm)</label>
                             <div style="display:flex; align-items:center; gap:4px;">
-                                <input type="number" value="${p.slabThickness || 150}" onchange="window.PropertyController.updateFdProp('slab', ${item.id}, 'slabThickness', this.value)" style="width:70px; padding:4px; border:1px solid #cbd5e1; border-radius:4px; font-size:11px; text-align:right;">
+                                <input type="number" id="slab-prop-thickness-${item.id}" value="${thickness}" onchange="window.PropertyController.updateFdProp('slab', ${item.id}, 'slabThickness', this.value)" style="width:70px; padding:4px; border:1px solid #cbd5e1; border-radius:4px; font-size:11px; text-align:right;">
                                 <span style="font-size:10px; color:#475569;">mm</span>
                             </div>
                         </div>
                         <div style="display:flex; flex-direction:column;">
                             <label style="font-size:10px; color:#64748b; margin-bottom:3px; font-weight:500;">かぶり (mm)</label>
                             <div style="display:flex; align-items:center; gap:4px;">
-                                <input type="number" value="${p.coverDepth || 70}" onchange="window.PropertyController.updateFdProp('slab', ${item.id}, 'coverDepth', this.value)" style="width:70px; padding:4px; border:1px solid #cbd5e1; border-radius:4px; font-size:11px; text-align:right;">
+                                <input type="number" id="slab-prop-cover-${item.id}" value="${p.coverDepth || 70}" onchange="window.PropertyController.updateFdProp('slab', ${item.id}, 'coverDepth', this.value)" style="width:70px; padding:4px; border:1px solid #cbd5e1; border-radius:4px; font-size:11px; text-align:right;">
                                 <span style="font-size:10px; color:#475569;">mm</span>
                             </div>
                         </div>
                         <div style="display:flex; flex-direction:column;">
                             <label style="font-size:10px; color:#64748b; margin-bottom:3px; font-weight:500;">天端高 (mm)</label>
                             <div style="display:flex; align-items:center; gap:4px;">
-                                <input type="number" value="${p.slabTopHeight !== undefined ? p.slabTopHeight : 50}" onchange="window.PropertyController.updateFdProp('slab', ${item.id}, 'slabTopHeight', this.value)" style="width:70px; padding:4px; border:1px solid #cbd5e1; border-radius:4px; font-size:11px; text-align:right;">
+                                <input type="number" id="slab-prop-top-${item.id}" value="${p.slabTopHeight !== undefined ? p.slabTopHeight : 50}" onchange="window.PropertyController.updateFdProp('slab', ${item.id}, 'slabTopHeight', this.value)" style="width:70px; padding:4px; border:1px solid #cbd5e1; border-radius:4px; font-size:11px; text-align:right;">
                                 <span style="font-size:10px; color:#475569;">mm</span>
                             </div>
                         </div>
@@ -549,12 +551,12 @@ window.PropertyController = {
                         <!-- 短辺配筋 -->
                         <div style="display:grid; grid-template-columns: 2fr 3fr 1fr 3fr; align-items:center; gap:6px; font-size:11px; padding:4px 0; border-bottom:1px dashed #e2e8f0;">
                             <span style="font-weight:500; color:#334155;">短辺配筋</span>
-                            <select onchange="window.PropertyController.updateFdProp('slab', ${item.id}, 'rebarShort.type', this.value)" style="padding:3px; border:1px solid #cbd5e1; border-radius:4px; font-size:11px; background:#fff;">
-                                ${rebars.map(r => `<option value="${r}" ${p.rebarShort?.type === r ? 'selected' : ''}>${r}</option>`).join('')}
+                            <select id="slab-prop-short-type-${item.id}" onchange="window.PropertyController.updateFdProp('slab', ${item.id}, 'rebarShort.type', this.value)" style="padding:3px; border:1px solid #cbd5e1; border-radius:4px; font-size:11px; background:#fff;">
+                                ${rebars.map(r => `<option value="${r}" ${(p.rebarShort?.type || 'D13') === r ? 'selected' : ''}>${r}</option>`).join('')}
                             </select>
                             <span style="text-align:center; color:#64748b;">@</span>
                             <div style="display:flex; align-items:center; gap:4px;">
-                                <input type="number" value="${p.rebarShort?.pitch || 200}" onchange="window.PropertyController.updateFdProp('slab', ${item.id}, 'rebarShort.pitch', this.value)" style="width:55px; padding:3px; border:1px solid #cbd5e1; border-radius:4px; font-size:11px; text-align:right;">
+                                <input type="number" id="slab-prop-short-pitch-${item.id}" value="${p.rebarShort?.pitch || 150}" onchange="window.PropertyController.updateFdProp('slab', ${item.id}, 'rebarShort.pitch', this.value)" style="width:55px; padding:3px; border:1px solid #cbd5e1; border-radius:4px; font-size:11px; text-align:right;">
                                 <span style="font-size:10px; color:#64748b;">mm</span>
                             </div>
                         </div>
@@ -562,22 +564,79 @@ window.PropertyController = {
                         <!-- 長辺配筋 -->
                         <div style="display:grid; grid-template-columns: 2fr 3fr 1fr 3fr; align-items:center; gap:6px; font-size:11px; padding:4px 0;">
                             <span style="font-weight:500; color:#334155;">長辺配筋</span>
-                            <select onchange="window.PropertyController.updateFdProp('slab', ${item.id}, 'rebarLong.type', this.value)" style="padding:3px; border:1px solid #cbd5e1; border-radius:4px; font-size:11px; background:#fff;">
-                                ${rebars.map(r => `<option value="${r}" ${p.rebarLong?.type === r ? 'selected' : ''}>${r}</option>`).join('')}
+                            <select id="slab-prop-long-type-${item.id}" onchange="window.PropertyController.updateFdProp('slab', ${item.id}, 'rebarLong.type', this.value)" style="padding:3px; border:1px solid #cbd5e1; border-radius:4px; font-size:11px; background:#fff;">
+                                ${rebars.map(r => `<option value="${r}" ${(p.rebarLong?.type || 'D13') === r ? 'selected' : ''}>${r}</option>`).join('')}
                             </select>
                             <span style="text-align:center; color:#64748b;">@</span>
                             <div style="display:flex; align-items:center; gap:4px;">
-                                <input type="number" value="${p.rebarLong?.pitch || 200}" onchange="window.PropertyController.updateFdProp('slab', ${item.id}, 'rebarLong.pitch', this.value)" style="width:55px; padding:3px; border:1px solid #cbd5e1; border-radius:4px; font-size:11px; text-align:right;">
+                                <input type="number" id="slab-prop-long-pitch-${item.id}" value="${p.rebarLong?.pitch || 300}" onchange="window.PropertyController.updateFdProp('slab', ${item.id}, 'rebarLong.pitch', this.value)" style="width:55px; padding:3px; border:1px solid #cbd5e1; border-radius:4px; font-size:11px; text-align:right;">
                                 <span style="font-size:10px; color:#64748b;">mm</span>
                             </div>
                         </div>
                     </div>
                 </div>
 
+                <div style="text-align:center; margin-bottom:15px;">
+                    <button type="button" onclick="window.PropertyController.saveSlabModalProps(${item.id})" style="width:100%; padding:8px 0; background:#27ae60; color:#fff; font-weight:bold; font-size:13px; border:none; border-radius:6px; cursor:pointer; box-shadow:0 2px 4px rgba(0,0,0,0.15);">💾 設定を保存して再計算を実行</button>
+                </div>
+
                 <div id="slab-calc-result-container" style="margin-top:15px; border-top:1px dashed #cbd5e1; padding-top:10px;">
                     ${(typeof getFoundationSlabReportHtml === 'function') ? getFoundationSlabReportHtml(item) : '<p style="color:#888; font-size:11px;">解析中...</p>'}
                 </div>
             </div>`;
+    },
+
+    /**
+     * スラブモーダルの入力値を一括取得して保存・再計算
+     */
+    saveSlabModalProps: function(slabId) {
+        const s = window.AppState;
+        if (!s) return;
+        const slab = (s.foundationSlabs || []).find(x => x.id === slabId);
+        if (!slab) return;
+        if (!slab.props) slab.props = {};
+
+        const nameEl = document.getElementById(`slab-prop-name-${slabId}`);
+        const supEl = document.getElementById(`slab-prop-support-${slabId}`);
+        const thkEl = document.getElementById(`slab-prop-thickness-${slabId}`);
+        const covEl = document.getElementById(`slab-prop-cover-${slabId}`);
+        const topEl = document.getElementById(`slab-prop-top-${slabId}`);
+        const stTypeEl = document.getElementById(`slab-prop-short-type-${slabId}`);
+        const stPitchEl = document.getElementById(`slab-prop-short-pitch-${slabId}`);
+        const lgTypeEl = document.getElementById(`slab-prop-long-type-${slabId}`);
+        const lgPitchEl = document.getElementById(`slab-prop-long-pitch-${slabId}`);
+
+        if (nameEl) slab.props.name = nameEl.value.trim();
+        if (supEl) slab.props.support = supEl.value;
+        if (thkEl) {
+            const t = parseFloat(thkEl.value) || 150;
+            slab.props.slabThickness = t;
+            slab.props.thickness = t;
+        }
+        if (covEl) slab.props.coverDepth = parseFloat(covEl.value) || 70;
+        if (topEl) slab.props.slabTopHeight = parseFloat(topEl.value) || 0;
+
+        if (!slab.props.rebarShort) slab.props.rebarShort = {};
+        if (stTypeEl) slab.props.rebarShort.type = stTypeEl.value;
+        if (stPitchEl) slab.props.rebarShort.pitch = parseFloat(stPitchEl.value) || 150;
+
+        if (!slab.props.rebarLong) slab.props.rebarLong = {};
+        if (lgTypeEl) slab.props.rebarLong.type = lgTypeEl.value;
+        if (lgPitchEl) slab.props.rebarLong.pitch = parseFloat(lgPitchEl.value) || 300;
+
+        // 再解析と再描画
+        if (window.FoundationEngine && typeof window.FoundationEngine.runAnalysis === 'function') {
+            window.FoundationEngine.runAnalysis(s);
+        }
+        if (window.AppController && typeof window.AppController.refreshAll === 'function') {
+            window.AppController.refreshAll();
+        }
+
+        // モーダルの結果表示領域を更新
+        const resultContainer = document.getElementById('slab-calc-result-container');
+        if (resultContainer && typeof getFoundationSlabReportHtml === 'function') {
+            resultContainer.innerHTML = getFoundationSlabReportHtml(slab);
+        }
     },
 
     generateGeneralFormHtml: function(type, item) {

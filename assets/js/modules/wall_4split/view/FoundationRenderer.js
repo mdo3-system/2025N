@@ -79,12 +79,13 @@ window.FoundationRenderer = {
             if (pC.cx != null) {
                 ctx.font = 'bold 11px sans-serif';
                 const sp = slab.props || {};
-                const labelA = `${sp.name || 'スラブ'}`;
-                const labelB = `t=${sp.thickness || 150} / D${sp.rebarDiameter || 13}@${sp.rebarPitch || 200}`;
+                const slabThickness = sp.slabThickness || sp.thickness || 150;
+                const labelA = `${sp.name || 'FS1'}`;
+                const labelB = `t=${slabThickness}`;
                 const wA = ctx.measureText(labelA).width;
                 const wB = ctx.measureText(labelB).width;
                 const boxW = Math.max(wA, wB) + 16;
-                const boxH = 32;
+                const boxH = 30;
                 const rx = pC.cx - boxW / 2;
                 const ry = pC.cy - boxH / 2;
 
@@ -100,12 +101,8 @@ window.FoundationRenderer = {
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
 
-                if (labelB) {
-                    ctx.fillText(labelA, pC.cx, pC.cy - 6);
-                    ctx.fillText(labelB, pC.cx, pC.cy + 6);
-                } else {
-                    ctx.fillText(labelA, pC.cx, pC.cy);
-                }
+                ctx.fillText(labelA, pC.cx, pC.cy - 6);
+                ctx.fillText(labelB, pC.cx, pC.cy + 6);
             }
             ctx.restore();
         });

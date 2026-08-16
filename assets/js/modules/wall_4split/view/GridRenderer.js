@@ -40,6 +40,10 @@ window.GridRenderer = {
         const ctx = state.ctx;
         if (!ctx || !state.canvas) return;
 
+        const _dprGR = window.devicePixelRatio || 1;
+        const cssW = state.canvas.width / _dprGR;
+        const cssH = state.canvas.height / _dprGR;
+
         ctx.save();
         ctx.strokeStyle = state.isPrintMode ? '#555' : '#8e44ad';
         ctx.setLineDash([5, 5]);
@@ -47,30 +51,21 @@ window.GridRenderer = {
         const hasY = state.gridYCoords && state.gridYCoords.length > 0;
         const hasX = state.gridXCoords && state.gridXCoords.length > 0;
 
-        const gMinY = hasY ? Math.min(...state.gridYCoords) : 0;
-        const gMaxY = hasY ? Math.max(...state.gridYCoords) : 0;
-        const gMinX = hasX ? Math.min(...state.gridXCoords) : 0;
-        const gMaxX = hasX ? Math.max(...state.gridXCoords) : 0;
-
         const toCanvas = (x, y) => {
             const p = window.toCanvasPixel ? window.toCanvasPixel(x, y) : { cx: x, cy: y };
             return { cx: p.cx, cy: p.cy };
         };
 
-        const pTop = hasY ? toCanvas(0, gMaxY) : { cy: 0 };
-        const pBot = hasY ? toCanvas(0, gMinY) : { cy: state.canvas.height };
-        const pLeft = hasX ? toCanvas(gMinX, 0) : { cx: 0 };
-        const pRight = hasX ? toCanvas(gMaxX, 0) : { cx: state.canvas.width };
-
-        const botY = hasY ? pBot.cy + 30 : state.canvas.height;
-        const rightX = hasX ? pRight.cx + 30 : state.canvas.width;
+        // グリッド線および寸法線の境界をキャンバス全体（最外周部）に設定
+        const botY = cssH - 45;
+        const rightX = cssW - 65;
 
         const visibleLeft = -state.offsetX / state.scale;
         const visibleTop = (state.canvas.height - state.offsetY) / state.scale;
         const labelFontSize = Math.max(10, Math.min(20, 14 / state.scale));
         const labelPad = 10 / state.scale;
 
-        // X方向通り芯描画（上端端部ラベル＋グリッド線）
+        // X方向通り芯描画（上端端部ラベル＋キャンバス最下部まで伸ばすグリッド線）
         let lastCx = -Infinity;
         let staggerLevelX = 0;
         const sortedXIndices = state.gridXCoords.map((v, i) => i).sort((a, b) => state.gridXCoords[a] - state.gridXCoords[b]);
@@ -110,7 +105,7 @@ window.GridRenderer = {
             }
         });
 
-        // Y方向通り芯描画（左端端部ラベル＋グリッド線）
+        // Y方向通り芯描画（左端端部ラベル＋キャンバス最右部まで伸ばすグリッド線）
         let lastCy = -Infinity;
         let staggerLevelY = 0;
         const sortedYIndices = state.gridYCoords.map((v, i) => i).sort((a, b) => {
@@ -205,12 +200,15 @@ window.GridRenderer = {
         ctx.lineWidth = 1;
         ctx.setLineDash([]); // 実線
 
+        const _dprGD = window.devicePixelRatio || 1;
+        const cssW = state.canvas.width / _dprGD;
+        const cssH = state.canvas.height / _dprGD;
         const tickSize = 4;
 
-        // --- X方向 グリッド間寸法 (下側最外周) ---
+        // --- X方向 グリッド間寸法 (キャンバス最下部固定) ---
         if (sortedXIndices && sortedXIndices.length >= 2) {
-            const dimY = Math.min(botY + 20, (state.canvas?.height || 800) - 35);
-            const totalDimY = dimY + fontSize + 8;
+            const dimY = cssH - 35;
+            const totalDimY = cssH - 16;
 
             // スパン個別寸法
             for (let k = 0; k < sortedXIndices.length - 1; k++) {
@@ -286,10 +284,10 @@ window.GridRenderer = {
             ctx.fillText(`全体 ${totalSpanX}`, (startCx + endCx) / 2, totalDimY - 2);
         }
 
-        // --- Y方向 グリッド間寸法 (右側最外周) ---
+        // --- Y方向 グリッド間寸法 (キャンバス最右部固定) ---
         if (sortedYIndices && sortedYIndices.length >= 2) {
-            const dimX = Math.min(rightX + 20, (state.canvas?.width || 1200) - 50);
-            const totalDimX = dimX + fontSize * 3 + 12;
+            const dimX = cssW - 55;
+            const totalDimX = cssW - 20;
 
             // スパン個別寸法
             for (let k = 0; k < sortedYIndices.length - 1; k++) {
