@@ -464,16 +464,9 @@ window.AppController = {
                 } else if (uL.includes('1F') || uL.includes('_R') || uL.includes('RF')) {
                     state.layerVisibility[L] = false;
                 }
-            } else if (is1R) {
-                if (uL === '1F_ROOF' || uL.includes('1F_R') || uL.includes('1RF') || uL.includes('R_1F')) {
-                    state.layerVisibility[L] = true;
-                } else if (uL === '2F_ROOF' || uL.includes('2F') || uL.includes('2F_R') || uL.includes('RF')) {
-                    state.layerVisibility[L] = false;
-                }
-            } else if (is2R) {
-                if (uL === '2F_ROOF' || uL.includes('2F_R') || uL.includes('RF_R') || uL.includes('2RF') || uL.includes('RF')) {
-                    state.layerVisibility[L] = true;
-                } else if (uL === '1F_ROOF' || uL.includes('1F') || uL.includes('1F_R')) {
+            } else if (is1R || is2R) {
+                // 1階屋根・2階屋根は背景表示不要（通り芯のみ表示）
+                if (!/(GRID|GLID|通り芯|軸線|軸|芯)/i.test(uL)) {
                     state.layerVisibility[L] = false;
                 }
             }

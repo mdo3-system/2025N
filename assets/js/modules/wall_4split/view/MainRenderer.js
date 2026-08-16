@@ -185,8 +185,7 @@ window.MainRenderer = {
             // デフォルト（lv[cat]が未設定）の場合は現在の作図フロアで自動フィルタリング
             if (curFloor === '1F') return cat === '1F_BACK' || fl === '1F';
             if (curFloor === '2F') return cat === '2F_BACK' || fl === '2F';
-            if (curFloor === '1R') return cat === '1F_ROOF' || fl === '1R';
-            if (curFloor === '2R') return cat === '2F_ROOF' || fl === '2R';
+            if (curFloor === '1R' || curFloor === '2R') return false; // 屋根モードは背景非表示
         }
 
         return true;
