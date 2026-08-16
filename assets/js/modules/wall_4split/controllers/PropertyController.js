@@ -661,6 +661,9 @@ window.PropertyController = {
                 ? `<span><input type="number" id="edit-win-width" value="${item.length || (wallLen * 1000).toFixed(0)}" style="width:70px; text-align:right;"> mm</span>`
                 : `<span style="font-weight:bold;">${(wallLen * 1000).toFixed(0)} mm</span>`;
             
+            const heightInfo = window.WallEngine ? window.WallEngine.getWallHeightAndReduction(item, state) : { height: floorHeight, reduction: 1.0 };
+            const isReduced = heightInfo.reduction < 1.0;
+            
             return `
                 <div style="background:#fff9db; padding:10px; border-radius:6px; border:1px solid #ffe066; margin-bottom:12px; font-size:13px;">
                     <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
@@ -668,10 +671,11 @@ window.PropertyController = {
                         ${widthInput}
                     </div>
                     ${type === 'wall' ? '<div style="font-size:10px; color:#e67e22; margin-top:-5px; margin-bottom:10px;">※耐力壁の幅は柱間距離で自動決定されます</div>' : ''}
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <span>🏢 軸組階高:</span>
-                        <span><input type="number" id="edit-wall-h" step="0.001" value="${item.h || floorHeight.toFixed(3)}" style="width:80px; text-align:right; font-weight:bold;"> m</span>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                        <span>🏢 有効階高 (柱連動):</span>
+                        <span style="font-weight:bold; color:#2c3e50;">${heightInfo.height.toFixed(3)} m ${isReduced ? `<span style="color:#e74c3c; font-size:11px;">(低減係数 γ: ${heightInfo.reduction})</span>` : '<span style="color:#27ae60; font-size:11px;">(基準内)</span>'}</span>
                     </div>
+                    <div style="font-size:10px; color:#7f8c8d;">※高さの個別変更は当該耐力壁が取り付く「柱」のプロパティで行います</div>
                 </div>
                 <div class="prop-edit-row"><label>要素種別</label><select id="edit-element-type" onchange="window.PropertyController.updateWallFields(this.value, null)"><option value="wall" ${type === "wall" ? "selected" : ""}>耐力壁</option><option value="window" ${type === "window" ? "selected" : ""}>開口部</option></select></div><div id="dynamic-fields"></div>`;
         }

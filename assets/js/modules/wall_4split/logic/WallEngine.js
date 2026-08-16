@@ -30,7 +30,41 @@ window.WallEngine = {
         return master.find(m => m.id === id) || { id: "b0", val: 0, text: "なし" };
     },
 
-    getTotalMultiplier: function(wall) {
+    /**
+     * 耐力壁に取り付く柱の高さから、耐力壁の実効高さ H および 3.2m超低減係数 γ を算定
+     */
+    getWallHeightAndReduction: function(wall, state) {
+        const s = state || window.AppState;
+        if (!wall || !s) return { height: 2.7, reduction: 1.0, baseH: 2.7 };
+
+        const cfg = s.config || {};
+        const isFloorMatched = (f1, f2) => window.isFloorMatched ? window.isFloorMatched(f1, f2) : (String(f1).toUpperCase().trim() === String(f2).toUpperCase().trim());
+        const defaultH = isFloorMatched(wall.floor, '2F') ? (cfg.floorHeight2F || 2.7) : (cfg.floorHeight1F || 2.7);
+
+        let h1 = defaultH;
+        let h2 = defaultH;
+
+        if (wall.p1 && wall.p2 && s.pillars) {
+            const p1 = s.pillars.find(p => !p.isDeleted && !p.isInvalidPos && Math.hypot(p.x - wall.p1.x, p.y - wall.p1.y) < 50 && (isFloorMatched(p.floor, wall.floor) || p.floor === 'ALL'));
+            const p2 = s.pillars.find(p => !p.isDeleted && !p.isInvalidPos && Math.hypot(p.x - wall.p2.x, p.y - wall.p2.y) < 50 && (isFloorMatched(p.floor, wall.floor) || p.floor === 'ALL'));
+
+            if (p1 && (p1.manualH || p1.h)) h1 = parseFloat(p1.manualH || p1.h);
+            if (p2 && (p2.manualH || p2.h)) h2 = parseFloat(p2.manualH || p2.h);
+        }
+
+        // 両端の柱高さのうち安全側（高い方）を耐力壁の高さとする
+        const wallH = Math.max(h1, h2);
+
+        // 階高 3.2m 超の低減係数 γ = 3.2 / H
+        let reduction = 1.0;
+        if (wallH > 3.2) {
+            reduction = Math.round((3.2 / wallH) * 1000) / 1000;
+        }
+
+        return { height: wallH, reduction: reduction, baseH: defaultH };
+    },
+
+    getTotalMultiplier: function(wall, state) {
         if (!wall) return 0;
         
         // Lookup specs from master lists using IDs
@@ -44,20 +78,24 @@ window.WallEngine = {
         if (total === 0) {
             total = (wall.outPanelVal || 0) + (wall.inPanelVal || 0) + (wall.braceVal || 0);
         }
-        return total;
+
+        // 柱高さに基づく 3.2m 超低減の適用
+        const { reduction } = this.getWallHeightAndReduction(wall, state);
+        return total * reduction;
     },
 
     /**
      * グレー本2025 (2.4.1.3a/b) 準拠の斜め壁有効壁長計算 (cos^2 θ / sin^2 θ)
      */
-    calcWallEffectiveLengths: function(w) {
-        if (!w || !w.p1 || !w.p2) return { kx: 0, ky: 0, len: 0, tv: 0, cos2: 0, sin2: 0 };
+    calcWallEffectiveLengths: function(w, state) {
+        if (!w || !w.p1 || !w.p2) return { kx: 0, ky: 0, len: 0, tv: 0, cos2: 0, sin2: 0, heightInfo: { height: 2.7, reduction: 1.0 } };
         const dx = Math.abs(w.p2.x - w.p1.x);
         const dy = Math.abs(w.p2.y - w.p1.y);
         const len = Math.hypot(dx, dy);
-        if (len === 0) return { kx: 0, ky: 0, len: 0, tv: 0, cos2: 0, sin2: 0 };
+        if (len === 0) return { kx: 0, ky: 0, len: 0, tv: 0, cos2: 0, sin2: 0, heightInfo: { height: 2.7, reduction: 1.0 } };
 
-        const tv = this.getTotalMultiplier(w);
+        const heightInfo = this.getWallHeightAndReduction(w, state);
+        const tv = this.getTotalMultiplier(w, state);
         const lenM = len / 1000;
         
         const cos2 = (dx * dx) / (len * len);
@@ -66,7 +104,7 @@ window.WallEngine = {
         const kx = lenM * tv * cos2; // X方向許容せん断耐力・有効壁長 (m)
         const ky = lenM * tv * sin2; // Y方向許容せん断耐力・有効壁長 (m)
 
-        return { kx, ky, len: lenM, tv, cos2, sin2 };
+        return { kx, ky, len: lenM, tv, cos2, sin2, heightInfo };
     },
 
     /**

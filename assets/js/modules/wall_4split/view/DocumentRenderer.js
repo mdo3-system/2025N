@@ -94,6 +94,8 @@ window.DocumentRenderer = {
             state.bgLinesOriginal.filter(e => {
                 if (!e.isUnderlay && !e.isBg) return false;
                 const L = (e.layer || "").toUpperCase().trim();
+                // 求積図・床面積図では屋根レイヤーを完全除外
+                if (/(ROOF|屋根|_RF|AREA_RF|BG_RF|1F_ROOF|2F_ROOF)/i.test(L)) return false;
                 const targetBG = 'BG_' + floorStr;
                 return (isFloorMatched(e.floor, floorStr) || e.floor === 'ALL' || L.includes(targetBG) || L.includes('BG_ALL') || L.startsWith('BG_'));
             }).forEach(e => {
@@ -439,6 +441,8 @@ window.DocumentRenderer = {
         state.bgLinesOriginal.filter(e => {
             if (!e.isUnderlay && !e.isBg) return false;
             const L = (e.layer || "").toUpperCase().trim();
+            // 階層が屋根以外のときは屋根レイヤーを除外
+            if (!floor.includes('R') && /(ROOF|屋根|_RF|AREA_RF|BG_RF|1F_ROOF|2F_ROOF)/i.test(L)) return false;
             const targetBG = 'BG_' + floor;
             return (isFloorMatched(e.floor, floor) || e.floor === 'ALL' || L.includes(targetBG) || L.includes('BG_ALL') || L.startsWith('BG_'));
         }).forEach(e => {
