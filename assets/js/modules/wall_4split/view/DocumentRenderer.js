@@ -12,15 +12,36 @@ window.DocumentRenderer = {
         const state = window.AppState;
         const data = state.docDrawings[docType];
         
-        // Handle case where DXF is not loaded but manual areas exist
-        const hasManualAreas = floorStr && state.areaLines.some(a => a.floor === floorStr && a.isManualArea);
-        if ((!data || !data.loaded) && !hasManualAreas) return null;
+        const isFloorMatched = (f1, f2) => window.isFloorMatched ? window.isFloorMatched(f1, f2) : (String(f1).toUpperCase().trim() === String(f2).toUpperCase().trim());
+        const hasAreas = floorStr && state.areaLines.some(a => isFloorMatched(a.floor, floorStr));
+        const hasBg = state.bgLinesOriginal && state.bgLinesOriginal.some(e => isFloorMatched(e.floor, floorStr) || e.floor === 'ALL' || (e.layer && e.layer.toUpperCase().includes('BG_' + floorStr)));
+        if ((!data || !data.loaded) && !hasAreas && !hasBg) return null;
 
         const entities = data ? data.entities : [];
         const filteredEnts = window.DocumentEngine.filterEntities(entities, targetLayers, bgLayers, isPrint);
         const bbox = window.DocumentEngine.calculateBoundingBox(filteredEnts, floorStr, state.areaLines);
 
-        if (bbox.minX === Infinity) return null;
+        // フォールバック bbox
+        if (bbox.minX === Infinity) {
+            let bMinX = Infinity, bMaxX = -Infinity, bMinY = Infinity, bMaxY = -Infinity;
+            state.areaLines.filter(a => isFloorMatched(a.floor, floorStr)).forEach(a => {
+                (a.vertices || []).forEach(v => {
+                    if (v.x < bMinX) bMinX = v.x; if (v.x > bMaxX) bMaxX = v.x;
+                    if (v.y < bMinY) bMinY = v.y; if (v.y > bMaxY) bMaxY = v.y;
+                });
+            });
+            state.bgLinesOriginal.filter(e => isFloorMatched(e.floor, floorStr) || e.floor === 'ALL').forEach(e => {
+                if (e.vertices) e.vertices.forEach(v => {
+                    if (v.x < bMinX) bMinX = v.x; if (v.x > bMaxX) bMaxX = v.x;
+                    if (v.y < bMinY) bMinY = v.y; if (v.y > bMaxY) bMaxY = v.y;
+                });
+            });
+            if (bMinX !== Infinity) {
+                bbox.minX = bMinX; bbox.maxX = bMaxX; bbox.minY = bMinY; bbox.maxY = bMaxY;
+            } else {
+                return null;
+            }
+        }
 
         // Calculate Scale
         const scaleInputId = (docType === 'elev') ? 'scale-sub' : (document.getElementById('scale-plan') ? 'scale-plan' : 'scale-floor');
@@ -59,7 +80,7 @@ window.DocumentRenderer = {
             cy: cH - ((y - adjustedBbox.minY) * sfFinal)
         });
 
-        // Draw Background CAD & DXF Underlay Lines (State bgLinesOriginal fallback)
+        // 1. Draw Background CAD & DXF Underlay Lines (State bgLinesOriginal fallback)
         const bgEnts = filteredEnts.filter(e => e.isBg);
         if (bgEnts.length > 0 && typeof _drawCADEntities === 'function') {
             _drawCADEntities(ctx, bgEnts, toC, true, sfFinal, true);
@@ -70,17 +91,28 @@ window.DocumentRenderer = {
             ctx.save();
             ctx.lineWidth = 1.2;
             ctx.strokeStyle = '#cccccc';
-            state.bgLinesOriginal.filter(e => e.floor === floorStr || e.floor === 'ALL' || (e.layer && e.layer.includes(floorStr))).forEach(e => {
+            state.bgLinesOriginal.filter(e => {
+                if (!e.isUnderlay && !e.isBg) return false;
+                const L = (e.layer || "").toUpperCase().trim();
+                const targetBG = 'BG_' + floorStr;
+                return (isFloorMatched(e.floor, floorStr) || e.floor === 'ALL' || L.includes(targetBG) || L.includes('BG_ALL') || L.startsWith('BG_'));
+            }).forEach(e => {
                 ctx.beginPath();
                 if (e.type === 'LINE' && e.vertices && e.vertices.length >= 2) {
                     let p1 = toC(e.vertices[0].x, e.vertices[0].y), p2 = toC(e.vertices[1].x, e.vertices[1].y);
-                    ctx.moveTo(p1.cx, p1.cy); ctx.lineTo(p2.cx, p2.cy);
+                    if (p1.cx != null && !isNaN(p1.cx)) { ctx.moveTo(p1.cx, p1.cy); ctx.lineTo(p2.cx, p2.cy); }
                 } else if (['LWPOLYLINE', 'POLYLINE'].includes(e.type) && e.vertices) {
                     e.vertices.forEach((v, i) => {
                         let p = toC(v.x, v.y);
-                        i === 0 ? ctx.moveTo(p.cx, p.cy) : ctx.lineTo(p.cx, p.cy);
+                        if (p.cx != null && !isNaN(p.cx)) { i === 0 ? ctx.moveTo(p.cx, p.cy) : ctx.lineTo(p.cx, p.cy); }
                     });
                     if (e.closed) ctx.closePath();
+                } else if (e.type === 'CIRCLE') {
+                    let p = toC(e.center.x, e.center.y);
+                    if (p.cx != null && !isNaN(p.cx)) { ctx.arc(p.cx, p.cy, e.radius * sfFinal, 0, 2 * Math.PI); }
+                } else if (e.type === 'ARC') {
+                    let p = toC(e.center.x, e.center.y);
+                    if (p.cx != null && !isNaN(p.cx)) { ctx.arc(p.cx, p.cy, e.radius * sfFinal, -e.endAngle * Math.PI / 180, -e.startAngle * Math.PI / 180); }
                 }
                 ctx.stroke();
             });
@@ -277,16 +309,14 @@ window.DocumentRenderer = {
 
             const toC = (x, y) => ({ cx: (x - mx) * sfFinal, cy: cH - ((y - my) * sfFinal) });
 
-            // 2. Draw Background
-            if (mode !== 'area') {
-                this.drawBackground(ctx, floor, toC, sfFinal, isPrint);
-            }
+            // 2. Draw Background (床面積図・4分割図・構造図のすべてでDXF背景を下絵として描画)
+            this.drawBackground(ctx, floor, toC, sfFinal, isPrint);
 
             // 3. Draw Areas
             if (mode === 'area') {
                 this.drawAreaTributaries(ctx, floor, toC, isPrint);
             }
-            this.drawAreaPolygons(ctx, state.areaLines.filter(a => a.floor === floor), toC, { showAreaDims: mode !== 'area' && showAreaDims, dimScale, skipLabels: mode === 'area' });
+            this.drawAreaPolygons(ctx, state.areaLines.filter(a => isFloorMatched(a.floor, floor)), toC, { showAreaDims: mode !== 'area' && showAreaDims, dimScale, skipLabels: mode === 'area' });
 
             // 3.5 Draw 4-Division bounds if divMode is present
             if (divMode) {
@@ -312,7 +342,9 @@ window.DocumentRenderer = {
      */
     drawStructuralElements: function(ctx, floor, mode, toC, isPrint) {
         const state = window.AppState;
-        state.pillars.filter(p => !p.isDeleted && !p.isInvalidPos && (p.floor === floor || p.floor === 'ALL')).forEach(p => {
+        const isFloorMatched = (f1, f2) => window.isFloorMatched ? window.isFloorMatched(f1, f2) : (String(f1).toUpperCase().trim() === String(f2).toUpperCase().trim());
+
+        state.pillars.filter(p => !p.isDeleted && !p.isInvalidPos && (isFloorMatched(p.floor, floor) || p.floor === 'ALL')).forEach(p => {
             if (!isPrint && state.layerVisibility[p.layer] === false) return;
             let pt = toC(p.x, p.y);
             ctx.fillStyle = '#333';
@@ -326,7 +358,7 @@ window.DocumentRenderer = {
         });
 
         if (mode !== 'area') {
-            state.walls.filter(w => w.floor === floor).forEach(w => {
+            state.walls.filter(w => isFloorMatched(w.floor, floor)).forEach(w => {
                 if (!isPrint && (state.layerVisibility || {})[w.layer] === false) return;
                 let p1 = toC(w.p1.x, w.p1.y), p2 = toC(w.p2.x, w.p2.y);
                 const isWallMode = mode === 'wall';
@@ -400,22 +432,34 @@ window.DocumentRenderer = {
 
     drawBackground: function(ctx, floor, toC, sfFinal, isPrint) {
         const state = window.AppState;
+        const isFloorMatched = (f1, f2) => window.isFloorMatched ? window.isFloorMatched(f1, f2) : (String(f1).toUpperCase().trim() === String(f2).toUpperCase().trim());
+
         ctx.save();
         ctx.lineWidth = 1.5; ctx.strokeStyle = '#cccccc';
         state.bgLinesOriginal.filter(e => {
-            if (!e.isUnderlay) return false;
-            if (isPrint) return (e.layer || "").toUpperCase().includes('BG_' + floor);
-            return (e.floor === floor || e.floor === 'ALL');
+            if (!e.isUnderlay && !e.isBg) return false;
+            const L = (e.layer || "").toUpperCase().trim();
+            const targetBG = 'BG_' + floor;
+            return (isFloorMatched(e.floor, floor) || e.floor === 'ALL' || L.includes(targetBG) || L.includes('BG_ALL') || L.startsWith('BG_'));
         }).forEach(e => {
             if (!isPrint && (state.layerVisibility || {})[e.layer] === false) return;
             if (e.isGridLine) return;
             ctx.beginPath();
-            if (e.type === 'LINE' && e.vertices) { 
+            if (e.type === 'LINE' && e.vertices && e.vertices.length >= 2) { 
                 let p1 = toC(e.vertices[0].x, e.vertices[0].y), p2 = toC(e.vertices[1].x, e.vertices[1].y); 
-                ctx.moveTo(p1.cx, p1.cy); ctx.lineTo(p2.cx, p2.cy); 
+                if (p1.cx != null && !isNaN(p1.cx)) { ctx.moveTo(p1.cx, p1.cy); ctx.lineTo(p2.cx, p2.cy); }
             } else if (['LWPOLYLINE', 'POLYLINE'].includes(e.type) && e.vertices) {
-                e.vertices.forEach((v, i) => { let p = toC(v.x, v.y); i === 0 ? ctx.moveTo(p.cx, p.cy) : ctx.lineTo(p.cx, p.cy); });
+                e.vertices.forEach((v, i) => { 
+                    let p = toC(v.x, v.y); 
+                    if (p.cx != null && !isNaN(p.cx)) { i === 0 ? ctx.moveTo(p.cx, p.cy) : ctx.lineTo(p.cx, p.cy); } 
+                });
                 if (e.closed) ctx.closePath();
+            } else if (e.type === 'CIRCLE') {
+                let p = toC(e.center.x, e.center.y);
+                if (p.cx != null && !isNaN(p.cx)) { ctx.arc(p.cx, p.cy, e.radius * sfFinal, 0, 2 * Math.PI); }
+            } else if (e.type === 'ARC') {
+                let p = toC(e.center.x, e.center.y);
+                if (p.cx != null && !isNaN(p.cx)) { ctx.arc(p.cx, p.cy, e.radius * sfFinal, -e.endAngle * Math.PI / 180, -e.startAngle * Math.PI / 180); }
             }
             ctx.stroke();
         });
