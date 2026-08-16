@@ -4,6 +4,16 @@
  */
 
 window.FoundationSlabAnalysisEngine = {
+    // 鉄筋単重・断面積定義
+    REBAR_AREAS: {
+        'D10': 71.33,
+        'D13': 126.7,
+        'D16': 198.6,
+        'D10/D13': 99.015,
+        'D13/D16': 162.65
+    },
+
+    // 各支持条件の曲げモーメント係数表 (日本建築学会・木造ベタ基礎設計指針準拠)
     COEFFS: {
         '4辺固定':                     { mcx: 0.024, max: 0.052, mcy: 0.048, may: 0.082 },
         '4辺ピン':                     { mcx: 0.080, max: 0.000, mcy: 0.050, may: 0.000 },
@@ -12,6 +22,9 @@ window.FoundationSlabAnalysisEngine = {
         '短辺2辺固定長辺2辺ピン':      { mcx: 0.030, max: 0.000, mcy: 0.060, may: 0.090 },
         '1辺固定3辺ピン（長辺固定）':  { mcx: 0.065, max: 0.100, mcy: 0.040, may: 0.000 },
         '1辺固定3辺ピン（短辺固定）':  { mcx: 0.050, max: 0.000, mcy: 0.075, may: 0.110 },
+        '2隣辺固定2隣辺ピン':          { mcx: 0.045, max: 0.085, mcy: 0.035, may: 0.070 },
+        '3辺固定1辺ピン（長辺ピン）':  { mcx: 0.030, max: 0.065, mcy: 0.035, may: 0.075 },
+        '3辺固定1辺ピン（短辺ピン）':  { mcx: 0.035, max: 0.075, mcy: 0.030, may: 0.065 },
         '4辺固定(ピン扱い)':           { mcx: 0.080, max: 0.000, mcy: 0.050, may: 0.000 }
     },
 
@@ -205,18 +218,39 @@ window.FoundationSlabAnalysisEngine = {
                 lx = (edgeLengths[0] + edgeLengths[1]) / 2;
                 ly = (edgeLengths[edgeLengths.length - 1] + edgeLengths[edgeLengths.length - 2]) / 2;
             }
-            const dt = (slab.props.coverDepth || 70), D = (slab.props.slabThickness || 150), d = D - dt, j = d * 0.875;
-            const Ma_short = 195 * (slab.props.rebarShort?.at || 0) * j / 1e6;
-            const Ma_long  = 195 * (slab.props.rebarLong?.at || 0)  * j / 1e6;
+            const dt = (slab.props.coverDepth || 70), D = (slab.props.slabThickness || slab.props.thickness || 150), d = Math.max(10, D - dt), j = d * 0.875;
+
+            // 1mあたりの鉄筋断面積 at (mm2/m) を配筋仕様 (径・ピッチ) から自動算定
+            const shortType = slab.props.rebarShort?.type || 'D13';
+            const shortPitch = parseFloat(slab.props.rebarShort?.pitch) || 150;
+            const shortUnitArea = this.REBAR_AREAS[shortType] || 126.7;
+            const at_short = shortPitch > 0 ? (shortUnitArea * (1000 / shortPitch)) : 0;
+            if (!slab.props.rebarShort) slab.props.rebarShort = {};
+            slab.props.rebarShort.at = at_short;
+            slab.props.rebarShort.type = shortType;
+            slab.props.rebarShort.pitch = shortPitch;
+
+            const longType = slab.props.rebarLong?.type || 'D13';
+            const longPitch = parseFloat(slab.props.rebarLong?.pitch) || 300;
+            const longUnitArea = this.REBAR_AREAS[longType] || 126.7;
+            const at_long = longPitch > 0 ? (longUnitArea * (1000 / longPitch)) : 0;
+            if (!slab.props.rebarLong) slab.props.rebarLong = {};
+            slab.props.rebarLong.at = at_long;
+            slab.props.rebarLong.type = longType;
+            slab.props.rebarLong.pitch = longPitch;
+
+            // 許容曲げモーメント Ma (kNm/m) (長期許容応力度 ft = 195 N/mm2)
+            const Ma_short = 195 * at_short * j / 1e6;
+            const Ma_long  = 195 * at_long  * j / 1e6;
 
             if (slab.props.support === '片持ち') {
                 const Mx = 0.5 * qTotal * ((slab.props.cantileverLength || 0.9) ** 2);
-                slab.fdStress = { qTotal, axialPressure: axial_kN/area, stemPressure: stem_kN/area, totalAxial_kN: axial_kN, stemWeight_kN: stem_kN, floorLoad: 1.740, deadLoad: qTotal - 1.740, area, supportName: '片持ち', Mx_center: Mx, Ma_short, ratioShort: Mx / (Ma_short || 1), isNG: Mx > Ma_short, cantileverLength: slab.props.cantileverLength || 0.9 };
+                slab.fdStress = { qTotal, axialPressure: axial_kN/area, stemPressure: stem_kN/area, totalAxial_kN: axial_kN, stemWeight_kN: stem_kN, floorLoad: 1.740, deadLoad: qTotal - 1.740, area, supportName: '片持ち', Mx_center: Mx, Ma_short, ratioShort: Mx / (Ma_short || 1), isNG: Mx > Ma_short, cantileverLength: slab.props.cantileverLength || 0.9, at_short, at_long, j, d };
             } else {
                 const c = this.COEFFS[slab.props.support] || this.COEFFS['4辺固定'];
                 const Mx_center = c.mcx * qTotal * (lx ** 2), My_center = c.mcy * qTotal * (lx ** 2) * Math.min(1.0, 1.5 / (ly/lx || 1));
                 const Mx_end = c.max * qTotal * (lx ** 2), My_end = c.may * qTotal * (lx ** 2) * Math.min(1.0, 1.5 / (ly/lx || 1));
-                slab.fdStress = { qTotal, axialPressure: axial_kN/area, stemPressure: stem_kN/area, totalAxial_kN: axial_kN, stemWeight_kN: stem_kN, floorLoad: 1.740, deadLoad: qTotal - 1.740, area, supportName: slab.props.support, lx, ly, Mx_center, Mx_end, My_center, My_end, Ma_short, Ma_long, ratioShort: Math.max(Mx_center, Mx_end) / (Ma_short || 1), ratioLong: Math.max(My_center, My_end) / (Ma_long || 1), isNG: Math.max(Mx_center, Mx_end) > Ma_short || Math.max(My_center, My_end) > Ma_long };
+                slab.fdStress = { qTotal, axialPressure: axial_kN/area, stemPressure: stem_kN/area, totalAxial_kN: axial_kN, stemWeight_kN: stem_kN, floorLoad: 1.740, deadLoad: qTotal - 1.740, area, supportName: slab.props.support, lx, ly, Mx_center, Mx_end, My_center, My_end, Ma_short, Ma_long, ratioShort: Math.max(Mx_center, Mx_end) / (Ma_short || 1), ratioLong: Math.max(My_center, My_end) / (Ma_long || 1), isNG: Math.max(Mx_center, Mx_end) > Ma_short || Math.max(My_center, My_end) > Ma_long, at_short, at_long, j, d };
             }
             slab.fdStress.detailedLoads = { wR, wW, wF, sArea1F, sArea2F, sAreaRoof };
         });

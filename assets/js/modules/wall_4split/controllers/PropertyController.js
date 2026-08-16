@@ -994,8 +994,12 @@ window.getFoundationSlabReportHtml = function(slab) {
     html += `<div style="margin-bottom:10px; padding:6px; background:#fdfdfe; border:1px solid #dee2e6; border-left:4px solid #8e44ad; font-size:10px;">`;
     html += `<div style="font-weight:bold; color:#8e44ad; margin-bottom:3px;">【算定条件・参照プロパティ】</div>`;
     html += `<div style="display:grid; grid-template-columns: 1fr 1fr; gap:5px;">`;
-    html += `<div>・スラブ厚 D: <b>${slab.props?.slabThickness || 150}</b> mm</div>`;
-    html += `<div>・スラブ天端高 dt: <b>${slab.props?.slabTopHeight || 50}</b> mm</div>`;
+    html += `<div>・スラブ厚 D: <b>${slab.props?.slabThickness || slab.props?.thickness || 150}</b> mm (d=${s.d||80}mm, j=${fmt(s.j||70, 1)}mm)</div>`;
+    html += `<div>・支持条件: <b>${s.supportName || slab.props?.support || '4辺固定'}</b></div>`;
+    html += `<div>・短辺配筋: <b>${slab.props?.rebarShort?.type || 'D13'}@${slab.props?.rebarShort?.pitch || 150}</b> (at=${fmt(s.at_short||0, 1)} ㎟/m)</div>`;
+    html += `<div>・長辺配筋: <b>${slab.props?.rebarLong?.type || 'D13'}@${slab.props?.rebarLong?.pitch || 300}</b> (at=${fmt(s.at_long||0, 1)} ㎟/m)</div>`;
+    html += `<div>・短辺許容曲げ Ma: <b>${fmt(s.Ma_short, 3)}</b> kN・m/m</div>`;
+    html += `<div>・長辺許容曲げ Ma: <b>${fmt(s.Ma_long, 3)}</b> kN・m/m</div>`;
     html += `<div>・建物荷重(仕様合計): <b>${wTotal.toFixed(2)}</b> kN/㎡</div>`;
     html += `<div>　(屋根:${wR.toFixed(2)} + 外壁:${wW.toFixed(2)} + 骨組:${wF.toFixed(2)})</div>`;
     html += `<div>・1階床負担面積: <b>${fmt(dl.sArea1F || 0, 3)}</b> ㎡</div>`;
@@ -1006,7 +1010,7 @@ window.getFoundationSlabReportHtml = function(slab) {
     const eaves = (window.AppState.config?.eavesLen !== undefined) ? window.AppState.config.eavesLen : 300;
     html += `<div style="margin-top:4px; border-top:1px dashed #cbd5e1; padding-top:4px; font-size:9px; color:#4b5563;">・軒の出寸法: <b>${eaves}</b> mm (最外周オフセットによる統合屋根投影面積)</div>`;
     html += `<div style="margin-top:4px; color:#666; font-size:9px;">※建物軸力 ΣN = 各階の負担面積合計 × 建物荷重(仕様合計) に基づき、スラブ上の1階・2階面積から算出</div>`;
-    html += `<div style="margin-top:2px; color:#666; font-size:9px;">※立上り自重には、スラブ境界にある<b>内部・外周全ての基礎梁</b>の重量が含まれます</div>`;
+    html += `<div style="margin-top:2px; color:#666; font-size:9px;">※許容曲げモーメント Ma = ft × at × j (ft = 195 N/㎟, j = 0.875d)</div>`;
     html += `</div>`;
 
     // (2) 荷重の内訳表
