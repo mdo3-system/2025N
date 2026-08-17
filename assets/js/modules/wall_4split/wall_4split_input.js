@@ -732,21 +732,27 @@ function handleEditText(e, state) {
     if (winnerType === 'X' && bestGX !== null) {
         const oldName = state.gridXNames[bestIX] || '';
         const newName = prompt(`X通り (${Math.round(bestGX)} mm) の通り芯名を編集してください:`, oldName);
-        if (newName !== null) {
-            if (!state.userEditedGridX) state.userEditedGridX = {};
-            state.userEditedGridX[bestGX] = newName.trim();
+        if (newName !== null && newName.trim() !== '') {
+            if (window.GridEngine && typeof window.GridEngine.updateGridName === 'function') {
+                window.GridEngine.updateGridName('X', bestIX, newName.trim(), state);
+            } else {
+                state.gridXNames[bestIX] = newName.trim();
+            }
         }
     } else if (winnerType === 'Y' && bestGY !== null) {
         const oldName = state.gridYNames[bestIY] || '';
         const newName = prompt(`Y通り (${Math.round(bestGY)} mm) の通り芯名を編集してください:`, oldName);
-        if (newName !== null) {
-            if (!state.userEditedGridY) state.userEditedGridY = {};
-            state.userEditedGridY[bestGY] = newName.trim();
+        if (newName !== null && newName.trim() !== '') {
+            if (window.GridEngine && typeof window.GridEngine.updateGridName === 'function') {
+                window.GridEngine.updateGridName('Y', bestIY, newName.trim(), state);
+            } else {
+                state.gridYNames[bestIY] = newName.trim();
+            }
         }
     } else if (winnerType === 'Diag' && bestDiag) {
         const oldName = bestDiag.name || '';
         const newName = prompt(`斜め通り芯 (${oldName}) の名称を編集してください:`, oldName);
-        if (newName !== null) {
+        if (newName !== null && newName.trim() !== '') {
             bestDiag.name = newName.trim();
         }
     }

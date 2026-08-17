@@ -264,16 +264,86 @@ window.GridEngine = {
     },
 
     /**
+     * 通り芯名の更新および全要素（柱等）の名称一括同期
+     */
+    updateGridName: function(axis, index, newName, state) {
+        const s = state || window.AppState;
+        if (!s) return;
+        const name = (newName || '').trim();
+        if (!name) return;
+
+        s.isGridFixed = true;
+
+        if (axis === 'X') {
+            if (!s.gridXNames) s.gridXNames = [];
+            s.gridXNames[index] = name;
+            if (!s.userEditedGridX) s.userEditedGridX = {};
+            if (s.gridXCoords && s.gridXCoords[index] != null) {
+                s.userEditedGridX[s.gridXCoords[index]] = name;
+            }
+        } else if (axis === 'Y') {
+            if (!s.gridYNames) s.gridYNames = [];
+            s.gridYNames[index] = name;
+            if (!s.userEditedGridY) s.userEditedGridY = {};
+            if (s.gridYCoords && s.gridYCoords[index] != null) {
+                s.userEditedGridY[s.gridYCoords[index]] = name;
+            }
+        }
+
+        // 全柱および関連要素の名称を即座に再同期
+        this.syncAllElementNames(s);
+    },
+
+    /**
+     * 全柱および関連要素の名称・通り芯プロパティを再同期
+     */
+    syncAllElementNames: function(state) {
+        const s = state || window.AppState;
+        if (!s) return;
+
+        (s.pillars || []).forEach(p => {
+            if (p.isDeleted) return;
+            const nm = this.getPillarName(p, s);
+            p.name = nm;
+            
+            // gx, gy の同期
+            const TOL = 250;
+            const gXC = s.gridXCoords || [];
+            const gXN = s.gridXNames || [];
+            for (let i = 0; i < gXC.length; i++) {
+                if (Math.abs(Number(gXC[i]) - Number(p.x)) < TOL) {
+                    p.gx = gXN[i] || `X${i+1}`;
+                    break;
+                }
+            }
+            const gYC = s.gridYCoords || [];
+            const gYN = s.gridYNames || [];
+            for (let i = 0; i < gYC.length; i++) {
+                if (Math.abs(Number(gYC[i]) - Number(p.y)) < TOL) {
+                    p.gy = gYN[i] || `Y${i+1}`;
+                    break;
+                }
+            }
+        });
+
+        // 選択中の柱プロパティパネルが表示されている場合は即座に再描画
+        if (s.selectedPillar && window.PillarPropertyController && typeof window.PillarPropertyController.showPillarProps === 'function') {
+            window.PillarPropertyController.showPillarProps(s.selectedPillar);
+        }
+    },
+
+    /**
      * 柱の現在の座標から通り芯名を取得します
      */
     getPillarName: function(p, state) {
         if (!p) return '位置不明';
+        const s = state || window.AppState || {};
         const TOL = 250;
         
         let bestXIndex = -1;
         let minXDist = Infinity;
-        const gXC = state.gridXCoords || [];
-        const gXN = state.gridXNames || [];
+        const gXC = s.gridXCoords || [];
+        const gXN = s.gridXNames || [];
         for (let i = 0; i < gXC.length; i++) {
             const dist = Math.abs(Number(gXC[i]) - Number(p.x));
             if (dist < minXDist) {
@@ -281,12 +351,12 @@ window.GridEngine = {
                 bestXIndex = i;
             }
         }
-        let gx = (bestXIndex !== -1 && minXDist < TOL) ? gXN[bestXIndex] : (p.gx || '?');
+        let gx = (bestXIndex !== -1 && minXDist < TOL && gXN[bestXIndex]) ? gXN[bestXIndex] : (p.gx || '?');
 
         let bestYIndex = -1;
         let minYDist = Infinity;
-        const gYC = state.gridYCoords || [];
-        const gYN = state.gridYNames || [];
+        const gYC = s.gridYCoords || [];
+        const gYN = s.gridYNames || [];
         for (let i = 0; i < gYC.length; i++) {
             const dist = Math.abs(Number(gYC[i]) - Number(p.y));
             if (dist < minYDist) {
@@ -294,10 +364,10 @@ window.GridEngine = {
                 bestYIndex = i;
             }
         }
-        let gy = (bestYIndex !== -1 && minYDist < TOL) ? gYN[bestYIndex] : (p.gy || '?');
+        let gy = (bestYIndex !== -1 && minYDist < TOL && gYN[bestYIndex]) ? gYN[bestYIndex] : (p.gy || '?');
         
-        if (state.userEditedGridX && state.userEditedGridX[p.x]) gx = state.userEditedGridX[p.x];
-        if (state.userEditedGridY && state.userEditedGridY[p.y]) gy = state.userEditedGridY[p.y];
+        if (s.userEditedGridX && s.userEditedGridX[p.x]) gx = s.userEditedGridX[p.x];
+        if (s.userEditedGridY && s.userEditedGridY[p.y]) gy = s.userEditedGridY[p.y];
         
         if (gx === '?' && gy === '?') return `(${Math.round(p.x)}, ${Math.round(p.y)})`;
         if (gx === '?') return `${gy}通り上`;

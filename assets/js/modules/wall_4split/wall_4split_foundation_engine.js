@@ -202,12 +202,15 @@ function generateFoundationLongTermStressTable(beam, allSlabs, allBeams) {
 
 // [バグ修正 通り芯名変換と応力伝達の型安全化] 座標から通り芯名への逆引き
 window.getGridNameAt = function(x, y) {
-    const TOL = 250; // Generous tolerance as pillars are guaranteed to be at grid intersections
+    if (window.GridEngine && typeof window.GridEngine.getPillarName === 'function') {
+        return window.GridEngine.getPillarName({ x, y }, window.AppState);
+    }
+    const TOL = 250;
     let xName = "", yName = "";
-    const gXC = window.AppState.gridXCoords || [];
-    const gXN = window.AppState.gridXNames || [];
-    const gYC = window.AppState.gridYCoords || [];
-    const gYN = window.AppState.gridYNames || [];
+    const gXC = window.AppState?.gridXCoords || [];
+    const gXN = window.AppState?.gridXNames || [];
+    const gYC = window.AppState?.gridYCoords || [];
+    const gYN = window.AppState?.gridYNames || [];
     
     let bestXIndex = -1;
     let minXDist = Infinity;
@@ -231,7 +234,6 @@ window.getGridNameAt = function(x, y) {
     }
     if (bestYIndex !== -1 && minYDist < TOL) yName = gYN[bestYIndex];
     
-    // [バグ修正 文字化けの物理的修復] 通り芯名の結合 (ハイフンなしで美しく結合)
     if(xName && yName) return `${xName}${yName}`;
     if(xName) return `${xName}通り上`;
     if(yName) return `${yName}通り上`;
