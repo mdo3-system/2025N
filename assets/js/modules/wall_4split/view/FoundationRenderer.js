@@ -238,7 +238,7 @@ window.FoundationRenderer = {
         ctx.stroke();
 
         const mx = (p1.cx + p2.cx) / 2, my = (p1.cy + p2.cy) / 2;
-        const lstr = `${props?.width || 150}x${props?.height || 640}`;
+        const lstr = props?.symbol || props?.beamName || 'FG';
         ctx.font = 'bold 11px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
         ctx.fillStyle = isSelected ? '#ff00ff' : (isHovered ? '#d35400' : '#2c3e50');
         ctx.fillText(lstr, mx, my);
@@ -535,6 +535,7 @@ window.FoundationRenderer = {
             <thead>
                 <tr style="background:#34495e; color:#fff; border-bottom:1px solid #bdc3c7;">
                     <th rowspan="2" style="border:1px solid #bdc3c7; padding:4px;">柱間</th>
+                    <th rowspan="2" style="border:1px solid #bdc3c7; padding:4px; width:55px;">基礎符号</th>
                     <th rowspan="2" style="border:1px solid #bdc3c7; padding:4px; width:45px;">成 D(mm)</th>
                     <th rowspan="2" style="border:1px solid #bdc3c7; padding:4px; width:45px;">根入れ h(mm)</th>
                     <th colspan="4" style="border:1px solid #bdc3c7; padding:4px; text-align:center; background:#ebf5fb; color:#1b4f72;">上端主筋</th>
@@ -560,6 +561,7 @@ window.FoundationRenderer = {
             const currentTop = parseRebarInput(sTopRebar);
             const currentBot = parseRebarInput(sBottomRebar);
 
+            const spanSymbol = spProps.symbol || span.symbol || bp.symbol || bp.beamName || `FG${sIdx + 1}`;
             const spanHeight = spProps.height !== undefined ? spProps.height : (span.height !== undefined ? span.height : (bp.height || 640));
             const spanEmbed = spProps.embedDepth !== undefined ? spProps.embedDepth : (span.embedDepth !== undefined ? span.embedDepth : (bp.embedDepth ?? 250));
 
@@ -593,6 +595,9 @@ window.FoundationRenderer = {
                 <option value="D16D19" ${currentBot.type === 'D16D19' ? 'selected' : ''}>D16+D19</option>
             `;
 
+            const symbolInputHtml = options.showInputs ? `
+                <input type="text" id="span-symbol-${beam.id}-${sIdx}" value="${spanSymbol}" onchange="window.PropertyController.updateFdProp('beam_span', ${beam.id}, 'symbol', this.value, ${sIdx})" style="width:50px; padding:2px; font-size:9px; border:1px solid #ccc; border-radius:3px; text-align:center;">` : `${spanSymbol}`;
+
             const topControlHtml = options.showInputs ? `
                 <input type="number" id="${topCountId}" min="1" max="8" value="${currentTop.count}" onchange="const typeVal = document.getElementById('${topTypeId}').value; window.PropertyController.updateFdProp('beam_span', ${beam.id}, 'topRebar', this.value + '-' + typeVal, ${sIdx})" style="width:32px; padding:2px; font-size:9px; border:1px solid #ccc; border-radius:3px; text-align:right;">-
                 <select id="${topTypeId}" onchange="const countVal = document.getElementById('${topCountId}').value; window.PropertyController.updateFdProp('beam_span', ${beam.id}, 'topRebar', countVal + '-' + this.value, ${sIdx})" style="padding:2px; font-size:9px; border:1px solid #ccc; border-radius:3px; background:#fff; max-width:70px;">
@@ -613,6 +618,7 @@ window.FoundationRenderer = {
 
             table4 += `<tr>
                 <td style="border:1px solid #bdc3c7; padding:4px; font-weight:bold; text-align:center;">${getFreshSpanName(span)}</td>
+                <td style="border:1px solid #bdc3c7; padding:4px; text-align:center;">${symbolInputHtml}</td>
                 <td style="border:1px solid #bdc3c7; padding:4px; text-align:center;">${heightInputHtml}</td>
                 <td style="border:1px solid #bdc3c7; padding:4px; text-align:center;">${embedInputHtml}</td>
                 <td style="border:1px solid #bdc3c7; padding:4px; text-align:center; white-space:nowrap;">${topControlHtml}</td>

@@ -109,6 +109,11 @@ window.AppController = {
             window.MainRenderer.render(state);
         }
 
+        // [v3.12.90] 全スラブ・全基礎梁一覧パネルが開いている場合、解析結果(OK/NG)を即座に自動同期
+        if (typeof window.updateFdElementList === 'function') {
+            window.updateFdElementList();
+        }
+
         // [v2.7.0] 3Dプレビューがアクティブな場合は、シーンの同期描画もリアルタイム実行
         if (window.ThreeDPreviewController && document.getElementById(window.ThreeDPreviewController.modalId)?.style.display === 'flex') {
             window.ThreeDPreviewController.updateScene();

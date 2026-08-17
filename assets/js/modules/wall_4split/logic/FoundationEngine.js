@@ -404,13 +404,15 @@ window.FoundationEngine = {
                 const h_val = sp.height !== undefined ? parseFloat(sp.height) : (beam.props?.height || 640);
                 const embed_val = sp.embedDepth !== undefined ? parseFloat(sp.embedDepth) : (beam.props?.embedDepth ?? 250);
                 
-                // 鉄筋もスパン別上書きに対応 (スコープをループ直下に配置)
+                // 鉄筋および基礎符号もスパン別上書きに対応 (スコープをループ直下に配置)
+                const symbolStr = sp.symbol || beam.props?.symbol || beam.props?.beamName || `FG${i+1}`;
                 const topRebarStr = sp.topRebar || beam.props?.topRebar || '1-D13';
                 const botRebarStr = sp.bottomRebar || beam.props?.bottomRebar || '1-D13';
                 const stirrupStr = sp.stirrup || beam.props?.stirrup || '1-D10@200';
                 
                 // 永続ストア spanProps に即座に保存
                 beam.spanProps[i] = {
+                    symbol: symbolStr,
                     width: b_val,
                     height: h_val,
                     embedDepth: embed_val,

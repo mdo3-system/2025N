@@ -61,6 +61,7 @@ window.FoundationPropertyHandler = {
                     if (key === 'topRebar') { sp.topRebar = val; }
                     else if (key === 'bottomRebar') { sp.bottomRebar = val; }
                     else if (key === 'stirrup') { sp.stirrup = val; }
+                    else if (key === 'symbol') { sp.symbol = val; }
                     else if (key === 'height') {
                         sp.height = isNaN(numVal) ? 640 : numVal;
                     } else if (key === 'embedDepth') {
@@ -75,7 +76,8 @@ window.FoundationPropertyHandler = {
                     }
                 } else {
                     let numVal = parseFloat(val);
-                    if (key === 'width') beam.props.width = isNaN(numVal) ? 150 : numVal;
+                    if (key === 'symbol') beam.props.symbol = val;
+                    else if (key === 'width') beam.props.width = isNaN(numVal) ? 150 : numVal;
                     else if (key === 'height') beam.props.height = isNaN(numVal) ? 640 : numVal;
                     else if (key === 'embedDepth') beam.props.embedDepth = isNaN(numVal) ? 250 : numVal;
                     else if (key === 'modelType') beam.props.modelType = val;
@@ -116,6 +118,7 @@ window.FoundationPropertyHandler = {
             if (!beam.spanProps[sIdx]) beam.spanProps[sIdx] = {};
             const sp = beam.spanProps[sIdx];
 
+            const symEl = document.getElementById(`span-symbol-${beamId}-${sIdx}`);
             const hEl = document.getElementById(`span-height-${beamId}-${sIdx}`);
             const embEl = document.getElementById(`span-embed-${beamId}-${sIdx}`);
             const wEl = document.getElementById(`span-width-${beamId}-${sIdx}`);
@@ -129,6 +132,7 @@ window.FoundationPropertyHandler = {
             const stTypeEl = document.getElementById(`st-type-${beamId}-${sIdx}`);
             const stPitchEl = document.getElementById(`st-pitch-${beamId}-${sIdx}`);
 
+            if (symEl && symEl.value.trim()) sp.symbol = symEl.value.trim();
             if (hEl) sp.height = parseFloat(hEl.value) || 640;
             if (embEl) sp.embedDepth = parseFloat(embEl.value) || 250;
             if (wEl) sp.width = parseFloat(wEl.value) || 150;

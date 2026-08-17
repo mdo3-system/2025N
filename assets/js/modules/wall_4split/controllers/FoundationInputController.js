@@ -376,26 +376,12 @@ window.FoundationInputController = {
     }
 };
 
-window.toggleFdElementList = function(type) {
+window.updateFdElementList = function(targetType = null) {
     const container = document.getElementById('fd-element-list-container');
-    if (!container) return;
+    if (!container || container.style.display === 'none') return;
     
-    if (container.style.display === 'block' && container.getAttribute('data-current-type') === type) {
-        container.style.display = 'none';
-        return;
-    }
-    
-    container.setAttribute('data-current-type', type);
-    container.style.display = 'block';
-
-    // 連続梁を自動解析・結合して帳票と100%同期させる (例外で停止しないよう保護)
-    try {
-        if (window.FoundationEngine && typeof window.FoundationEngine.runAnalysis === 'function') {
-            window.FoundationEngine.runAnalysis(window.AppState);
-        }
-    } catch (err) {
-        console.warn("Foundation analysis warning during list toggle:", err);
-    }
+    const type = targetType || container.getAttribute('data-current-type');
+    if (!type) return;
 
     const s = window.AppState;
     let html = '';
@@ -409,7 +395,7 @@ window.toggleFdElementList = function(type) {
             beams.forEach((beam, idx) => {
                 const isNG = beam.fdStress?.isNG;
                 const statusStr = isNG ? '<span style="color:#e74c3c; font-weight:bold;">[NG]</span>' : '<span style="color:#27ae60; font-weight:bold;">[OK]</span>';
-                const label = beam.props?.beamName || `FG${idx+1}`;
+                const label = beam.props?.symbol || beam.props?.beamName || `FG${idx+1}`;
                 const spansCount = beam.spans ? beam.spans.length : 1;
                 html += `
                 <div class="fd-list-item" onclick="window.selectFdElementFromList('beam', '${beam.id}')" style="padding:5px 8px; margin-bottom:3px; background:#fff; border:1px solid #cbd5e1; border-radius:4px; cursor:pointer; display:flex; justify-content:space-between; align-items:center;">
@@ -445,6 +431,30 @@ window.toggleFdElementList = function(type) {
     }
     
     container.innerHTML = html;
+};
+
+window.toggleFdElementList = function(type) {
+    const container = document.getElementById('fd-element-list-container');
+    if (!container) return;
+    
+    if (container.style.display === 'block' && container.getAttribute('data-current-type') === type) {
+        container.style.display = 'none';
+        return;
+    }
+    
+    container.setAttribute('data-current-type', type);
+    container.style.display = 'block';
+
+    // 連続梁を自動解析・結合して帳票と100%同期させる (例外で停止しないよう保護)
+    try {
+        if (window.FoundationEngine && typeof window.FoundationEngine.runAnalysis === 'function') {
+            window.FoundationEngine.runAnalysis(window.AppState);
+        }
+    } catch (err) {
+        console.warn("Foundation analysis warning during list toggle:", err);
+    }
+
+    window.updateFdElementList(type);
 };
 
 window.selectFdElementFromList = function(type, id) {
