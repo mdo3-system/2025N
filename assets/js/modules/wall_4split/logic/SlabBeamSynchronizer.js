@@ -214,7 +214,6 @@ window.SlabBeamSynchronizer = {
                 const mx = tp.mx !== undefined ? Math.round(tp.mx) : roundedPolygon.reduce((sum, pt) => sum + pt.x, 0) / roundedPolygon.length;
                 const my = tp.my !== undefined ? Math.round(tp.my) : roundedPolygon.reduce((sum, pt) => sum + pt.y, 0) / roundedPolygon.length;
 
-                let isCollinearSync = false;
                 if (!isMyBeam) {
                     // [グリッド大原則] 分配ポリゴンのいずれかの辺が、この梁と共線かつ重なっているかを判定
                     const N = roundedPolygon.length;
@@ -231,26 +230,9 @@ window.SlabBeamSynchronizer = {
                         }
                     }
 
+                    // 所有梁でなく、かつ明確な同一グリッド共線辺も存在しない多角形は即座に除外（二重加算を完全排除）
                     if (!isCollinearSync) {
-                        // 紐付いておらず、かつ同一グリッド共線でもない場合のみ、しきい値による距離チェックを実行
-                        const distToLine = (px, py) => {
-                            const l2 = (x2 - x1)**2 + (y2 - y1)**2;
-                            if (l2 === 0) return Math.hypot(px - x1, py - y1);
-                            const t = ((px - x1) * (x2 - x1) + (py - y1) * (y2 - y1)) / l2;
-                            return Math.hypot(px - (x1 + t * (x2 - x1)), py - (y1 + t * (y2 - y1)));
-                        };
-                        const minLineDist = Math.min(...roundedPolygon.map(pt => distToLine(pt.x, pt.y)));
-                        
-                        // [v2.6.7] 片持ち梁等での幾何判定漏れを防ぐため、スラブ重心から梁スパン（線分）への距離もチェックする
-                        const distCentroidToSpan = () => {
-                            const l2 = (x2 - x1)**2 + (y2 - y1)**2;
-                            if (l2 === 0) return Math.hypot(mx - x1, my - y1);
-                            let t = ((mx - x1) * (x2 - x1) + (my - y1) * (y2 - y1)) / l2;
-                            t = Math.max(0, Math.min(1, t)); // 線分内にクランプ
-                            return Math.hypot(mx - (x1 + t * (x2 - x1)), my - (y1 + t * (y2 - y1)));
-                        };
-
-                        if (minLineDist >= 150 && distCentroidToSpan() >= 250) return;
+                        return;
                     }
                 }
 
