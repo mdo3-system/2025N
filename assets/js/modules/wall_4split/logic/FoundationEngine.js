@@ -280,7 +280,12 @@ window.FoundationEngine = {
             let R = [];
             let R_l = 0, R_r = 0;
 
-            if (modelType === 'pillar_supported') {
+            if (modelType === 'simple_beam') {
+                // 単純梁モデル: 各スパン独立で端部モーメント・せん断力を算定
+                const n = pillars.length;
+                R = pillars.map(() => 0);
+                R_l = 0; R_r = 0;
+            } else if (modelType === 'pillar_supported') {
                 const n = pillars.length;
                 const x = pillars.map(p => p.x);
                 const Sx = x.reduce((sum, xi) => sum + xi, 0);

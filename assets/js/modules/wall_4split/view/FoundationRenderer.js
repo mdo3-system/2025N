@@ -378,6 +378,7 @@ window.FoundationRenderer = {
                     <select onchange="window.PropertyController.updateFdProp('beam', ${beam.id}, 'modelType', this.value)" style="width:100%; box-sizing:border-box; padding:4px; border:1px solid #ccc; border-radius:4px; background:#fff;">
                         <option value="both_ends" ${(!bp.modelType || bp.modelType === 'both_ends') ? 'selected' : ''}>両端支点（連続梁）</option>
                         <option value="pillar_supported" ${bp.modelType === 'pillar_supported' ? 'selected' : ''}>柱直下支点（連続梁）</option>
+                        <option value="simple_beam" ${bp.modelType === 'simple_beam' ? 'selected' : ''}>単純梁</option>
                     </select>
                 </div>
             </div>`;

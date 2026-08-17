@@ -1,4 +1,4 @@
 /**
  * Version.js - Centralized Version Management
  */
-window.APP_VERSION = "v3.12.94"; // Fix: Correct seismic moment Mf calculation to node equilibrium equation, matching external calculation results
+window.APP_VERSION = "v3.12.95"; // Feature: Add simple beam model (simple_beam) option to foundation beam stress analysis
