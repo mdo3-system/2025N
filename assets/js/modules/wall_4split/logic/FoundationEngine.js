@@ -391,12 +391,13 @@ window.FoundationEngine = {
                 return;
             }
 
+            if (!beam.spanProps) beam.spanProps = [];
+
             for (let i = 0; i < pillars.length - 1; i++) {
                 const p1 = pillars[i], p2 = pillars[i+1], L = Math.max(0.1, p2.x - p1.x);
                 
-                // 1. 既存の個別スパン設定(props)を継承
-                const existingSpan = (beam.spans && beam.spans[i]) ? beam.spans[i] : null;
-                const sp = existingSpan ? (existingSpan.props || existingSpan) : {};
+                // 1. 永続スパンプロパティ(spanProps)を優先参照
+                const sp = beam.spanProps[i] || {};
                 
                 // 2. スパン別次元の確定 (個別指定が無ければ全体デフォルト)
                 const b_val = sp.width !== undefined ? parseFloat(sp.width) : (beam.props?.width || 150);
@@ -407,6 +408,16 @@ window.FoundationEngine = {
                 const topRebarStr = sp.topRebar || beam.props?.topRebar || '1-D13';
                 const botRebarStr = sp.bottomRebar || beam.props?.bottomRebar || '1-D13';
                 const stirrupStr = sp.stirrup || beam.props?.stirrup || '1-D10@200';
+                
+                // 永続ストア spanProps に即座に保存
+                beam.spanProps[i] = {
+                    width: b_val,
+                    height: h_val,
+                    embedDepth: embed_val,
+                    topRebar: topRebarStr,
+                    bottomRebar: botRebarStr,
+                    stirrup: stirrupStr
+                };
                 
                 const topRebar = this.parseRebar(topRebarStr);
                 const botRebar = this.parseRebar(botRebarStr);
@@ -523,14 +534,7 @@ window.FoundationEngine = {
                         h: h_val
                     },
                     isNG: spanNG,
-                    props: {
-                        width: b_val,
-                        height: h_val,
-                        embedDepth: embed_val,
-                        topRebar: topRebarStr,
-                        bottomRebar: botRebarStr,
-                        stirrup: stirrupStr
-                    }
+                    props: beam.spanProps[i]
                 });
             }
             beam.fdStress = { pillars, seismic, spans, isNG };

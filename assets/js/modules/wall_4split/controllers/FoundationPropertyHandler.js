@@ -51,30 +51,27 @@ window.FoundationPropertyHandler = {
             const beam = (s.foundationBeams || []).find(x => x.id === id);
             if (beam) {
                 if (!beam.props) beam.props = {};
+                if (!beam.spanProps) beam.spanProps = [];
 
-                if (spanIdx !== null && spanIdx !== undefined && beam.spans && beam.spans[spanIdx]) {
-                    const span = beam.spans[spanIdx];
-                    if (!span.props) span.props = {};
+                if (spanIdx !== null && spanIdx !== undefined) {
+                    if (!beam.spanProps[spanIdx]) beam.spanProps[spanIdx] = {};
+                    const sp = beam.spanProps[spanIdx];
                     let numVal = parseFloat(val);
 
-                    if (key === 'topRebar') { span.props.topRebar = val; span.topRebar = val; }
-                    else if (key === 'bottomRebar') { span.props.bottomRebar = val; span.bottomRebar = val; }
-                    else if (key === 'stirrup') { span.props.stirrup = val; span.stirrup = val; }
+                    if (key === 'topRebar') { sp.topRebar = val; }
+                    else if (key === 'bottomRebar') { sp.bottomRebar = val; }
+                    else if (key === 'stirrup') { sp.stirrup = val; }
                     else if (key === 'height') {
-                        const hVal = isNaN(numVal) ? 640 : numVal;
-                        span.props.height = hVal;
-                        span.height = hVal;
+                        sp.height = isNaN(numVal) ? 640 : numVal;
                     } else if (key === 'embedDepth') {
-                        const embVal = isNaN(numVal) ? 250 : numVal;
-                        span.props.embedDepth = embVal;
-                        span.embedDepth = embVal;
+                        sp.embedDepth = isNaN(numVal) ? 250 : numVal;
                     } else if (key === 'width') {
-                        const wVal = isNaN(numVal) ? 150 : numVal;
-                        span.props.width = wVal;
-                        span.width = wVal;
+                        sp.width = isNaN(numVal) ? 150 : numVal;
                     } else {
-                        span.props[key] = val;
-                        span[key] = val;
+                        sp[key] = val;
+                    }
+                    if (beam.spans && beam.spans[spanIdx]) {
+                        beam.spans[spanIdx].props = { ...sp };
                     }
                 } else {
                     let numVal = parseFloat(val);
@@ -112,9 +109,12 @@ window.FoundationPropertyHandler = {
         const beam = (s.foundationBeams || []).find(x => x.id === beamId);
         if (!beam || !beam.spans) return;
 
+        if (!beam.spanProps) beam.spanProps = [];
+
         // 各スパンの入力値を一括取得
         beam.spans.forEach((span, sIdx) => {
-            if (!span.props) span.props = {};
+            if (!beam.spanProps[sIdx]) beam.spanProps[sIdx] = {};
+            const sp = beam.spanProps[sIdx];
 
             const hEl = document.getElementById(`span-height-${beamId}-${sIdx}`);
             const embEl = document.getElementById(`span-embed-${beamId}-${sIdx}`);
@@ -129,19 +129,20 @@ window.FoundationPropertyHandler = {
             const stTypeEl = document.getElementById(`st-type-${beamId}-${sIdx}`);
             const stPitchEl = document.getElementById(`st-pitch-${beamId}-${sIdx}`);
 
-            if (hEl) span.props.height = parseFloat(hEl.value) || 640;
-            if (embEl) span.props.embedDepth = parseFloat(embEl.value) || 250;
-            if (wEl) span.props.width = parseFloat(wEl.value) || 150;
+            if (hEl) sp.height = parseFloat(hEl.value) || 640;
+            if (embEl) sp.embedDepth = parseFloat(embEl.value) || 250;
+            if (wEl) sp.width = parseFloat(wEl.value) || 150;
 
             if (topCountEl && topTypeEl) {
-                span.props.topRebar = `${topCountEl.value}-${topTypeEl.value}`;
+                sp.topRebar = `${topCountEl.value}-${topTypeEl.value}`;
             }
             if (botCountEl && botTypeEl) {
-                span.props.bottomRebar = `${botCountEl.value}-${botTypeEl.value}`;
+                sp.bottomRebar = `${botCountEl.value}-${botTypeEl.value}`;
             }
             if (stCountEl && stTypeEl && stPitchEl) {
-                span.props.stirrup = `${stCountEl.value}-${stTypeEl.value}@${stPitchEl.value}`;
+                sp.stirrup = `${stCountEl.value}-${stTypeEl.value}@${stPitchEl.value}`;
             }
+            span.props = { ...sp };
         });
 
         if (window.FoundationEngine && typeof window.FoundationEngine.runAnalysis === 'function') {
