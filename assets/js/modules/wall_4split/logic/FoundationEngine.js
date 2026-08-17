@@ -399,9 +399,10 @@ window.FoundationEngine = {
                 const sp = existingSpan?.props ? JSON.parse(JSON.stringify(existingSpan.props)) : {};
                 
                 // 2. スパン別次元の確定 (個別指定が無ければ全体デフォルト)
-                const b_val = sp.width !== undefined ? parseFloat(sp.width) : (beam.props?.width || 150);
-                const h_val = sp.height !== undefined ? parseFloat(sp.height) : (beam.props?.height || 640);
-                const embed_val = sp.embedDepth !== undefined ? parseFloat(sp.embedDepth) : (beam.props?.embedDepth ?? 250);
+                const spProps = sp.props || {};
+                const b_val = spProps.width !== undefined ? parseFloat(spProps.width) : (sp.width !== undefined ? parseFloat(sp.width) : (beam.props?.width || 150));
+                const h_val = spProps.height !== undefined ? parseFloat(spProps.height) : (sp.height !== undefined ? parseFloat(sp.height) : (beam.props?.height || 640));
+                const embed_val = spProps.embedDepth !== undefined ? parseFloat(spProps.embedDepth) : (sp.embedDepth !== undefined ? parseFloat(sp.embedDepth) : (beam.props?.embedDepth ?? 250));
                 
                 // 3. 自重(w_self)をスパンごとに再算出して分布荷重へ加算 ( mandates + 0.01m additive buffer )
                 const w_self_span = (b_val * (Math.max(0, h_val - embed_val) + 10.0) / 1e6) * 24.0;
@@ -431,9 +432,9 @@ window.FoundationEngine = {
                     const j = d * 0.875;
                     
                     // 鉄筋もスパン別上書きに対応
-                    const topRebarStr = sp.topRebar || beam.props?.topRebar || '1-D13';
-                    const botRebarStr = sp.bottomRebar || beam.props?.bottomRebar || '1-D13';
-                    const stirrupStr = sp.stirrup || beam.props?.stirrup || '1-D10@200';
+                    const topRebarStr = spProps.topRebar || sp.topRebar || beam.props?.topRebar || '1-D13';
+                    const botRebarStr = spProps.bottomRebar || sp.bottomRebar || beam.props?.bottomRebar || '1-D13';
+                    const stirrupStr = spProps.stirrup || sp.stirrup || beam.props?.stirrup || '1-D10@200';
                     
                     const topRebar = this.parseRebar(topRebarStr);
                     const botRebar = this.parseRebar(botRebarStr);
@@ -708,22 +709,32 @@ window.FoundationEngine = {
         return nonCollinear.length === 3;
     },
     parseRebar: function(str) { 
-        const m = (str || '').match(/(\d+)-D([A-Za-z0-9]+)/i); 
-        if (!m) return { area: 127 };
-        const count = parseInt(m[1]) || 1;
-        const typeStr = m[2].toUpperCase();
-        const table = { '10': 71, '13': 127, '16': 199, '19': 287, '22': 387 };
-        let area = 0;
-        if (typeStr === '13D16') {
-            area = table['13'] + table['16'];
-        } else if (typeStr === '13D19') {
-            area = table['13'] + table['19'];
-        } else if (typeStr === '16D19') {
-            area = table['16'] + table['19'];
-        } else {
-            area = table[typeStr] || 127;
-        }
-        return { area: count * area };
+        if (!str) return { area: 126.7 };
+        const raw = String(str).trim();
+        const table = { '10': 71.33, '13': 126.7, '16': 198.6, '19': 286.5, '22': 387.1, '25': 506.7 };
+        
+        let totalArea = 0;
+        // '+' または ',' で分割された複数指定に対応 (例: 1-D13+1-D16 または 2-D13)
+        const parts = raw.split(/[+,]/);
+        parts.forEach(p => {
+            const item = p.trim();
+            const m = item.match(/(\d+)?\s*-?\s*D([A-Za-z0-9]+)/i);
+            if (m) {
+                const count = parseInt(m[1]) || 1;
+                const typeStr = m[2].toUpperCase();
+                if (typeStr === '13D16' || typeStr === '1316') {
+                    totalArea += count * (table['13'] + table['16']);
+                } else if (typeStr === '13D19' || typeStr === '1319') {
+                    totalArea += count * (table['13'] + table['19']);
+                } else if (typeStr === '16D19' || typeStr === '1619') {
+                    totalArea += count * (table['16'] + table['19']);
+                } else {
+                    const unitArea = table[typeStr] || 126.7;
+                    totalArea += count * unitArea;
+                }
+            }
+        });
+        return { area: totalArea > 0 ? totalArea : 126.7 };
     },
     parseStirrups: function(str) { 
         const m = (str || '').match(/(\d+)-D(\d+)@(\d+)/); 

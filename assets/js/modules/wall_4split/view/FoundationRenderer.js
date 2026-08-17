@@ -360,7 +360,10 @@ window.FoundationRenderer = {
 
         if (options.showInputs) {
             html += `
-            <div style="font-size:12px; font-weight:bold; color:#2c3e50; border-bottom:2px solid #8e44ad; margin-bottom:10px; padding-bottom:5px;">🏗️ 基礎梁 計算条件</div>
+            <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid #8e44ad; margin-bottom:10px; padding-bottom:5px;">
+                <span style="font-size:12px; font-weight:bold; color:#2c3e50;">🏗️ 基礎梁 計算条件</span>
+                <button type="button" onclick="if(window.FoundationPropertyHandler) window.FoundationPropertyHandler.saveBeamModalProps(${beam.id})" style="padding:5px 12px; background:#8e44ad; color:#fff; font-weight:bold; font-size:11px; border:none; border-radius:4px; cursor:pointer; box-shadow:0 2px 4px rgba(0,0,0,0.1);">💾 基礎梁設定を保存して再計算</button>
+            </div>
             <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; background:#fdfafa; padding:8px; border-radius:6px; margin-bottom:12px; border:1px solid #f1e5f5; font-size:11px;">
                 <div>
                     <label style="font-weight:bold; color:#7d3c98; display:block; margin-bottom:2px;">配置通り芯</label>
@@ -551,46 +554,62 @@ window.FoundationRenderer = {
             <tbody>`;
 
         spans.forEach((span, sIdx) => {
-            const sTopRebar = span.props?.topRebar || bp.topRebar || '1-D13';
-            const sBottomRebar = span.props?.bottomRebar || bp.bottomRebar || '1-D13';
+            const spProps = span.props || {};
+            const sTopRebar = spProps.topRebar || span.topRebar || bp.topRebar || '1-D13';
+            const sBottomRebar = spProps.bottomRebar || span.bottomRebar || bp.bottomRebar || '1-D13';
             const currentTop = parseRebarInput(sTopRebar);
             const currentBot = parseRebarInput(sBottomRebar);
+
+            const spanHeight = spProps.height !== undefined ? spProps.height : (span.height !== undefined ? span.height : (bp.height || 640));
+            const spanEmbed = spProps.embedDepth !== undefined ? spProps.embedDepth : (span.embedDepth !== undefined ? span.embedDepth : (bp.embedDepth ?? 250));
 
             const topCountId = `top-count-${beam.id}-${sIdx}`;
             const topTypeId = `top-type-${beam.id}-${sIdx}`;
             const botCountId = `bot-count-${beam.id}-${sIdx}`;
             const botTypeId = `bot-type-${beam.id}-${sIdx}`;
 
-            const topArea = (window.FoundationEngine && window.FoundationEngine.parseRebar) ? window.FoundationEngine.parseRebar(sTopRebar).area : 127;
-            const botArea = (window.FoundationEngine && window.FoundationEngine.parseRebar) ? window.FoundationEngine.parseRebar(sBottomRebar).area : 127;
+            const topArea = (window.FoundationEngine && window.FoundationEngine.parseRebar) ? window.FoundationEngine.parseRebar(sTopRebar).area : 126.7;
+            const botArea = (window.FoundationEngine && window.FoundationEngine.parseRebar) ? window.FoundationEngine.parseRebar(sBottomRebar).area : 126.7;
+
+            const rebarOptions = `
+                <option value="D10" ${currentTop.type === 'D10' ? 'selected' : ''}>D10</option>
+                <option value="D13" ${currentTop.type === 'D13' ? 'selected' : ''}>D13</option>
+                <option value="D16" ${currentTop.type === 'D16' ? 'selected' : ''}>D16</option>
+                <option value="D19" ${currentTop.type === 'D19' ? 'selected' : ''}>D19</option>
+                <option value="D22" ${currentTop.type === 'D22' ? 'selected' : ''}>D22</option>
+                <option value="D13D16" ${currentTop.type === 'D13D16' ? 'selected' : ''}>D13+D16</option>
+                <option value="D13D19" ${currentTop.type === 'D13D19' ? 'selected' : ''}>D13+D19</option>
+                <option value="D16D19" ${currentTop.type === 'D16D19' ? 'selected' : ''}>D16+D19</option>
+            `;
+
+            const rebarBotOptions = `
+                <option value="D10" ${currentBot.type === 'D10' ? 'selected' : ''}>D10</option>
+                <option value="D13" ${currentBot.type === 'D13' ? 'selected' : ''}>D13</option>
+                <option value="D16" ${currentBot.type === 'D16' ? 'selected' : ''}>D16</option>
+                <option value="D19" ${currentBot.type === 'D19' ? 'selected' : ''}>D19</option>
+                <option value="D22" ${currentBot.type === 'D22' ? 'selected' : ''}>D22</option>
+                <option value="D13D16" ${currentBot.type === 'D13D16' ? 'selected' : ''}>D13+D16</option>
+                <option value="D13D19" ${currentBot.type === 'D13D19' ? 'selected' : ''}>D13+D19</option>
+                <option value="D16D19" ${currentBot.type === 'D16D19' ? 'selected' : ''}>D16+D19</option>
+            `;
 
             const topControlHtml = options.showInputs ? `
-                <input type="number" id="${topCountId}" min="1" value="${currentTop.count}" onchange="const typeVal = document.getElementById('${topTypeId}').value; window.PropertyController.updateFdProp('beam_span', ${beam.id}, 'topRebar', this.value + '-' + typeVal, ${sIdx})" style="width:30px; padding:2px; font-size:9px; border:1px solid #ccc; border-radius:3px; text-align:right;">-
-                <select id="${topTypeId}" onchange="const countVal = document.getElementById('${topCountId}').value; window.PropertyController.updateFdProp('beam_span', ${beam.id}, 'topRebar', countVal + '-' + this.value, ${sIdx})" style="padding:2px; font-size:9px; border:1px solid #ccc; border-radius:3px; background:#fff; max-width:65px;">
-                    <option value="D13" ${currentTop.type === 'D13' ? 'selected' : ''}>D13</option>
-                    <option value="D16" ${currentTop.type === 'D16' ? 'selected' : ''}>D16</option>
-                    <option value="D19" ${currentTop.type === 'D19' ? 'selected' : ''}>D19</option>
-                    <option value="D13D16" ${currentTop.type === 'D13D16' ? 'selected' : ''}>D13D16</option>
-                    <option value="D13D19" ${currentTop.type === 'D13D19' ? 'selected' : ''}>D13D19</option>
-                    <option value="D16D19" ${currentTop.type === 'D16D19' ? 'selected' : ''}>D16D19</option>
+                <input type="number" id="${topCountId}" min="1" max="8" value="${currentTop.count}" onchange="const typeVal = document.getElementById('${topTypeId}').value; window.PropertyController.updateFdProp('beam_span', ${beam.id}, 'topRebar', this.value + '-' + typeVal, ${sIdx})" style="width:32px; padding:2px; font-size:9px; border:1px solid #ccc; border-radius:3px; text-align:right;">-
+                <select id="${topTypeId}" onchange="const countVal = document.getElementById('${topCountId}').value; window.PropertyController.updateFdProp('beam_span', ${beam.id}, 'topRebar', countVal + '-' + this.value, ${sIdx})" style="padding:2px; font-size:9px; border:1px solid #ccc; border-radius:3px; background:#fff; max-width:70px;">
+                    ${rebarOptions}
                 </select>` : `${sTopRebar}`;
 
             const botControlHtml = options.showInputs ? `
-                <input type="number" id="${botCountId}" min="1" value="${currentBot.count}" onchange="const typeVal = document.getElementById('${botTypeId}').value; window.PropertyController.updateFdProp('beam_span', ${beam.id}, 'bottomRebar', this.value + '-' + typeVal, ${sIdx})" style="width:30px; padding:2px; font-size:9px; border:1px solid #ccc; border-radius:3px; text-align:right;">-
-                <select id="${botTypeId}" onchange="const countVal = document.getElementById('${botCountId}').value; window.PropertyController.updateFdProp('beam_span', ${beam.id}, 'bottomRebar', countVal + '-' + this.value, ${sIdx})" style="padding:2px; font-size:9px; border:1px solid #ccc; border-radius:3px; background:#fff; max-width:65px;">
-                    <option value="D13" ${currentBot.type === 'D13' ? 'selected' : ''}>D13</option>
-                    <option value="D16" ${currentBot.type === 'D16' ? 'selected' : ''}>D16</option>
-                    <option value="D19" ${currentBot.type === 'D19' ? 'selected' : ''}>D19</option>
-                    <option value="D13D16" ${currentBot.type === 'D13D16' ? 'selected' : ''}>D13D16</option>
-                    <option value="D13D19" ${currentBot.type === 'D13D19' ? 'selected' : ''}>D13D19</option>
-                    <option value="D16D19" ${currentBot.type === 'D16D19' ? 'selected' : ''}>D16D19</option>
+                <input type="number" id="${botCountId}" min="1" max="8" value="${currentBot.count}" onchange="const typeVal = document.getElementById('${botTypeId}').value; window.PropertyController.updateFdProp('beam_span', ${beam.id}, 'bottomRebar', this.value + '-' + typeVal, ${sIdx})" style="width:32px; padding:2px; font-size:9px; border:1px solid #ccc; border-radius:3px; text-align:right;">-
+                <select id="${botTypeId}" onchange="const countVal = document.getElementById('${botCountId}').value; window.PropertyController.updateFdProp('beam_span', ${beam.id}, 'bottomRebar', countVal + '-' + this.value, ${sIdx})" style="padding:2px; font-size:9px; border:1px solid #ccc; border-radius:3px; background:#fff; max-width:70px;">
+                    ${rebarBotOptions}
                 </select>` : `${sBottomRebar}`;
 
             const heightInputHtml = options.showInputs ? `
-                <input type="number" step="10" value="${span.props?.height || bp.height || 640}" onchange="window.PropertyController.updateFdProp('beam_span', ${beam.id}, 'height', this.value, ${sIdx})" style="width:40px; padding:2px; font-size:9px; border:1px solid #ccc; border-radius:3px; text-align:right;">` : `${span.props?.height || bp.height || 640}`;
+                <input type="number" id="span-height-${beam.id}-${sIdx}" step="10" value="${spanHeight}" onchange="window.PropertyController.updateFdProp('beam_span', ${beam.id}, 'height', this.value, ${sIdx})" style="width:45px; padding:2px; font-size:9px; border:1px solid #ccc; border-radius:3px; text-align:right;">` : `${spanHeight}`;
 
             const embedInputHtml = options.showInputs ? `
-                <input type="number" step="10" value="${span.props?.embedDepth !== undefined ? span.props.embedDepth : (bp.embedDepth !== undefined ? bp.embedDepth : 250)}" onchange="window.PropertyController.updateFdProp('beam_span', ${beam.id}, 'embedDepth', this.value, ${sIdx})" style="width:40px; padding:2px; font-size:9px; border:1px solid #ccc; border-radius:3px; text-align:right;">` : `${span.props?.embedDepth !== undefined ? span.props.embedDepth : (bp.embedDepth !== undefined ? bp.embedDepth : 250)}`;
+                <input type="number" id="span-embed-${beam.id}-${sIdx}" step="10" value="${spanEmbed}" onchange="window.PropertyController.updateFdProp('beam_span', ${beam.id}, 'embedDepth', this.value, ${sIdx})" style="width:45px; padding:2px; font-size:9px; border:1px solid #ccc; border-radius:3px; text-align:right;">` : `${spanEmbed}`;
 
             table4 += `<tr>
                 <td style="border:1px solid #bdc3c7; padding:4px; font-weight:bold; text-align:center;">${getFreshSpanName(span)}</td>
@@ -635,8 +654,10 @@ window.FoundationRenderer = {
             <tbody>`;
 
         spans.forEach((span, sIdx) => {
-            const sStirrup = span.props?.stirrup || bp.stirrup || '1-D10@200';
+            const spProps = span.props || {};
+            const sStirrup = spProps.stirrup || span.stirrup || bp.stirrup || '1-D10@200';
             const currentSt = parseStirrupInput(sStirrup);
+            const spanWidth = spProps.width !== undefined ? spProps.width : (span.width !== undefined ? span.width : (bp.width || 150));
 
             const stCountId = `st-count-${beam.id}-${sIdx}`;
             const stTypeId = `st-type-${beam.id}-${sIdx}`;
@@ -652,10 +673,10 @@ window.FoundationRenderer = {
             const pwWarning = pwValue < 0.002 ? 'background:#fff9c4; color:#d32f2f; font-weight:bold;' : '';
 
             const widthInputHtml = options.showInputs ? `
-                <input type="number" step="10" value="${span.props?.width || bp.width || 150}" onchange="window.PropertyController.updateFdProp('beam_span', ${beam.id}, 'width', this.value, ${sIdx})" style="width:40px; padding:2px; font-size:9px; border:1px solid #ccc; border-radius:3px; text-align:right;">` : `${span.props?.width || bp.width || 150}`;
+                <input type="number" id="span-width-${beam.id}-${sIdx}" step="10" value="${spanWidth}" onchange="window.PropertyController.updateFdProp('beam_span', ${beam.id}, 'width', this.value, ${sIdx})" style="width:45px; padding:2px; font-size:9px; border:1px solid #ccc; border-radius:3px; text-align:right;">` : `${spanWidth}`;
 
             const stirrupControlHtml = options.showInputs ? `
-                <input type="number" id="${stCountId}" min="1" value="${currentSt.count}" onchange="const typeVal = document.getElementById('${stTypeId}').value; const pitchVal = document.getElementById('${stPitchId}').value; window.PropertyController.updateFdProp('beam_span', ${beam.id}, 'stirrup', this.value + '-' + typeVal + '@' + pitchVal, ${sIdx})" style="width:30px; padding:2px; font-size:9px; border:1px solid #ccc; border-radius:3px; text-align:right;">-
+                <input type="number" id="${stCountId}" min="1" max="4" value="${currentSt.count}" onchange="const typeVal = document.getElementById('${stTypeId}').value; const pitchVal = document.getElementById('${stPitchId}').value; window.PropertyController.updateFdProp('beam_span', ${beam.id}, 'stirrup', this.value + '-' + typeVal + '@' + pitchVal, ${sIdx})" style="width:30px; padding:2px; font-size:9px; border:1px solid #ccc; border-radius:3px; text-align:right;">-
                 <select id="${stTypeId}" onchange="const countVal = document.getElementById('${stCountId}').value; const pitchVal = document.getElementById('${stPitchId}').value; window.PropertyController.updateFdProp('beam_span', ${beam.id}, 'stirrup', countVal + '-' + this.value + '@' + pitchVal, ${sIdx})" style="padding:2px; font-size:9px; border:1px solid #ccc; border-radius:3px; background:#fff; max-width:60px;">
                     <option value="D10" ${currentSt.type === 'D10' ? 'selected' : ''}>D10</option>
                     <option value="D13" ${currentSt.type === 'D13' ? 'selected' : ''}>D13</option>
@@ -724,6 +745,13 @@ window.FoundationRenderer = {
         });
         table6 += `</tbody></table>`;
         html += table6;
+
+        if (options.showInputs) {
+            html += `
+            <div style="text-align:center; margin:15px 0 10px 0;">
+                <button type="button" onclick="if(window.FoundationPropertyHandler) window.FoundationPropertyHandler.saveBeamModalProps(${beam.id})" style="width:100%; padding:10px 0; background:#8e44ad; color:#fff; font-weight:bold; font-size:13px; border:none; border-radius:6px; cursor:pointer; box-shadow:0 2px 5px rgba(0,0,0,0.15);">💾 基礎梁設定を保存して再計算を実行</button>
+            </div>`;
+        }
 
         html += `</div>`;
         return html;
