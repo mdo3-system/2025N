@@ -403,6 +403,15 @@ window.FoundationEngine = {
                 const h_val = sp.height !== undefined ? parseFloat(sp.height) : (beam.props?.height || 640);
                 const embed_val = sp.embedDepth !== undefined ? parseFloat(sp.embedDepth) : (beam.props?.embedDepth ?? 250);
                 
+                // 鉄筋もスパン別上書きに対応 (スコープをループ直下に配置)
+                const topRebarStr = sp.topRebar || beam.props?.topRebar || '1-D13';
+                const botRebarStr = sp.bottomRebar || beam.props?.bottomRebar || '1-D13';
+                const stirrupStr = sp.stirrup || beam.props?.stirrup || '1-D10@200';
+                
+                const topRebar = this.parseRebar(topRebarStr);
+                const botRebar = this.parseRebar(botRebarStr);
+                const st = this.parseStirrups(stirrupStr);
+
                 // 3. 自重(w_self)をスパンごとに再算出して分布荷重へ加算 ( mandates + 0.01m additive buffer )
                 const w_self_span = (b_val * (Math.max(0, h_val - embed_val) + 10.0) / 1e6) * 24.0;
 
@@ -429,15 +438,6 @@ window.FoundationEngine = {
                     // スパン別断面検定 (b_val, h_valを使用)
                     const d = Math.max(10, h_val - 70);
                     const j = d * 0.875;
-                    
-                    // 鉄筋もスパン別上書きに対応
-                    const topRebarStr = sp.topRebar || beam.props?.topRebar || '1-D13';
-                    const botRebarStr = sp.bottomRebar || beam.props?.bottomRebar || '1-D13';
-                    const stirrupStr = sp.stirrup || beam.props?.stirrup || '1-D10@200';
-                    
-                    const topRebar = this.parseRebar(topRebarStr);
-                    const botRebar = this.parseRebar(botRebarStr);
-                    const st = this.parseStirrups(stirrupStr);
                     
                     const lMa_top = (topRebar.area * 195 * j) / 1e6;
                     const lMa_bot = (botRebar.area * 195 * j) / 1e6;
