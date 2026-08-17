@@ -314,12 +314,18 @@ window.FoundationEngine = {
                 });
             }
 
-            const Qe = [], Mf = []; let currQ = 0, currM = 0;
+            const Qe = [], Mf = []; let currQ = 0;
             Td.forEach((t, i) => {
                 currQ += t + R[i];
                 Qe.push(currQ);
-                if (i > 0) currM += Qe[i - 1] * (pillars[i].x - pillars[i - 1].x);
-                Mf.push(currM);
+
+                const xi = pillars[i].x - pillars[0].x;
+                let m = R_l * xi;
+                for (let k = 0; k < i; k++) {
+                    const xk = pillars[k].x - pillars[0].x;
+                    m += Td[k] * (xi - xk);
+                }
+                Mf.push(m);
             });
             return { Td, Qe, Mf, R, R_left: R_l, R_right: R_r, supportIdx1: 0, supportIdx2: pillars.length - 1 };
         };
