@@ -57,16 +57,25 @@ window.FoundationPropertyHandler = {
                     if (!span.props) span.props = {};
                     let numVal = parseFloat(val);
 
-                    if (key === 'topRebar') span.props.topRebar = val;
-                    else if (key === 'bottomRebar') span.props.bottomRebar = val;
-                    else if (key === 'stirrup') span.props.stirrup = val;
+                    if (key === 'topRebar') { span.props.topRebar = val; span.topRebar = val; }
+                    else if (key === 'bottomRebar') { span.props.bottomRebar = val; span.bottomRebar = val; }
+                    else if (key === 'stirrup') { span.props.stirrup = val; span.stirrup = val; }
                     else if (key === 'height') {
-                        span.props.height = isNaN(numVal) ? 640 : numVal;
+                        const hVal = isNaN(numVal) ? 640 : numVal;
+                        span.props.height = hVal;
+                        span.height = hVal;
                     } else if (key === 'embedDepth') {
-                        span.props.embedDepth = isNaN(numVal) ? 250 : numVal;
+                        const embVal = isNaN(numVal) ? 250 : numVal;
+                        span.props.embedDepth = embVal;
+                        span.embedDepth = embVal;
                     } else if (key === 'width') {
-                        span.props.width = isNaN(numVal) ? 150 : numVal;
-                    } else span.props[key] = val;
+                        const wVal = isNaN(numVal) ? 150 : numVal;
+                        span.props.width = wVal;
+                        span.width = wVal;
+                    } else {
+                        span.props[key] = val;
+                        span[key] = val;
+                    }
                 } else {
                     let numVal = parseFloat(val);
                     if (key === 'width') beam.props.width = isNaN(numVal) ? 150 : numVal;

@@ -396,13 +396,12 @@ window.FoundationEngine = {
                 
                 // 1. 既存の個別スパン設定(props)を継承
                 const existingSpan = (beam.spans && beam.spans[i]) ? beam.spans[i] : null;
-                const sp = existingSpan?.props ? JSON.parse(JSON.stringify(existingSpan.props)) : {};
+                const sp = existingSpan ? (existingSpan.props || existingSpan) : {};
                 
                 // 2. スパン別次元の確定 (個別指定が無ければ全体デフォルト)
-                const spProps = sp.props || {};
-                const b_val = spProps.width !== undefined ? parseFloat(spProps.width) : (sp.width !== undefined ? parseFloat(sp.width) : (beam.props?.width || 150));
-                const h_val = spProps.height !== undefined ? parseFloat(spProps.height) : (sp.height !== undefined ? parseFloat(sp.height) : (beam.props?.height || 640));
-                const embed_val = spProps.embedDepth !== undefined ? parseFloat(spProps.embedDepth) : (sp.embedDepth !== undefined ? parseFloat(sp.embedDepth) : (beam.props?.embedDepth ?? 250));
+                const b_val = sp.width !== undefined ? parseFloat(sp.width) : (beam.props?.width || 150);
+                const h_val = sp.height !== undefined ? parseFloat(sp.height) : (beam.props?.height || 640);
+                const embed_val = sp.embedDepth !== undefined ? parseFloat(sp.embedDepth) : (beam.props?.embedDepth ?? 250);
                 
                 // 3. 自重(w_self)をスパンごとに再算出して分布荷重へ加算 ( mandates + 0.01m additive buffer )
                 const w_self_span = (b_val * (Math.max(0, h_val - embed_val) + 10.0) / 1e6) * 24.0;
@@ -432,9 +431,9 @@ window.FoundationEngine = {
                     const j = d * 0.875;
                     
                     // 鉄筋もスパン別上書きに対応
-                    const topRebarStr = spProps.topRebar || sp.topRebar || beam.props?.topRebar || '1-D13';
-                    const botRebarStr = spProps.bottomRebar || sp.bottomRebar || beam.props?.bottomRebar || '1-D13';
-                    const stirrupStr = spProps.stirrup || sp.stirrup || beam.props?.stirrup || '1-D10@200';
+                    const topRebarStr = sp.topRebar || beam.props?.topRebar || '1-D13';
+                    const botRebarStr = sp.bottomRebar || beam.props?.bottomRebar || '1-D13';
+                    const stirrupStr = sp.stirrup || beam.props?.stirrup || '1-D10@200';
                     
                     const topRebar = this.parseRebar(topRebarStr);
                     const botRebar = this.parseRebar(botRebarStr);
@@ -524,7 +523,14 @@ window.FoundationEngine = {
                         h: h_val
                     },
                     isNG: spanNG,
-                    props: sp // 4. 個別スパン設定を永続化するために格納
+                    props: {
+                        width: b_val,
+                        height: h_val,
+                        embedDepth: embed_val,
+                        topRebar: topRebarStr,
+                        bottomRebar: botRebarStr,
+                        stirrup: stirrupStr
+                    }
                 });
             }
             beam.fdStress = { pillars, seismic, spans, isNG };
