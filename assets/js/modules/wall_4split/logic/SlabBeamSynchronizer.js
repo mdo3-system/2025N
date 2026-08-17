@@ -214,6 +214,7 @@ window.SlabBeamSynchronizer = {
                 const mx = tp.mx !== undefined ? Math.round(tp.mx) : roundedPolygon.reduce((sum, pt) => sum + pt.x, 0) / roundedPolygon.length;
                 const my = tp.my !== undefined ? Math.round(tp.my) : roundedPolygon.reduce((sum, pt) => sum + pt.y, 0) / roundedPolygon.length;
 
+                let isCollinearSync = false;
                 if (!isMyBeam) {
                     // [グリッド大原則] 分配ポリゴンのいずれかの辺が、この梁と共線かつ重なっているかを判定
                     const N = roundedPolygon.length;
