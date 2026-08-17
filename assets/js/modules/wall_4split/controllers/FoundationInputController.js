@@ -268,7 +268,7 @@ window.FoundationInputController = {
             }
             const sel = state.fdSelection;
             if (sel.item) {
-                if (sel.type === 'beam') state.foundationBeams = state.foundationBeams.filter(b => b.id !== sel.item.id);
+                if (sel.type === 'beam' || sel.type === 'beam_span') state.foundationBeams = state.foundationBeams.filter(b => b.id !== sel.item.id);
                 else if (sel.type === 'slab') state.foundationSlabs = state.foundationSlabs.filter(s => s.id !== sel.item.id);
                 else if (sel.type === 'manhole') state.manholes = state.manholes.filter(m => m.id !== sel.item.id);
                 else if (sel.type === 'ext_wall') state.exteriorWalls = state.exteriorWalls.filter(ew => ew.id !== sel.item.id);
