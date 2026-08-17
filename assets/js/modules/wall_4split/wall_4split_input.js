@@ -580,6 +580,8 @@ function handleGridInput(mode, state, clickX, clickY) {
 
             if (!state.manualGridX) state.manualGridX = [];
             state.manualGridX.push({ coord: newGX, name: name.trim() });
+            if (!state.userEditedGridX) state.userEditedGridX = {};
+            state.userEditedGridX[newGX] = name.trim();
 
             if (state.deletedGridX) {
                 state.deletedGridX = state.deletedGridX.filter(dx => Math.abs(dx - newGX) > 5);
@@ -611,13 +613,20 @@ function handleGridInput(mode, state, clickX, clickY) {
 
             if (!state.manualGridY) state.manualGridY = [];
             state.manualGridY.push({ coord: newGY, name: name.trim() });
+            if (!state.userEditedGridY) state.userEditedGridY = {};
+            state.userEditedGridY[newGY] = name.trim();
 
             // 削除リストに入っていたら解除
             if (state.deletedGridY) {
                 state.deletedGridY = state.deletedGridY.filter(dy => Math.abs(dy - newGY) > 5);
             }
         }
-        if (window.GridEngine) window.GridEngine.analyzeGrids(state);
+        if (window.GridEngine) {
+            window.GridEngine.analyzeGrids(state);
+            if (typeof window.GridEngine.syncAllElementNames === 'function') {
+                window.GridEngine.syncAllElementNames(state);
+            }
+        }
         window.AppController.refreshAll();
     } else if (mode === 'del-grid') {
         // クリック位置に近いグリッドを検索
