@@ -1079,9 +1079,12 @@ $$R_i = A + B \cdot x_i$$
 ### 86. レイヤ設定ボタン直接起動化および全DXF個別レイヤー動的トグル連動の完全達成 (v3.13.0)
 - **「🗂 レイヤ設定」ボタンの直接 `onclick` 起動構造**:
   - `index.html` 内の `btn-toggle-layer` ボタンへ `onclick="if(window.toggleLayerPanelDirect) window.toggleLayerPanelDirect(); return false;"` を追加し、イベントハンドラーバインドの不確定性を解消してボタンクリックで100%確実に表示設定パネルを開閉可能化。
-- **DXF全個別レイヤーの動的リスト化および表示トグル制御の強化**:
-  - `wall_4split_render.js` 内の `renderLayerPanel()` を拡張し、標準5カテゴリに加えて、DXFファイルから取り込まれた全個別レイヤー（`extraLayers`）を自動的にパネル内へ動的生成・リストアップ。
-  - チェックボックス操作時に `MainRenderer.js` の `isLayerVisible` において生のレイヤー名（`lv[layer]`）および `layerCategory` の両方を最優先判定し、個々のDXFレイヤーの表示/非表示がリアルタイムで描画へ100%即座に反映される完全連動構造を確立。
+### 87. .cursorrules バージョン管理規約に則るパッチ更新および本番サーバー同期 (v3.13.1)
+- **.cursorrules 開発規約の厳密適用**:
+  - ルールに規定された「コード変更時のパッチインクリメント」に則り、`Version.js` および `index.html` のクエリバージョンを `v3.13.1` へインクリメント。
+- **本番Webサーバー(XServer)への完全同期**:
+  - `git push origin main` 実行後、規定のSSHデプロイコマンド `ssh -o BatchMode=yes -p 10022 mdo3@mdo3.xsrv.jp "cd eie.jp/public_html/2025 && git pull origin main"` を直接実行し、XServer本番環境へ最新ソースを完全同期反映。
+
 
 
 
