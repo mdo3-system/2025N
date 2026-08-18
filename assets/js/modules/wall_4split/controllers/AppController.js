@@ -138,6 +138,12 @@ window.AppController = {
             manualGridAngle: JSON.parse(JSON.stringify(state.manualGridAngle || [])),
             deletedGridX: [...(state.deletedGridX || [])],
             deletedGridY: [...(state.deletedGridY || [])],
+            // 【確定修正②】gridXCoords/gridYCoords/isGridFixed を履歴に含める（アンドゥ/リドゥ時の通り芯消失バグ解消）
+            gridXCoords: [...(state.gridXCoords || [])],
+            gridYCoords: [...(state.gridYCoords || [])],
+            gridXNames: [...(state.gridXNames || [])],
+            gridYNames: [...(state.gridYNames || [])],
+            isGridFixed: !!state.isGridFixed,
             foundationBeams: JSON.parse(JSON.stringify(state.foundationBeams || [])),
             foundationSlabs: JSON.parse(JSON.stringify(state.foundationSlabs || [])),
             exteriorWalls: JSON.parse(JSON.stringify(state.exteriorWalls || [])),
@@ -183,10 +189,12 @@ window.AppController = {
         state.windowsArr = JSON.parse(JSON.stringify(data.windowsArr));
         state.areaLines = JSON.parse(JSON.stringify(data.areaLines));
         state.roofFaces = JSON.parse(JSON.stringify(data.roofFaces || [])); // [v2.7.0]
+        // 【確定修正②】通り芯座標・名称・固定フラグを完全復元（アンドゥ/リドゥ時の通り芯消失バグ解消）
         state.gridXCoords = [...(data.gridXCoords || [])];
         state.gridYCoords = [...(data.gridYCoords || [])];
         state.gridXNames = [...(data.gridXNames || [])];
         state.gridYNames = [...(data.gridYNames || [])];
+        state.isGridFixed = !!data.isGridFixed;
         state.manualGridX = JSON.parse(JSON.stringify(data.manualGridX || []));
         state.manualGridY = JSON.parse(JSON.stringify(data.manualGridY || []));
         state.roofGridManualX = JSON.parse(JSON.stringify(data.roofGridManualX || [])); // [v2.7.0]

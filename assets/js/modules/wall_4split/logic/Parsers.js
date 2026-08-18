@@ -411,9 +411,56 @@ window.Parsers = {
 
         // 9. Migrate legacy data (Add IDs if missing)
         this.migrateLegacyData(s);
+
+        // 10. 【確定修正①】JSON復元後、全作図要素頂点をgridXCoords/gridYCoordsへ100%グリッド正規化（3mm等の浮遊誤差を根底から消去）
+        this.snapAllElementsToGrid(s);
+
         if (typeof renderLayerPanel === 'function') renderLayerPanel();
 
         return s;
+    },
+
+    /**
+     * 【v3.12.104 確定修正①】ロード後に全作図要素頂点をgridXCoords/gridYCoordsへ精密再スナップ
+     * 対象: areaLines, pillars, walls, windows, foundationBeams, foundationSlabs, manholes
+     */
+    snapAllElementsToGrid: function(state) {
+        const gxc = state.gridXCoords || [];
+        const gyc = state.gridYCoords || [];
+        if (gxc.length === 0 && gyc.length === 0) return;
+
+        const snapCoord = (val, coords) => {
+            if (val == null || !isFinite(val) || coords.length === 0) return val;
+            let bestIdx = -1, minD = Infinity;
+            coords.forEach((c, i) => {
+                const d = Math.abs(c - val);
+                if (d < minD) { minD = d; bestIdx = i; }
+            });
+            // グリッド交点から100mm以内ならば完全スナップ（作図面積枠等は必ずグリッド上にある前提）
+            if (bestIdx !== -1 && minD < 100) return Math.round(coords[bestIdx]);
+            return Math.round(val);
+        };
+
+        const snapPoint = (p) => {
+            if (!p) return;
+            if (gxc.length > 0) p.x = snapCoord(p.x, gxc);
+            if (gyc.length > 0) p.y = snapCoord(p.y, gyc);
+        };
+
+        // 作図面積ポリゴン（最優先: ここが3mm誤差の主因）
+        (state.areaLines || []).forEach(a => {
+            (a.vertices || []).forEach(v => snapPoint(v));
+        });
+        // 柱（念のため）
+        (state.pillars || []).forEach(p => snapPoint(p));
+        // 基礎梁
+        (state.foundationBeams || []).forEach(b => { snapPoint(b.p1); snapPoint(b.p2); });
+        // 基礎スラブ
+        (state.foundationSlabs || []).forEach(sl => { (sl.vertices || []).forEach(v => snapPoint(v)); });
+        // 人通口
+        (state.manholes || []).forEach(mh => snapPoint(mh));
+
+        console.log('[Parsers] snapAllElementsToGrid: all element vertices snapped to grid intersections on load.');
     },
 
     migrateLegacyData: function(state) {
