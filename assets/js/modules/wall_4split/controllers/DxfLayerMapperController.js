@@ -925,24 +925,25 @@ window.DxfLayerMapperController = {
         if (typeof window.renderLayerPanel === 'function') {
             window.renderLayerPanel();
         }
+        const panel = document.getElementById('dxf-layer-panel');
+        if (panel) {
+            const isHidden = (panel.style.display === 'none' || panel.style.display === '');
+            panel.style.display = isHidden ? 'block' : 'none';
+            return;
+        }
         const modal = document.getElementById('modal-dxf-layer-toggle');
         if (modal) {
             modal.style.display = (modal.style.display === 'none' || !modal.style.display) ? 'flex' : 'none';
-            return;
-        }
-        const panel = document.getElementById('dxf-layer-panel');
-        if (panel) {
-            panel.style.display = (panel.style.display === 'none' || !panel.style.display) ? 'block' : 'none';
         }
     }
 };
 
-window.toggleDxfLayerPanel = function() {
+window.toggleLayerPanelDirect = function() {
     return window.DxfLayerMapperController.toggleDxfLayerPanel();
 };
 
-window.openOrToggleDxfLayerPanel = window.toggleDxfLayerPanel;
-window.toggleLayerPanelDirect = window.toggleDxfLayerPanel;
+window.toggleDxfLayerPanel = window.toggleLayerPanelDirect;
+window.openOrToggleDxfLayerPanel = window.toggleLayerPanelDirect;
 
 if (window.ServiceContainer) {
     window.ServiceContainer.register('DxfLayerMapperController', window.DxfLayerMapperController);

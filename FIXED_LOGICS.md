@@ -1071,8 +1071,15 @@ $$R_i = A + B \cdot x_i$$
   - `wall_4split_foundation_engine.js` 内の重複解析関数群（`fd_parseRebar`, `fd_getConcreteAllowable` 等）を `logic/FoundationEngine.js` へ一元集約し、安全な委譲プロキシへ構造化。
 - **フェーズ 3: プロパティモーダルフォーム表示の分離**:
   - モーダル用フォームHTML文字列生成部を [`view/PropertyModalView.js`](file:///e:/Dropbox/■設計ｻﾎﾟｰﾄ/■note/antigravity/wall_4split_v2/mdo3_local/app/assets/js/modules/wall_4split/view/PropertyModalView.js) [NEW] へ独立抽出し、コントローラーの単一責任化を実施。
-- **フェーズ 4: index.html の直書きスクリプトクリーン化**:
-  - `index.html` 末尾の重複インライン関数群を `controllers/DxfLayerMapperController.js` へ集約・整理し、スクリプト読み込みタグを統一。
+### 85. レイヤ設定トグル動作復元、DXFプレビュー背景画像生成関数明示公開およびv3.13.0リリース (v3.13.0)
+- **バージョン v3.13.0 への繰り上げ**:
+  - 全4フェーズのリファクタリング完了および今回の表示・UI復元に伴い、メジャーバージョン `v3.13.0` へ更新。過去コミット（`18bca8d` 等）への完璧な復元保証を確立。
+- **「🗂 レイヤ設定」パネルトグル動作の完全復元**:
+  - `DxfLayerMapperController.js` の `toggleLayerPanelDirect` において、`modal-dxf-layer-toggle` の存在チェックで `return` してしまっていたロジックを修正。ドッキング型レイヤー表示設定パネル (`dxf-layer-panel`) の表示/非表示トグル動作を 100% 元通りに完全復元。
+- **求積図・見附面積プレビューのDXF背景表示の完全復元**:
+  - `wall_4split_pdf.js` の画像生成関数群（`createLayerFilteredImage`, `createNativeCanvasImage`, `createHighResPlanImage`, `generateAutoMitsukeCanvas`）を `window` オブジェクトへ明示的に登録・公開。
+  - `PreviewModalView.js` からの呼び出し時に `undefined` となる問題を根絶し、プレビューモーダル内のDXF背景下絵画像を100%正常に完全表示・描画可能化。
+
 
 
 

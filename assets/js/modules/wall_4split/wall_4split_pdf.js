@@ -7,15 +7,17 @@
 function createLayerFilteredImage(docType, targetLayers, bgLayers, floorStr = null, showAreaDims = true, dimScale = 1.0, isPrint = false) {
     return window.DocumentRenderer.renderLayerFilteredImage(docType, targetLayers, bgLayers, floorStr, { showAreaDims, dimScale, isPrint });
 }
-
+window.createLayerFilteredImage = createLayerFilteredImage;
 
 function createNativeCanvasImage(f, mode, d4 = null, showAreaDims = true, dimScale = 1.0, isPrint = false) {
     return createHighResPlanImage(f, mode, d4, showAreaDims, dimScale, isPrint);
 }
+window.createNativeCanvasImage = createNativeCanvasImage;
 
 function createHighResPlanImage(f, mode, d4 = null, showAreaDims = true, dimScale = 1.0, isPrint = false) {
     return window.DocumentRenderer.renderStructuralPlan(f, mode, d4, { showAreaDims, dimScale, isPrint });
 }
+window.createHighResPlanImage = createHighResPlanImage;
 
 function triangulatePolygon(vertices) {
     const triangles = [];
@@ -492,7 +494,7 @@ function generateAutoMitsukeCanvas(direction, commonScale) {
     }
     return null;
 }
-
+window.generateAutoMitsukeCanvas = generateAutoMitsukeCanvas;
 
 // [v3.4.0] generateFloorAreaTableHtml -> delegated to ReportWallTableView (SRP)
 function generateFloorAreaTableHtml(state) {
@@ -501,6 +503,7 @@ function generateFloorAreaTableHtml(state) {
     }
     return '';
 }
+window.generateFloorAreaTableHtml = generateFloorAreaTableHtml;
 
 function showAreaPreview() {
     if (window.PreviewModalView && typeof window.PreviewModalView.showAreaPreview === 'function') {
