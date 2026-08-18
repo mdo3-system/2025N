@@ -1139,3 +1139,12 @@ $$R_i = A + B \cdot x_i$$
   4. index.html の onclick 直接起動も不能
   5. DXFレイヤーマッピング機能全体が全滅
 - **自動テスト結果**: PASS: 24 / FAIL: 0 (100%通過)
+
+### 89. wall_4split_pdf.js 構文エラー解消および実機ブラウザ全機能セルフテスト完了 (v3.13.3)
+- **真の根本原因（wall_4split_pdf.js の構文エラー）の特定と完全解消**:
+  - wall_4split_pdf.js L519 において、_zoomMitsukeImg の中括弧 } が閉じてしまい直後のコードが関数外へ漏洩したことで SyntaxError: Unexpected token ';' が発生していた。
+  - これによりブラウザで wall_4split_pdf.js 読み込み時にエラーとなり、後続の wall_4split_main.js や DOMContentLoaded の初期化イベント（全ボタンのバインド・初期描画）が実行停止していた。
+  - wall_4split_pdf.js L515〜533 の構文を修正し、新スクリプト check_all_syntax.js でプロジェクト内全84ファイルの Syntax Validation を実施し 0 errors を実証。
+- **実機ブラウザ環境でのセルフテスト**:
+  - ブラウザサブエージェントにより https://2025.eie.jp/ を開き、「🗂 レイヤ設定」ボタンによるパネル開閉、チェックボックス切り替え、プレビュー表示等の正常動作を完全に検証。
+- **自動テスト結果**: PASS: 24 / FAIL: 0 (100%通過)

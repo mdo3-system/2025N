@@ -1,4 +1,1 @@
-/**
- * Version.js - Centralized Version Management
- */
-window.APP_VERSION = "v3.13.2"; // Fix: DxfLayerMapperController.js syntax error (missing comma at L923) causing entire object registration failure and layer panel non-functioning
+window.APP_VERSION = "v3.13.3"; // Fix: wall_4split_pdf.js syntax error causing DOMContentLoaded interruption and layer settings failure

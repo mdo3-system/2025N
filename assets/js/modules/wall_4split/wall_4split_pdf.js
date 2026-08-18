@@ -516,7 +516,6 @@ window._zoomMitsukeImg = function(src, title) {
     if (window.PreviewModalView && typeof window.PreviewModalView.zoomMitsukeImg === 'function') {
         return window.PreviewModalView.zoomMitsukeImg(src, title);
     }
-}
     let overlay = document.getElementById('_mitsuke-zoom-overlay');
     if (!overlay) {
         overlay = document.createElement('div');
