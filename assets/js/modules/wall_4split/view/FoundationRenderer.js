@@ -309,6 +309,38 @@ window.FoundationRenderer = {
             ctx.lineTo(ep.cx, ep.cy); ctx.stroke();
             ctx.restore();
         }
+
+        if (fm === 'f_manhole') {
+            const targetBeam = state.selectedManholeBeam;
+            if (targetBeam) {
+                const wp = state.snapPoint ? state.snapPoint : (window.toWorldCoord ? window.toWorldCoord(state.mouseX, state.mouseY) : { x: 0, y: 0 });
+                const dx = targetBeam.p2.x - targetBeam.p1.x, dy = targetBeam.p2.y - targetBeam.p1.y;
+                const len2 = dx * dx + dy * dy;
+                if (len2 > 1) {
+                    const t = Math.max(0, Math.min(1, ((wp.x - targetBeam.p1.x) * dx + (wp.y - targetBeam.p1.y) * dy) / len2));
+                    const px = targetBeam.p1.x + t * dx;
+                    const py = targetBeam.p1.y + t * dy;
+                    const mp = toCanvas({ x: px, y: py }, null);
+                    
+                    if (mp.cx != null) {
+                        const mw = parseFloat(document.getElementById('fd-manhole-width')?.value) || 600;
+                        const bw = (targetBeam.props?.width || 150);
+                        const mhHalfW = (mw / 2) * state.scale;
+                        const mhHalfH = Math.max(8, (bw * state.scale) / 2);
+
+                        ctx.save();
+                        ctx.fillStyle = 'rgba(231, 76, 60, 0.4)';
+                        ctx.fillRect(mp.cx - mhHalfW, mp.cy - mhHalfH, mhHalfW * 2, mhHalfH * 2);
+                        ctx.strokeStyle = '#e74c3c'; ctx.lineWidth = 3; ctx.setLineDash([4, 2]);
+                        ctx.strokeRect(mp.cx - mhHalfW, mp.cy - mhHalfH, mhHalfW * 2, mhHalfH * 2);
+                        
+                        ctx.fillStyle = '#c0392b'; ctx.font = 'bold 11px sans-serif'; ctx.textAlign = 'center';
+                        ctx.fillText('人通口配置位置 (クリックで確定)', mp.cx, mp.cy - mhHalfH - 6);
+                        ctx.restore();
+                    }
+                }
+            }
+        }
     },
 
     // ==========================================
@@ -754,7 +786,7 @@ window.FoundationRenderer = {
         html += table6;
 
         // ⑦ 人通口補強計算 セクション (jintsuko.html 準拠)
-        html += `<div style="font-size:12px; font-weight:bold; color:#2c3e50; border-left:4px solid #8e44ad; padding-left:8px; margin:15px 0 6px 0;">⑦ 人通口補強計算 (スラブ内割増筋)</div>`;
+        html += `<div style="font-size:12px; font-weight:bold; color:#2c3e50; border-left:4px solid #8e44ad; padding-left:8px; margin:15px 0 6px 0;">⑦ 人通口補強計算 (スラブ内割増筋: 長期・短期耐力検定)</div>`;
         
         const beamManholes = (s.manholes || []).filter(m => m.parentBeamId === beam.id);
         const slabThickness = (s.foundationSlabs && s.foundationSlabs.length > 0) ? (s.foundationSlabs[0].props?.slabThickness || 150) : 150;
@@ -762,49 +794,80 @@ window.FoundationRenderer = {
         let table7 = `<table style="width:100%; border-collapse:collapse; font-size:10px; border:2px solid #8e44ad; text-align:center; background:#fff;">
             <thead>
                 <tr style="background:#8e44ad; color:#fff;">
-                    <th style="border:1px solid #bdc3c7; padding:6px;">人通口位置 (グリッド)</th>
-                    <th style="border:1px solid #bdc3c7; padding:6px;">仕様</th>
-                    <th style="border:1px solid #bdc3c7; padding:6px;">補強筋 (径・本数)</th>
-                    <th style="border:1px solid #bdc3c7; padding:6px;">スラブ厚 t (mm)</th>
-                    <th style="border:1px solid #bdc3c7; padding:6px;">許容耐力 Ma (kNm)</th>
-                    <th style="border:1px solid #bdc3c7; padding:6px;">作用曲げ M (kNm)</th>
-                    <th style="border:1px solid #bdc3c7; padding:6px;">検定比</th>
-                    <th style="border:1px solid #bdc3c7; padding:6px;">判定</th>
+                    <th style="border:1px solid #bdc3c7; padding:5px;">位置 (グリッド)</th>
+                    <th style="border:1px solid #bdc3c7; padding:5px;">仕様</th>
+                    <th style="border:1px solid #bdc3c7; padding:5px;">補強筋 本数・径</th>
+                    <th style="border:1px solid #bdc3c7; padding:5px;">スラブ厚 t</th>
+                    <th style="border:1px solid #bdc3c7; padding:5px;">長期 M / 耐力 Ma,L</th>
+                    <th style="border:1px solid #bdc3c7; padding:5px;">長期検定比</th>
+                    <th style="border:1px solid #bdc3c7; padding:5px;">短期 M / 耐力 Ma,S</th>
+                    <th style="border:1px solid #bdc3c7; padding:5px;">短期検定比</th>
+                    <th style="border:1px solid #bdc3c7; padding:5px;">判定</th>
                 </tr>
             </thead>
             <tbody>`;
 
         if (beamManholes.length === 0) {
-            table7 += `<tr><td colspan="8" style="padding:10px; color:#7f8c8d; background:#fafafa;">※ この基礎梁には人通口が配置されていません（配置後自動計算）</td></tr>`;
+            table7 += `<tr><td colspan="9" style="padding:10px; color:#7f8c8d; background:#fafafa;">※ この基礎梁には人通口が配置されていません（配置後自動計算）</td></tr>`;
         } else {
             beamManholes.forEach((mh, idx) => {
-                const targetSpan = spans[0] || { spanName: '全区間', ratioM_L: 0, ratioM_S: 0, M_mid: 0 };
+                const targetSpan = spans[0] || { spanName: '全区間', ratioM_L: 0, ratioM_S: 0, M_mid: 0, M_end: 0 };
                 const spanName = targetSpan.spanName || '柱間';
                 
-                // jintsuko.html 公式: COVER_MM = 70, LFs = 195
+                // jintsuko.html 公式: COVER_MM = 70, fs_L = 195, fs_S = 295
                 const barType = mh.bar_type || 'D13';
                 const barCount = parseInt(mh.n_bars) || 2;
+                const specName = mh.spec || 'スラブ内割増筋';
+
                 const barAreas = { "D10": 71.0, "D13": 126.7, "D16": 198.6, "D19": 286.5, "D13+D16": 325.3 };
                 const at = barCount * (barAreas[barType] || 126.7);
                 const d = Math.max(10, slabThickness - 70);
                 const j = (7 / 8) * d;
-                const Ma = (at * 195 * j) / 1000000; // kNm
 
-                const M_acting = Math.max(targetSpan.M_mid || 0, targetSpan.M_end || 0, 0.1);
-                const ratio = Ma > 0 ? (M_acting / Ma) : 0;
-                const isManholeOk = ratio <= 1.0;
+                // 許容耐力 Ma
+                const Ma_L = (at * 195 * j) / 1000000; // kNm (長期)
+                const Ma_S = (at * 295 * j) / 1000000; // kNm (短期)
+
+                // 作用応力 M (長期・短期)
+                const M_acting_L = Math.max(targetSpan.M_mid || 0, targetSpan.M_end || 0, 0.1);
+                const M_acting_S = Math.max(
+                    (targetSpan.leftward?.Mf_left !== undefined ? Math.abs(targetSpan.leftward.Mf_left) : 0),
+                    (targetSpan.rightward?.Mf_left !== undefined ? Math.abs(targetSpan.rightward.Mf_left) : 0),
+                    M_acting_L
+                );
+
+                const ratioL = Ma_L > 0 ? (M_acting_L / Ma_L) : 0;
+                const ratioS = Ma_S > 0 ? (M_acting_S / Ma_S) : 0;
+                const isManholeOk = (ratioL <= 1.0) && (ratioS <= 1.0);
+
+                // ドロップダウン編集UI
+                const countOptions = [1, 2, 3, 4].map(n => `<option value="${n}" ${n === barCount ? 'selected' : ''}>${n}本</option>`).join('');
+                const typeOptions = ["D10", "D13", "D16", "D19", "D13+D16"].map(t => `<option value="${t}" ${t === barType ? 'selected' : ''}>${t}</option>`).join('');
+                const specOptions = ["スラブ内割増筋", "シングル配筋", "ダブル配筋"].map(s => `<option value="${s}" ${s === specName ? 'selected' : ''}>${s}</option>`).join('');
 
                 table7 += `
                 <tr>
-                    <td style="border:1px solid #bdc3c7; padding:6px; font-weight:bold;">${spanName}</td>
-                    <td style="border:1px solid #bdc3c7; padding:6px;">${mh.spec || 'スラブ内割増筋'}</td>
-                    <td style="border:1px solid #bdc3c7; padding:6px;">${barCount}-${barType}</td>
-                    <td style="border:1px solid #bdc3c7; padding:6px;">${slabThickness} mm</td>
-                    <td style="border:1px solid #bdc3c7; padding:6px; font-weight:bold; color:#2980b9;">${Ma.toFixed(3)} kNm</td>
-                    <td style="border:1px solid #bdc3c7; padding:6px;">${M_acting.toFixed(3)} kNm</td>
-                    <td style="border:1px solid #bdc3c7; padding:6px; font-weight:bold;">${(ratio * 100).toFixed(1)}%</td>
-                    <td style="border:1px solid #bdc3c7; padding:6px;">
-                        <span style="background:${isManholeOk ? '#27ae60' : '#e74c3c'}; color:#fff; padding:3px 10px; border-radius:12px; font-size:11px; font-weight:bold;">
+                    <td style="border:1px solid #bdc3c7; padding:4px; font-weight:bold;">${spanName}</td>
+                    <td style="border:1px solid #bdc3c7; padding:4px;">
+                        <select onchange="window.FoundationPropertyHandler.updateManholeProp('${mh.id}', 'spec', this.value)" style="font-size:9px; padding:1px; border:1px solid #ccc; border-radius:3px;">
+                            ${specOptions}
+                        </select>
+                    </td>
+                    <td style="border:1px solid #bdc3c7; padding:4px;">
+                        <select onchange="window.FoundationPropertyHandler.updateManholeProp('${mh.id}', 'n_bars', this.value)" style="font-size:9px; padding:1px; border:1px solid #ccc; border-radius:3px;">
+                            ${countOptions}
+                        </select> - 
+                        <select onchange="window.FoundationPropertyHandler.updateManholeProp('${mh.id}', 'bar_type', this.value)" style="font-size:9px; padding:1px; border:1px solid #ccc; border-radius:3px;">
+                            ${typeOptions}
+                        </select>
+                    </td>
+                    <td style="border:1px solid #bdc3c7; padding:4px;">${slabThickness} mm</td>
+                    <td style="border:1px solid #bdc3c7; padding:4px;">${M_acting_L.toFixed(2)} / <strong style="color:#2980b9;">${Ma_L.toFixed(2)}</strong> kNm</td>
+                    <td style="border:1px solid #bdc3c7; padding:4px; font-weight:bold; color:${ratioL > 1.0 ? '#e74c3c' : '#27ae60'};">${(ratioL * 100).toFixed(1)}%</td>
+                    <td style="border:1px solid #bdc3c7; padding:4px;">${M_acting_S.toFixed(2)} / <strong style="color:#8e44ad;">${Ma_S.toFixed(2)}</strong> kNm</td>
+                    <td style="border:1px solid #bdc3c7; padding:4px; font-weight:bold; color:${ratioS > 1.0 ? '#e74c3c' : '#27ae60'};">${(ratioS * 100).toFixed(1)}%</td>
+                    <td style="border:1px solid #bdc3c7; padding:4px;">
+                        <span style="background:${isManholeOk ? '#27ae60' : '#e74c3c'}; color:#fff; padding:2px 8px; border-radius:12px; font-size:10px; font-weight:bold;">
                             ${isManholeOk ? 'OK' : 'NG'}
                         </span>
                     </td>

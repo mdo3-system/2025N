@@ -160,6 +160,24 @@ window.FoundationPropertyHandler = {
         if (window.PropertyController && typeof window.PropertyController.showFdPopup === 'function') {
             window.PropertyController.showFdPopup('beam', beam);
         }
+    },
+
+    updateManholeProp: function(mhId, propKey, propVal) {
+        const s = window.AppState;
+        const mh = (s.manholes || []).find(m => String(m.id) === String(mhId));
+        if (mh) {
+            mh[propKey] = propVal;
+            if (window.FoundationEngine && typeof window.FoundationEngine.runAnalysis === 'function') {
+                window.FoundationEngine.runAnalysis(s);
+            }
+            if (window.AppController && typeof window.AppController.refreshAll === 'function') {
+                window.AppController.refreshAll();
+            }
+            const parentBeam = (s.foundationBeams || []).find(b => b.id === mh.parentBeamId);
+            if (parentBeam && window.PropertyController && typeof window.PropertyController.showFdPopup === 'function') {
+                window.PropertyController.showFdPopup('beam', parentBeam);
+            }
+        }
     }
 };
 

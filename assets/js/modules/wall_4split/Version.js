@@ -1,4 +1,4 @@
 /**
  * Version.js - Centralized Version Management
  */
-window.APP_VERSION = "v3.12.99"; // Feature: Add embedDepth input, grid titles in beam list, 2-step manhole placement & Table 7 jintsuko reinforcement calc
+window.APP_VERSION = "v3.13.00"; // Feature: Realtime manhole preview on grid, editable rebar specs & dual long/short-term strength verification
