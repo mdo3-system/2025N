@@ -920,7 +920,7 @@ window.DxfLayerMapperController = {
             }
             this.renderPreviewCanvas();
         };
-    }
+    },
     toggleDxfLayerPanel: function() {
         if (typeof window.renderLayerPanel === 'function') {
             window.renderLayerPanel();

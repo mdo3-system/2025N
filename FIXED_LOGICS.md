@@ -1126,3 +1126,16 @@ $$R_i = A + B \cdot x_i$$
 
 
 
+
+### 88. DxfLayerMapperController.js 構文エラー修正によるレイヤ設定機能完全復元 (v3.13.2)
+- **根本原因の特定と修正（構文エラー：カンマ欠落）**:
+  - controllers/DxfLayerMapperController.js L923 において、オブジェクトリテラルのメソッド間の必須カンマが欠落しており、ファイル全体が SyntaxError となっていた。
+  - node -e でも Unexpected identifier 'toggleDxfLayerPanel' を確認し根本原因を特定。
+  - L923 の } を }, に修正（1文字追加）により完全解消。
+- **連鎖的に引き起こされた障害（5段階）**:
+  1. DxfLayerMapperController オブジェクト全体が window への登録に失敗（undefined）
+  2. window.toggleLayerPanelDirect が undefined のまま（L941の登録コードも実行されず）
+  3. InputController.js のイベントリスナーからパネル開閉が実行不能
+  4. index.html の onclick 直接起動も不能
+  5. DXFレイヤーマッピング機能全体が全滅
+- **自動テスト結果**: PASS: 24 / FAIL: 0 (100%通過)
