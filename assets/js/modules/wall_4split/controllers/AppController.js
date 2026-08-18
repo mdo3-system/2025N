@@ -466,10 +466,46 @@ window.AppController = {
         (state.bgTextsOriginal || []).forEach(t => { if (t.layer) foundLayers.add(t.layer); });
         (state.pillars || []).forEach(p => { if (p.layer) foundLayers.add(p.layer); });
 
+        // 基本5カテゴリに対する明示的な初期状態の自動切替
+        state.layerVisibility['GRID'] = true;
+        if (is1R) {
+            state.layerVisibility['1F_ROOF'] = true;
+            state.layerVisibility['2F_ROOF'] = false;
+            state.layerVisibility['1F_BACK'] = false;
+            state.layerVisibility['2F_BACK'] = false;
+        } else if (is2R) {
+            state.layerVisibility['2F_ROOF'] = true;
+            state.layerVisibility['1F_ROOF'] = false;
+            state.layerVisibility['1F_BACK'] = false;
+            state.layerVisibility['2F_BACK'] = false;
+        } else if (is1F) {
+            state.layerVisibility['1F_BACK'] = true;
+            state.layerVisibility['2F_BACK'] = false;
+            state.layerVisibility['1F_ROOF'] = false;
+            state.layerVisibility['2F_ROOF'] = false;
+        } else if (is2F) {
+            state.layerVisibility['2F_BACK'] = true;
+            state.layerVisibility['1F_BACK'] = false;
+            state.layerVisibility['1F_ROOF'] = false;
+            state.layerVisibility['2F_ROOF'] = false;
+        }
+
         foundLayers.forEach(L => {
             const uL = String(L).toUpperCase().trim();
             if (/(GRID|GLID|通り芯|軸線|軸|芯|COL|COLUMN|柱|柱心)/i.test(uL)) {
                 state.layerVisibility[L] = true;
+            } else if (is1R) {
+                if (uL.includes('1F_ROOF') || uL.includes('ROOF_1F') || uL.includes('1R')) {
+                    state.layerVisibility[L] = true;
+                } else if (uL.includes('2F_ROOF') || uL.includes('ROOF_2F') || uL.includes('2R') || uL.includes('BACK') || uL.includes('BG')) {
+                    state.layerVisibility[L] = false;
+                }
+            } else if (is2R) {
+                if (uL.includes('2F_ROOF') || uL.includes('ROOF_2F') || uL.includes('2R') || uL.includes('RF')) {
+                    state.layerVisibility[L] = true;
+                } else if (uL.includes('1F_ROOF') || uL.includes('ROOF_1F') || uL.includes('1R') || uL.includes('BACK') || uL.includes('BG')) {
+                    state.layerVisibility[L] = false;
+                }
             } else if (is1F) {
                 if (uL.includes('1F_BACK') || uL.includes('1F_BG') || uL.includes('BG_1F') || (uL.includes('1F') && !uL.includes('2F') && !uL.includes('_R'))) {
                     state.layerVisibility[L] = true;
@@ -480,11 +516,6 @@ window.AppController = {
                 if (uL.includes('2F_BACK') || uL.includes('2F_BG') || uL.includes('BG_2F') || (uL.includes('2F') && !uL.includes('1F') && !uL.includes('_R'))) {
                     state.layerVisibility[L] = true;
                 } else if (uL.includes('1F') || uL.includes('_R') || uL.includes('RF')) {
-                    state.layerVisibility[L] = false;
-                }
-            } else if (is1R || is2R) {
-                // 1階屋根・2階屋根は背景表示不要（通り芯のみ表示）
-                if (!/(GRID|GLID|通り芯|軸線|軸|芯)/i.test(uL)) {
                     state.layerVisibility[L] = false;
                 }
             }
