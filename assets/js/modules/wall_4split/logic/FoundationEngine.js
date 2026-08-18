@@ -514,7 +514,6 @@ window.FoundationEngine = {
                 const rQ_L = Q_L / (resL.lQa || 1);
 
                 const spanNG = (
-                    load.isSyncFailed || // [v2.6.7] スラブ接地圧同期失敗時はエラーとする
                     rM_L > 1.0 ||
                     rQ_L > 1.0 ||
                     resL.rM_left > 1.0 ||
