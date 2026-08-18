@@ -160,6 +160,12 @@ window.MainRenderer = {
         if (!state) return true;
         const lv = state.layerVisibility || {};
 
+        // 生のレイヤー名が明示的にON/OFFトグルされている場合の最優先判定
+        if (layer) {
+            if (lv[layer] === false) return false;
+            if (lv[layer] === true) return true;
+        }
+
         // 1. カテゴリごとのトグル可視性チェック（チェックが外れていれば非表示）
         if (element && element.layerCategory) {
             if (lv[element.layerCategory] === false) return false;

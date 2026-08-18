@@ -52,7 +52,8 @@ window.renderLayerPanel = function() {
             panel.style.cssText = `
                 position: absolute; top: 45px; right: 20px; z-index: 4000;
                 background: #ffffff; border: 1px solid #0056b3; border-radius: 6px;
-                box-shadow: 0 4px 15px rgba(0,0,0,0.2); width: 280px; padding: 12px;
+                box-shadow: 0 4px 15px rgba(0,0,0,0.2); width: 300px; padding: 12px;
+                max-height: 80vh; overflow-y: auto;
             `;
             container.appendChild(panel);
         }
@@ -61,6 +62,7 @@ window.renderLayerPanel = function() {
     const s = window.AppState || {};
     if (!s.layerVisibility) s.layerVisibility = {};
 
+    // 1. 基本標準カテゴリ
     const categories = [
         { id: 'GRID', name: '📐 通り芯・グリッド', color: '#00d2d3' },
         { id: '1F_BACK', name: '🖼️ 1階背景', color: '#1dd1a1' },
@@ -69,17 +71,39 @@ window.renderLayerPanel = function() {
         { id: '2F_ROOF', name: '🏠 2階屋根', color: '#ff6b6b' },
     ];
 
-    let html = '<div style="display:flex; flex-direction:column; gap:8px; font-size:12px;">';
+    const standardIds = new Set(categories.map(c => c.id));
 
+    // 2. 実在する追加DXFレイヤーを収集
+    const extraLayers = new Set(Object.keys(s.layerVisibility).filter(k => !standardIds.has(k)));
+    (s.bgLinesOriginal || []).forEach(l => { if (l.layer && !standardIds.has(l.layer)) extraLayers.add(l.layer); });
+    (s.bgTextsOriginal || []).forEach(t => { if (t.layer && !standardIds.has(t.layer)) extraLayers.add(t.layer); });
+
+    let html = '<div style="display:flex; flex-direction:column; gap:6px; font-size:12px;">';
+
+    // 標準カテゴリのHTML生成
     categories.forEach(cat => {
         const checked = s.layerVisibility[cat.id] !== false ? 'checked' : '';
         html += `
-            <label style="display:flex; align-items:center; gap:10px; padding:8px 12px; background:#f8f9fa; border-left:4px solid ${cat.color}; border-radius:4px; color:#2c3e50; font-size:12px; cursor:pointer; user-select:none;">
+            <label style="display:flex; align-items:center; gap:10px; padding:6px 10px; background:#f8f9fa; border-left:4px solid ${cat.color}; border-radius:4px; color:#2c3e50; font-size:12px; cursor:pointer; user-select:none;">
                 <input type="checkbox" class="dxf-layer-toggle-cb" data-layer="${cat.id}" ${checked} style="width:16px; height:16px; cursor:pointer;">
                 <span style="font-weight:bold;">${cat.name}</span>
             </label>
         `;
     });
+
+    // 追加DXF個別レイヤーのHTML生成
+    if (extraLayers.size > 0) {
+        html += '<div style="margin-top:8px; padding-top:6px; border-top:1px solid #eee; font-weight:bold; color:#555;">📁 DXF個別レイヤー:</div>';
+        extraLayers.forEach(layerName => {
+            const checked = s.layerVisibility[layerName] !== false ? 'checked' : '';
+            html += `
+                <label style="display:flex; align-items:center; gap:10px; padding:4px 8px; background:#fafafa; border-left:3px solid #b2bec3; border-radius:3px; color:#333; font-size:11px; cursor:pointer; user-select:none;">
+                    <input type="checkbox" class="dxf-layer-toggle-cb" data-layer="${layerName}" ${checked} style="width:14px; height:14px; cursor:pointer;">
+                    <span>${layerName}</span>
+                </label>
+            `;
+        });
+    }
 
     html += '</div>';
 
@@ -92,7 +116,7 @@ window.renderLayerPanel = function() {
         let fullHtml = `
             <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #eee; padding-bottom:6px; margin-bottom:10px;">
                 <span style="font-weight:bold; font-size:13px; color:#0056b3;">🎨 DXFレイヤ表示設定</span>
-                <button onclick="document.getElementById('dxf-layer-panel').style.display='none'" style="background:none; border:none; font-size:14px; cursor:pointer; color:#666;">✖</button>
+                <button onclick="document.getElementById('dxf-layer-panel').style.display='none'" style="background:none; border:none; font-size:16px; cursor:pointer; color:#666; font-weight:bold;">✕</button>
             </div>
             <div id="layer-list-container">${html}</div>
         `;
@@ -107,6 +131,8 @@ window.renderLayerPanel = function() {
                 s.layerVisibility[layerKey] = e.target.checked;
                 if (window.AppController && window.AppController.refreshAll) {
                     window.AppController.refreshAll();
+                } else if (typeof window.draw === 'function') {
+                    window.draw();
                 }
             };
         });

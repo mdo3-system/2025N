@@ -1076,9 +1076,13 @@ $$R_i = A + B \cdot x_i$$
   - 全4フェーズのリファクタリング完了および今回の表示・UI復元に伴い、メジャーバージョン `v3.13.0` へ更新。過去コミット（`18bca8d` 等）への完璧な復元保証を確立。
 - **「🗂 レイヤ設定」パネルトグル動作の完全復元**:
   - `DxfLayerMapperController.js` の `toggleLayerPanelDirect` において、`modal-dxf-layer-toggle` の存在チェックで `return` してしまっていたロジックを修正。ドッキング型レイヤー表示設定パネル (`dxf-layer-panel`) の表示/非表示トグル動作を 100% 元通りに完全復元。
-- **求積図・見附面積プレビューのDXF背景表示の完全復元**:
-  - `wall_4split_pdf.js` の画像生成関数群（`createLayerFilteredImage`, `createNativeCanvasImage`, `createHighResPlanImage`, `generateAutoMitsukeCanvas`）を `window` オブジェクトへ明示的に登録・公開。
-  - `PreviewModalView.js` からの呼び出し時に `undefined` となる問題を根絶し、プレビューモーダル内のDXF背景下絵画像を100%正常に完全表示・描画可能化。
+### 86. レイヤ設定ボタン直接起動化および全DXF個別レイヤー動的トグル連動の完全達成 (v3.13.0)
+- **「🗂 レイヤ設定」ボタンの直接 `onclick` 起動構造**:
+  - `index.html` 内の `btn-toggle-layer` ボタンへ `onclick="if(window.toggleLayerPanelDirect) window.toggleLayerPanelDirect(); return false;"` を追加し、イベントハンドラーバインドの不確定性を解消してボタンクリックで100%確実に表示設定パネルを開閉可能化。
+- **DXF全個別レイヤーの動的リスト化および表示トグル制御の強化**:
+  - `wall_4split_render.js` 内の `renderLayerPanel()` を拡張し、標準5カテゴリに加えて、DXFファイルから取り込まれた全個別レイヤー（`extraLayers`）を自動的にパネル内へ動的生成・リストアップ。
+  - チェックボックス操作時に `MainRenderer.js` の `isLayerVisible` において生のレイヤー名（`lv[layer]`）および `layerCategory` の両方を最優先判定し、個々のDXFレイヤーの表示/非表示がリアルタイムで描画へ100%即座に反映される完全連動構造を確立。
+
 
 
 
