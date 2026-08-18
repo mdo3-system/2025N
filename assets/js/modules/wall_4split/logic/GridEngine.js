@@ -206,24 +206,25 @@ window.GridEngine = {
         const delta = newSpan - oldSpan;
         if (delta === 0) return;
 
-        // 境界通り芯 targetIdx = spanIndex + 1 を delta 移動
-        const targetIdx = spanIndex + 1;
+        // 【確定修正①】spanIndex より後ろの全通り芯(idx > spanIndex)を一斉に +delta シフト移動させる
         const newCoords = coords.map((c, idx) => {
-            if (idx === targetIdx) return c + delta;
-            return c;
+            if (idx > spanIndex) return Math.round(c + delta);
+            return Math.round(c);
         });
 
-        // 1. 全要素の座標を新グリッド交点へ再配置
+        // 1. 全要素(柱, 壁, 開口, スラブ, 基礎梁, 人通口, 作図面積枠)の座標を新グリッド交点へ100%精密再配置
         this.rebindAllElements(isX ? 'X' : 'Y', oldCoords, newCoords, s);
 
-        // 2. グリッド座標の固定と更新
+        // 2. グリッド座標および名称マップの固定と連動更新
         s.isGridFixed = true;
         if (isX) {
             s.gridXCoords = newCoords;
             s.masterXs = newCoords;
             if (s.manualGridX) {
                 s.manualGridX.forEach(m => {
-                    if (Math.abs(m.coord - oldCoords[targetIdx]) < 3) m.coord = newCoords[targetIdx];
+                    oldCoords.forEach((oc, i) => {
+                        if (Math.abs(m.coord - oc) < 5) m.coord = newCoords[i];
+                    });
                 });
             }
             if (s.userEditedGridX) {
@@ -231,8 +232,14 @@ window.GridEngine = {
                 Object.keys(s.userEditedGridX).forEach(k => {
                     const val = s.userEditedGridX[k];
                     const numK = parseFloat(k);
-                    if (Math.abs(numK - oldCoords[targetIdx]) < 3) newEdited[newCoords[targetIdx]] = val;
-                    else newEdited[k] = val;
+                    let mapped = false;
+                    oldCoords.forEach((oc, i) => {
+                        if (Math.abs(numK - oc) < 5) {
+                            newEdited[newCoords[i]] = val;
+                            mapped = true;
+                        }
+                    });
+                    if (!mapped) newEdited[k] = val;
                 });
                 s.userEditedGridX = newEdited;
             }
@@ -241,7 +248,9 @@ window.GridEngine = {
             s.masterYs = newCoords;
             if (s.manualGridY) {
                 s.manualGridY.forEach(m => {
-                    if (Math.abs(m.coord - oldCoords[targetIdx]) < 3) m.coord = newCoords[targetIdx];
+                    oldCoords.forEach((oc, i) => {
+                        if (Math.abs(m.coord - oc) < 5) m.coord = newCoords[i];
+                    });
                 });
             }
             if (s.userEditedGridY) {
@@ -249,8 +258,14 @@ window.GridEngine = {
                 Object.keys(s.userEditedGridY).forEach(k => {
                     const val = s.userEditedGridY[k];
                     const numK = parseFloat(k);
-                    if (Math.abs(numK - oldCoords[targetIdx]) < 3) newEdited[newCoords[targetIdx]] = val;
-                    else newEdited[k] = val;
+                    let mapped = false;
+                    oldCoords.forEach((oc, i) => {
+                        if (Math.abs(numK - oc) < 5) {
+                            newEdited[newCoords[i]] = val;
+                            mapped = true;
+                        }
+                    });
+                    if (!mapped) newEdited[k] = val;
                 });
                 s.userEditedGridY = newEdited;
             }
@@ -262,18 +277,21 @@ window.GridEngine = {
     },
 
     /**
-     * グリッド座標変更に伴い、配置されている全要素の座標をマッピングして再配置
+     * グリッド座標変更に伴い、配置されている全要素の座標をマッピングして100%精密再配置
      */
     rebindAllElements: function(axis, oldCoords, newCoords, state) {
         const isX = (axis === 'X');
         const mapCoord = (val) => {
+            if (val == null || !isFinite(val)) return val;
             let bestIdx = -1, minD = Infinity;
             oldCoords.forEach((oc, idx) => {
                 const d = Math.abs(oc - val);
                 if (d < minD) { minD = d; bestIdx = idx; }
             });
-            if (bestIdx !== -1 && minD < 200) {
-                return newCoords[bestIdx] + (val - oldCoords[bestIdx]);
+            // 【確定修正②】旧グリッド交点近傍の頂点を新グリッド交点へ100%完全同期・移動
+            if (bestIdx !== -1 && minD < 450) {
+                const offset = val - oldCoords[bestIdx];
+                return Math.round(newCoords[bestIdx] + offset);
             }
             return val;
         };
@@ -284,23 +302,23 @@ window.GridEngine = {
             else p.y = mapCoord(p.y);
         };
 
-        // 柱
+        // 1. 柱
         (state.pillars || []).forEach(p => mapPoint(p));
-        // 壁
+        // 2. 壁
         (state.walls || []).forEach(w => { mapPoint(w.p1); mapPoint(w.p2); });
-        // 開口部
+        // 3. 開口部
         (state.windows || []).forEach(win => { mapPoint(win.p1); mapPoint(win.p2); });
-        // 面積ポリゴン
+        // 4. 作図面積ポリゴン (areaLines) -> 100% グリッド同期
         (state.areaLines || []).forEach(a => {
             (a.vertices || []).forEach(v => mapPoint(v));
         });
-        // 基礎梁
+        // 5. 基礎梁
         (state.foundationBeams || []).forEach(b => { mapPoint(b.p1); mapPoint(b.p2); });
-        // 基礎スラブ
+        // 6. 基礎スラブ
         (state.foundationSlabs || []).forEach(sl => {
             (sl.vertices || []).forEach(v => mapPoint(v));
         });
-        // 人通口
+        // 7. 人通口
         (state.manholes || []).forEach(mh => mapPoint(mh));
     },
 
