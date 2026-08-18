@@ -840,9 +840,9 @@ window.FoundationRenderer = {
                 const ratioS = Ma_S > 0 ? (M_acting_S / Ma_S) : 0;
                 const isManholeOk = (ratioL <= 1.0) && (ratioS <= 1.0);
 
-                // ドロップダウン編集UI
-                const countOptions = [1, 2, 3, 4].map(n => `<option value="${n}" ${n === barCount ? 'selected' : ''}>${n}本</option>`).join('');
-                const typeOptions = ["D10", "D13", "D16", "D19", "D13+D16"].map(t => `<option value="${t}" ${t === barType ? 'selected' : ''}>${t}</option>`).join('');
+                // ドロップダウン編集UI (1〜10本、径はD13 / D16の2択)
+                const countOptions = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => `<option value="${n}" ${n === barCount ? 'selected' : ''}>${n}本</option>`).join('');
+                const typeOptions = ["D13", "D16"].map(t => `<option value="${t}" ${t === barType ? 'selected' : ''}>${t}</option>`).join('');
                 const specOptions = ["スラブ内割増筋", "シングル配筋", "ダブル配筋"].map(s => `<option value="${s}" ${s === specName ? 'selected' : ''}>${s}</option>`).join('');
 
                 table7 += `

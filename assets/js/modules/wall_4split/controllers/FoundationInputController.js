@@ -27,7 +27,8 @@ window.FoundationInputController = {
         } else if (fm === 'f_ext_wall' || fm === 'f_slab') {
             this.handlePolygonInput(snap, fm, state, e);
         } else if (fm === 'f_manhole') {
-            this.handleManholeInput(snap, state);
+            const rawWp = window.toWorldCoord(amx, amy);
+            this.handleManholeInput(rawWp, state);
         } else if (fm === 'f_delete') {
             this.handleDelete(amx, amy, state);
         }
@@ -423,8 +424,20 @@ window.updateFdElementList = function(targetType = null) {
         if (beams.length === 0) {
             html = '<div style="padding:5px; color:#7f8c8d;">※ 基礎梁が配置されていません</div>';
         } else {
-            html = `<div style="font-weight:bold; margin-bottom:4px; color:#2980b9;">🧱 登録済み基礎梁 一覧 (${beams.length}件)</div>`;
-            beams.forEach((beam, idx) => {
+            // 図面上の配置位置に従い自動ソート: 1: Yが大きい(上)順, 2: Xが小さい(左)順
+            const sortedBeams = [...beams].sort((a, b) => {
+                const aMaxY = Math.max(a.p1.y, a.p2.y);
+                const bMaxY = Math.max(b.p1.y, b.p2.y);
+                if (Math.abs(bMaxY - aMaxY) > 10) {
+                    return bMaxY - aMaxY; // 図面上の上(Y大)優先
+                }
+                const aMinX = Math.min(a.p1.x, a.p2.x);
+                const bMinX = Math.min(b.p1.x, b.p2.x);
+                return aMinX - bMinX; // 図面上の左(X小)優先
+            });
+
+            html = `<div style="font-weight:bold; margin-bottom:4px; color:#2980b9;">🧱 登録済み基礎梁 一覧 (${sortedBeams.length}件)</div>`;
+            sortedBeams.forEach((beam, idx) => {
                 const isNG = beam.fdStress?.isNG;
                 const statusStr = isNG ? '<span style="color:#e74c3c; font-weight:bold;">[NG]</span>' : '<span style="color:#27ae60; font-weight:bold;">[OK]</span>';
                 const label = beam.props?.symbol || beam.props?.beamName || `FG${idx+1}`;
