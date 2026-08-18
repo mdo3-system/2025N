@@ -260,20 +260,31 @@ window.FoundationRenderer = {
             const mhHalfW = (mh.width / 2) * state.scale;
             const mhHalfH = beamWidthPx / 2;
             
+            // 基礎梁の角度に合わせて人通口を正確に回転描画 (Y軸縦方向・X軸横方向・斜め梁)
+            let angle = 0;
+            if (beam) {
+                const dx = beam.p2.x - beam.p1.x;
+                const dy = beam.p2.y - beam.p1.y;
+                angle = Math.atan2(-dy, dx);
+            }
+
             ctx.save();
+            ctx.translate(mp.cx, mp.cy);
+            ctx.rotate(angle);
+
             ctx.fillStyle = 'rgba(255,255,255,0.9)';
-            ctx.fillRect(mp.cx - mhHalfW, mp.cy - mhHalfH, mhHalfW * 2, mhHalfH * 2);
+            ctx.fillRect(-mhHalfW, -mhHalfH, mhHalfW * 2, mhHalfH * 2);
             ctx.strokeStyle = '#e74c3c'; ctx.lineWidth = 2;
-            ctx.strokeRect(mp.cx - mhHalfW, mp.cy - mhHalfH, mhHalfW * 2, mhHalfH * 2);
+            ctx.strokeRect(-mhHalfW, -mhHalfH, mhHalfW * 2, mhHalfH * 2);
             ctx.beginPath();
-            ctx.moveTo(mp.cx - mhHalfW, mp.cy - mhHalfH); ctx.lineTo(mp.cx + mhHalfW, mp.cy + mhHalfH);
-            ctx.moveTo(mp.cx + mhHalfW, mp.cy - mhHalfH); ctx.lineTo(mp.cx - mhHalfW, mp.cy + mhHalfH);
+            ctx.moveTo(-mhHalfW, -mhHalfH); ctx.lineTo(mhHalfW, mhHalfH);
+            ctx.moveTo(mhHalfW, -mhHalfH); ctx.lineTo(-mhHalfW, mhHalfH);
             ctx.stroke();
             
             const isSelected = fdSel.type === 'manhole' && fdSel.item?.id === mh.id;
             if (isSelected) {
                 ctx.strokeStyle = '#00ffff'; ctx.lineWidth = 3;
-                ctx.beginPath(); ctx.arc(mp.cx, mp.cy, mhHalfW + 10, 0, Math.PI * 2); ctx.stroke();
+                ctx.beginPath(); ctx.arc(0, 0, mhHalfW + 10, 0, Math.PI * 2); ctx.stroke();
             }
             ctx.restore();
         });
@@ -327,15 +338,19 @@ window.FoundationRenderer = {
                         const bw = (targetBeam.props?.width || 150);
                         const mhHalfW = (mw / 2) * state.scale;
                         const mhHalfH = Math.max(8, (bw * state.scale) / 2);
+                        const angle = Math.atan2(-dy, dx);
 
                         ctx.save();
+                        ctx.translate(mp.cx, mp.cy);
+                        ctx.rotate(angle);
+
                         ctx.fillStyle = 'rgba(231, 76, 60, 0.4)';
-                        ctx.fillRect(mp.cx - mhHalfW, mp.cy - mhHalfH, mhHalfW * 2, mhHalfH * 2);
+                        ctx.fillRect(-mhHalfW, -mhHalfH, mhHalfW * 2, mhHalfH * 2);
                         ctx.strokeStyle = '#e74c3c'; ctx.lineWidth = 3; ctx.setLineDash([4, 2]);
-                        ctx.strokeRect(mp.cx - mhHalfW, mp.cy - mhHalfH, mhHalfW * 2, mhHalfH * 2);
+                        ctx.strokeRect(-mhHalfW, -mhHalfH, mhHalfW * 2, mhHalfH * 2);
                         
                         ctx.fillStyle = '#c0392b'; ctx.font = 'bold 11px sans-serif'; ctx.textAlign = 'center';
-                        ctx.fillText('人通口配置位置 (クリックで確定)', mp.cx, mp.cy - mhHalfH - 6);
+                        ctx.fillText('人通口配置位置 (クリックで確定)', 0, -mhHalfH - 6);
                         ctx.restore();
                     }
                 }
