@@ -1062,11 +1062,18 @@ $$R_i = A + B \cdot x_i$$
   - 左パネル「基礎梁標準仕様設定」に「根入れ深さ h(mm)」のスロット（`fd-embed-depth`）を追加し、新規配置時の根入れ深さ標準値（`250mm`）を入力・連動可能化。
 - **全基礎梁一覧パネルの表記改革**:
   - 全基礎梁一覧パネルの項目表示を旧「基礎梁No.1」から **`X1通り Y1〜Y4 (符号: FG1)`** 等の通り・グリッド表記へ切り替え。
-### 83. 見附面積図のDXF読込プレビュー表示の全削除およびUI整理 (v3.12.105)
-- **見附面積図におけるDXF読込ブロックの完全撤去**:
-  - 見附面積図はモデル作図データから自動生成・分析するため、不要であった「DXF読込」プレビュー表示枠を完全削除。
-  - `index.html` のモーダルヘッダータイトルから「`(自動計算 ＆ DXF読込)`」の表記を削除し「`🖼️ 求積図・見付面積プレビュー`」に整理。
-  - `wall_4split_pdf.js` 内の見附面積タブ (`tab-mitsuke`) から `(DXF読込)` 表示枠および `(自動計算モデル)` という対比文言を整理除去し、すっきりとした『X方向 見附面積図』・『Y方向 見附面積図』のUIレイアウトへ最適化。
+### 84. 全4フェーズにわたる単一責任原則（SRP）準拠の段階的リファクタリング (v3.12.106)
+- **計算・出力・描画・画面構成への完全影響ゼロ維持方針の達成**:
+  - 現在システム上で確立されている全ての構造計算、描画レンダリング、出力・レポート生成、DOMレイアウト・画面構成に一切の副作用を与えることなく、単一責任原則（SRP）に則った安全な4段階リファクタリングを完遂。
+- **フェーズ 1: プレビューUIとPDF生成処理の分離**:
+  - 1,411行・106KBに達していた `wall_4split_pdf.js` からプレビューモーダルレンダリングおよびタブ制御を独立した新モジュール [`view/PreviewModalView.js`](file:///e:/Dropbox/■設計ｻﾎﾟｰﾄ/■note/antigravity/wall_4split_v2/mdo3_local/app/assets/js/modules/wall_4split/view/PreviewModalView.js) [NEW] へ抽出。従来関数 `showAreaPreview()` 等との全域上位互換プロキシを確立。
+- **フェーズ 2: 基礎解析ヘルパーの一元化**:
+  - `wall_4split_foundation_engine.js` 内の重複解析関数群（`fd_parseRebar`, `fd_getConcreteAllowable` 等）を `logic/FoundationEngine.js` へ一元集約し、安全な委譲プロキシへ構造化。
+- **フェーズ 3: プロパティモーダルフォーム表示の分離**:
+  - モーダル用フォームHTML文字列生成部を [`view/PropertyModalView.js`](file:///e:/Dropbox/■設計ｻﾎﾟｰﾄ/■note/antigravity/wall_4split_v2/mdo3_local/app/assets/js/modules/wall_4split/view/PropertyModalView.js) [NEW] へ独立抽出し、コントローラーの単一責任化を実施。
+- **フェーズ 4: index.html の直書きスクリプトクリーン化**:
+  - `index.html` 末尾の重複インライン関数群を `controllers/DxfLayerMapperController.js` へ集約・整理し、スクリプト読み込みタグを統一。
+
 
 
 

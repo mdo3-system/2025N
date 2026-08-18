@@ -45,6 +45,64 @@ window.FoundationEngine = {
         '4辺固定(ピン扱い)':           { mcx: 0.080, max: 0.000, mcy: 0.050, may: 0.000 }
     },
 
+    getConcreteAllowable: function(fc) {
+        return {
+            fc: fc,
+            fck_L: fc / 3,
+            ftk_L: 0.49 * Math.pow(fc, 1/3),
+            fwk_L: fc / 3 / Math.sqrt(3)
+        };
+    },
+
+    parseRebar: function(str) {
+        if (!str || typeof str !== 'string') return { count: 0, dia: 0, area: 0 };
+        const m = str.trim().match(/^(\d+)-D([A-Za-z0-9]+)/i);
+        if (!m) return { count: 0, dia: 0, area: 0 };
+        const count = parseInt(m[1], 10);
+        const typeStr = m[2].toUpperCase();
+        
+        const diaTbl = { 10: 71.33, 13: 126.7, 16: 198.6, 19: 286.5, 22: 387.1, 25: 506.7, 29: 642.4, 32: 794.2 };
+        
+        let area1 = 0;
+        let dia = 0;
+        if (typeStr === '13D16') {
+            area1 = diaTbl[13] + diaTbl[16];
+            dia = 16;
+        } else if (typeStr === '13D19') {
+            area1 = diaTbl[13] + diaTbl[19];
+            dia = 19;
+        } else if (typeStr === '16D19') {
+            area1 = diaTbl[16] + diaTbl[19];
+            dia = 19;
+        } else {
+            dia = parseInt(typeStr, 10);
+            area1 = diaTbl[dia] || (Math.PI * dia * dia / 4);
+        }
+        
+        return { count, dia, area: count * area1 };
+    },
+
+    getSteelStrength: function(str) {
+        if (!str) return { ft: 195, fts: 295, type: 'SD295' };
+        const isSD345 = /19|22/.test(str);
+        if (isSD345) {
+            return { ft: 215, fts: 345, type: 'SD345' };
+        }
+        return { ft: 195, fts: 295, type: 'SD295' };
+    },
+
+    parseStirrups: function(str) {
+        if (!str || typeof str !== 'string') return { count: 1, dia: 10, pitch: 200, area: 71.33 };
+        const m = str.trim().match(/^(\d+)-D(\d+)@(\d+)/i);
+        if (!m) return { count: 1, dia: 10, pitch: 200, area: 71.33 };
+        const count = parseInt(m[1], 10);
+        const dia   = parseInt(m[2], 10);
+        const pitch = parseInt(m[3], 10);
+        const diaTbl = { 10: 71.33, 13: 126.7, 16: 198.6 };
+        const area1 = diaTbl[dia] || (Math.PI * dia * dia / 4);
+        return { count, dia, pitch, area: count * area1 };
+    },
+
     runAnalysis: function(state) {
         const s = state || this._appState || window.AppState;
         
