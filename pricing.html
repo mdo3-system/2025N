@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>機能・商品詳細と料金プラン | 上善如水 構造計算WEB</title>
-    <meta name="description" content="上善如水 構造計算WEB（株式会社住ま居る）の商品詳細、機能特長、および週額・月額・年額料金プランのご案内ページです。">
+    <title>機能・商品詳細と料金プラン | 上善如水 壁量計算Web (v3.13)</title>
+    <meta name="description" content="上善如水 壁量計算Web（株式会社住ま居る）の商品詳細、機能特長、および週額・月額・年額料金プランのご案内ページです。">
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -239,7 +239,7 @@
         /* Pricing Cards */
         .pricing-wrap {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
             gap: 1.5rem;
             max-width: 1100px;
             margin: 0 auto;
@@ -364,6 +364,33 @@
             background-color: var(--primary-light);
         }
 
+        /* Support & Community Section */
+        .support-box {
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            border-radius: var(--radius);
+            padding: 2rem;
+            max-width: 900px;
+            margin: 3rem auto 0;
+            text-align: left;
+        }
+
+        .support-title {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: #166534;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .support-desc {
+            font-size: 0.95rem;
+            color: #1e293b;
+            line-height: 1.7;
+        }
+
         /* Notice Box */
         .notice-box {
             background: #fffbebfb;
@@ -435,13 +462,13 @@
     <header class="navbar">
         <div class="nav-container">
             <a href="index.html" class="brand-logo">
-                上善如水 構造計算WEB
-                <span class="brand-badge">v3.8.1</span>
+                上善如水 壁量計算Web
+                <span class="brand-badge">v3.13</span>
             </a>
             <nav class="nav-links">
                 <a href="pricing.html" class="nav-link" style="color: var(--primary); font-weight: 600;">機能・料金詳細</a>
                 <a href="tokusho.html" class="nav-link">特定商取引法表記</a>
-                <a href="manual/index.html" class="nav-link">操作マニュアル</a>
+                <a href="manual/manual_full_v3.html" class="nav-link">操作マニュアル</a>
                 <a href="index.html" class="btn-nav">アプリを始める</a>
             </nav>
         </div>
@@ -449,10 +476,10 @@
 
     <!-- Hero Section -->
     <section class="hero">
-        <h1 class="hero-title">木造住宅 構造計算をWeb上で高速・正確に</h1>
+        <h1 class="hero-title">木造住宅 壁量計算をWeb上で高速・正確に</h1>
         <p class="hero-subtitle">
             壁量計算、四分割法、N値計算、柱・梁伏図入力から各種帳票・DXF出力まで。<br>
-            建築士・構造設計者の実務を強力にバックアップする次世代構造計算Webツール。
+            建築士・設計者の実務を強力にバックアップする次世代壁量計算Webツール。
         </p>
         <div class="hero-tags">
             <span class="hero-tag">⚡ ブラウザで即座に動作</span>
@@ -498,14 +525,14 @@
                     <div class="feature-icon">📄</div>
                     <h3 class="feature-h3">各種帳票・PDF/DXF出力</h3>
                     <p class="feature-p">
-                        確認申請および構造審査に使用できる詳細構造計算書、壁配置図、N値確認図をワンクリックでPDFおよびDXFフォーマット出力。
+                        確認申請に使用できる詳細壁量計算書、壁配置図、N値確認図をワンクリックでPDFおよびDXFフォーマット出力。
                     </p>
                 </div>
                 <div class="feature-card">
-                    <div class="feature-icon">☁️</div>
-                    <h3 class="feature-h3">クラウド連携・インストール不要</h3>
+                    <div class="feature-icon">💻</div>
+                    <h3 class="feature-h3">Webブラウザ動作・インストール不要</h3>
                     <p class="feature-p">
-                        専用ソフトのインストールは一切不要。Windows / Mac等の最新Webブラウザで、いつでもどこでもプロジェクトの閲覧・編集が可能です。
+                        専用ソフトのインストールは一切不要。Windows / Mac等の最新Webブラウザで、いつでもどこでもプロジェクトの作図・ローカル保存（JSON保存/復元）が可能です。
                     </p>
                 </div>
                 <div class="feature-card">
@@ -536,9 +563,10 @@
                             <span class="plan-period">/ 週 (税込)</span>
                         </div>
                         <ul class="plan-features">
-                            <li>全構造計算機能（壁量/4分割/N値）</li>
+                            <li>全壁量計算機能（壁量/4分割/N値）</li>
                             <li>DXFインポート & 3D表示</li>
                             <li>帳票PDF・CAD（DXF）無制限出力</li>
+                            <li>プロジェクトのローカル保存（JSON復元）</li>
                             <li>7日間無制限アクセス</li>
                         </ul>
                     </div>
@@ -555,10 +583,10 @@
                             <span class="plan-period">/ 月 (税込)</span>
                         </div>
                         <ul class="plan-features">
-                            <li>全構造計算機能（壁量/4分割/N値）</li>
+                            <li>全壁量計算機能（壁量/4分割/N値）</li>
                             <li>DXFインポート & 3D表示</li>
                             <li>帳票PDF・CAD（DXF）無制限出力</li>
-                            <li>プロジェクト保存・クラウド管理</li>
+                            <li>プロジェクト保存（ローカルJSON保存・復元）</li>
                             <li>いつでも自動更新停止可能</li>
                         </ul>
                     </div>
@@ -578,32 +606,21 @@
                         <ul class="plan-features">
                             <li>スタンダードプランの全機能</li>
                             <li>年間一括払い（実質2ヶ月分お得）</li>
-                            <li>DXFインポート & 3D表示</li>
                             <li>帳票PDF・CAD（DXF）無制限出力</li>
-                            <li>メール優先サポート</li>
+                            <li>プロジェクト保存（ローカルJSON保存・復元）</li>
+                            <li>いつでも自動更新停止可能</li>
                         </ul>
                     </div>
                     <button onclick="startCheckout('annual')" class="btn-plan btn-plan-primary">年額プランで始める</button>
                 </div>
+            </div>
 
-                <!-- Monthly Premium (With Support) Plan -->
-                <div class="pricing-card" style="border-color: #8e44ad;">
-                    <div>
-                        <h3 class="plan-name">月額プレミアム</h3>
-                        <p class="plan-desc">操作方法や個別構造設計相談のサポート付き</p>
-                        <div class="plan-price-wrap">
-                            <span class="plan-price" style="color: #8e44ad;">¥10,000</span>
-                            <span class="plan-period">/ 月 (税込)</span>
-                        </div>
-                        <ul class="plan-features">
-                            <li>スタンダードプランの全機能</li>
-                            <li>専任構造設計サポート・質疑対応</li>
-                            <li>入力データの整合性チェック助言</li>
-                            <li>帳票PDF・CAD（DXF）無制限出力</li>
-                            <li>優先電話・メールサポート</li>
-                        </ul>
-                    </div>
-                    <button onclick="startCheckout('monthly_prem')" class="btn-plan btn-plan-outline" style="color: #8e44ad; border-color: #8e44ad;">サポート付きで始める</button>
+            <!-- Support & Community Box -->
+            <div class="support-box">
+                <div class="support-title">💬 サポート・コミュニティについて</div>
+                <div class="support-desc">
+                    本ツールはクラウド管理を行わず、プロジェクトデータはお客様自身のPC環境にローカルJSONファイルとして安全に保存・復元いただけます。<br>
+                    サポート体制は、ユーザーコミュニティページにQ&Aを設置し随時更新を行っているほか、専用掲示板を設置してユーザー間での円滑な情報交換・問題解決を図っています。
                 </div>
             </div>
 
@@ -621,9 +638,9 @@
             <a href="index.html" class="footer-link">計算アプリ ホーム</a>
             <a href="pricing.html" class="footer-link">機能・料金詳細</a>
             <a href="tokusho.html" class="footer-link">特定商取引法に基づく表記</a>
-            <a href="manual/index.html" class="footer-link">操作マニュアル</a>
+            <a href="manual/manual_full_v3.html" class="footer-link">操作マニュアル</a>
         </div>
-        <p class="copyright">&copy; 2026 株式会社住ま居る (上善如水 構造計算WEB). All rights reserved.</p>
+        <p class="copyright">&copy; 2026 株式会社住ま居る (上善如水 壁量計算Web). All rights reserved.</p>
     </footer>
 
     <script>

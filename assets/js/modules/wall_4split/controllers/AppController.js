@@ -278,6 +278,7 @@ window.AppController = {
         if (roofPanel) roofPanel.style.display = (mode === 'roof') ? 'block' : 'none';
 
         if (mode === 'foundation') {
+            this.setDefaultLayerVisibility('1F');
             this.updateFoundationUI();
             // [v2.5.16 修正] スケールが初期デフォルト値(1.0)かつオフセットもゼロ（＝完全未初期化状態）の場合のみ初期ビューを計算する
             const isUninitialized = (state.scale === 1.0 && state.offsetX === 0 && state.offsetY === 0);
