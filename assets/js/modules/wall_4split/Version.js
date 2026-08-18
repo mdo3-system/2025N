@@ -1,4 +1,4 @@
 /**
  * Version.js - Centralized Version Management
  */
-window.APP_VERSION = "v3.12.102"; // Fix: Ensure grid span updates shift all subsequent axes and 100% rebind all element vertices to grid intersections
+window.APP_VERSION = "v3.12.103"; // Fix: Shift grid axes right/up from origin (left/bottom) and direct-snap all element vertices to new grid coordinates

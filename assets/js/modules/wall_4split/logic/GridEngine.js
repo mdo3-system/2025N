@@ -288,10 +288,9 @@ window.GridEngine = {
                 const d = Math.abs(oc - val);
                 if (d < minD) { minD = d; bestIdx = idx; }
             });
-            // 【確定修正②】旧グリッド交点近傍の頂点を新グリッド交点へ100%完全同期・移動
+            // 【確定修正②】旧グリッド交点近傍の全頂点を、微小オフセット加算なしで新通り芯座標へ100%ダイレクト代入（再スナップ）
             if (bestIdx !== -1 && minD < 450) {
-                const offset = val - oldCoords[bestIdx];
-                return Math.round(newCoords[bestIdx] + offset);
+                return Math.round(newCoords[bestIdx]);
             }
             return val;
         };
