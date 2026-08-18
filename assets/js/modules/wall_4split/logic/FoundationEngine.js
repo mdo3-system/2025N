@@ -280,12 +280,6 @@ window.FoundationEngine = {
             let R = [];
             let R_l = 0, R_r = 0;
 
-            if (modelType === 'both_ends' && pillars.length > 0) {
-                // 両端支点モデルでは始点・終点の Td は 0（支点反力 R のみが作用）
-                Td[0] = 0;
-                Td[pillars.length - 1] = 0;
-            }
-
             if (modelType === 'simple_beam') {
                 // 単純梁モデル: 各スパン独立で端部モーメント・せん断力を算定
                 const n = pillars.length;
