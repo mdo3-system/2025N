@@ -1,4 +1,4 @@
 /**
  * Version.js - Centralized Version Management
  */
-window.APP_VERSION = "v3.12.98"; // Fix: Ensure overall status matches individual ratios by removing non-structural isSyncFailed flag from spanNG
+window.APP_VERSION = "v3.12.99"; // Feature: Add embedDepth input, grid titles in beam list, 2-step manhole placement & Table 7 jintsuko reinforcement calc

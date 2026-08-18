@@ -244,21 +244,53 @@ window.FoundationInputController = {
 
     handleManholeInput: function(snap, state) {
         const wx = snap.x, wy = snap.y;
-        let bestBeam = null, bestT = 0, bestDist = Infinity;
-        state.foundationBeams.forEach(b => {
-            const dx = b.p2.x - b.p1.x, dy = b.p2.y - b.p1.y;
-            const len2 = dx * dx + dy * dy; if (len2 < 1) return;
-            const t = Math.max(0, Math.min(1, ((wx - b.p1.x) * dx + (wy - b.p1.y) * dy) / len2));
-            const d = Math.hypot(wx - (b.p1.x + t * dx), wy - (b.p1.y + t * dy));
-            if (d < bestDist) { bestDist = d; bestBeam = b; bestT = t; }
-        });
-        if (bestBeam && bestDist < 500) {
+        
+        // 1段目: 対象の基礎梁（通り）が未選択の場合、最も近い基礎梁を特定して選択・固定する
+        if (!state.selectedManholeBeam) {
+            let bestBeam = null, bestDist = Infinity;
+            (state.foundationBeams || []).forEach(b => {
+                const dx = b.p2.x - b.p1.x, dy = b.p2.y - b.p1.y;
+                const len2 = dx * dx + dy * dy; if (len2 < 1) return;
+                const t = Math.max(0, Math.min(1, ((wx - b.p1.x) * dx + (wy - b.p1.y) * dy) / len2));
+                const d = Math.hypot(wx - (b.p1.x + t * dx), wy - (b.p1.y + t * dy));
+                if (d < bestDist) { bestDist = d; bestBeam = b; }
+            });
+
+            if (bestBeam && bestDist < 800) {
+                state.selectedManholeBeam = bestBeam;
+                const axisName = window.GridEngine ? window.GridEngine.getLineAxisName(bestBeam.p1, bestBeam.p2, state) : '';
+                console.log(`[Manhole 2-step] Step 1: Beam selected (${axisName || '対象梁'}). Click to place manhole on span.`);
+                window.AppController.refreshAll();
+            } else {
+                console.log(`[Manhole 2-step] No nearby beam found. Click on a foundation beam.`);
+            }
+            return;
+        }
+
+        // 2段目: 選択済みの基礎梁上の任意位置に人通口を確定配置する
+        const b = state.selectedManholeBeam;
+        const dx = b.p2.x - b.p1.x, dy = b.p2.y - b.p1.y;
+        const len2 = dx * dx + dy * dy;
+        if (len2 > 1) {
             if (window.AppController && typeof window.AppController.saveStateToHistory === 'function') {
                 window.AppController.saveStateToHistory();
             }
-            state.manholes.push({ id: Date.now(), parentBeamId: bestBeam.id, x: bestBeam.p1.x + bestT * (bestBeam.p2.x - bestBeam.p1.x), y: bestBeam.p1.y + bestT * (bestBeam.p2.y - bestBeam.p1.y), width: 600 });
-            window.AppController.refreshAll();
+            const t = Math.max(0, Math.min(1, ((wx - b.p1.x) * dx + (wy - b.p1.y) * dy) / len2));
+            const px = Math.round(b.p1.x + t * dx);
+            const py = Math.round(b.p1.y + t * dy);
+            
+            const width = parseFloat(document.getElementById('fd-manhole-width')?.value) || 600;
+            state.manholes.push({
+                id: Date.now(),
+                parentBeamId: b.id,
+                x: px,
+                y: py,
+                width: width
+            });
+            console.log(`[Manhole 2-step] Step 2: Manhole placed on ${b.id} at (${px}, ${py})`);
         }
+        state.selectedManholeBeam = null;
+        window.AppController.refreshAll();
     },
 
     handleDelete: function(mx, my, state) {
@@ -397,10 +429,17 @@ window.updateFdElementList = function(targetType = null) {
                 const statusStr = isNG ? '<span style="color:#e74c3c; font-weight:bold;">[NG]</span>' : '<span style="color:#27ae60; font-weight:bold;">[OK]</span>';
                 const label = beam.props?.symbol || beam.props?.beamName || `FG${idx+1}`;
                 const spansCount = beam.spans ? beam.spans.length : 1;
+                
+                const axisName = window.GridEngine ? window.GridEngine.getLineAxisName(beam.p1, beam.p2, s) : '';
+                const p1Grid = window.getGridNameAt ? window.getGridNameAt(beam.p1.x, beam.p1.y) : '';
+                const p2Grid = window.getGridNameAt ? window.getGridNameAt(beam.p2.x, beam.p2.y) : '';
+                let gridTitle = `${axisName ? axisName + '通り ' : ''}${p1Grid && p2Grid ? p1Grid + '〜' + p2Grid : ''}`.trim();
+                if (!gridTitle) gridTitle = `基礎梁 No.${idx+1}`;
+
                 html += `
                 <div class="fd-list-item" onclick="window.selectFdElementFromList('beam', '${beam.id}')" style="padding:5px 8px; margin-bottom:3px; background:#fff; border:1px solid #cbd5e1; border-radius:4px; cursor:pointer; display:flex; justify-content:space-between; align-items:center;">
                     <div>
-                        <strong style="color:#2c3e50;">基礎梁 No.${idx+1}</strong> <span style="color:#555;">(符号: ${label})</span>
+                        <strong style="color:#2c3e50;">${gridTitle}</strong> <span style="color:#555;">(符号: ${label})</span>
                         <div style="font-size:10px; color:#7f8c8d;">幅: ${beam.props?.width||150}mm / 高: ${beam.props?.height||640}mm / スパン: ${spansCount}</div>
                     </div>
                     <div>${statusStr}</div>

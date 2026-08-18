@@ -753,6 +753,67 @@ window.FoundationRenderer = {
         table6 += `</tbody></table>`;
         html += table6;
 
+        // ⑦ 人通口補強計算 セクション (jintsuko.html 準拠)
+        html += `<div style="font-size:12px; font-weight:bold; color:#2c3e50; border-left:4px solid #8e44ad; padding-left:8px; margin:15px 0 6px 0;">⑦ 人通口補強計算 (スラブ内割増筋)</div>`;
+        
+        const beamManholes = (s.manholes || []).filter(m => m.parentBeamId === beam.id);
+        const slabThickness = (s.foundationSlabs && s.foundationSlabs.length > 0) ? (s.foundationSlabs[0].props?.slabThickness || 150) : 150;
+        
+        let table7 = `<table style="width:100%; border-collapse:collapse; font-size:10px; border:2px solid #8e44ad; text-align:center; background:#fff;">
+            <thead>
+                <tr style="background:#8e44ad; color:#fff;">
+                    <th style="border:1px solid #bdc3c7; padding:6px;">人通口位置 (グリッド)</th>
+                    <th style="border:1px solid #bdc3c7; padding:6px;">仕様</th>
+                    <th style="border:1px solid #bdc3c7; padding:6px;">補強筋 (径・本数)</th>
+                    <th style="border:1px solid #bdc3c7; padding:6px;">スラブ厚 t (mm)</th>
+                    <th style="border:1px solid #bdc3c7; padding:6px;">許容耐力 Ma (kNm)</th>
+                    <th style="border:1px solid #bdc3c7; padding:6px;">作用曲げ M (kNm)</th>
+                    <th style="border:1px solid #bdc3c7; padding:6px;">検定比</th>
+                    <th style="border:1px solid #bdc3c7; padding:6px;">判定</th>
+                </tr>
+            </thead>
+            <tbody>`;
+
+        if (beamManholes.length === 0) {
+            table7 += `<tr><td colspan="8" style="padding:10px; color:#7f8c8d; background:#fafafa;">※ この基礎梁には人通口が配置されていません（配置後自動計算）</td></tr>`;
+        } else {
+            beamManholes.forEach((mh, idx) => {
+                const targetSpan = spans[0] || { spanName: '全区間', ratioM_L: 0, ratioM_S: 0, M_mid: 0 };
+                const spanName = targetSpan.spanName || '柱間';
+                
+                // jintsuko.html 公式: COVER_MM = 70, LFs = 195
+                const barType = mh.bar_type || 'D13';
+                const barCount = parseInt(mh.n_bars) || 2;
+                const barAreas = { "D10": 71.0, "D13": 126.7, "D16": 198.6, "D19": 286.5, "D13+D16": 325.3 };
+                const at = barCount * (barAreas[barType] || 126.7);
+                const d = Math.max(10, slabThickness - 70);
+                const j = (7 / 8) * d;
+                const Ma = (at * 195 * j) / 1000000; // kNm
+
+                const M_acting = Math.max(targetSpan.M_mid || 0, targetSpan.M_end || 0, 0.1);
+                const ratio = Ma > 0 ? (M_acting / Ma) : 0;
+                const isManholeOk = ratio <= 1.0;
+
+                table7 += `
+                <tr>
+                    <td style="border:1px solid #bdc3c7; padding:6px; font-weight:bold;">${spanName}</td>
+                    <td style="border:1px solid #bdc3c7; padding:6px;">${mh.spec || 'スラブ内割増筋'}</td>
+                    <td style="border:1px solid #bdc3c7; padding:6px;">${barCount}-${barType}</td>
+                    <td style="border:1px solid #bdc3c7; padding:6px;">${slabThickness} mm</td>
+                    <td style="border:1px solid #bdc3c7; padding:6px; font-weight:bold; color:#2980b9;">${Ma.toFixed(3)} kNm</td>
+                    <td style="border:1px solid #bdc3c7; padding:6px;">${M_acting.toFixed(3)} kNm</td>
+                    <td style="border:1px solid #bdc3c7; padding:6px; font-weight:bold;">${(ratio * 100).toFixed(1)}%</td>
+                    <td style="border:1px solid #bdc3c7; padding:6px;">
+                        <span style="background:${isManholeOk ? '#27ae60' : '#e74c3c'}; color:#fff; padding:3px 10px; border-radius:12px; font-size:11px; font-weight:bold;">
+                            ${isManholeOk ? 'OK' : 'NG'}
+                        </span>
+                    </td>
+                </tr>`;
+            });
+        }
+        table7 += `</tbody></table>`;
+        html += table7;
+
         if (options.showInputs) {
             html += `
             <div style="text-align:center; margin:15px 0 10px 0;">
