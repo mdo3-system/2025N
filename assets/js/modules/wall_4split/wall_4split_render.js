@@ -62,7 +62,7 @@ window.renderLayerPanel = function() {
     const s = window.AppState || {};
     if (!s.layerVisibility) s.layerVisibility = {};
 
-    // 1. 基本標準カテゴリ
+    // 基本標準5カテゴリ限定
     const categories = [
         { id: 'GRID', name: '📐 通り芯・グリッド', color: '#00d2d3' },
         { id: '1F_BACK', name: '🖼️ 1階背景', color: '#1dd1a1' },
@@ -70,13 +70,6 @@ window.renderLayerPanel = function() {
         { id: '1F_ROOF', name: '🏠 1階屋根', color: '#feca57' },
         { id: '2F_ROOF', name: '🏠 2階屋根', color: '#ff6b6b' },
     ];
-
-    const standardIds = new Set(categories.map(c => c.id));
-
-    // 2. 実在する追加DXFレイヤーを収集
-    const extraLayers = new Set(Object.keys(s.layerVisibility).filter(k => !standardIds.has(k)));
-    (s.bgLinesOriginal || []).forEach(l => { if (l.layer && !standardIds.has(l.layer)) extraLayers.add(l.layer); });
-    (s.bgTextsOriginal || []).forEach(t => { if (t.layer && !standardIds.has(t.layer)) extraLayers.add(t.layer); });
 
     let html = '<div style="display:flex; flex-direction:column; gap:6px; font-size:12px;">';
 
@@ -90,20 +83,6 @@ window.renderLayerPanel = function() {
             </label>
         `;
     });
-
-    // 追加DXF個別レイヤーのHTML生成
-    if (extraLayers.size > 0) {
-        html += '<div style="margin-top:8px; padding-top:6px; border-top:1px solid #eee; font-weight:bold; color:#555;">📁 DXF個別レイヤー:</div>';
-        extraLayers.forEach(layerName => {
-            const checked = s.layerVisibility[layerName] !== false ? 'checked' : '';
-            html += `
-                <label style="display:flex; align-items:center; gap:10px; padding:4px 8px; background:#fafafa; border-left:3px solid #b2bec3; border-radius:3px; color:#333; font-size:11px; cursor:pointer; user-select:none;">
-                    <input type="checkbox" class="dxf-layer-toggle-cb" data-layer="${layerName}" ${checked} style="width:14px; height:14px; cursor:pointer;">
-                    <span>${layerName}</span>
-                </label>
-            `;
-        });
-    }
 
     html += '</div>';
 
