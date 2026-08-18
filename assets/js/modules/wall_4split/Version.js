@@ -1,1 +1,1 @@
-window.APP_VERSION = "v3.13.3"; // Fix: wall_4split_pdf.js syntax error causing DOMContentLoaded interruption and layer settings failure
+window.APP_VERSION = "v3.13.4"; // Fix: Resolved double-toggle event listener cancellation on btn-toggle-layer
