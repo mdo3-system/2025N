@@ -893,11 +893,15 @@ window.FoundationRenderer = {
                 const Ma_L = (at * 195 * j) / 1000000; // kNm (長期)
                 const Ma_S = (at * 295 * j) / 1000000; // kNm (短期)
 
-                // 作用応力 M (長期・短期)
+                // 作用応力 M (長期 M_L ・ 短期 M_S)
                 const M_acting_L = Math.max(targetSpan.M_mid || 0, targetSpan.M_end || 0, 0.1);
                 const M_acting_S = Math.max(
-                    (targetSpan.leftward?.Mf_left !== undefined ? Math.abs(targetSpan.leftward.Mf_left) : 0),
-                    (targetSpan.rightward?.Mf_left !== undefined ? Math.abs(targetSpan.rightward.Mf_left) : 0),
+                    (targetSpan.leftward?.M_left || 0),
+                    (targetSpan.leftward?.M_right || 0),
+                    (targetSpan.leftward?.M_mid_S || 0),
+                    (targetSpan.rightward?.M_left || 0),
+                    (targetSpan.rightward?.M_right || 0),
+                    (targetSpan.rightward?.M_mid_S || 0),
                     M_acting_L
                 );
 
@@ -928,9 +932,9 @@ window.FoundationRenderer = {
                     </td>
                     <td style="border:1px solid #bdc3c7; padding:4px;">${slabThickness} mm</td>
                     <td style="border:1px solid #bdc3c7; padding:4px;">${M_acting_L.toFixed(2)} / <strong style="color:#2980b9;">${Ma_L.toFixed(2)}</strong> kNm</td>
-                    <td style="border:1px solid #bdc3c7; padding:4px; font-weight:bold; color:${ratioL > 1.0 ? '#e74c3c' : '#27ae60'};">${(ratioL * 100).toFixed(1)}%</td>
+                    <td style="border:1px solid #bdc3c7; padding:4px; font-weight:bold; color:${ratioL > 1.0 ? '#e74c3c' : '#27ae60'};">${(ratioL * 100).toFixed(1)}% ${ratioL <= 1.0 ? 'OK' : 'NG'}</td>
                     <td style="border:1px solid #bdc3c7; padding:4px;">${M_acting_S.toFixed(2)} / <strong style="color:#8e44ad;">${Ma_S.toFixed(2)}</strong> kNm</td>
-                    <td style="border:1px solid #bdc3c7; padding:4px; font-weight:bold; color:${ratioS > 1.0 ? '#e74c3c' : '#27ae60'};">${(ratioS * 100).toFixed(1)}%</td>
+                    <td style="border:1px solid #bdc3c7; padding:4px; font-weight:bold; color:${ratioS > 1.0 ? '#e74c3c' : '#27ae60'};">${(ratioS * 100).toFixed(1)}% ${ratioS <= 1.0 ? 'OK' : 'NG'}</td>
                     <td style="border:1px solid #bdc3c7; padding:4px;">
                         <span style="background:${isManholeOk ? '#27ae60' : '#e74c3c'}; color:#fff; padding:2px 8px; border-radius:12px; font-size:10px; font-weight:bold;">
                             ${isManholeOk ? 'OK' : 'NG'}

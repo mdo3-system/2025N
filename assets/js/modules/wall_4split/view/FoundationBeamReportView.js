@@ -306,6 +306,78 @@ function getFoundationBeamReportHtml_inner(beam) {
             </tr>`;
         });
         html += `</tbody></table>`;
+
+        // Table 7: 人通口補強計算
+        const s = window.AppState || {};
+        const beamManholes = (s.manholes || []).filter(m => m.parentBeamId === beam.id);
+        const slabThickness = (s.foundationSlabs && s.foundationSlabs.length > 0) ? (s.foundationSlabs[0].props?.slabThickness || 150) : 150;
+
+        html += `<div style="font-weight:bold; margin-top:10px; margin-bottom:4px; font-size:11px;">(7) 人通口補強計算（スラブ内割増筋: 長期・短期耐力検定）</div>
+        <table style="width:100%; border-collapse:collapse; font-size:10px; border:1px solid #aaa; text-align:center;">
+            <thead>
+                <tr style="background:#f2f2f2;">
+                    <th style="border:1px solid #aaa; padding:3px;">位置 (グリッド)</th>
+                    <th style="border:1px solid #aaa; padding:3px;">仕様</th>
+                    <th style="border:1px solid #aaa; padding:3px;">補強筋 本数・径</th>
+                    <th style="border:1px solid #aaa; padding:3px;">スラブ厚 t</th>
+                    <th style="border:1px solid #aaa; padding:3px;">長期 M / 耐力 Ma,L</th>
+                    <th style="border:1px solid #aaa; padding:3px;">長期検定比</th>
+                    <th style="border:1px solid #aaa; padding:3px;">短期 M / 耐力 Ma,S</th>
+                    <th style="border:1px solid #aaa; padding:3px;">短期検定比</th>
+                    <th style="border:1px solid #aaa; padding:3px;">判定</th>
+                </tr>
+            </thead>
+            <tbody>`;
+
+        if (beamManholes.length === 0) {
+            html += `<tr><td colspan="9" style="padding:8px; color:#7f8c8d; background:#fafafa;">※ この基礎梁には人通口が配置されていません（配置後自動計算）</td></tr>`;
+        } else {
+            beamManholes.forEach(mh => {
+                const targetSpan = spans[0] || { spanName: '全区間', M_mid: 0, M_end: 0 };
+                const spanName = targetSpan.spanName || '柱間';
+                const barType = mh.bar_type || 'D13';
+                const barCount = parseInt(mh.n_bars) || 2;
+                const specName = mh.spec || 'スラブ内割増筋';
+
+                const barAreas = { "D10": 71.0, "D13": 126.7, "D16": 198.6, "D19": 286.5, "D13+D16": 325.3 };
+                const at = barCount * (barAreas[barType] || 126.7);
+                const d = Math.max(10, slabThickness - 70);
+                const j = (7 / 8) * d;
+
+                const Ma_L = (at * 195 * j) / 1000000;
+                const Ma_S = (at * 295 * j) / 1000000;
+
+                const M_acting_L = Math.max(targetSpan.M_mid || 0, targetSpan.M_end || 0, 0.1);
+                const M_acting_S = Math.max(
+                    (targetSpan.leftward?.M_left || 0),
+                    (targetSpan.leftward?.M_right || 0),
+                    (targetSpan.leftward?.M_mid_S || 0),
+                    (targetSpan.rightward?.M_left || 0),
+                    (targetSpan.rightward?.M_right || 0),
+                    (targetSpan.rightward?.M_mid_S || 0),
+                    M_acting_L
+                );
+
+                const ratioL = Ma_L > 0 ? (M_acting_L / Ma_L) : 0;
+                const ratioS = Ma_S > 0 ? (M_acting_S / Ma_S) : 0;
+                const isManholeOk = (ratioL <= 1.0) && (ratioS <= 1.0);
+
+                html += `<tr>
+                    <td style="border:1px solid #aaa; padding:3px; font-weight:bold;">${spanName}</td>
+                    <td style="border:1px solid #aaa; padding:3px;">${specName}</td>
+                    <td style="border:1px solid #aaa; padding:3px;">${barCount}本 - ${barType}</td>
+                    <td style="border:1px solid #aaa; padding:3px;">${slabThickness} mm</td>
+                    <td style="border:1px solid #aaa; padding:3px;">${M_acting_L.toFixed(2)} / ${Ma_L.toFixed(2)} kNm</td>
+                    <td style="border:1px solid #aaa; padding:3px; font-weight:bold; color:${ratioL > 1.0 ? 'red' : 'green'};">${(ratioL * 100).toFixed(1)}% ${ratioL <= 1.0 ? 'OK' : 'NG'}</td>
+                    <td style="border:1px solid #aaa; padding:3px;">${M_acting_S.toFixed(2)} / ${Ma_S.toFixed(2)} kNm</td>
+                    <td style="border:1px solid #aaa; padding:3px; font-weight:bold; color:${ratioS > 1.0 ? 'red' : 'green'};">${(ratioS * 100).toFixed(1)}% ${ratioS <= 1.0 ? 'OK' : 'NG'}</td>
+                    <td style="border:1px solid #aaa; padding:3px;">
+                        <span style="color:${isManholeOk ? 'green' : 'red'}; font-weight:bold;">${isManholeOk ? 'OK' : 'NG'}</span>
+                    </td>
+                </tr>`;
+            });
+        }
+        html += `</tbody></table>`;
     } else {
         html += `<p style="padding:10px; text-align:center; color:#7f8c8d; font-size:11px;">
             💡 基礎梁のスパン（柱間）が検出されていません。

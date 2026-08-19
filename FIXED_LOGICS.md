@@ -1246,3 +1246,11 @@ eedBotRebarBoost（下主筋補強フラグ）を個別に判定・算出。
     - 判定 < 1.0
     - 💡 補強要否ガイド
 - **検証結果**: PASS: 25 / FAIL: 0 (100%通過)、全85JSファイル構文チェック PASS。
+
+### 98. 基礎梁人通口補強筋計算（Table 7）の長期・短期応力/耐力検定（Ma,L, Ma,S）の明示的算定・二重判定化 (v3.13.12)
+- **改修内容**:
+  - 人通口補強計算（Table 7）において、長期作用モーメント {acting,L}$（長期 {mid}$ / {end}$）と短期作用モーメント {acting,S}$（短期加力曲げ・モーメント勾配合成値）を分離算出。
+  - 補強筋断面積 $、応力中心間距離 $ より長期許容耐力 ,L = (a_t \cdot 195 \cdot j) / 10^6$ (kN・m) と短期許容耐力 ,S = (a_t \cdot 295 \cdot j) / 10^6$ (kN・m) をそれぞれ算出。
+  - 長期検定比 atioL = (M_acting_L / Ma_L * 100).toFixed(1) + "% OK/NG" および 短期検定比 atioS = (M_acting_S / Ma_S * 100).toFixed(1) + "% OK/NG" を個別に判定表示。
+  - FoundationRenderer.js および FoundationBeamReportView.js の両方で同一UI・同一ロジックを完全適用。
+- **検証結果**: PASS: 25 / FAIL: 0 (100%通過)、全85JSファイル構文チェック PASS。

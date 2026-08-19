@@ -1,1 +1,1 @@
-window.APP_VERSION = "v3.13.11"; // Feature: Foundation beam modal now fully complies with official calculation format (Long-term M_mid/lMa_top & M_end/lMa_bot, Short-term Left/Right moment ratios, and explicit rebar boost guidance)
+window.APP_VERSION = "v3.13.12"; // Feature: Foundation manhole reinforcement stress checks now explicitly evaluate Long-term M_L / Ma,L & Short-term M_S / Ma,S with individual OK/NG ratios
