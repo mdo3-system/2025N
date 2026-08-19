@@ -154,9 +154,48 @@ window.GridEngine = {
         state.masterXs = masterXs; 
         state.masterYs = masterYs;
 
-        // 通り芯名称の決定 (ユーザー手動変更優先 > 自動連番 X1, X2... / Y1, Y2...)
-        let nx = masterXs.map((x, i) => (state.userEditedGridX && state.userEditedGridX[x]) || `X${i + 1}`);
-        let ny = masterYs.map((y, i) => (state.userEditedGridY && state.userEditedGridY[y]) || `Y${i + 1}`);
+        // 通り芯名称の決定 (ユーザー手動変更優先 > 復元済み配列優先 > 自動連番 X1, X2... / Y1, Y2...)
+        const resolveGridXName = (x, i) => {
+            const rx = Math.round(x);
+            if (state.userEditedGridX) {
+                if (state.userEditedGridX[x] !== undefined) return state.userEditedGridX[x];
+                if (state.userEditedGridX[rx] !== undefined) return state.userEditedGridX[rx];
+                if (state.userEditedGridX[String(rx)] !== undefined) return state.userEditedGridX[String(rx)];
+                for (const k in state.userEditedGridX) {
+                    if (Math.abs(parseFloat(k) - x) < 3) return state.userEditedGridX[k];
+                }
+            }
+            if (state.gridXNames && state.gridXNames[i]) return state.gridXNames[i];
+            return `X${i + 1}`;
+        };
+
+        const resolveGridYName = (y, i) => {
+            const ry = Math.round(y);
+            if (state.userEditedGridY) {
+                if (state.userEditedGridY[y] !== undefined) return state.userEditedGridY[y];
+                if (state.userEditedGridY[ry] !== undefined) return state.userEditedGridY[ry];
+                if (state.userEditedGridY[String(ry)] !== undefined) return state.userEditedGridY[String(ry)];
+                for (const k in state.userEditedGridY) {
+                    if (Math.abs(parseFloat(k) - y) < 3) return state.userEditedGridY[k];
+                }
+            }
+            if (state.gridYNames && state.gridYNames[i]) return state.gridYNames[i];
+            return `Y${i + 1}`;
+        };
+
+        let nx = masterXs.map((x, i) => {
+            const name = resolveGridXName(x, i);
+            if (!state.userEditedGridX) state.userEditedGridX = {};
+            state.userEditedGridX[Math.round(x)] = name;
+            return name;
+        });
+
+        let ny = masterYs.map((y, i) => {
+            const name = resolveGridYName(y, i);
+            if (!state.userEditedGridY) state.userEditedGridY = {};
+            state.userEditedGridY[Math.round(y)] = name;
+            return name;
+        });
 
         state.gridXCoords = masterXs; state.gridXNames = nx;
         state.gridYCoords = masterYs; state.gridYNames = ny;
@@ -337,14 +376,18 @@ window.GridEngine = {
             s.gridXNames[index] = name;
             if (!s.userEditedGridX) s.userEditedGridX = {};
             if (s.gridXCoords && s.gridXCoords[index] != null) {
-                s.userEditedGridX[s.gridXCoords[index]] = name;
+                const coord = s.gridXCoords[index];
+                s.userEditedGridX[coord] = name;
+                s.userEditedGridX[Math.round(coord)] = name;
             }
         } else if (axis === 'Y') {
             if (!s.gridYNames) s.gridYNames = [];
             s.gridYNames[index] = name;
             if (!s.userEditedGridY) s.userEditedGridY = {};
             if (s.gridYCoords && s.gridYCoords[index] != null) {
-                s.userEditedGridY[s.gridYCoords[index]] = name;
+                const coord = s.gridYCoords[index];
+                s.userEditedGridY[coord] = name;
+                s.userEditedGridY[Math.round(coord)] = name;
             }
         }
 

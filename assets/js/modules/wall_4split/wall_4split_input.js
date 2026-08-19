@@ -620,6 +620,7 @@ function handleGridInput(mode, state, clickX, clickY) {
             if (state.deletedGridY) {
                 state.deletedGridY = state.deletedGridY.filter(dy => Math.abs(dy - newGY) > 5);
             }
+            state.isGridFixed = true;
         }
         if (window.GridEngine) {
             window.GridEngine.analyzeGrids(state);

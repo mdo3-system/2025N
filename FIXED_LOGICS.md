@@ -1191,3 +1191,16 @@ $$R_i = A + B \cdot x_i$$
 - **基礎モード選択時の1階背景（1F_BACK）自動連動**:
   - AppController.js の switchAppMode('foundation') 実行時に setDefaultLayerVisibility('1F') を連動させ、基礎モード選択時に「1階背景（1F_BACK）」に自動でチェックが入りキャンバスに描画されるよう改修。
 - **自動テスト結果**: PASS: 24 / FAIL: 0 (100%通過)
+
+### 94. グリッドスパン変更・通り芯文字編集の保存・復元（JSONセーブ/ロード）の100%完全保持 (v3.13.8)
+- **スパン変更が復元時に元に戻るバグの根絶**:
+  - wall_4split_export.js の JSON 出力処理 exportJson に手動スパン固定フラグ isGridFixed: !!state.isGridFixed を追加。
+  - Parsers.js の parseJson 時に isGridFixed フラグを完全復元し、かつ gxc/gyc（手動スパン座標）保存時は isGridFixed = true を確定させるよう修正。
+  - nalyzeGrids 実行時に isGridFixed = false と誤判定されて DXF 初期スパン座標に上書きリセットされる現象を根絶。
+- **通り芯文字編集が復元時に書き換わるバグの根絶**:
+  - GridEngine.js 内に通り芯文字多角解決ロジック（esolveGridXName, esolveGridYName）を新設。
+  - 数値座標、Math.round 丸め座標、文字列キー（例: "1820"）、2mm以内の近接座標スナップの全パターンで userEditedGridX/Y を安全検索。
+  - さらに、復元された gridXNames / gridYNames の保護優先処理を導入し、手動文字変更が X1, X2... のデフォルト名に強制上書き破棄される問題を完全解決。
+  - 通り芯リネーム（updateGridName）時に数値座標と整数座標の両方で userEditedGridX/Y に二重登録・同期させる処理を追加。
+- **ヘッドレスユニットテスト追加**:
+  - GridPersistence.test.js を新規新設。グリッドスパン変更・手動通り芯文字編集後の JSON パース＆nalyzeGrids 復元プロセスを常時自動検証（全25テスト PASS: 25 / FAIL: 0）。

@@ -159,6 +159,7 @@ window.AppExport = {
             layerMapping: state.layerMapping || null,
             elementVisibility: state.elementVisibility || {},
             ueGX: state.userEditedGridX, ueGY: state.userEditedGridY,
+            isGridFixed: !!state.isGridFixed,
             docDrawingsRaw: docDrawingsRaw,
             deletedGX: state.deletedGridX, deletedGY: state.deletedGridY,
             // [バグ修正 基礎データのセーブ・ロード対応] 基礎用データを追加

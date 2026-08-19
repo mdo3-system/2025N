@@ -32,6 +32,8 @@ global.document = {
 // logic ファイル群の読み込み
 const filesToLoad = [
     '../logic/ServiceContainer.js',
+    '../logic/GridEngine.js',
+    '../logic/Parsers.js',
     '../logic/MathUtils.js',
     '../logic/CadEngine.js',
     '../logic/WallEngine.js',
@@ -81,7 +83,8 @@ const testFiles = [
     'AreaEngine.test.js',
     'FoundationSlabAnalysisEngine.test.js',
     'FoundationBeamEngine.test.js',
-    'ReportNValueView.test.js'
+    'ReportNValueView.test.js',
+    'GridPersistence.test.js'
 ];
 
 testFiles.forEach(f => {

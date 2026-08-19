@@ -266,10 +266,10 @@ window.Parsers = {
         s.roofGridManualY = d.roofGridManualY || []; // [v2.7.0]
 
         // 2. Grid & Coordinates
-        if (d.gx) s.gridXNames = d.gx;
-        if (d.gy) s.gridYNames = d.gy;
-        if (d.gxc) s.gridXCoords = d.gxc;
-        if (d.gyc) s.gridYCoords = d.gyc;
+        if (d.gx) s.gridXNames = [...d.gx];
+        if (d.gy) s.gridYNames = [...d.gy];
+        if (d.gxc) s.gridXCoords = [...d.gxc];
+        if (d.gyc) s.gridYCoords = [...d.gyc];
         if (d.mgX) s.manualGridX = d.mgX;
         if (d.mgY) s.manualGridY = d.mgY;
         if (d.mgAngle) s.manualGridAngle = d.mgAngle;
@@ -277,6 +277,11 @@ window.Parsers = {
         if (d.ueGY) s.userEditedGridY = d.ueGY;
         if (d.deletedGX) s.deletedGridX = d.deletedGX;
         if (d.deletedGY) s.deletedGridY = d.deletedGY;
+        if (d.isGridFixed !== undefined) {
+            s.isGridFixed = !!d.isGridFixed;
+        } else if ((d.gxc && d.gxc.length > 0) || (d.gyc && d.gyc.length > 0)) {
+            s.isGridFixed = true;
+        }
 
         // 3. Foundation data
         s.foundationBeams = d.foundationBeams || [];
