@@ -261,8 +261,6 @@ function getFoundationBeamReportHtml_inner(beam) {
             </thead>
             <tbody>`;
         spans.forEach(span => {
-            const badge = span.isNG ? `<span style="color:red; font-weight:bold;">NG</span>` : `<span style="color:green; font-weight:bold;">OK</span>`;
-            
             const rM_L_mid = span.rM_L_mid ?? (span.M_mid / (span.cap?.lMa_top || 1));
             const rM_L_end = span.rM_L_end ?? (span.M_end / (span.cap?.lMa_bot || 1));
             const rQ_L = span.rQ_L ?? (span.Q_L / (span.cap?.lQa || 1));
@@ -275,32 +273,37 @@ function getFoundationBeamReportHtml_inner(beam) {
             const r_rM_right = (span.rightward?.rM_right_top ?? (span.rightward?.M_right / (span.cap?.sMa_top || 1))) || 0;
             const r_rQ = span.rightward?.rQ ?? 0;
 
-            const needTop = span.needTopBoost !== undefined ? span.needTopBoost : (rM_L_mid > 1.0 || l_rM_left > 1.0 || l_rM_right > 1.0 || r_rM_left > 1.0 || r_rM_right > 1.0);
-            const needBot = span.needBotBoost !== undefined ? span.needBotBoost : (rM_L_end > 1.0);
+            const needTop = (rM_L_mid > 1.0) || (l_rM_left > 1.0) || (l_rM_right > 1.0) || (r_rM_left > 1.0) || (r_rM_right > 1.0);
+            const needBot = (rM_L_end > 1.0);
+            const needShear = (rQ_L > 1.0) || (l_rQ > 1.0) || (r_rQ > 1.0);
+            const isSpanNG = needTop || needBot || needShear;
+
+            const badge = isSpanNG ? `<span style="color:red; font-weight:bold;">NG</span>` : `<span style="color:green; font-weight:bold;">OK</span>`;
+
             let advice = '';
             if (needTop && needBot) {
                 advice = `<span style="color:#900; font-weight:bold; background:#fde8e8; padding:2px 4px; border-radius:3px;">⚠️ 上主筋・下主筋の両方を補強</span>`;
             } else if (needTop) {
                 advice = `<span style="color:#c0392b; font-weight:bold; background:#fadbd8; padding:2px 4px; border-radius:3px;">⚠️ 上主筋を補強 (端部曲げ/長期M中)</span>`;
             } else if (needBot) {
-                advice = `<span style="color:#c0392b; font-weight:bold; background:#fadbd8; padding:2px 4px; border-radius:3px;">⚠️ 下主筋を補強 (長期M端/中央短期)</span>`;
-            } else if (span.isNG) {
-                advice = `<span style="color:#d35400; font-weight:bold;">⚠️ せん断力等を検討</span>`;
+                advice = `<span style="color:#c0392b; font-weight:bold; background:#fadbd8; padding:2px 4px; border-radius:3px;">⚠️ 下主筋を補強 (長期M端)</span>`;
+            } else if (needShear) {
+                advice = `<span style="color:#d35400; font-weight:bold; background:#fef5e7; padding:2px 4px; border-radius:3px;">⚠️ あばら筋(ST筋)を補強 (せん断)</span>`;
             } else {
                 advice = `<span style="color:#27ae60;">✅ 既定配筋で適合</span>`;
             }
 
-            html += `<tr>
+            html += `<tr style="${isSpanNG ? 'background:#fef5f5;' : ''}">
                 <td style="border:1px solid #aaa; padding:3px; font-weight:bold;">${span.spanName}</td>
                 <td style="border:1px solid #aaa; padding:3px; font-weight:bold; background:#f4f9ff; color:${rM_L_mid > 1.0 ? 'red' : '#1b4f72'};">${rM_L_mid.toFixed(3)}</td>
                 <td style="border:1px solid #aaa; padding:3px; font-weight:bold; background:#fdf9f4; color:${rM_L_end > 1.0 ? 'red' : '#7e5109'};">${rM_L_end.toFixed(3)}</td>
-                <td style="border:1px solid #aaa; padding:3px;">${rQ_L.toFixed(3)}</td>
+                <td style="border:1px solid #aaa; padding:3px; color:${rQ_L > 1.0 ? 'red' : 'inherit'};">${rQ_L.toFixed(3)}</td>
                 <td style="border:1px solid #aaa; padding:3px; color:${l_rM_left > 1.0 ? 'red' : 'inherit'};">${l_rM_left.toFixed(3)}</td>
                 <td style="border:1px solid #aaa; padding:3px; color:${l_rM_right > 1.0 ? 'red' : 'inherit'};">${l_rM_right.toFixed(3)}</td>
-                <td style="border:1px solid #aaa; padding:3px;">${l_rQ.toFixed(3)}</td>
+                <td style="border:1px solid #aaa; padding:3px; color:${l_rQ > 1.0 ? 'red' : 'inherit'};">${l_rQ.toFixed(3)}</td>
                 <td style="border:1px solid #aaa; padding:3px; color:${r_rM_left > 1.0 ? 'red' : 'inherit'};">${r_rM_left.toFixed(3)}</td>
                 <td style="border:1px solid #aaa; padding:3px; color:${r_rM_right > 1.0 ? 'red' : 'inherit'};">${r_rM_right.toFixed(3)}</td>
-                <td style="border:1px solid #aaa; padding:3px;">${r_rQ.toFixed(3)}</td>
+                <td style="border:1px solid #aaa; padding:3px; color:${r_rQ > 1.0 ? 'red' : 'inherit'};">${r_rQ.toFixed(3)}</td>
                 <td style="border:1px solid #aaa; padding:3px; text-align:center;">${badge}</td>
                 <td style="border:1px solid #aaa; padding:3px; text-align:left;">${advice}</td>
             </tr>`;

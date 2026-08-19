@@ -1254,3 +1254,10 @@ eedBotRebarBoost（下主筋補強フラグ）を個別に判定・算出。
   - 長期検定比 atioL = (M_acting_L / Ma_L * 100).toFixed(1) + "% OK/NG" および 短期検定比 atioS = (M_acting_S / Ma_S * 100).toFixed(1) + "% OK/NG" を個別に判定表示。
   - FoundationRenderer.js および FoundationBeamReportView.js の両方で同一UI・同一ロジックを完全適用。
 - **検証結果**: PASS: 25 / FAIL: 0 (100%通過)、全85JSファイル構文チェック PASS。
+
+### 99. Table 6 総合判定（isSpanNG）および補強要否ガイドの表示項目値完全連動（誤判定バグ修復） (v3.13.13)
+- **原因解明**: 裏側の check() 内 cap_l（正モーメント時に sMa_bot 比較）での M_left が 1.0 を超えていたため、裏で span.isNG / 
+eedBotBoost が 	rue となり、画面上には sMa_top 比較の「51.5% OK」が表示されているにもかかわらず、判定バッジが「NG」「⚠️ 下主筋を補強」と誤表示されていた不一致を修正。
+- **修復内容**:
+  - FoundationEngine.js, FoundationRenderer.js, FoundationBeamReportView.js の全てにおいて、Table 6 に表示されている全10項目の値（M_L_mid, M_L_end, Q_L, l_rM_left, l_rM_right, l_rQ, _rM_left, _rM_right, _rQ）が**すべて 1.0 (100%) 以下の場合に絶対 100% 確実に isSpanNG = false (OKバッジ) かつ ✅ 既定配筋で適合** と判定されるよう完全連動改修。
+- **検証結果**: PASS: 25 / FAIL: 0 (100%通過)、全85JSファイル構文チェック PASS。

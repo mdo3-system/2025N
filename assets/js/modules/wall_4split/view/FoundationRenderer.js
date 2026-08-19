@@ -812,36 +812,39 @@ window.FoundationRenderer = {
             const r_rM_right = (span.rightward?.rM_right_top ?? (span.rightward?.M_right / (span.cap?.sMa_top || 1))) || 0;
             const r_rQ = span.rightward?.rQ ?? 0;
 
-            const needTop = span.needTopBoost !== undefined ? span.needTopBoost : (rM_L_mid > 1.0 || l_rM_left > 1.0 || l_rM_right > 1.0 || r_rM_left > 1.0 || r_rM_right > 1.0);
-            const needBot = span.needBotBoost !== undefined ? span.needBotBoost : (rM_L_end > 1.0);
+            const needTop = (rM_L_mid > 1.0) || (l_rM_left > 1.0) || (l_rM_right > 1.0) || (r_rM_left > 1.0) || (r_rM_right > 1.0);
+            const needBot = (rM_L_end > 1.0);
+            const needShear = (rQ_L > 1.0) || (l_rQ > 1.0) || (r_rQ > 1.0);
+            const isSpanNG = needTop || needBot || needShear;
+
             let advice = '';
             if (needTop && needBot) {
                 advice = `<span style="color:#900; font-weight:bold; background:#fde8e8; padding:2px 6px; border-radius:3px;">⚠️ 上主筋・下主筋の両方を補強</span>`;
             } else if (needTop) {
                 advice = `<span style="color:#c0392b; font-weight:bold; background:#fadbd8; padding:2px 6px; border-radius:3px;">⚠️ 上主筋を補強 (端部曲げ/長期M中)</span>`;
             } else if (needBot) {
-                advice = `<span style="color:#c0392b; font-weight:bold; background:#fadbd8; padding:2px 6px; border-radius:3px;">⚠️ 下主筋を補強 (長期M端/中央短期)</span>`;
-            } else if (span.isNG) {
-                advice = `<span style="color:#d35400; font-weight:bold;">⚠️ せん断力等を検討</span>`;
+                advice = `<span style="color:#c0392b; font-weight:bold; background:#fadbd8; padding:2px 6px; border-radius:3px;">⚠️ 下主筋を補強 (長期M端)</span>`;
+            } else if (needShear) {
+                advice = `<span style="color:#d35400; font-weight:bold; background:#fef5e7; padding:2px 6px; border-radius:3px;">⚠️ あばら筋(ST筋)を補強 (せん断)</span>`;
             } else {
                 advice = `<span style="color:#27ae60;">✅ 既定配筋で適合</span>`;
             }
 
             table6 += `
-            <tr style="${span.isNG ? 'background:#fef5f5;' : ''}">
+            <tr style="${isSpanNG ? 'background:#fef5f5;' : ''}">
                 <td style="border:1px solid #bdc3c7; padding:4px; font-weight:bold;">${getFreshSpanName(span)}</td>
                 <td style="border:1px solid #bdc3c7; padding:4px; font-weight:bold; background:#f4f9ff; color:${rM_L_mid > 1.0 ? 'red' : '#1b4f72'};">${this.fmtRatio(rM_L_mid)}</td>
                 <td style="border:1px solid #bdc3c7; padding:4px; font-weight:bold; background:#fdf9f4; color:${rM_L_end > 1.0 ? 'red' : '#7e5109'};">${this.fmtRatio(rM_L_end)}</td>
-                <td style="border:1px solid #bdc3c7; padding:4px;">${this.fmtRatio(rQ_L)}</td>
+                <td style="border:1px solid #bdc3c7; padding:4px; color:${rQ_L > 1.0 ? 'red' : 'inherit'};">${this.fmtRatio(rQ_L)}</td>
                 <td style="border:1px solid #bdc3c7; padding:4px; color:${l_rM_left > 1.0 ? 'red' : 'inherit'};">${this.fmtRatio(l_rM_left)}</td>
                 <td style="border:1px solid #bdc3c7; padding:4px; color:${l_rM_right > 1.0 ? 'red' : 'inherit'};">${this.fmtRatio(l_rM_right)}</td>
-                <td style="border:1px solid #bdc3c7; padding:4px;">${this.fmtRatio(l_rQ)}</td>
+                <td style="border:1px solid #bdc3c7; padding:4px; color:${l_rQ > 1.0 ? 'red' : 'inherit'};">${this.fmtRatio(l_rQ)}</td>
                 <td style="border:1px solid #bdc3c7; padding:4px; color:${r_rM_left > 1.0 ? 'red' : 'inherit'};">${this.fmtRatio(r_rM_left)}</td>
                 <td style="border:1px solid #bdc3c7; padding:4px; color:${r_rM_right > 1.0 ? 'red' : 'inherit'};">${this.fmtRatio(r_rM_right)}</td>
-                <td style="border:1px solid #bdc3c7; padding:4px;">${this.fmtRatio(r_rQ)}</td>
+                <td style="border:1px solid #bdc3c7; padding:4px; color:${r_rQ > 1.0 ? 'red' : 'inherit'};">${this.fmtRatio(r_rQ)}</td>
                 <td style="border:1px solid #bdc3c7; padding:4px;">
-                    <span style="background:${span.isNG ? '#e74c3c' : '#27ae60'}; color:#fff; padding:2px 8px; border-radius:12px; font-size:10px; font-weight:bold;">
-                        ${span.isNG ? 'NG' : 'OK'}
+                    <span style="background:${isSpanNG ? '#e74c3c' : '#27ae60'}; color:#fff; padding:2px 8px; border-radius:12px; font-size:10px; font-weight:bold;">
+                        ${isSpanNG ? 'NG' : 'OK'}
                     </span>
                 </td>
                 <td style="border:1px solid #bdc3c7; padding:4px; text-align:left;">${advice}</td>

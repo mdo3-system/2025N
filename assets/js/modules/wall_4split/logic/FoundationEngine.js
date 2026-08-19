@@ -577,15 +577,18 @@ window.FoundationEngine = {
 
                 const rM_end_S = Math.max(resL.rM_end_max, resR.rM_end_max);
                 const rM_mid_S_max = Math.max(resL.rM_mid_S, resR.rM_mid_S);
-                const needTopBoost = (rM_end_S > 1.0) || (rM_L_mid > 1.0);
-                const needBotBoost = (rM_mid_S_max > 1.0) || (rM_L_end > 1.0);
+                const needTopBoost = (rM_L_mid > 1.0) || (resL.rM_left_top > 1.0) || (resL.rM_right_top > 1.0) || (resR.rM_left_top > 1.0) || (resR.rM_right_top > 1.0);
+                const needBotBoost = (rM_L_end > 1.0);
 
                 const spanNG = (
-                    rM_L > 1.0 ||
+                    rM_L_mid > 1.0 ||
+                    rM_L_end > 1.0 ||
                     rQ_L > 1.0 ||
-                    rM_end_S > 1.0 ||
-                    rM_mid_S_max > 1.0 ||
+                    resL.rM_left_top > 1.0 ||
+                    resL.rM_right_top > 1.0 ||
                     (resL.Q / (resL.sQa || 1)) > 1.0 ||
+                    resR.rM_left_top > 1.0 ||
+                    resR.rM_right_top > 1.0 ||
                     (resR.Q / (resR.sQa || 1)) > 1.0
                 );
                 if (spanNG) isNG = true;
