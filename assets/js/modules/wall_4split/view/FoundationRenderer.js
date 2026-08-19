@@ -532,19 +532,21 @@ window.FoundationRenderer = {
         table2 += `</tbody></table>`;
         html += table2;
 
-        html += `<div style="font-size:12px; font-weight:bold; color:#2c3e50; border-left:4px solid #34495e; padding-left:8px; margin:15px 0 6px 0;">③ 応力の算定 (短期組み合わせ)</div>`;
+        html += `<div style="font-size:12px; font-weight:bold; color:#2c3e50; border-left:4px solid #34495e; padding-left:8px; margin:15px 0 6px 0;">③ 応力の算定 (短期組み合わせ: 端部・中央曲げモーメント)</div>`;
         let table3 = `<table style="width:100%; border-collapse:collapse; font-size:10px; margin-bottom:15px; border:1px solid #bdc3c7; text-align:center;">
             <thead>
                 <tr style="background:#34495e; color:#fff;">
                     <th rowspan="2" style="border:1px solid #bdc3c7; padding:4px;">柱間</th>
-                    <th colspan="3" style="border:1px solid #bdc3c7; padding:4px; text-align:center; background:#ebf5fb; color:#1b4f72;">左加力 (QL + Qe)</th>
-                    <th colspan="3" style="border:1px solid #bdc3c7; padding:4px; text-align:center; background:#fdf2e9; color:#7e5109;">右加力 (QL + Qe)</th>
+                    <th colspan="4" style="border:1px solid #bdc3c7; padding:4px; text-align:center; background:#ebf5fb; color:#1b4f72;">左加力 (QL + Qe)</th>
+                    <th colspan="4" style="border:1px solid #bdc3c7; padding:4px; text-align:center; background:#fdf2e9; color:#7e5109;">右加力 (QL + Qe)</th>
                 </tr>
                 <tr style="background:#f2f4f4; color:#2c3e50; border-bottom:1px solid #bdc3c7;">
                     <th style="border:1px solid #bdc3c7; padding:3px;">M端(左)</th>
+                    <th style="border:1px solid #bdc3c7; padding:3px; background:#eef6ff; font-weight:bold; color:#1b4f72;">M中</th>
                     <th style="border:1px solid #bdc3c7; padding:3px;">M端(右)</th>
                     <th style="border:1px solid #bdc3c7; padding:3px;">QS (kN)</th>
                     <th style="border:1px solid #bdc3c7; padding:3px;">M端(左)</th>
+                    <th style="border:1px solid #bdc3c7; padding:3px; background:#eef6ff; font-weight:bold; color:#7e5109;">M中</th>
                     <th style="border:1px solid #bdc3c7; padding:3px;">M端(右)</th>
                     <th style="border:1px solid #bdc3c7; padding:3px;">QS (kN)</th>
                 </tr>
@@ -552,12 +554,16 @@ window.FoundationRenderer = {
             <tbody>`;
         
         spans.forEach(span => {
+            const l_Mmid = (span.leftward?.M_mid_S ?? span.M_mid ?? 0).toFixed(3);
+            const r_Mmid = (span.rightward?.M_mid_S ?? span.M_mid ?? 0).toFixed(3);
             table3 += `<tr>
                 <td style="border:1px solid #bdc3c7; padding:4px; font-weight:bold;">${getFreshSpanName(span)}</td>
                 <td style="border:1px solid #bdc3c7; padding:4px; text-align:right; color:#2980b9;">${(span.leftward?.M_left ?? 0).toFixed(3)}</td>
+                <td style="border:1px solid #bdc3c7; padding:4px; text-align:right; font-weight:bold; background:#f4f9ff; color:#1b4f72;">${l_Mmid}</td>
                 <td style="border:1px solid #bdc3c7; padding:4px; text-align:right; color:#27ae60;">${(span.leftward?.M_right ?? 0).toFixed(3)}</td>
                 <td style="border:1px solid #bdc3c7; padding:4px; text-align:right; font-weight:bold; color:#7d3c98;">${(span.leftward?.Q ?? 0).toFixed(3)}</td>
                 <td style="border:1px solid #bdc3c7; padding:4px; text-align:right; color:#c0392b;">${(span.rightward?.M_left ?? 0).toFixed(3)}</td>
+                <td style="border:1px solid #bdc3c7; padding:4px; text-align:right; font-weight:bold; background:#f4f9ff; color:#7e5109;">${r_Mmid}</td>
                 <td style="border:1px solid #bdc3c7; padding:4px; text-align:right; color:#e67e22;">${(span.rightward?.M_right ?? 0).toFixed(3)}</td>
                 <td style="border:1px solid #bdc3c7; padding:4px; text-align:right; font-weight:bold; color:#e74c3c;">${(span.rightward?.Q ?? 0).toFixed(3)}</td>
             </tr>`;
@@ -768,33 +774,55 @@ window.FoundationRenderer = {
         }
         html += table5;
 
-        html += `<div style="font-size:12px; font-weight:bold; color:#2c3e50; border-left:4px solid #34495e; padding-left:8px; margin:15px 0 6px 0;">⑥ 総合判定 (検定比)</div>`;
+        html += `<div style="font-size:12px; font-weight:bold; color:#2c3e50; border-left:4px solid #34495e; padding-left:8px; margin:15px 0 6px 0;">⑥ 総合判定 (検定比・主筋補強指針)</div>`;
         let table6 = `<table style="width:100%; border-collapse:collapse; font-size:10px; border:2px solid #34495e; text-align:center; background:#fff;">
             <thead>
                 <tr style="background:#34495e; color:#fff;">
                     <th style="border:1px solid #bdc3c7; padding:6px;">スパン No.</th>
                     <th style="border:1px solid #bdc3c7; padding:6px;">曲げ (長期)</th>
                     <th style="border:1px solid #bdc3c7; padding:6px;">せん断 (長期)</th>
-                    <th style="border:1px solid #bdc3c7; padding:6px;">曲げ (短期)</th>
+                    <th style="border:1px solid #bdc3c7; padding:6px; background:#2980b9; color:#fff;">短期端部 (上筋)<br>M端/sMa</th>
+                    <th style="border:1px solid #bdc3c7; padding:6px; background:#16a085; color:#fff;">短期中央 (下筋)<br>M中/sMa</th>
                     <th style="border:1px solid #bdc3c7; padding:6px;">せん断 (短期)</th>
                     <th style="border:1px solid #bdc3c7; padding:6px;">判定</th>
+                    <th style="border:1px solid #bdc3c7; padding:6px; text-align:left;">💡 補強要否ガイド</th>
                 </tr>
             </thead>
             <tbody>`;
         
         spans.forEach((span, i) => {
+            const rM_end = span.rM_end_S ?? Math.max((span.leftward?.rM_left ?? 0), (span.leftward?.rM_right ?? 0), (span.rightward?.rM_left ?? 0), (span.rightward?.rM_right ?? 0));
+            const rM_mid = span.rM_mid_S ?? Math.max(((span.leftward?.M_mid_S ?? 0) / (span.cap?.sMa_bot || 1)), ((span.rightward?.M_mid_S ?? 0) / (span.cap?.sMa_bot || 1)));
+
+            const needTop = span.needTopBoost !== undefined ? span.needTopBoost : (rM_end > 1.0);
+            const needBot = span.needBotBoost !== undefined ? span.needBotBoost : (rM_mid > 1.0);
+            let advice = '';
+            if (needTop && needBot) {
+                advice = `<span style="color:#900; font-weight:bold; background:#fde8e8; padding:2px 6px; border-radius:3px;">⚠️ 上主筋・下主筋の両方を補強</span>`;
+            } else if (needTop) {
+                advice = `<span style="color:#c0392b; font-weight:bold; background:#fadbd8; padding:2px 6px; border-radius:3px;">⚠️ 上主筋を補強 (端部曲げ)</span>`;
+            } else if (needBot) {
+                advice = `<span style="color:#c0392b; font-weight:bold; background:#fadbd8; padding:2px 6px; border-radius:3px;">⚠️ 下主筋を補強 (中央曲げ)</span>`;
+            } else if (span.isNG) {
+                advice = `<span style="color:#d35400; font-weight:bold;">⚠️ せん断力・長期曲げ等を検討</span>`;
+            } else {
+                advice = `<span style="color:#27ae60;">✅ 既定配筋で適合</span>`;
+            }
+
             table6 += `
             <tr style="${span.isNG ? 'background:#fef5f5;' : ''}">
                 <td style="border:1px solid #bdc3c7; padding:6px; font-weight:bold;">${getFreshSpanName(span)}</td>
                 <td style="border:1px solid #bdc3c7; padding:6px;">${this.fmtRatio(span.ratioM_L)}</td>
                 <td style="border:1px solid #bdc3c7; padding:6px;">${this.fmtRatio(span.ratioQ_L)}</td>
-                <td style="border:1px solid #bdc3c7; padding:6px;">${this.fmtRatio(span.ratioM_S)}</td>
+                <td style="border:1px solid #bdc3c7; padding:6px; font-weight:bold; background:#f0f7fc;">${this.fmtRatio(rM_end)}</td>
+                <td style="border:1px solid #bdc3c7; padding:6px; font-weight:bold; background:#f0f9f8;">${this.fmtRatio(rM_mid)}</td>
                 <td style="border:1px solid #bdc3c7; padding:6px;">${this.fmtRatio(span.ratioQ_S)}</td>
                 <td style="border:1px solid #bdc3c7; padding:6px;">
                     <span style="background:${span.isNG ? '#e74c3c' : '#27ae60'}; color:#fff; padding:3px 10px; border-radius:12px; font-size:11px; font-weight:bold;">
                         ${span.isNG ? 'NG' : 'OK'}
                     </span>
                 </td>
+                <td style="border:1px solid #bdc3c7; padding:6px; text-align:left;">${advice}</td>
             </tr>`;
         });
         table6 += `</tbody></table>`;
