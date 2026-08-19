@@ -540,9 +540,14 @@ window.FoundationEngine = {
                     const alpha_S = Math.max(1.0, Math.min(2.0, 4.0 / ((M_ratio_S / (Q_s * d / 1000 || 1)) + 1)));
                     const sQa = (alpha_S * fs * b_val * j * 1.5 / 1000) + Qa_steel_L;
                     
-                    // Determine which rebar (top or bottom) is in tension dynamically
-                    // M_combo < 0 represents top tension (checked against sMa_top)
-                    // M_combo >= 0 represents bottom tension (checked against sMa_bot)
+                    // 端部曲げモーメント(上筋抵抗 sMa_top) と 中央部曲げモーメント(下筋抵抗 sMa_bot) の分離算定
+                    const M_mid_S = Math.abs(M_mid + ((res.Mf[i] || 0) + (res.Mf[i + 1] || 0)) / 2.0);
+                    const rM_mid_S = M_mid_S / (sMa_bot || 1);
+
+                    const rM_left_top = Math.abs(M_combo_l) / (sMa_top || 1);
+                    const rM_right_top = Math.abs(M_combo_r) / (sMa_top || 1);
+                    const rM_end_max = Math.max(rM_left_top, rM_right_top);
+
                     const cap_l = M_combo_l < 0 ? sMa_top : sMa_bot;
                     const cap_r = M_combo_r < 0 ? sMa_top : sMa_bot;
                     
@@ -550,11 +555,11 @@ window.FoundationEngine = {
                     const rM_right = Math.abs(M_combo_r) / (cap_r || 1);
                     
                     return {
-                        M_left: Math.abs(M_combo_l), M_right: Math.abs(M_combo_r), Q: Q_s,
+                        M_left: Math.abs(M_combo_l), M_mid_S: M_mid_S, M_right: Math.abs(M_combo_r), Q: Q_s,
                         lMa_top, lMa_bot, sMa_top, sMa_bot, lQa, sQa,
                         alpha_L, alpha_S, pw: st.area / (b_val * (st.pitch || 200)),
-                        rM_left, rM_right,
-                        ok: Math.abs(M_combo_l) < cap_l && Math.abs(M_combo_r) < cap_r && Q_s < sQa
+                        rM_left, rM_right, rM_left_top, rM_right_top, rM_end_max, rM_mid_S,
+                        ok: Math.abs(M_combo_l) < cap_l && Math.abs(M_combo_r) < cap_r && M_mid_S < sMa_bot && Q_s < sQa
                     };
                 };
                 
@@ -571,14 +576,17 @@ window.FoundationEngine = {
                 );
                 const rQ_L = Q_L / (resL.lQa || 1);
 
+                const rM_end_S = Math.max(resL.rM_end_max, resR.rM_end_max);
+                const rM_mid_S_max = Math.max(resL.rM_mid_S, resR.rM_mid_S);
+                const needTopBoost = (rM_end_S > 1.0);
+                const needBotBoost = (rM_mid_S_max > 1.0);
+
                 const spanNG = (
                     rM_L > 1.0 ||
                     rQ_L > 1.0 ||
-                    resL.rM_left > 1.0 ||
-                    resL.rM_right > 1.0 ||
+                    rM_end_S > 1.0 ||
+                    rM_mid_S_max > 1.0 ||
                     (resL.Q / (resL.sQa || 1)) > 1.0 ||
-                    resR.rM_left > 1.0 ||
-                    resR.rM_right > 1.0 ||
                     (resR.Q / (resR.sQa || 1)) > 1.0
                 );
                 if (spanNG) isNG = true;
@@ -590,7 +598,9 @@ window.FoundationEngine = {
                     isSyncFailed: load.isSyncFailed,
                     M_mid, M_end, Q_L, rM_L, rQ_L,
                     ratioM_L: rM_L, ratioQ_L: rQ_L,
-                    ratioM_S: Math.max(resL.rM_left, resL.rM_right, resR.rM_left, resR.rM_right),
+                    rM_end_S, rM_mid_S: rM_mid_S_max,
+                    needTopBoost, needBotBoost,
+                    ratioM_S: Math.max(rM_end_S, rM_mid_S_max),
                     ratioQ_S: Math.max(resL.Q/resL.sQa, resR.Q/resR.sQa),
                     leftward: { ...resL, rQ: resL.Q/(resL.sQa || 1) },
                     rightward: { ...resR, rQ: resR.Q/(resR.sQa || 1) },
