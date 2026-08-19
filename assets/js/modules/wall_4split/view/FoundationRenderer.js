@@ -774,55 +774,77 @@ window.FoundationRenderer = {
         }
         html += table5;
 
-        html += `<div style="font-size:12px; font-weight:bold; color:#2c3e50; border-left:4px solid #34495e; padding-left:8px; margin:15px 0 6px 0;">⑥ 総合判定 (検定比・主筋補強指針)</div>`;
+        html += `<div style="font-size:12px; font-weight:bold; color:#2c3e50; border-left:4px solid #34495e; padding-left:8px; margin:15px 0 6px 0;">⑥ 総合判定 (長期 M中/上端LMa, M端/下端LMa ＆ 短期 ＆ 補強指針)</div>`;
         let table6 = `<table style="width:100%; border-collapse:collapse; font-size:10px; border:2px solid #34495e; text-align:center; background:#fff;">
             <thead>
                 <tr style="background:#34495e; color:#fff;">
-                    <th style="border:1px solid #bdc3c7; padding:6px;">スパン No.</th>
-                    <th style="border:1px solid #bdc3c7; padding:6px;">曲げ (長期)</th>
-                    <th style="border:1px solid #bdc3c7; padding:6px;">せん断 (長期)</th>
-                    <th style="border:1px solid #bdc3c7; padding:6px; background:#2980b9; color:#fff;">短期端部 (上筋)<br>M端/sMa</th>
-                    <th style="border:1px solid #bdc3c7; padding:6px; background:#16a085; color:#fff;">短期中央 (下筋)<br>M中/sMa</th>
-                    <th style="border:1px solid #bdc3c7; padding:6px;">せん断 (短期)</th>
-                    <th style="border:1px solid #bdc3c7; padding:6px;">判定</th>
-                    <th style="border:1px solid #bdc3c7; padding:6px; text-align:left;">💡 補強要否ガイド</th>
+                    <th rowspan="2" style="border:1px solid #bdc3c7; padding:4px;">柱間</th>
+                    <th colspan="3" style="border:1px solid #bdc3c7; padding:4px; text-align:center; background:#2c3e50;">長期</th>
+                    <th colspan="3" style="border:1px solid #bdc3c7; padding:4px; text-align:center; background:#1b4f72;">短期 左加力</th>
+                    <th colspan="3" style="border:1px solid #bdc3c7; padding:4px; text-align:center; background:#4a235a;">短期 右加力</th>
+                    <th rowspan="2" style="border:1px solid #bdc3c7; padding:4px;">判定<br>&lt; 1.0</th>
+                    <th rowspan="2" style="border:1px solid #bdc3c7; padding:4px; text-align:left;">💡 補強要否ガイド</th>
+                </tr>
+                <tr style="background:#f2f4f4; color:#2c3e50; border-bottom:1px solid #bdc3c7; font-size:9px;">
+                    <th style="border:1px solid #bdc3c7; padding:3px; font-weight:bold; background:#eef6ff; color:#1b4f72;">M中 / 上端LMa</th>
+                    <th style="border:1px solid #bdc3c7; padding:3px; font-weight:bold; background:#fdf2e9; color:#7e5109;">M端 / 下端LMa</th>
+                    <th style="border:1px solid #bdc3c7; padding:3px;">QL / LQa</th>
+                    <th style="border:1px solid #bdc3c7; padding:3px;">(M端+M水f)<br>/1.5 LMa (左)</th>
+                    <th style="border:1px solid #bdc3c7; padding:3px;">(M端+M水f)<br>/1.5 LMa (右)</th>
+                    <th style="border:1px solid #bdc3c7; padding:3px;">(QL+nQe)<br>/sQa</th>
+                    <th style="border:1px solid #bdc3c7; padding:3px;">(M端+M水f)<br>/1.5 LMa (左)</th>
+                    <th style="border:1px solid #bdc3c7; padding:3px;">(M端+M水f)<br>/1.5 LMa (右)</th>
+                    <th style="border:1px solid #bdc3c7; padding:3px;">(QL+nQe)<br>/sQa</th>
                 </tr>
             </thead>
             <tbody>`;
         
         spans.forEach((span, i) => {
-            const rM_end = span.rM_end_S ?? Math.max((span.leftward?.rM_left ?? 0), (span.leftward?.rM_right ?? 0), (span.rightward?.rM_left ?? 0), (span.rightward?.rM_right ?? 0));
-            const rM_mid = span.rM_mid_S ?? Math.max(((span.leftward?.M_mid_S ?? 0) / (span.cap?.sMa_bot || 1)), ((span.rightward?.M_mid_S ?? 0) / (span.cap?.sMa_bot || 1)));
+            const rM_L_mid = span.rM_L_mid ?? (span.M_mid / (span.cap?.lMa_top || 1));
+            const rM_L_end = span.rM_L_end ?? (span.M_end / (span.cap?.lMa_bot || 1));
+            const rQ_L = span.rQ_L ?? (span.Q_L / (span.cap?.lQa || 1));
 
-            const needTop = span.needTopBoost !== undefined ? span.needTopBoost : (rM_end > 1.0);
-            const needBot = span.needBotBoost !== undefined ? span.needBotBoost : (rM_mid > 1.0);
+            const l_rM_left = (span.leftward?.rM_left_top ?? (span.leftward?.M_left / (span.cap?.sMa_top || 1))) || 0;
+            const l_rM_right = (span.leftward?.rM_right_top ?? (span.leftward?.M_right / (span.cap?.sMa_top || 1))) || 0;
+            const l_rQ = span.leftward?.rQ ?? 0;
+
+            const r_rM_left = (span.rightward?.rM_left_top ?? (span.rightward?.M_left / (span.cap?.sMa_top || 1))) || 0;
+            const r_rM_right = (span.rightward?.rM_right_top ?? (span.rightward?.M_right / (span.cap?.sMa_top || 1))) || 0;
+            const r_rQ = span.rightward?.rQ ?? 0;
+
+            const needTop = span.needTopBoost !== undefined ? span.needTopBoost : (rM_L_mid > 1.0 || l_rM_left > 1.0 || l_rM_right > 1.0 || r_rM_left > 1.0 || r_rM_right > 1.0);
+            const needBot = span.needBotBoost !== undefined ? span.needBotBoost : (rM_L_end > 1.0);
             let advice = '';
             if (needTop && needBot) {
                 advice = `<span style="color:#900; font-weight:bold; background:#fde8e8; padding:2px 6px; border-radius:3px;">⚠️ 上主筋・下主筋の両方を補強</span>`;
             } else if (needTop) {
-                advice = `<span style="color:#c0392b; font-weight:bold; background:#fadbd8; padding:2px 6px; border-radius:3px;">⚠️ 上主筋を補強 (端部曲げ)</span>`;
+                advice = `<span style="color:#c0392b; font-weight:bold; background:#fadbd8; padding:2px 6px; border-radius:3px;">⚠️ 上主筋を補強 (端部曲げ/長期M中)</span>`;
             } else if (needBot) {
-                advice = `<span style="color:#c0392b; font-weight:bold; background:#fadbd8; padding:2px 6px; border-radius:3px;">⚠️ 下主筋を補強 (中央曲げ)</span>`;
+                advice = `<span style="color:#c0392b; font-weight:bold; background:#fadbd8; padding:2px 6px; border-radius:3px;">⚠️ 下主筋を補強 (長期M端/中央短期)</span>`;
             } else if (span.isNG) {
-                advice = `<span style="color:#d35400; font-weight:bold;">⚠️ せん断力・長期曲げ等を検討</span>`;
+                advice = `<span style="color:#d35400; font-weight:bold;">⚠️ せん断力等を検討</span>`;
             } else {
                 advice = `<span style="color:#27ae60;">✅ 既定配筋で適合</span>`;
             }
 
             table6 += `
             <tr style="${span.isNG ? 'background:#fef5f5;' : ''}">
-                <td style="border:1px solid #bdc3c7; padding:6px; font-weight:bold;">${getFreshSpanName(span)}</td>
-                <td style="border:1px solid #bdc3c7; padding:6px;">${this.fmtRatio(span.ratioM_L)}</td>
-                <td style="border:1px solid #bdc3c7; padding:6px;">${this.fmtRatio(span.ratioQ_L)}</td>
-                <td style="border:1px solid #bdc3c7; padding:6px; font-weight:bold; background:#f0f7fc;">${this.fmtRatio(rM_end)}</td>
-                <td style="border:1px solid #bdc3c7; padding:6px; font-weight:bold; background:#f0f9f8;">${this.fmtRatio(rM_mid)}</td>
-                <td style="border:1px solid #bdc3c7; padding:6px;">${this.fmtRatio(span.ratioQ_S)}</td>
-                <td style="border:1px solid #bdc3c7; padding:6px;">
-                    <span style="background:${span.isNG ? '#e74c3c' : '#27ae60'}; color:#fff; padding:3px 10px; border-radius:12px; font-size:11px; font-weight:bold;">
+                <td style="border:1px solid #bdc3c7; padding:4px; font-weight:bold;">${getFreshSpanName(span)}</td>
+                <td style="border:1px solid #bdc3c7; padding:4px; font-weight:bold; background:#f4f9ff; color:${rM_L_mid > 1.0 ? 'red' : '#1b4f72'};">${this.fmtRatio(rM_L_mid)}</td>
+                <td style="border:1px solid #bdc3c7; padding:4px; font-weight:bold; background:#fdf9f4; color:${rM_L_end > 1.0 ? 'red' : '#7e5109'};">${this.fmtRatio(rM_L_end)}</td>
+                <td style="border:1px solid #bdc3c7; padding:4px;">${this.fmtRatio(rQ_L)}</td>
+                <td style="border:1px solid #bdc3c7; padding:4px; color:${l_rM_left > 1.0 ? 'red' : 'inherit'};">${this.fmtRatio(l_rM_left)}</td>
+                <td style="border:1px solid #bdc3c7; padding:4px; color:${l_rM_right > 1.0 ? 'red' : 'inherit'};">${this.fmtRatio(l_rM_right)}</td>
+                <td style="border:1px solid #bdc3c7; padding:4px;">${this.fmtRatio(l_rQ)}</td>
+                <td style="border:1px solid #bdc3c7; padding:4px; color:${r_rM_left > 1.0 ? 'red' : 'inherit'};">${this.fmtRatio(r_rM_left)}</td>
+                <td style="border:1px solid #bdc3c7; padding:4px; color:${r_rM_right > 1.0 ? 'red' : 'inherit'};">${this.fmtRatio(r_rM_right)}</td>
+                <td style="border:1px solid #bdc3c7; padding:4px;">${this.fmtRatio(r_rQ)}</td>
+                <td style="border:1px solid #bdc3c7; padding:4px;">
+                    <span style="background:${span.isNG ? '#e74c3c' : '#27ae60'}; color:#fff; padding:2px 8px; border-radius:12px; font-size:10px; font-weight:bold;">
                         ${span.isNG ? 'NG' : 'OK'}
                     </span>
                 </td>
-                <td style="border:1px solid #bdc3c7; padding:6px; text-align:left;">${advice}</td>
+                <td style="border:1px solid #bdc3c7; padding:4px; text-align:left;">${advice}</td>
             </tr>`;
         });
         table6 += `</tbody></table>`;

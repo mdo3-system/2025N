@@ -235,53 +235,74 @@ function getFoundationBeamReportHtml_inner(beam) {
         });
         html += `</tbody></table>`;
 
-        // Table 6: 総合判定表
-        html += `<div style="font-weight:bold; margin-top:10px; margin-bottom:4px; font-size:11px;">(6) 総合判定表（長期・短期の曲げ・せん断 ＆ 配筋補強指針）</div>
-        <table style="width:100%; border-collapse:collapse; font-size:10px; border:1px solid #aaa;">
+        // Table 6: 総合判定表 (添付画像1公式テンプレート準拠)
+        html += `<div style="font-weight:bold; margin-top:10px; margin-bottom:4px; font-size:11px;">(6) 総合判定表（長期 M中/上端LMa, M端/下端LMa ＆ 短期 左・右加力 ＆ 配筋補強指針）</div>
+        <table style="width:100%; border-collapse:collapse; font-size:9px; border:1px solid #aaa; text-align:center;">
             <thead>
                 <tr style="background:#f2f2f2;">
-                    <th style="border:1px solid #aaa; padding:3px;">柱間</th>
-                    <th style="border:1px solid #aaa; padding:3px; text-align:center;">長期 M_L/Ma</th>
-                    <th style="border:1px solid #aaa; padding:3px; text-align:center;">長期 Q_L/Qa</th>
-                    <th style="border:1px solid #aaa; padding:3px; text-align:center; background:#eef6ff;">短期端部(上筋)<br>M端/sMa</th>
-                    <th style="border:1px solid #aaa; padding:3px; text-align:center; background:#eef6ff;">短期中央(下筋)<br>M中/sMa</th>
-                    <th style="border:1px solid #aaa; padding:3px; text-align:center;">短期 Q_S/Qa</th>
-                    <th style="border:1px solid #aaa; padding:3px; text-align:center;">判定</th>
-                    <th style="border:1px solid #aaa; padding:3px; text-align:left;">💡 補強要否ガイド</th>
+                    <th rowspan="2" style="border:1px solid #aaa; padding:3px;">柱間</th>
+                    <th colspan="3" style="border:1px solid #aaa; padding:3px; text-align:center;">長期</th>
+                    <th colspan="3" style="border:1px solid #aaa; padding:3px; text-align:center;">短期 左加力</th>
+                    <th colspan="3" style="border:1px solid #aaa; padding:3px; text-align:center;">短期 右加力</th>
+                    <th rowspan="2" style="border:1px solid #aaa; padding:3px;">判定<br>&lt; 1.0</th>
+                    <th rowspan="2" style="border:1px solid #aaa; padding:3px; text-align:left;">💡 補強要否ガイド</th>
+                </tr>
+                <tr style="background:#f2f2f2; font-size:8px;">
+                    <th style="border:1px solid #aaa; padding:2px; font-weight:bold; background:#eef6ff;">M中 / 上端LMa</th>
+                    <th style="border:1px solid #aaa; padding:2px; font-weight:bold; background:#fdf2e9;">M端 / 下端LMa</th>
+                    <th style="border:1px solid #aaa; padding:2px;">QL / LQa</th>
+                    <th style="border:1px solid #aaa; padding:2px;">(M端+M水f)<br>/1.5 LMa (左)</th>
+                    <th style="border:1px solid #aaa; padding:2px;">(M端+M水f)<br>/1.5 LMa (右)</th>
+                    <th style="border:1px solid #aaa; padding:2px;">(QL+nQe)<br>/sQa</th>
+                    <th style="border:1px solid #aaa; padding:2px;">(M端+M水f)<br>/1.5 LMa (左)</th>
+                    <th style="border:1px solid #aaa; padding:2px;">(M端+M水f)<br>/1.5 LMa (右)</th>
+                    <th style="border:1px solid #aaa; padding:2px;">(QL+nQe)<br>/sQa</th>
                 </tr>
             </thead>
             <tbody>`;
         spans.forEach(span => {
             const badge = span.isNG ? `<span style="color:red; font-weight:bold;">NG</span>` : `<span style="color:green; font-weight:bold;">OK</span>`;
             
-            const rM_end = span.rM_end_S ?? Math.max((span.leftward?.rM_left ?? 0), (span.leftward?.rM_right ?? 0), (span.rightward?.rM_left ?? 0), (span.rightward?.rM_right ?? 0));
-            const rM_mid = span.rM_mid_S ?? Math.max(((span.leftward?.M_mid_S ?? 0) / (span.cap?.sMa_bot || 1)), ((span.rightward?.M_mid_S ?? 0) / (span.cap?.sMa_bot || 1)));
-            const rQ_S = Math.max((span.leftward?.rQ ?? 0), (span.rightward?.rQ ?? 0));
+            const rM_L_mid = span.rM_L_mid ?? (span.M_mid / (span.cap?.lMa_top || 1));
+            const rM_L_end = span.rM_L_end ?? (span.M_end / (span.cap?.lMa_bot || 1));
+            const rQ_L = span.rQ_L ?? (span.Q_L / (span.cap?.lQa || 1));
 
-            const needTop = span.needTopBoost !== undefined ? span.needTopBoost : (rM_end > 1.0);
-            const needBot = span.needBotBoost !== undefined ? span.needBotBoost : (rM_mid > 1.0);
+            const l_rM_left = (span.leftward?.rM_left_top ?? (span.leftward?.M_left / (span.cap?.sMa_top || 1))) || 0;
+            const l_rM_right = (span.leftward?.rM_right_top ?? (span.leftward?.M_right / (span.cap?.sMa_top || 1))) || 0;
+            const l_rQ = span.leftward?.rQ ?? 0;
+
+            const r_rM_left = (span.rightward?.rM_left_top ?? (span.rightward?.M_left / (span.cap?.sMa_top || 1))) || 0;
+            const r_rM_right = (span.rightward?.rM_right_top ?? (span.rightward?.M_right / (span.cap?.sMa_top || 1))) || 0;
+            const r_rQ = span.rightward?.rQ ?? 0;
+
+            const needTop = span.needTopBoost !== undefined ? span.needTopBoost : (rM_L_mid > 1.0 || l_rM_left > 1.0 || l_rM_right > 1.0 || r_rM_left > 1.0 || r_rM_right > 1.0);
+            const needBot = span.needBotBoost !== undefined ? span.needBotBoost : (rM_L_end > 1.0);
             let advice = '';
             if (needTop && needBot) {
                 advice = `<span style="color:#900; font-weight:bold; background:#fde8e8; padding:2px 4px; border-radius:3px;">⚠️ 上主筋・下主筋の両方を補強</span>`;
             } else if (needTop) {
-                advice = `<span style="color:#c0392b; font-weight:bold; background:#fadbd8; padding:2px 4px; border-radius:3px;">⚠️ 上主筋を補強 (端部曲げ)</span>`;
+                advice = `<span style="color:#c0392b; font-weight:bold; background:#fadbd8; padding:2px 4px; border-radius:3px;">⚠️ 上主筋を補強 (端部曲げ/長期M中)</span>`;
             } else if (needBot) {
-                advice = `<span style="color:#c0392b; font-weight:bold; background:#fadbd8; padding:2px 4px; border-radius:3px;">⚠️ 下主筋を補強 (中央曲げ)</span>`;
+                advice = `<span style="color:#c0392b; font-weight:bold; background:#fadbd8; padding:2px 4px; border-radius:3px;">⚠️ 下主筋を補強 (長期M端/中央短期)</span>`;
             } else if (span.isNG) {
-                advice = `<span style="color:#d35400; font-weight:bold;">⚠️ せん断力・長期曲げ等を検討</span>`;
+                advice = `<span style="color:#d35400; font-weight:bold;">⚠️ せん断力等を検討</span>`;
             } else {
                 advice = `<span style="color:#27ae60;">✅ 既定配筋で適合</span>`;
             }
 
             html += `<tr>
                 <td style="border:1px solid #aaa; padding:3px; font-weight:bold;">${span.spanName}</td>
-                <td style="border:1px solid #aaa; padding:3px; text-align:right; font-weight:bold; color:${(span.rM_L ?? 0) > 1.0 ? 'red' : 'inherit'}">${(span.rM_L ?? 0).toFixed(2)}</td>
-                <td style="border:1px solid #aaa; padding:3px; text-align:right; font-weight:bold; color:${(span.rQ_L ?? 0) > 1.0 ? 'red' : 'inherit'}">${(span.rQ_L ?? 0).toFixed(2)}</td>
-                <td style="border:1px solid #aaa; padding:3px; text-align:right; font-weight:bold; background:#f4f9ff; color:${rM_end > 1.0 ? 'red' : 'inherit'}">${rM_end.toFixed(2)}</td>
-                <td style="border:1px solid #aaa; padding:3px; text-align:right; font-weight:bold; background:#f4f9ff; color:${rM_mid > 1.0 ? 'red' : 'inherit'}">${rM_mid.toFixed(2)}</td>
-                <td style="border:1px solid #aaa; padding:3px; text-align:right; font-weight:bold; color:${rQ_S > 1.0 ? 'red' : 'inherit'}">${rQ_S.toFixed(2)}</td>
+                <td style="border:1px solid #aaa; padding:3px; font-weight:bold; background:#f4f9ff; color:${rM_L_mid > 1.0 ? 'red' : '#1b4f72'};">${rM_L_mid.toFixed(3)}</td>
+                <td style="border:1px solid #aaa; padding:3px; font-weight:bold; background:#fdf9f4; color:${rM_L_end > 1.0 ? 'red' : '#7e5109'};">${rM_L_end.toFixed(3)}</td>
+                <td style="border:1px solid #aaa; padding:3px;">${rQ_L.toFixed(3)}</td>
+                <td style="border:1px solid #aaa; padding:3px; color:${l_rM_left > 1.0 ? 'red' : 'inherit'};">${l_rM_left.toFixed(3)}</td>
+                <td style="border:1px solid #aaa; padding:3px; color:${l_rM_right > 1.0 ? 'red' : 'inherit'};">${l_rM_right.toFixed(3)}</td>
+                <td style="border:1px solid #aaa; padding:3px;">${l_rQ.toFixed(3)}</td>
+                <td style="border:1px solid #aaa; padding:3px; color:${r_rM_left > 1.0 ? 'red' : 'inherit'};">${r_rM_left.toFixed(3)}</td>
+                <td style="border:1px solid #aaa; padding:3px; color:${r_rM_right > 1.0 ? 'red' : 'inherit'};">${r_rM_right.toFixed(3)}</td>
+                <td style="border:1px solid #aaa; padding:3px;">${r_rQ.toFixed(3)}</td>
                 <td style="border:1px solid #aaa; padding:3px; text-align:center;">${badge}</td>
-                <td style="border:1px solid #aaa; padding:3px;">${advice}</td>
+                <td style="border:1px solid #aaa; padding:3px; text-align:left;">${advice}</td>
             </tr>`;
         });
         html += `</tbody></table>`;

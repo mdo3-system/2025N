@@ -1,1 +1,1 @@
-window.APP_VERSION = "v3.13.10"; // Fix: Updated FoundationRenderer.js beam detail modal (Tables 3 & 6) for short-term mid/end bending moment checks and top/bottom rebar boost guidance
+window.APP_VERSION = "v3.13.11"; // Feature: Foundation beam modal now fully complies with official calculation format (Long-term M_mid/lMa_top & M_end/lMa_bot, Short-term Left/Right moment ratios, and explicit rebar boost guidance)

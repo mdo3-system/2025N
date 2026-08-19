@@ -568,18 +568,17 @@ window.FoundationEngine = {
                 
                 const M_end_left = (i === 0 ? 0 : M_end);
                 const M_end_right = (i === pillars.length - 2 ? 0 : M_end);
-                // Under upward ground reaction: center causes top tension (lMa_top), ends cause bottom tension (lMa_bot)
-                const rM_L = Math.max(
-                    M_end_left / (resL.lMa_bot || 1),
-                    M_end_right / (resL.lMa_bot || 1),
-                    M_mid / (resL.lMa_top || 1)
-                );
+                
+                // 長期曲げ: 中央部M中 (上端引張 lMa_top) と 端部M端 (下端引張 lMa_bot)
+                const rM_L_mid = M_mid / (resL.lMa_top || 1);
+                const rM_L_end = Math.max(M_end_left / (resL.lMa_bot || 1), M_end_right / (resL.lMa_bot || 1));
+                const rM_L = Math.max(rM_L_mid, rM_L_end);
                 const rQ_L = Q_L / (resL.lQa || 1);
 
                 const rM_end_S = Math.max(resL.rM_end_max, resR.rM_end_max);
                 const rM_mid_S_max = Math.max(resL.rM_mid_S, resR.rM_mid_S);
-                const needTopBoost = (rM_end_S > 1.0);
-                const needBotBoost = (rM_mid_S_max > 1.0);
+                const needTopBoost = (rM_end_S > 1.0) || (rM_L_mid > 1.0);
+                const needBotBoost = (rM_mid_S_max > 1.0) || (rM_L_end > 1.0);
 
                 const spanNG = (
                     rM_L > 1.0 ||
@@ -597,6 +596,7 @@ window.FoundationEngine = {
                     L, sigma_e: load.sigma, B_trib: load.B, w,
                     isSyncFailed: load.isSyncFailed,
                     M_mid, M_end, Q_L, rM_L, rQ_L,
+                    rM_L_mid, rM_L_end,
                     ratioM_L: rM_L, ratioQ_L: rQ_L,
                     rM_end_S, rM_mid_S: rM_mid_S_max,
                     needTopBoost, needBotBoost,
