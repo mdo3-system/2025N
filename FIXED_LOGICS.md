@@ -69,6 +69,91 @@
 
 *(※ $L$ は柱間（支点間）のスパン長（メートル）)*
 
+### ④ 水平荷重時応力算定ロジック（基礎梁 3モデル共通・モデル個別仕様）
+
+基礎梁の断面検定における短期（水平荷重時）応力は、選択した解析モデルに応じて以下のロジックで算定する。
+設定は梁プロパティの「解析モデル」（`modelType`）で切り替える。
+
+#### 共通事項
+
+- **節点引抜力（軸力） $T_d$ （kN）**:
+  各柱節点の地震時軸力（`axisSeismicAxial`）に反曲点高比 $B$ を乗じた値。
+  $$T_{d,i} = N_{\text{seismic}, i} \times B$$
+  - 柱直下支点モデルでは $B = 1.0$（軸力をそのまま節点荷重とする）
+  - 両端支点・単純梁モデルでは $B =$ 設定値（初期値 $0.50$）
+
+- **「計」行（ΣTd, ΣR）の検証条件**:
+  - $\Sigma T_d + \Sigma R = 0$（力の釣合が成立すること）
+  - 柱直下支点連続梁・両端支点連続梁では、接点応力表の末尾に「計」行を設け、各加力方向の $\Sigma T_d$ と $\Sigma R$ を表示する。
+
+---
+
+#### ① 柱直下支点連続梁モデル（pillar_supported）
+
+全柱位置を支点として連続梁解析。支点反力 $R$ は最小二乗法で全柱に分配する。
+
+$$
+R_i = A + B \cdot x_i
+$$
+$$
+A = \frac{-\Sigma T_d \cdot \Sigma(x_i^2) + \Sigma(T_{d,i} \cdot x_i) \cdot \Sigma x_i}{n \cdot \Sigma(x_i^2) - (\Sigma x_i)^2},\quad
+B = \frac{-n \cdot \Sigma(T_{d,i} \cdot x_i) + \Sigma x_i \cdot \Sigma T_d}{n \cdot \Sigma(x_i^2) - (\Sigma x_i)^2}
+$$
+
+- せん断力 $Q_{e,i}$ は $T_{d,i} + R_i$ の累積和（左端から右へ）
+- 曲げモーメント $M_{f,i}$ は $R_l \cdot x_i + \Sigma_{k<i} T_{d,k}(x_i - x_k)$
+
+**表レイアウト**（接点応力表）:
+| 柱 | x(m) | 左加力: Td(kN) | R(kN) | Qe(kN) | Mf(kN·m) | 右加力: Td(kN) | R(kN) | Qe(kN) | Mf(kN·m) |
+| 計 | | ΣTd | ΣR | | | ΣTd | ΣR | |
+
+---
+
+#### ② 両端支点連続梁モデル（both_ends）
+
+両端の柱のみを支点として連続梁解析。内部節点の反力 $R = 0$。
+
+$$
+R_{\text{right}} = \frac{-\Sigma(T_{d,i} \cdot x_i)}{L_{\text{total}}}
+$$
+$$
+R_{\text{left}} = -\Sigma T_d - R_{\text{right}}
+$$
+
+- 内部節点: $R_i = 0$（左端・右端のみ $R \neq 0$）
+- $Q_{e}$, $M_f$ の算定式は柱直下支点モデルと同一
+
+**表レイアウト**: 柱直下支点モデルと同一形式（「計」行付き）
+
+---
+
+#### ③ 単純梁モデル（simple_beam）
+
+各スパンを独立した単純梁として解析。支点反力 $R = 0$（全節点）。
+
+**表の構成**: 接点応力表は「柱間（スパン）」を行とする独自レイアウト。
+
+- **壁スパン**（`|Xn-Xm|`）: いずれかの端柱に $T_d \neq 0$ となる耐力壁が接続するスパン。
+  - $lTd$: 左端柱の $T_d$ 値
+  - $rTd$: 右端柱の $T_d$ 値
+  - **中央曲げモーメント**:
+    $$M_{\text{水}} = \frac{(|lTd| + |rTd|) \times L}{2}$$
+    *（画像実測から確定した公式）*
+  - $Qe, lM_{水f}, rM_{水f}$: 空欄
+
+- **開口スパン**（`Xn-Xm`）: 両端柱に $T_d \approx 0$ のスパン（耐力壁なし）。
+  - $lTd, rTd, M_{水}$: 空欄
+  - 左フェイスモーメント $lM_{水f}$ および右フェイスモーメント $rM_{水f}$ は左右隣接壁スパンの $M_{水}$ から按分:
+    $$lM_{水f} = M_{水,\text{left}} \cdot \frac{L_{\text{right}}}{L_{\text{left}} + L_{\text{right}}}$$
+    $$rM_{水f} = -M_{水,\text{right}} \cdot \frac{L_{\text{left}}}{L_{\text{left}} + L_{\text{right}}}$$
+  - せん断力:
+    $$Qe = \frac{lM_{水f} - rM_{水f}}{L_{\text{open}}}$$
+
+*（※ 開口スパンの $lM_{水f}$, $rM_{水f}$ の符号は、左隣壁スパンの $rTd$ および右隣壁スパンの $lTd$ の符号に依存する）*
+
+**表レイアウト**（単純梁専用）:
+| 柱間 | 長さ(m) | 左加力: lTd(kN) | rTd(kN) | M水(kN·m) | Qe(kN) | lM水f(kN·m) | rM水f(kN·m) | 右加力: lTd(kN) | rTd(kN) | M水(kN·m) | Qe(kN) | lM水f(kN·m) | rM水f(kN·m) |
+
 ---
 
 ## 3. 壁量計算・N値計算ロジック仕様

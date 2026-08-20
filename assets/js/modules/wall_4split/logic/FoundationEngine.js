@@ -390,7 +390,71 @@ window.FoundationEngine = {
                 }
                 Mf.push(m);
             });
-            return { Td, Qe, Mf, R, R_left: R_l, R_right: R_r, supportIdx1: 0, supportIdx2: pillars.length - 1 };
+
+            // ΣTd, ΣR の集計（「計」行表示用）
+            const sumTd = Td.reduce((s, t) => s + t, 0);
+            const sumR  = R.reduce((s, r) => s + r, 0);
+
+            // --- 単純梁モデル専用：スパン別解析 ---
+            // 各スパンに対して lTd, rTd, M水, Qe, lM水f, rM水f を算定
+            // 壁スパン：いずれかの端に Td != 0 → lTd, rTd, M水 を表示
+            // 開口スパン：両端 Td ≈ 0 → Qe, lM水f, rM水f を表示
+            const simpleBeamSpans = [];
+            if (modelType === 'simple_beam' && pillars.length >= 2) {
+                // ①スパン別の基本データ構築
+                for (let i = 0; i < pillars.length - 1; i++) {
+                    const lTd_val = Td[i];
+                    const rTd_val = Td[i + 1];
+                    const L_span  = pillars[i + 1].x - pillars[i].x; // m
+                    const isWall  = (Math.abs(lTd_val) > 1e-6 || Math.abs(rTd_val) > 1e-6);
+                    // M水 = (|lTd| + |rTd|) × L / 2 （壁スパン確定公式）
+                    const M_wf    = (Math.abs(lTd_val) + Math.abs(rTd_val)) * L_span / 2;
+                    simpleBeamSpans.push({
+                        idx_l: i, idx_r: i + 1,
+                        lTd: lTd_val, rTd: rTd_val,
+                        L: L_span, isWall, M_wf,
+                        Qe: null, lM_wf: null, rM_wf: null
+                    });
+                }
+
+                // ②開口スパンの Qe・lM水f・rM水f を計算
+                // 開口スパンは左右に最も近い壁スパンの M水 から
+                // 梁端部モーメントを三点モーメント法（簡易）で按分する
+                // lM_wf = M水_left × L_right / (L_left + L_right)
+                // rM_wf = -M水_right × L_left / (L_left + L_right)
+                for (let i = 0; i < simpleBeamSpans.length; i++) {
+                    const sp = simpleBeamSpans[i];
+                    if (sp.isWall) continue;
+
+                    // 左側の壁スパンを探す
+                    let leftWallIdx = -1;
+                    for (let j = i - 1; j >= 0; j--) {
+                        if (simpleBeamSpans[j].isWall) { leftWallIdx = j; break; }
+                    }
+                    // 右側の壁スパンを探す
+                    let rightWallIdx = -1;
+                    for (let j = i + 1; j < simpleBeamSpans.length; j++) {
+                        if (simpleBeamSpans[j].isWall) { rightWallIdx = j; break; }
+                    }
+
+                    const M_left  = leftWallIdx  >= 0 ? simpleBeamSpans[leftWallIdx].M_wf  : 0;
+                    const M_right = rightWallIdx >= 0 ? simpleBeamSpans[rightWallIdx].M_wf : 0;
+                    const L_left  = leftWallIdx  >= 0 ? simpleBeamSpans[leftWallIdx].L     : 1;
+                    const L_right = rightWallIdx >= 0 ? simpleBeamSpans[rightWallIdx].L    : 1;
+                    // 両端への伝達モーメントを按分（三点法簡易）
+                    const L_sum  = L_left + L_right;
+                    // 左壁スパンの rTd と右壁スパンの lTd の符号で方向を決定
+                    const sign_l = (leftWallIdx  >= 0 ? (simpleBeamSpans[leftWallIdx].rTd  >= 0 ? 1 : -1) : 1);
+                    const sign_r = (rightWallIdx >= 0 ? (simpleBeamSpans[rightWallIdx].lTd >= 0 ? 1 : -1) : 1);
+                    const lM = sign_l * M_left  * L_right / L_sum;
+                    const rM = -sign_r * M_right * L_left  / L_sum;
+                    sp.lM_wf = lM;
+                    sp.rM_wf = rM;
+                    sp.Qe    = sp.L > 1e-9 ? (lM - rM) / sp.L : 0;
+                }
+            }
+
+            return { Td, Qe, Mf, R, R_left: R_l, R_right: R_r, supportIdx1: 0, supportIdx2: pillars.length - 1, sumTd, sumR, simpleBeamSpans };
         };
         return { leftward: calculateDir(true), rightward: calculateDir(false), axisName };
     },

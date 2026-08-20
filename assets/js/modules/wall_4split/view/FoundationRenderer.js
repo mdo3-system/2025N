@@ -447,56 +447,160 @@ window.FoundationRenderer = {
         const modelType = bp.modelType || 'both_ends';
         const dispB = (modelType === 'pillar_supported') ? 1.0 : B_val;
 
-        let table1 = `<table style="width:100%; border-collapse:collapse; font-size:10px; margin-bottom:15px; border:1px solid #bdc3c7;">
-            <thead>
-                <tr style="background:#34495e; color:#fff; border-bottom:1px solid #bdc3c7;">
-                    <th rowspan="2" style="border:1px solid #bdc3c7; padding:4px; width:60px;">柱/節点</th>
-                    <th rowspan="2" style="border:1px solid #bdc3c7; padding:4px; width:45px;">x(m)</th>
-                    <th colspan="4" style="border:1px solid #bdc3c7; padding:4px; text-align:center; background:#ebf5fb; color:#1b4f72;">左加力 (B=${dispB.toFixed(3)})</th>
-                    <th colspan="4" style="border:1px solid #bdc3c7; padding:4px; text-align:center; background:#fdf2e9; color:#7e5109;">右加力 (B=${dispB.toFixed(3)})</th>
-                </tr>
-                <tr style="background:#f2f4f4; color:#2c3e50; border-bottom:1px solid #bdc3c7;">
-                    <th style="border:1px solid #bdc3c7; padding:3px;">Td(kN)</th>
-                    <th style="border:1px solid #bdc3c7; padding:3px;">R(kN)</th>
-                    <th style="border:1px solid #bdc3c7; padding:3px;">Qe(kN)</th>
-                    <th style="border:1px solid #bdc3c7; padding:3px;">Mf(kNm)</th>
-                    <th style="border:1px solid #bdc3c7; padding:3px;">Td(kN)</th>
-                    <th style="border:1px solid #bdc3c7; padding:3px;">R(kN)</th>
-                    <th style="border:1px solid #bdc3c7; padding:3px;">Qe(kN)</th>
-                    <th style="border:1px solid #bdc3c7; padding:3px;">Mf(kNm)</th>
-                </tr>
-            </thead>
-            <tbody>`;
-
         const pillars = beam.fdStress.pillars;
         const seismic = beam.fdStress.seismic || { leftward: { Td:[], Qe:[], Mf:[] }, rightward: { Td:[], Qe:[], Mf:[] } };
 
-        pillars.forEach((p, idx) => {
-            const l_Td = (seismic.leftward.Td?.[idx] ?? 0).toFixed(3);
-            const l_R_val = seismic.leftward.R ? (seismic.leftward.R[idx] ?? 0) : (idx === seismic.leftward.supportIdx1 ? (seismic.leftward.R_left ?? 0) : (idx === seismic.leftward.supportIdx2 ? (seismic.leftward.R_right ?? 0) : 0));
-            const l_Qe = (seismic.leftward.Qe?.[idx] ?? 0).toFixed(3);
-            const l_Mf = (seismic.leftward.Mf?.[idx] ?? 0).toFixed(3);
+        let table1 = '';
 
-            const r_Td = (seismic.rightward.Td?.[idx] ?? 0).toFixed(3);
-            const r_R_val = seismic.rightward.R ? (seismic.rightward.R[idx] ?? 0) : (idx === seismic.rightward.supportIdx1 ? (seismic.rightward.R_left ?? 0) : (idx === seismic.rightward.supportIdx2 ? (seismic.rightward.R_right ?? 0) : 0));
-            const r_Qe = (seismic.rightward.Qe?.[idx] ?? 0).toFixed(3);
-            const r_Mf = (seismic.rightward.Mf?.[idx] ?? 0).toFixed(3);
+        if (modelType === 'simple_beam') {
+            // ===== 単純梁モデル専用：スパン別テーブル =====
+            const lSpans = seismic.leftward.simpleBeamSpans  || [];
+            const rSpans = seismic.rightward.simpleBeamSpans || [];
+            const tdStyle = 'border:1px solid #bdc3c7; padding:3px; text-align:right;';
+            const thStyle = 'border:1px solid #bdc3c7; padding:3px; text-align:center;';
+            table1 = `<table style="width:100%; border-collapse:collapse; font-size:10px; margin-bottom:15px; border:1px solid #bdc3c7;">
+                <thead>
+                    <tr style="background:#34495e; color:#fff;">
+                        <th rowspan="2" style="${thStyle}">柱間</th>
+                        <th rowspan="2" style="${thStyle}">長さ(m)</th>
+                        <th colspan="6" style="${thStyle} background:#ebf5fb; color:#1b4f72;">水平荷重時 左加力 (B=${dispB.toFixed(2)})</th>
+                        <th colspan="6" style="${thStyle} background:#fdf2e9; color:#7e5109;">水平荷重時 右加力 (B=${dispB.toFixed(2)})</th>
+                    </tr>
+                    <tr style="background:#f2f4f4; color:#2c3e50;">
+                        <th style="${thStyle}">lTd(kN)</th>
+                        <th style="${thStyle}">rTd(kN)</th>
+                        <th style="${thStyle}">M水(kNm)</th>
+                        <th style="${thStyle}">Qe(kN)</th>
+                        <th style="${thStyle}">lM水f(kNm)</th>
+                        <th style="${thStyle}">rM水f(kNm)</th>
+                        <th style="${thStyle}">lTd(kN)</th>
+                        <th style="${thStyle}">rTd(kN)</th>
+                        <th style="${thStyle}">M水(kNm)</th>
+                        <th style="${thStyle}">Qe(kN)</th>
+                        <th style="${thStyle}">lM水f(kNm)</th>
+                        <th style="${thStyle}">rM水f(kNm)</th>
+                    </tr>
+                </thead>
+                <tbody>`;
 
-            table1 += `<tr>
-                <td style="border:1px solid #bdc3c7; padding:4px; font-weight:bold; text-align:center;">${getFreshPillarName(p)}</td>
-                <td style="border:1px solid #bdc3c7; padding:4px; text-align:right;">${(p.x ?? 0).toFixed(3)}</td>
-                <td style="border:1px solid #bdc3c7; padding:4px; text-align:right; font-weight:bold; color:#e74c3c; background:#fef5f5;">${l_Td}</td>
-                <td style="border:1px solid #bdc3c7; padding:4px; text-align:right; background:#f4f6f7;">${l_R_val.toFixed(3)}</td>
-                <td style="border:1px solid #bdc3c7; padding:4px; text-align:right; font-weight:bold; color:#2980b9;">${l_Qe}</td>
-                <td style="border:1px solid #bdc3c7; padding:4px; text-align:right; font-weight:bold; color:#27ae60;">${l_Mf}</td>
-                <td style="border:1px solid #bdc3c7; padding:4px; text-align:right; font-weight:bold; color:#e74c3c; background:#fef5f5;">${r_Td}</td>
-                <td style="border:1px solid #bdc3c7; padding:4px; text-align:right; background:#fdfefe;">${r_R_val.toFixed(3)}</td>
-                <td style="border:1px solid #bdc3c7; padding:4px; text-align:right; font-weight:bold; color:#c0392b;">${r_Qe}</td>
-                <td style="border:1px solid #bdc3c7; padding:4px; text-align:right; font-weight:bold; color:#d35400;">${r_Mf}</td>
-            </tr>`;
-        });
-        table1 += `</tbody></table>`;
+            const maxLen = Math.max(lSpans.length, rSpans.length);
+            for (let i = 0; i < maxLen; i++) {
+                const ls = lSpans[i] || {};
+                const rs = rSpans[i] || {};
+                const isWall = ls.isWall || rs.isWall;
+                const leftPillar = pillars[ls.idx_l !== undefined ? ls.idx_l : i] || {};
+                const rightPillar = pillars[ls.idx_r !== undefined ? ls.idx_r : i + 1] || {};
+                const spanName = isWall
+                    ? `|${getFreshPillarName(leftPillar)}-${getFreshPillarName(rightPillar)}|`
+                    : `${getFreshPillarName(leftPillar)}-${getFreshPillarName(rightPillar)}`;
+                const L_span = ls.L || rs.L || 0;
+                const rowBg = isWall ? 'background:#f0fff4;' : 'background:#fffbf0;';
+
+                // 左加力
+                const l_lTd = isWall ? (ls.lTd ?? 0).toFixed(3) : '';
+                const l_rTd = isWall ? (ls.rTd ?? 0).toFixed(3) : '';
+                const l_Mwf = isWall ? (ls.M_wf ?? 0).toFixed(3) : '';
+                const l_Qe  = (!isWall && ls.Qe  != null) ? ls.Qe.toFixed(3) : '';
+                const l_lMf = (!isWall && ls.lM_wf != null) ? ls.lM_wf.toFixed(3) : '';
+                const l_rMf = (!isWall && ls.rM_wf != null) ? ls.rM_wf.toFixed(3) : '';
+                // 右加力
+                const r_lTd = isWall ? (rs.lTd ?? 0).toFixed(3) : '';
+                const r_rTd = isWall ? (rs.rTd ?? 0).toFixed(3) : '';
+                const r_Mwf = isWall ? (rs.M_wf ?? 0).toFixed(3) : '';
+                const r_Qe  = (!isWall && rs.Qe  != null) ? rs.Qe.toFixed(3) : '';
+                const r_lMf = (!isWall && rs.lM_wf != null) ? rs.lM_wf.toFixed(3) : '';
+                const r_rMf = (!isWall && rs.rM_wf != null) ? rs.rM_wf.toFixed(3) : '';
+
+                table1 += `<tr style="${rowBg}">
+                    <td style="${tdStyle} font-weight:bold;">${spanName}</td>
+                    <td style="${tdStyle}">${L_span.toFixed(3)}</td>
+                    <td style="${tdStyle} color:#e74c3c;">${l_lTd}</td>
+                    <td style="${tdStyle} color:#e74c3c;">${l_rTd}</td>
+                    <td style="${tdStyle} font-weight:bold; color:#27ae60;">${l_Mwf}</td>
+                    <td style="${tdStyle} color:#2980b9;">${l_Qe}</td>
+                    <td style="${tdStyle} color:#8e44ad;">${l_lMf}</td>
+                    <td style="${tdStyle} color:#d35400;">${l_rMf}</td>
+                    <td style="${tdStyle} color:#c0392b;">${r_lTd}</td>
+                    <td style="${tdStyle} color:#c0392b;">${r_rTd}</td>
+                    <td style="${tdStyle} font-weight:bold; color:#16a085;">${r_Mwf}</td>
+                    <td style="${tdStyle} color:#2471a3;">${r_Qe}</td>
+                    <td style="${tdStyle} color:#7d3c98;">${r_lMf}</td>
+                    <td style="${tdStyle} color:#ca6f1e;">${r_rMf}</td>
+                </tr>`;
+            }
+            table1 += `</tbody></table>`;
+
+        } else {
+            // ===== 柱直下支点 / 両端支点 連続梁モデル：節点別テーブル（「計」行付き）=====
+            table1 = `<table style="width:100%; border-collapse:collapse; font-size:10px; margin-bottom:15px; border:1px solid #bdc3c7;">
+                <thead>
+                    <tr style="background:#34495e; color:#fff; border-bottom:1px solid #bdc3c7;">
+                        <th rowspan="2" style="border:1px solid #bdc3c7; padding:4px; width:60px;">柱/節点</th>
+                        <th rowspan="2" style="border:1px solid #bdc3c7; padding:4px; width:45px;">x(m)</th>
+                        <th colspan="4" style="border:1px solid #bdc3c7; padding:4px; text-align:center; background:#ebf5fb; color:#1b4f72;">左加力 (B=${dispB.toFixed(3)})</th>
+                        <th colspan="4" style="border:1px solid #bdc3c7; padding:4px; text-align:center; background:#fdf2e9; color:#7e5109;">右加力 (B=${dispB.toFixed(3)})</th>
+                    </tr>
+                    <tr style="background:#f2f4f4; color:#2c3e50; border-bottom:1px solid #bdc3c7;">
+                        <th style="border:1px solid #bdc3c7; padding:3px;">Td(kN)</th>
+                        <th style="border:1px solid #bdc3c7; padding:3px;">R(kN)</th>
+                        <th style="border:1px solid #bdc3c7; padding:3px;">Qe(kN)</th>
+                        <th style="border:1px solid #bdc3c7; padding:3px;">Mf(kNm)</th>
+                        <th style="border:1px solid #bdc3c7; padding:3px;">Td(kN)</th>
+                        <th style="border:1px solid #bdc3c7; padding:3px;">R(kN)</th>
+                        <th style="border:1px solid #bdc3c7; padding:3px;">Qe(kN)</th>
+                        <th style="border:1px solid #bdc3c7; padding:3px;">Mf(kNm)</th>
+                    </tr>
+                </thead>
+                <tbody>`;
+
+            pillars.forEach((p, idx) => {
+                const l_Td = (seismic.leftward.Td?.[idx] ?? 0).toFixed(3);
+                const l_R_val = seismic.leftward.R ? (seismic.leftward.R[idx] ?? 0) : (idx === seismic.leftward.supportIdx1 ? (seismic.leftward.R_left ?? 0) : (idx === seismic.leftward.supportIdx2 ? (seismic.leftward.R_right ?? 0) : 0));
+                const l_Qe = (seismic.leftward.Qe?.[idx] ?? 0).toFixed(3);
+                const l_Mf = (seismic.leftward.Mf?.[idx] ?? 0).toFixed(3);
+
+                const r_Td = (seismic.rightward.Td?.[idx] ?? 0).toFixed(3);
+                const r_R_val = seismic.rightward.R ? (seismic.rightward.R[idx] ?? 0) : (idx === seismic.rightward.supportIdx1 ? (seismic.rightward.R_left ?? 0) : (idx === seismic.rightward.supportIdx2 ? (seismic.rightward.R_right ?? 0) : 0));
+                const r_Qe = (seismic.rightward.Qe?.[idx] ?? 0).toFixed(3);
+                const r_Mf = (seismic.rightward.Mf?.[idx] ?? 0).toFixed(3);
+
+                table1 += `<tr>
+                    <td style="border:1px solid #bdc3c7; padding:4px; font-weight:bold; text-align:center;">${getFreshPillarName(p)}</td>
+                    <td style="border:1px solid #bdc3c7; padding:4px; text-align:right;">${(p.x ?? 0).toFixed(3)}</td>
+                    <td style="border:1px solid #bdc3c7; padding:4px; text-align:right; font-weight:bold; color:#e74c3c; background:#fef5f5;">${l_Td}</td>
+                    <td style="border:1px solid #bdc3c7; padding:4px; text-align:right; background:#f4f6f7;">${l_R_val.toFixed(3)}</td>
+                    <td style="border:1px solid #bdc3c7; padding:4px; text-align:right; font-weight:bold; color:#2980b9;">${l_Qe}</td>
+                    <td style="border:1px solid #bdc3c7; padding:4px; text-align:right; font-weight:bold; color:#27ae60;">${l_Mf}</td>
+                    <td style="border:1px solid #bdc3c7; padding:4px; text-align:right; font-weight:bold; color:#e74c3c; background:#fef5f5;">${r_Td}</td>
+                    <td style="border:1px solid #bdc3c7; padding:4px; text-align:right; background:#fdfefe;">${r_R_val.toFixed(3)}</td>
+                    <td style="border:1px solid #bdc3c7; padding:4px; text-align:right; font-weight:bold; color:#c0392b;">${r_Qe}</td>
+                    <td style="border:1px solid #bdc3c7; padding:4px; text-align:right; font-weight:bold; color:#d35400;">${r_Mf}</td>
+                </tr>`;
+            });
+
+            // 「計」行（ΣTd, ΣR の合計行）
+            const l_sumTd = (seismic.leftward.sumTd ?? 0).toFixed(3);
+            const l_sumR  = (seismic.leftward.sumR  ?? 0).toFixed(3);
+            const r_sumTd = (seismic.rightward.sumTd ?? 0).toFixed(3);
+            const r_sumR  = (seismic.rightward.sumR  ?? 0).toFixed(3);
+            table1 += `<tr style="background:#ecf0f1; font-weight:bold; border-top:2px solid #7f8c8d;">
+                    <td style="border:1px solid #bdc3c7; padding:4px; text-align:center; font-weight:bold;">計</td>
+                    <td style="border:1px solid #bdc3c7; padding:4px;"></td>
+                    <td style="border:1px solid #bdc3c7; padding:4px; text-align:right; color:#c0392b;">${l_sumTd}</td>
+                    <td style="border:1px solid #bdc3c7; padding:4px; text-align:right; color:#7f8c8d;">${l_sumR}</td>
+                    <td style="border:1px solid #bdc3c7; padding:4px;"></td>
+                    <td style="border:1px solid #bdc3c7; padding:4px;"></td>
+                    <td style="border:1px solid #bdc3c7; padding:4px; text-align:right; color:#c0392b;">${r_sumTd}</td>
+                    <td style="border:1px solid #bdc3c7; padding:4px; text-align:right; color:#7f8c8d;">${r_sumR}</td>
+                    <td style="border:1px solid #bdc3c7; padding:4px;"></td>
+                    <td style="border:1px solid #bdc3c7; padding:4px;"></td>
+                </tr>`;
+
+            table1 += `</tbody></table>`;
+        }
+
         html += table1;
+
 
         html += `<div style="font-size:12px; font-weight:bold; color:#2c3e50; border-left:4px solid #34495e; padding-left:8px; margin:15px 0 6px 0;">② 応力の算定 (長期)</div>`;
         let table2 = `<table style="width:100%; border-collapse:collapse; font-size:10px; margin-bottom:15px; border:1px solid #bdc3c7; text-align:center;">
