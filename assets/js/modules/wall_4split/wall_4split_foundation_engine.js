@@ -795,6 +795,37 @@ window.reconstructContinuousBeams = function() {
         delete nb.originalBeams;
     });
 
+    // 基礎梁の整列ソート（X方向梁を上から順[Y降順] ➡ Y方向梁を左から順[X昇順] ➡ 斜め梁）
+    newBeams.sort((a, b) => {
+        const dxA = Math.abs(a.p2.x - a.p1.x), dyA = Math.abs(a.p2.y - a.p1.y);
+        const dxB = Math.abs(b.p2.x - b.p1.x), dyB = Math.abs(b.p2.y - b.p1.y);
+        const isHA = dxA >= dyA; // 水平（X方向梁）
+        const isHB = dxB >= dyB; // 水平（X方向梁）
+
+        if (isHA && !isHB) return -1; // X方向梁を先
+        if (!isHA && isHB) return 1;  // Y方向梁を後
+
+        if (isHA && isHB) {
+            // X方向梁同士：上から順（Y座標が大きい順：降順）
+            const yA = (a.p1.y + a.p2.y) / 2;
+            const yB = (b.p1.y + b.p2.y) / 2;
+            if (Math.abs(yA - yB) > 5) return yB - yA; // Y降順
+            // 同一Yなら左から順（X昇順）
+            const xA = Math.min(a.p1.x, a.p2.x);
+            const xB = Math.min(b.p1.x, b.p2.x);
+            return xA - xB;
+        } else {
+            // Y方向梁同士：左から順（X座標が小さい順：昇順）
+            const xA = (a.p1.x + a.p2.x) / 2;
+            const xB = (b.p1.x + b.p2.x) / 2;
+            if (Math.abs(xA - xB) > 5) return xA - xB; // X昇順
+            // 同一Xなら上から順（Y降順）
+            const yA = Math.max(a.p1.y, a.p2.y);
+            const yB = Math.max(b.p1.y, b.p2.y);
+            return yB - yA;
+        }
+    });
+
     // 状態の更新
     window.AppState.foundationBeams = newBeams;
     

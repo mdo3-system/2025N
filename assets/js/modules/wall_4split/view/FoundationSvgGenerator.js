@@ -33,11 +33,24 @@ window.FoundationSvgGenerator = {
         pillars.forEach((p, idx) => {
             maxTd = Math.max(maxTd, Math.abs(seismic.leftward.Td?.[idx] || 0), Math.abs(seismic.rightward.Td?.[idx] || 0));
         });
+        const modelType = beam.props?.modelType || 'both_ends';
+        const isSimpleBeam = (modelType === 'simple_beam');
+        const lSpans = seismic.leftward?.simpleBeamSpans || [];
+        const rSpans = seismic.rightward?.simpleBeamSpans || [];
+
         spans.forEach((span, sIdx) => {
             maxM = Math.max(maxM, Math.abs(span.M_mid || 0), Math.abs(span.M_end || 0));
-            maxM = Math.max(maxM, Math.abs(seismic.leftward.Mf?.[sIdx] || 0), Math.abs(seismic.leftward.Mf?.[sIdx + 1] || 0));
-            maxM = Math.max(maxM, Math.abs(seismic.rightward.Mf?.[sIdx] || 0), Math.abs(seismic.rightward.Mf?.[sIdx + 1] || 0));
-            maxQ = Math.max(maxQ, Math.abs(span.Q_L || 0), Math.abs(span.leftward?.Q || 0), Math.abs(span.rightward?.Q || 0));
+            if (isSimpleBeam) {
+                const ls = lSpans[sIdx] || {};
+                const rs = rSpans[sIdx] || {};
+                maxM = Math.max(maxM, Math.abs(ls.M_wf || 0), Math.abs(ls.lM_wf || 0), Math.abs(ls.rM_wf || 0));
+                maxM = Math.max(maxM, Math.abs(rs.M_wf || 0), Math.abs(rs.lM_wf || 0), Math.abs(rs.rM_wf || 0));
+                maxQ = Math.max(maxQ, Math.abs(span.Q_L || 0), Math.abs(ls.Qe || 0), Math.abs(rs.Qe || 0));
+            } else {
+                maxM = Math.max(maxM, Math.abs(seismic.leftward.Mf?.[sIdx] || 0), Math.abs(seismic.leftward.Mf?.[sIdx + 1] || 0));
+                maxM = Math.max(maxM, Math.abs(seismic.rightward.Mf?.[sIdx] || 0), Math.abs(seismic.rightward.Mf?.[sIdx + 1] || 0));
+                maxQ = Math.max(maxQ, Math.abs(span.Q_L || 0), Math.abs(span.leftward?.Q || 0), Math.abs(span.rightward?.Q || 0));
+            }
         });
 
         const getFreshPillarName = (p) => {
@@ -111,27 +124,61 @@ window.FoundationSvgGenerator = {
             const lt_yMid = y2 + (mM / maxM) * 35;
             svg += `<path d="M ${xL} ${lt_yLeft} Q ${xMid} ${lt_yMid} ${xR} ${lt_yRight}" fill="none" stroke="#10b981" stroke-width="1.5" stroke-dasharray="2,2" />`;
 
-            const l_mL = seismic.leftward?.Mf?.[sIdx] || 0;
-            const l_mR = seismic.leftward?.Mf?.[sIdx + 1] || 0;
-            const l_yL = y2 + (l_mL / maxM) * 35;
-            const l_yR = y2 + (l_mR / maxM) * 35;
-            svg += `<line x1="${xL}" y1="${l_yL}" x2="${xR}" y2="${l_yR}" stroke="#3b82f6" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />`;
+            if (isSimpleBeam) {
+                const ls = lSpans[sIdx] || {};
+                const rs = rSpans[sIdx] || {};
+                const isWall = ls.isWall || rs.isWall;
 
-            const r_mL = seismic.rightward?.Mf?.[sIdx] || 0;
-            const r_mR = seismic.rightward?.Mf?.[sIdx + 1] || 0;
-            const r_yL = y2 + (r_mL / maxM) * 35;
-            const r_yR = y2 + (r_mR / maxM) * 35;
-            svg += `<line x1="${xL}" y1="${r_yL}" x2="${xR}" y2="${r_yR}" stroke="#f97316" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />`;
+                if (isWall) {
+                    // 単純梁 壁スパン：スパン中央曲げモーメント M水（山形ライン）
+                    const l_mwf = ls.M_wf || 0;
+                    const r_mwf = rs.M_wf || 0;
+                    const l_yMid = y2 + (l_mwf / maxM) * 35;
+                    const r_yMid = y2 + (r_mwf / maxM) * 35;
 
-            const shiftL_blue = (sIdx % 2 === 0) ? -6 : -14;
-            const shiftL_orange = (sIdx % 2 === 0) ? 12 : 18;
+                    svg += `<polyline points="${xL},${y2} ${xMid},${l_yMid} ${xR},${y2}" stroke="#3b82f6" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round" />`;
+                    svg += `<polyline points="${xL},${y2} ${xMid},${r_yMid} ${xR},${y2}" stroke="#f97316" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round" />`;
 
-            if (sIdx === 0) {
-                svg += `<text x="${xL}" y="${l_yL + shiftL_blue}" font-size="8" text-anchor="middle" fill="#1d4ed8" font-weight="bold">${l_mL.toFixed(3)}</text>`;
-                svg += `<text x="${xL}" y="${r_yL + shiftL_orange}" font-size="8" text-anchor="middle" fill="#c2410c" font-weight="bold">${r_mL.toFixed(3)}</text>`;
+                    if (Math.abs(l_mwf) > 0.001) {
+                        svg += `<text x="${xMid}" y="${l_yMid - 6}" font-size="8" text-anchor="middle" fill="#1d4ed8" font-weight="bold">${l_mwf.toFixed(3)}</text>`;
+                    }
+                    if (Math.abs(r_mwf) > 0.001) {
+                        svg += `<text x="${xMid}" y="${r_yMid + 14}" font-size="8" text-anchor="middle" fill="#c2410c" font-weight="bold">${r_mwf.toFixed(3)}</text>`;
+                    }
+                } else {
+                    // 単純梁 開口スパン：端部モーメント lM水f, rM水f
+                    const l_lMf = ls.lM_wf || 0, l_rMf = ls.rM_wf || 0;
+                    const r_lMf = rs.lM_wf || 0, r_rMf = rs.rM_wf || 0;
+                    const l_yL = y2 + (l_lMf / maxM) * 35, l_yR = y2 + (l_rMf / maxM) * 35;
+                    const r_yL = y2 + (r_lMf / maxM) * 35, r_yR = y2 + (r_rMf / maxM) * 35;
+
+                    svg += `<line x1="${xL}" y1="${l_yL}" x2="${xR}" y2="${l_yR}" stroke="#3b82f6" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />`;
+                    svg += `<line x1="${xL}" y1="${r_yL}" x2="${xR}" y2="${r_yR}" stroke="#f97316" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />`;
+                }
+            } else {
+                // 連続梁モデル
+                const l_mL = seismic.leftward?.Mf?.[sIdx] || 0;
+                const l_mR = seismic.leftward?.Mf?.[sIdx + 1] || 0;
+                const l_yL = y2 + (l_mL / maxM) * 35;
+                const l_yR = y2 + (l_mR / maxM) * 35;
+                svg += `<line x1="${xL}" y1="${l_yL}" x2="${xR}" y2="${l_yR}" stroke="#3b82f6" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />`;
+
+                const r_mL = seismic.rightward?.Mf?.[sIdx] || 0;
+                const r_mR = seismic.rightward?.Mf?.[sIdx + 1] || 0;
+                const r_yL = y2 + (r_mL / maxM) * 35;
+                const r_yR = y2 + (r_mR / maxM) * 35;
+                svg += `<line x1="${xL}" y1="${r_yL}" x2="${xR}" y2="${r_yR}" stroke="#f97316" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />`;
+
+                const shiftL_blue = (sIdx % 2 === 0) ? -6 : -14;
+                const shiftL_orange = (sIdx % 2 === 0) ? 12 : 18;
+
+                if (sIdx === 0) {
+                    svg += `<text x="${xL}" y="${l_yL + shiftL_blue}" font-size="8" text-anchor="middle" fill="#1d4ed8" font-weight="bold">${l_mL.toFixed(3)}</text>`;
+                    svg += `<text x="${xL}" y="${r_yL + shiftL_orange}" font-size="8" text-anchor="middle" fill="#c2410c" font-weight="bold">${r_mL.toFixed(3)}</text>`;
+                }
+                svg += `<text x="${xR}" y="${l_yR + shiftL_blue}" font-size="8" text-anchor="middle" fill="#1d4ed8" font-weight="bold">${l_mR.toFixed(3)}</text>`;
+                svg += `<text x="${xR}" y="${r_yR + shiftL_orange}" font-size="8" text-anchor="middle" fill="#c2410c" font-weight="bold">${r_mR.toFixed(3)}</text>`;
             }
-            svg += `<text x="${xR}" y="${l_yR + shiftL_blue}" font-size="8" text-anchor="middle" fill="#1d4ed8" font-weight="bold">${l_mR.toFixed(3)}</text>`;
-            svg += `<text x="${xR}" y="${r_yR + shiftL_orange}" font-size="8" text-anchor="middle" fill="#c2410c" font-weight="bold">${r_mR.toFixed(3)}</text>`;
         });
         svg += `</g>`;
 
@@ -161,19 +208,19 @@ window.FoundationSvgGenerator = {
             svg += `<line x1="${xMid}" y1="${lt_y1}" x2="${xMid}" y2="${lt_y2}" stroke="#10b981" stroke-width="1" stroke-dasharray="2,2" />`;
             svg += `<line x1="${xMid}" y1="${lt_y2}" x2="${xR}" y2="${lt_y2}" stroke="#10b981" stroke-width="1" stroke-dasharray="2,2" />`;
 
-            const l_q = span.leftward?.Q || 0;
+            const l_q = isSimpleBeam ? (lSpans[sIdx]?.Qe ?? (span.leftward?.Q || 0)) : (span.leftward?.Q || 0);
             const l_y = y3 - (l_q / maxQ) * 35;
             svg += `<line x1="${xL}" y1="${l_y}" x2="${xR}" y2="${l_y}" stroke="#3b82f6" stroke-width="1.5" />`;
-            if (sIdx > 0) {
+            if (sIdx > 0 && !isSimpleBeam) {
                 const prev_l_q = spans[sIdx - 1].leftward?.Q || 0;
                 const prev_l_y = y3 - (prev_l_q / maxQ) * 35;
                 svg += `<line x1="${xL}" y1="${prev_l_y}" x2="${xL}" y2="${l_y}" stroke="#3b82f6" stroke-width="1.5" />`;
             }
 
-            const r_q = span.rightward?.Q || 0;
+            const r_q = isSimpleBeam ? (rSpans[sIdx]?.Qe ?? (span.rightward?.Q || 0)) : (span.rightward?.Q || 0);
             const r_y = y3 - (r_q / maxQ) * 35;
             svg += `<line x1="${xL}" y1="${r_y}" x2="${xR}" y2="${r_y}" stroke="#f97316" stroke-width="1.5" />`;
-            if (sIdx > 0) {
+            if (sIdx > 0 && !isSimpleBeam) {
                 const prev_r_q = spans[sIdx - 1].rightward?.Q || 0;
                 const prev_r_y = y3 - (prev_r_q / maxQ) * 35;
                 svg += `<line x1="${xL}" y1="${prev_r_y}" x2="${xL}" y2="${r_y}" stroke="#f97316" stroke-width="1.5" />`;

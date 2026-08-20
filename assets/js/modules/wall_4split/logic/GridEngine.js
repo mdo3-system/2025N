@@ -154,7 +154,52 @@ window.GridEngine = {
         state.masterXs = masterXs; 
         state.masterYs = masterYs;
 
-        // 通り芯名称の決定 (ユーザー手動変更優先 > 復元済み配列優先 > 自動連番 X1, X2... / Y1, Y2...)
+        // DXF背景テキストからの通り芯名自動検出（初期インポート時または手動未編集時）
+        const detectedGridX = {};
+        const detectedGridY = {};
+        if (state.bgTextsOriginal && state.bgTextsOriginal.length > 0) {
+            const rawGridTexts = state.bgTextsOriginal.filter(t => t.isGridText || /(GRID|GLID|通り芯|軸線)/i.test(t.layer || '') || /(^[XYxy]\d+[a-zA-Z]?$)/.test((t.text || '').trim()));
+            const combinedTexts = [];
+            const usedIndices = new Set();
+            rawGridTexts.forEach((t1, i) => {
+                if (usedIndices.has(i)) return;
+                const cluster = [t1];
+                usedIndices.add(i);
+                rawGridTexts.forEach((t2, j) => {
+                    if (i !== j && !usedIndices.has(j)) {
+                        const dist = Math.hypot(t1.x - t2.x, t1.y - t2.y);
+                        if (dist < 200) {
+                            cluster.push(t2);
+                            usedIndices.add(j);
+                        }
+                    }
+                });
+                cluster.sort((a, b) => a.x - b.x);
+                const mergedText = cluster.map(c => (c.text || '').trim()).join('');
+                const avgX = cluster.reduce((sum, c) => sum + c.x, 0) / cluster.length;
+                const avgY = cluster.reduce((sum, c) => sum + c.y, 0) / cluster.length;
+                combinedTexts.push({ text: mergedText, x: avgX, y: avgY });
+            });
+
+            combinedTexts.forEach(ct => {
+                const cleaned = ct.text.replace(/通り/g, '').trim();
+                if (/^[X|x]/i.test(cleaned)) {
+                    masterXs.forEach(mx => {
+                        if (Math.abs(mx - ct.x) < 350) {
+                            detectedGridX[Math.round(mx)] = cleaned;
+                        }
+                    });
+                } else if (/^[Y|y]/i.test(cleaned)) {
+                    masterYs.forEach(my => {
+                        if (Math.abs(my - ct.y) < 350) {
+                            detectedGridY[Math.round(my)] = cleaned;
+                        }
+                    });
+                }
+            });
+        }
+
+        // 通り芯名称の決定 (ユーザー手動変更優先 > DXF検出名称優先 > 復元済み配列優先 > 自動連番 X1, X2... / Y1, Y2...)
         const resolveGridXName = (x, i) => {
             const rx = Math.round(x);
             if (state.userEditedGridX) {
@@ -165,6 +210,7 @@ window.GridEngine = {
                     if (Math.abs(parseFloat(k) - x) < 3) return state.userEditedGridX[k];
                 }
             }
+            if (detectedGridX[rx]) return detectedGridX[rx];
             if (state.gridXNames && state.gridXNames[i]) return state.gridXNames[i];
             return `X${i + 1}`;
         };
@@ -179,6 +225,7 @@ window.GridEngine = {
                     if (Math.abs(parseFloat(k) - y) < 3) return state.userEditedGridY[k];
                 }
             }
+            if (detectedGridY[ry]) return detectedGridY[ry];
             if (state.gridYNames && state.gridYNames[i]) return state.gridYNames[i];
             return `Y${i + 1}`;
         };
