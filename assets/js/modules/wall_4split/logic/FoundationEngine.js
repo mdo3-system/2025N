@@ -313,13 +313,13 @@ window.FoundationEngine = {
                 );
                 
                 let val = 0;
-                if (op && op.axisSeismicAxial) {
+                if (op && op.axisSeismicAxial && axisName) {
                     const axisKeys = Object.keys(op.axisSeismicAxial);
                     const targetKey = axisName.replace(/[^a-zA-Z0-9]/g, '');
 
                     if (op.axisSeismicAxial[axisName] !== undefined) {
                         val = op.axisSeismicAxial[axisName];
-                    } else {
+                    } else if (targetKey) {
                         const matchKey = axisKeys.find(k =>
                             k.replace(/[^a-zA-Z0-9]/g, '') === targetKey ||
                             k === targetKey ||
@@ -329,9 +329,7 @@ window.FoundationEngine = {
                         if (matchKey) val = op.axisSeismicAxial[matchKey];
                     }
                 }
-                if (!val) {
-                    val = (op?.seismicAxial) || (p.seismicAxial * 1000) || 0;
-                }
+                // 【確定仕様】当該基礎梁の通り芯上に耐力壁が存在しない場合は厳密に val = 0（直交方向の軸力は一切混入させない）
                 return (isLeft ? val : -val) * (bp.modelType === 'pillar_supported' ? 1.0 : (bp.B_val || 0.5)) / 1000;
             });
             const modelType = bp.modelType || 'both_ends';

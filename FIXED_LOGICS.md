@@ -76,12 +76,12 @@
 
 #### 共通事項
 
-- **節点引抜力（軸力） $T_d$ （kN）**:
-  各柱節点の地震時軸力（`axisSeismicAxial`）に反曲点高比 $B$ を乗じた値。
-  $$T_{d,i} = N_{\text{seismic}, i} \times B$$
-  - 柱直下支点モデルでは $B = 1.0$（軸力をそのまま節点荷重とする）
-  - 両端支点・単純梁モデルでは $B =$ 設定値（初期値 $0.50$）
-
+- **節点引抜力（軸力） $ （kN）**:
+  各柱節点において、**当該基礎梁と同一通り芯（梁の方向）に接続する耐力壁のみから算定された地震時軸力**（xisSeismicAxial[axisName]）に反曲点高比 $ を乗じた値。
+  T_{d,i} = N_{\text{seismic}, i, \text{axis}} \times B
+  - 当該基礎梁の通り芯上に耐力壁が存在しない柱（直交方向のみに耐力壁がある場合等）は、**厳密に  = 0$** とする（直交方向の耐力壁引抜力は混入させない）。
+  - 柱直下支点モデルでは  = 1.0$（軸力をそのまま節点荷重とする）
+  - 両端支点・単純梁モデルでは  =$ 設定値（初期値 .50$）
 - **「計」行（ΣTd, ΣR）の検証条件**:
   - $\Sigma T_d + \Sigma R = 0$（力の釣合が成立すること）
   - 柱直下支点連続梁・両端支点連続梁では、接点応力表の末尾に「計」行を設け、各加力方向の $\Sigma T_d$ と $\Sigma R$ を表示する。
@@ -1244,7 +1244,8 @@ $$R_i = A + B \cdot x_i$$
 
 ### 91. レイヤ設定パネルのDXF個別レイヤー表示削除・基本5カテゴリ限定復元 (v3.13.5)
 - **DXF個別レイヤー表示の完全撤廃と基本5カテゴリ限定化**:
-  - wall_4split_render.js 内の enderLayerPanel() から、DXF個別レイヤー（extraLayers）の動的リストアップ処理およびHTML生成部を完全削除。
+  - wall_4split_render.js 内の 
+enderLayerPanel() から、DXF個別レイヤー（extraLayers）の動的リストアップ処理およびHTML生成部を完全削除。
   - レイヤー表示設定パネルに表示する要素を確定仕様である**基本5カテゴリ（「📐 通り芯・グリッド」「🖼️ 1階背景」「🖼️ 2階背景」「🏠 1階屋根」「🏠 2階屋根」）のみ**にスッキリと限定復元。
   - MainRenderer.js の isLayerVisible も基本5カテゴリに特化した判定構造へ整理。
 - **自動テスト結果**: PASS: 24 / FAIL: 0 (100%通過)
@@ -1253,7 +1254,8 @@ $$R_i = A + B \cdot x_i$$
 - **左パネルのマニュアルボタン表記改定**:
   - index.html の左パネルリンクを 📖 新マニュアル (v3.12) から **📖 マニュアル (v3.13)** へ修正。
 - **1階屋根・2階屋根モード時のDXFレイヤ表示自動連動**:
-  - AppController.js の setDefaultLayerVisibility を改修。1階屋根（1R）選択時に 1F_ROOF: true、2階屋根（2R）選択時に 2F_ROOF: true、1階作図時に 1F_BACK: true、2階作図時に 2F_BACK: true を自動初期化し、レイヤー設定パネル（enderLayerPanel()）が100%自動連動するよう修正。
+  - AppController.js の setDefaultLayerVisibility を改修。1階屋根（1R）選択時に 1F_ROOF: true、2階屋根（2R）選択時に 2F_ROOF: true、1階作図時に 1F_BACK: true、2階作図時に 2F_BACK: true を自動初期化し、レイヤー設定パネル（
+enderLayerPanel()）が100%自動連動するよう修正。
 - **完全操作マニュアル（manual_full_v3.html / manual/index.html）のv3.13全面改訂**:
   - 表題部を「v3.13版」に更新、旧「v3.10版」「v3.12版」の記述をすべて「v3.13版」に統一。
   - 「1. CADでの作図＆DXF読み込みルール」を4ステップ・レイヤー割当ウィザード、通り芯交点吸着、原点スナップ、基本5カテゴリレイヤ表示設定の最新仕様に合わせて全面刷新。
@@ -1283,7 +1285,9 @@ $$R_i = A + B \cdot x_i$$
   - Parsers.js の parseJson 時に isGridFixed フラグを完全復元し、かつ gxc/gyc（手動スパン座標）保存時は isGridFixed = true を確定させるよう修正。
   - nalyzeGrids 実行時に isGridFixed = false と誤判定されて DXF 初期スパン座標に上書きリセットされる現象を根絶。
 - **通り芯文字編集が復元時に書き換わるバグの根絶**:
-  - GridEngine.js 内に通り芯文字多角解決ロジック（esolveGridXName, esolveGridYName）を新設。
+  - GridEngine.js 内に通り芯文字多角解決ロジック（
+esolveGridXName, 
+esolveGridYName）を新設。
   - 数値座標、Math.round 丸め座標、文字列キー（例: "1820"）、2mm以内の近接座標スナップの全パターンで userEditedGridX/Y を安全検索。
   - さらに、復元された gridXNames / gridYNames の保護優先処理を導入し、手動文字変更が X1, X2... のデフォルト名に強制上書き破棄される問題を完全解決。
   - 通り芯リネーム（updateGridName）時に数値座標と整数座標の両方で userEditedGridX/Y に二重登録・同期させる処理を追加。
@@ -1319,8 +1323,10 @@ eedBotRebarBoost（下主筋補強フラグ）を個別に判定・算出。
 ### 97. 基礎梁長期応力（M中/上端LMa, M端/下端LMa）算定および添付画像公式判定テーブル完全準拠実装 (v3.13.11)
 - **長期応力における主筋負担の物理挙動に基づく算定**:
   - 地中反力（接地圧 $）により発生する基礎梁の長期曲げモーメントを以下に分離算定：
-    - **長期 M中** (/8 \cdot \sigma_e \cdot B \cdot L^2$): 上端引張 ➔ **M_L_mid = M_mid / lMa_top** (上端主筋抵抗)
-    - **長期 M端** (/12 \cdot \sigma_e \cdot B \cdot L^2$): 下端引張 ➔ **M_L_end = M_end / lMa_bot** (下端主筋抵抗)
+    - **長期 M中** (/8 \cdot \sigma_e \cdot B \cdot L^2$): 上端引張 ➔ **
+M_L_mid = M_mid / lMa_top** (上端主筋抵抗)
+    - **長期 M端** (/12 \cdot \sigma_e \cdot B \cdot L^2$): 下端引張 ➔ **
+M_L_end = M_end / lMa_bot** (下端主筋抵抗)
 - **添付画像公式判定テーブル（添付画像1〜3）の完全再現**:
   - FoundationRenderer.js および FoundationBeamReportView.js の総合判定表（Table 6）を添付画像1と完全に一致する二段ヘッダーレイアウトへアップデート：
     - 長期: M中 / 上端LMa
@@ -1336,13 +1342,22 @@ eedBotRebarBoost（下主筋補強フラグ）を個別に判定・算出。
 - **改修内容**:
   - 人通口補強計算（Table 7）において、長期作用モーメント {acting,L}$（長期 {mid}$ / {end}$）と短期作用モーメント {acting,S}$（短期加力曲げ・モーメント勾配合成値）を分離算出。
   - 補強筋断面積 $、応力中心間距離 $ より長期許容耐力 ,L = (a_t \cdot 195 \cdot j) / 10^6$ (kN・m) と短期許容耐力 ,S = (a_t \cdot 295 \cdot j) / 10^6$ (kN・m) をそれぞれ算出。
-  - 長期検定比 atioL = (M_acting_L / Ma_L * 100).toFixed(1) + "% OK/NG" および 短期検定比 atioS = (M_acting_S / Ma_S * 100).toFixed(1) + "% OK/NG" を個別に判定表示。
+  - 長期検定比 
+atioL = (M_acting_L / Ma_L * 100).toFixed(1) + "% OK/NG" および 短期検定比 
+atioS = (M_acting_S / Ma_S * 100).toFixed(1) + "% OK/NG" を個別に判定表示。
   - FoundationRenderer.js および FoundationBeamReportView.js の両方で同一UI・同一ロジックを完全適用。
 - **検証結果**: PASS: 25 / FAIL: 0 (100%通過)、全85JSファイル構文チェック PASS。
 
 ### 99. Table 6 総合判定（isSpanNG）および補強要否ガイドの表示項目値完全連動（誤判定バグ修復） (v3.13.13)
-- **原因解明**: 裏側の check() 内 cap_l（正モーメント時に sMa_bot 比較）での M_left が 1.0 を超えていたため、裏で span.isNG / 
+- **原因解明**: 裏側の check() 内 cap_l（正モーメント時に sMa_bot 比較）での 
+M_left が 1.0 を超えていたため、裏で span.isNG / 
 eedBotBoost が 	rue となり、画面上には sMa_top 比較の「51.5% OK」が表示されているにもかかわらず、判定バッジが「NG」「⚠️ 下主筋を補強」と誤表示されていた不一致を修正。
 - **修復内容**:
-  - FoundationEngine.js, FoundationRenderer.js, FoundationBeamReportView.js の全てにおいて、Table 6 に表示されている全10項目の値（M_L_mid, M_L_end, Q_L, l_rM_left, l_rM_right, l_rQ, _rM_left, _rM_right, _rQ）が**すべて 1.0 (100%) 以下の場合に絶対 100% 確実に isSpanNG = false (OKバッジ) かつ ✅ 既定配筋で適合** と判定されるよう完全連動改修。
+  - FoundationEngine.js, FoundationRenderer.js, FoundationBeamReportView.js の全てにおいて、Table 6 に表示されている全10項目の値（
+M_L_mid, 
+M_L_end, 
+Q_L, l_rM_left, l_rM_right, l_rQ, 
+_rM_left, 
+_rM_right, 
+_rQ）が**すべて 1.0 (100%) 以下の場合に絶対 100% 確実に isSpanNG = false (OKバッジ) かつ ✅ 既定配筋で適合** と判定されるよう完全連動改修。
 - **検証結果**: PASS: 25 / FAIL: 0 (100%通過)、全85JSファイル構文チェック PASS。
