@@ -158,13 +158,11 @@ window.GridEngine = {
         const detectedGridX = {};
         const detectedGridY = {};
         if (state.bgTextsOriginal && state.bgTextsOriginal.length > 0) {
-            // 通り芯レイヤーまたは通り芯名候補のテキストを抽出
+            // 通り芯レイヤーのテキストのみを厳格に抽出
             const rawGridTexts = state.bgTextsOriginal.filter(t => {
                 if (t.isGridText) return true;
-                if (/(GRID|GLID|通り芯|軸線)/i.test(t.layer || '')) return true;
-                const txt = (t.text || '').trim();
-                // 1〜5文字の通り芯名パターン（X1, Y1, X4a, い, ろ, い1a, A, B等、カンマや単位を含まない）
-                return /^[A-Za-z0-9\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF_-]{1,6}$/.test(txt) && !txt.includes(',') && !/^(Fix|UP|FL|CH|GL|mm|㎡|100|200)$/i.test(txt);
+                if (/(GRID|GLID|通り芯|軸線)/i.test(t.layer || '') || /(GRID|GLID|通り芯|軸線)/i.test(t.originalLayer || '')) return true;
+                return false;
             });
 
             const singleChars = rawGridTexts.filter(t => (t.text || '').trim().length === 1);

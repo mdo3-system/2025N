@@ -150,9 +150,13 @@ window.Parsers = {
                             }
 
                             if (['TEXT', 'MTEXT'].includes(offEnt.type)) {
-                                const txt = offEnt.text || offEnt.string || "";
-                                const pos = offEnt.startPoint || offEnt.position || offEnt.insertionPoint || {};
-                                newBgTexts.push({ text: txt, x: (pos.x || 0), y: (pos.y || 0), floor: targetFloorName, layer: targetLayerName, layerCategory: targetLayerName, originalLayer: origL, isUnderlay: true, isGridText: false });
+                                // 通り芯以外のテキストは、寸法レイヤー（DIM / 寸法）のみ取り込み、不要な注記・部屋名・記号は完全破棄
+                                const isDimLayer = /(DIM|寸法|DIMENSION)/i.test(origL || '');
+                                if (isDimLayer) {
+                                    const txt = offEnt.text || offEnt.string || "";
+                                    const pos = offEnt.startPoint || offEnt.position || offEnt.insertionPoint || {};
+                                    newBgTexts.push({ text: txt, x: (pos.x || 0), y: (pos.y || 0), floor: targetFloorName, layer: targetLayerName, layerCategory: targetLayerName, originalLayer: origL, isUnderlay: true, isGridText: false });
+                                }
                             } else {
                                 newBgLines.push({ ...offEnt, layer: targetLayerName, layerCategory: targetLayerName, originalLayer: origL, floor: targetFloorName, isUnderlay: true, isGridLine: false });
                             }
