@@ -150,8 +150,10 @@ window.Parsers = {
                             }
 
                             if (['TEXT', 'MTEXT'].includes(offEnt.type)) {
-                                // 通り芯以外のテキストは、寸法レイヤー（DIM / 寸法）のみ取り込み、不要な注記・部屋名・記号は完全破棄
-                                const isDimLayer = /(DIM|寸法|DIMENSION)/i.test(origL || '');
+                                // 通り芯以外のテキストは、指定された寸法レイヤー（または DIM / 寸法 パターン）のみ取り込み、不要な注記・部屋名・記号は完全破棄
+                                const specifiedDim = (layerMapping && layerMapping.dimLayer) ? layerMapping.dimLayer.toUpperCase().trim() : '';
+                                const curUpperL = (origL || '').toUpperCase().trim();
+                                const isDimLayer = (specifiedDim && curUpperL === specifiedDim) || (!specifiedDim && /(DIM|寸法|SUNPO|DIMENSION)/i.test(curUpperL));
                                 if (isDimLayer) {
                                     const txt = offEnt.text || offEnt.string || "";
                                     const pos = offEnt.startPoint || offEnt.position || offEnt.insertionPoint || {};

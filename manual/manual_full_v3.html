@@ -293,6 +293,11 @@
                     <td>点・円・四角枠の中心を1階/2階の「柱」として通り芯交点へ自動吸着配置します。柱データは計算の基本要素として常時表示されます。</td>
                 </tr>
                 <tr>
+                    <td><strong>寸法線・寸法値</strong></td>
+                    <td><code>寸法レイヤー (Dimension Layer)</code></td>
+                    <td>寸法値（1820, 910等）を背景下絵として取り込みます。<strong>※寸法値を背景に表示させたい場合は、CAD段階で寸法レイヤを作成し、ここに寸法レイヤーを指定してください。</strong></td>
+                </tr>
+                <tr>
                     <td><strong>1階/2階 屋根</strong></td>
                     <td><code>1階屋根レイヤー / 2階屋根レイヤー (Roof Layer)</code></td>
                     <td>屋根形状（軒の出ライン等）の下絵ガイド線分として取り込まれ、1階屋根/2階屋根モード選択時に自動連動して画面上に表示されます。</td>
@@ -300,10 +305,16 @@
                 <tr>
                     <td><strong>1階/2階 背景</strong></td>
                     <td><code>1階背景レイヤー / 2階背景レイヤー (Background Layer)</code></td>
-                    <td>間取り・壁・建具・寸法文字などを下絵（背景）として取り込みます。画面表示のON/OFFは中央パネル上部の「🗂 レイヤ設定」で自由に制御可能です。</td>
+                    <td>間取り・壁・建具などを下絵（背景）として取り込みます。画面表示のON/OFFは中央パネル上部の「🗂 レイヤ設定」で自由に制御可能です。</td>
                 </tr>
             </tbody>
         </table>
+
+        <div class="alert alert-important" style="margin-top: 15px; border-left: 5px solid #3498db; background: #ebf5fb; padding: 12px; border-radius: 4px;">
+            ℹ️ <strong>【寸法値の背景表示およびテキスト自動破棄仕様】:</strong><br>
+            寸法値を背景に表示させたい場合は、CAD段階で寸法専用のレイヤを作成し、DXF読み込みウィザードで「<strong>寸法レイヤー</strong>」として指定してください。<br>
+            <strong>指定された「通り芯レイヤー」にある通り芯名、および「寸法レイヤー」にある寸法値以外のすべてのテキストデータ（部屋名、建具記号、仕上、特記事項、面積表など）は、図面をクリーンに保ち誤結合を防止するため、読み込み時にすべて自動破棄されます。</strong>
+        </div>
 
         <div class="alert alert-important" style="margin-top: 20px; border-left: 5px solid #e74c3c; background: #fdf2e9; padding: 15px; border-radius: 4px;">
             ⚠️ <strong>【最重要】柱の自動抽出アルゴリズムおよび通り芯交点条件:</strong><br>

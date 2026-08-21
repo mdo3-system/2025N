@@ -55,12 +55,12 @@ window.DxfLayerMapperController = {
         this.established1FGridLines = [];
 
         this.gridTextStep = 1; // 通り芯文字を読み込むステップ（1: 1F, 2: 2F, 3: 1RF, 4: 2RF）
-        // ステップデータの初期化（全ステップで gridLayer をサポート）
+        // ステップデータの初期化（全ステップで gridLayer, dimLayer をサポート）
         this.stepData = {
-            1: { fileIdx: 0, gridLayer: '', colLayer: '', backLayer: '', originPt: null },
-            2: { fileIdx: 0, gridLayer: '', colLayer: '', backLayer: '', originPt: null },
-            3: { fileIdx: 0, gridLayer: '', roofLayer: '', originPt: null },
-            4: { fileIdx: 0, gridLayer: '', roofLayer: '', originPt: null }
+            1: { fileIdx: 0, gridLayer: '', colLayer: '', dimLayer: '', backLayer: '', originPt: null },
+            2: { fileIdx: 0, gridLayer: '', colLayer: '', dimLayer: '', backLayer: '', originPt: null },
+            3: { fileIdx: 0, gridLayer: '', dimLayer: '', roofLayer: '', originPt: null },
+            4: { fileIdx: 0, gridLayer: '', dimLayer: '', roofLayer: '', originPt: null }
         };
 
         if (Array.isArray(inputData)) {
@@ -172,13 +172,16 @@ window.DxfLayerMapperController = {
             if (stepNum === 1) {
                 this.stepData[1].gridLayer = findLayer(/(GRID|GLID|通り芯|軸線)/i);
                 this.stepData[1].colLayer = findLayer(/(柱|COL|HASHIRA)/i);
+                this.stepData[1].dimLayer = findLayer(/(DIM|寸法|SUNPO|DIMENSION)/i);
                 this.stepData[1].backLayer = '__ALL_LAYERS__';
             } else if (stepNum === 2) {
                 this.stepData[2].gridLayer = findLayer(/(GRID|GLID|通り芯|軸線)/i);
                 this.stepData[2].colLayer = findLayer(/(柱|COL|HASHIRA)/i);
+                this.stepData[2].dimLayer = findLayer(/(DIM|寸法|SUNPO|DIMENSION)/i);
                 this.stepData[2].backLayer = '__ALL_LAYERS__';
             } else if (stepNum === 3 || stepNum === 4) {
                 this.stepData[stepNum].gridLayer = findLayer(/(GRID|GLID|通り芯|軸線)/i);
+                this.stepData[stepNum].dimLayer = findLayer(/(DIM|寸法|SUNPO|DIMENSION)/i);
                 this.stepData[stepNum].roofLayer = findLayer(/(屋根|ROOF|下屋|大屋根)/i) || '__ALL_LAYERS__';
             }
 
@@ -234,7 +237,7 @@ window.DxfLayerMapperController = {
         if (btnSkip) btnSkip.style.display = (stepNum >= 2) ? 'inline-block' : 'none';
         if (btnNext) btnNext.innerText = (stepNum === 4) ? '解析・読込完了 🚀' : '確定して次へ ➔';
 
-        // ステップ専用コントロールの自動生成 (全ステップで通り芯レイヤー選択スロットを設置)
+        // ステップ専用コントロールの自動生成 (全ステップで通り芯・寸法レイヤー選択スロットを設置)
         const container = document.getElementById('wizard-step-control-container');
         if (!container) return;
 
@@ -244,19 +247,19 @@ window.DxfLayerMapperController = {
 
         let html = '';
         const gridRadioHtml = `
-            <div style="margin-top:8px; padding-top:6px; border-top:1px dashed #485460; display:flex; align-items:center; justify-content:space-between;">
+            <div style="margin-top:8px; padding-top:6px; border-top:1px dashed #485460; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
                 <label style="font-size:11px; color:#f1c40f; font-weight:bold; display:inline-flex; align-items:center; gap:6px; cursor:pointer;">
                     <input type="radio" name="w-grid-text-step" value="${stepNum}" ${this.gridTextStep === stepNum ? 'checked' : ''} onchange="window.DxfLayerMapperController.gridTextStep = ${stepNum};" style="cursor:pointer;" />
                     🏷️ このファイルから通り芯名（文字）を読み込む
                 </label>
-                <span style="font-size:10px; color:#95a5a6;">※ 通り芯文字の重複防止のため、1つのファイルのみ選択できます（デフォルトは1階）</span>
+                <span style="font-size:10px; color:#95a5a6;">※ 図面をクリーンに保つため、指定された通り芯名および寸法値以外の不要テキスト（部屋名・記号等）は自動破棄されます</span>
             </div>
         `;
 
         if (stepNum === 1) {
             container.style.borderLeftColor = '#00d2d3';
             html = `
-                <div style="display:grid; grid-template-columns: 1.3fr 1fr 1fr 1fr; gap:10px; align-items:center;">
+                <div style="display:grid; grid-template-columns: 1.3fr 1fr 1fr 1fr 1fr; gap:8px; align-items:center;">
                     <div>
                         <span style="font-size:11px; color:#a4b0be; display:block;">📁 1階対象ファイル:</span>
                         <div style="display:flex; gap:4px; align-items:center;">
@@ -274,6 +277,10 @@ window.DxfLayerMapperController = {
                         <select id="w-select-col" style="width:100%; padding:6px; background:#1e272e; color:#fff; border:1px solid #485460; border-radius:4px; font-size:12px;"></select>
                     </div>
                     <div>
+                        <span style="font-size:11px; color:#e056fd; font-weight:bold; display:block;">📏 寸法レイヤー:</span>
+                        <select id="w-select-dim" style="width:100%; padding:6px; background:#1e272e; color:#fff; border:1px solid #485460; border-radius:4px; font-size:12px;"></select>
+                    </div>
+                    <div>
                         <span style="font-size:11px; color:#1dd1a1; font-weight:bold; display:block;">🖼️ 1階背景レイヤー:</span>
                         <select id="w-select-back" style="width:100%; padding:6px; background:#1e272e; color:#fff; border:1px solid #485460; border-radius:4px; font-size:12px;"></select>
                     </div>
@@ -283,7 +290,7 @@ window.DxfLayerMapperController = {
         } else if (stepNum === 2) {
             container.style.borderLeftColor = '#ff9ff3';
             html = `
-                <div style="display:grid; grid-template-columns: 1.3fr 1fr 1fr 1fr; gap:10px; align-items:center;">
+                <div style="display:grid; grid-template-columns: 1.3fr 1fr 1fr 1fr 1fr; gap:8px; align-items:center;">
                     <div>
                         <span style="font-size:11px; color:#a4b0be; display:block;">📁 2階対象ファイル:</span>
                         <div style="display:flex; gap:4px; align-items:center;">
@@ -301,6 +308,10 @@ window.DxfLayerMapperController = {
                         <select id="w-select-col" style="width:100%; padding:6px; background:#1e272e; color:#fff; border:1px solid #485460; border-radius:4px; font-size:12px;"></select>
                     </div>
                     <div>
+                        <span style="font-size:11px; color:#e056fd; font-weight:bold; display:block;">📏 寸法レイヤー:</span>
+                        <select id="w-select-dim" style="width:100%; padding:6px; background:#1e272e; color:#fff; border:1px solid #485460; border-radius:4px; font-size:12px;"></select>
+                    </div>
+                    <div>
                         <span style="font-size:11px; color:#54a0ff; font-weight:bold; display:block;">🖼️ 2階背景レイヤー:</span>
                         <select id="w-select-back" style="width:100%; padding:6px; background:#1e272e; color:#fff; border:1px solid #485460; border-radius:4px; font-size:12px;"></select>
                     </div>
@@ -311,7 +322,7 @@ window.DxfLayerMapperController = {
             container.style.borderLeftColor = (stepNum === 3) ? '#feca57' : '#ff6b6b';
             const label = (stepNum === 3) ? '1階屋根 (下屋) レイヤー:' : '2階屋根 (大屋根) レイヤー:';
             html = `
-                <div style="display:grid; grid-template-columns: 1.3fr 1fr 1fr; gap:10px; align-items:center;">
+                <div style="display:grid; grid-template-columns: 1.3fr 1fr 1fr 1fr; gap:8px; align-items:center;">
                     <div>
                         <span style="font-size:11px; color:#a4b0be; display:block;">📁 屋根対象ファイル:</span>
                         <div style="display:flex; gap:4px; align-items:center;">
@@ -323,6 +334,10 @@ window.DxfLayerMapperController = {
                     <div>
                         <span style="font-size:11px; color:#00d2d3; font-weight:bold; display:block;">📐 通り芯レイヤー:</span>
                         <select id="w-select-grid" style="width:100%; padding:6px; background:#1e272e; color:#fff; border:1px solid #485460; border-radius:4px; font-size:12px;"></select>
+                    </div>
+                    <div>
+                        <span style="font-size:11px; color:#e056fd; font-weight:bold; display:block;">📏 寸法レイヤー:</span>
+                        <select id="w-select-dim" style="width:100%; padding:6px; background:#1e272e; color:#fff; border:1px solid #485460; border-radius:4px; font-size:12px;"></select>
                     </div>
                     <div>
                         <span style="font-size:11px; color:#feca57; font-weight:bold; display:block;">🏠 ${label}</span>
@@ -383,11 +398,13 @@ window.DxfLayerMapperController = {
             // 変更イベントでプレビューをリアルタイム更新
             el.onchange = () => {
                 if (elId === 'w-select-grid') curData.gridLayer = el.value;
+                if (elId === 'w-select-dim')  curData.dimLayer = el.value;
                 this.renderPreviewCanvas();
             };
         };
 
         populateSelect('w-select-grid', /(GRID|GLID|通り芯|軸線|°)/i, curData.gridLayer);
+        populateSelect('w-select-dim', /(DIM|寸法|SUNPO|DIMENSION)/i, curData.dimLayer);
 
         if (stepNum === 1) {
             populateSelect('w-select-col', /(1F_COL|1F.*COL|1F.*柱|COL|COLUMN|柱)/i, curData.colLayer);
@@ -415,9 +432,11 @@ window.DxfLayerMapperController = {
         const fileSel = document.getElementById('w-file-select');
         if (fileSel) curData.fileIdx = parseInt(fileSel.value || 0, 10);
         curData.gridLayer = document.getElementById('w-select-grid')?.value || '';
+        curData.dimLayer  = document.getElementById('w-select-dim')?.value || '';
 
         if (curNum === 1) {
             curData.colLayer = document.getElementById('w-select-col')?.value || '';
+            curData.backLayer = document.getElementById('w-select-back')?.value || '';
             curData.backLayer = document.getElementById('w-select-back')?.value || '';
             curData.originPt = this.selectedVisualOriginPt || { x: 0, y: 0 };
             this.established1FOrigin = curData.originPt;
@@ -549,6 +568,7 @@ window.DxfLayerMapperController = {
                 gridLayer:    key === 'grid'   ? layer : '',
                 col1FLayer:   key === 'col1F'  ? layer : '',
                 col2FLayer:   key === 'col2F'  ? layer : '',
+                dimLayer:     curData.dimLayer || '',
                 back1FLayer:  key === 'back1F' ? (layer || '__ALL_LAYERS__') : '',
                 back2FLayer:  key === 'back2F' ? (layer || '__ALL_LAYERS__') : '',
                 roof1FLayer:  key === 'roof1F' ? (layer || '__ALL_LAYERS__') : '',
