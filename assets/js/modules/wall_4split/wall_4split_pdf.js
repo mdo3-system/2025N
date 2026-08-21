@@ -1372,7 +1372,24 @@ async function generateDoc() {
             }
         }
 
-        const fBeams = window.AppState.foundationBeams || [];
+        const rawFBeams = window.AppState.foundationBeams || [];
+        const fBeams = [...rawFBeams].sort((a, b) => {
+            const dxA = Math.abs(a.p2.x - a.p1.x), dyA = Math.abs(a.p2.y - a.p1.y);
+            const dxB = Math.abs(b.p2.x - b.p1.x), dyB = Math.abs(b.p2.y - b.p1.y);
+            const isHA = dxA >= dyA;
+            const isHB = dxB >= dyB;
+            if (isHA && !isHB) return -1;
+            if (!isHA && isHB) return 1;
+            if (isHA && isHB) {
+                const yA = (a.p1.y + a.p2.y) / 2, yB = (b.p1.y + b.p2.y) / 2;
+                if (Math.abs(yA - yB) > 5) return yB - yA;
+                return Math.min(a.p1.x, a.p2.x) - Math.min(b.p1.x, b.p2.x);
+            } else {
+                const xA = (a.p1.x + a.p2.x) / 2, xB = (b.p1.x + b.p2.x) / 2;
+                if (Math.abs(xA - xB) > 5) return xA - xB;
+                return Math.max(a.p1.y, a.p2.y) - Math.max(b.p1.y, b.p2.y);
+            }
+        });
         if (fBeams.length === 0) {
             h += `<div style="padding:15px; background:#f8f9fa; border:1px dashed #bdc3c7; border-radius:4px; color:#7f8c8d; font-size:12px; margin-bottom:15px;">
                 ※ 基礎梁が未配置（未設定）です。基礎計算モードで作図・配置を行うと自動応力解析・検定結果がここに反映されます。

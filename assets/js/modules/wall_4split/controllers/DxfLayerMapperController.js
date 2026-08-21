@@ -54,6 +54,7 @@ window.DxfLayerMapperController = {
         this.established1FOrigin = null;
         this.established1FGridLines = [];
 
+        this.gridTextStep = 1; // 通り芯文字を読み込むステップ（1: 1F, 2: 2F, 3: 1RF, 4: 2RF）
         // ステップデータの初期化（全ステップで gridLayer をサポート）
         this.stepData = {
             1: { fileIdx: 0, gridLayer: '', colLayer: '', backLayer: '', originPt: null },
@@ -192,6 +193,16 @@ window.DxfLayerMapperController = {
         const fileLayers = activeFileObj ? activeFileObj.layers : [];
 
         let html = '';
+        const gridRadioHtml = `
+            <div style="margin-top:8px; padding-top:6px; border-top:1px dashed #485460; display:flex; align-items:center; justify-content:space-between;">
+                <label style="font-size:11px; color:#f1c40f; font-weight:bold; display:inline-flex; align-items:center; gap:6px; cursor:pointer;">
+                    <input type="radio" name="w-grid-text-step" value="${stepNum}" ${this.gridTextStep === stepNum ? 'checked' : ''} onchange="window.DxfLayerMapperController.gridTextStep = ${stepNum};" style="cursor:pointer;" />
+                    🏷️ このファイルから通り芯名（文字）を読み込む
+                </label>
+                <span style="font-size:10px; color:#95a5a6;">※ 通り芯文字の重複防止のため、1つのファイルのみ選択できます（デフォルトは1階）</span>
+            </div>
+        `;
+
         if (stepNum === 1) {
             container.style.borderLeftColor = '#00d2d3';
             html = `
@@ -213,6 +224,7 @@ window.DxfLayerMapperController = {
                         <select id="w-select-back" style="width:100%; padding:6px; background:#1e272e; color:#fff; border:1px solid #485460; border-radius:4px; font-size:12px;"></select>
                     </div>
                 </div>
+                ${gridRadioHtml}
             `;
         } else if (stepNum === 2) {
             container.style.borderLeftColor = '#ff9ff3';
@@ -235,6 +247,7 @@ window.DxfLayerMapperController = {
                         <select id="w-select-back" style="width:100%; padding:6px; background:#1e272e; color:#fff; border:1px solid #485460; border-radius:4px; font-size:12px;"></select>
                     </div>
                 </div>
+                ${gridRadioHtml}
             `;
         } else {
             container.style.borderLeftColor = (stepNum === 3) ? '#feca57' : '#ff6b6b';
@@ -254,6 +267,7 @@ window.DxfLayerMapperController = {
                         <select id="w-select-roof" style="width:100%; padding:6px; background:#1e272e; color:#fff; border:1px solid #485460; border-radius:4px; font-size:12px;"></select>
                     </div>
                 </div>
+                ${gridRadioHtml}
             `;
         }
 
@@ -470,14 +484,15 @@ window.DxfLayerMapperController = {
 
             const targetFloorStr = (stepNum === 1) ? '1F' : ((stepNum === 2) ? '2F' : ((stepNum === 3) ? '1R' : '2R'));
             const singleMapping = {
-                gridLayer:   key === 'grid'   ? layer : '',
-                col1FLayer:  key === 'col1F'  ? layer : '',
-                col2FLayer:  key === 'col2F'  ? layer : '',
-                back1FLayer: key === 'back1F' ? (layer || '__ALL_LAYERS__') : '',
-                back2FLayer: key === 'back2F' ? (layer || '__ALL_LAYERS__') : '',
-                roof1FLayer: key === 'roof1F' ? (layer || '__ALL_LAYERS__') : '',
-                roof2FLayer: key === 'roof2F' ? (layer || '__ALL_LAYERS__') : '',
-                targetFloor: targetFloorStr
+                gridLayer:    key === 'grid'   ? layer : '',
+                col1FLayer:   key === 'col1F'  ? layer : '',
+                col2FLayer:   key === 'col2F'  ? layer : '',
+                back1FLayer:  key === 'back1F' ? (layer || '__ALL_LAYERS__') : '',
+                back2FLayer:  key === 'back2F' ? (layer || '__ALL_LAYERS__') : '',
+                roof1FLayer:  key === 'roof1F' ? (layer || '__ALL_LAYERS__') : '',
+                roof2FLayer:  key === 'roof2F' ? (layer || '__ALL_LAYERS__') : '',
+                targetFloor:  targetFloorStr,
+                skipGridText: (stepNum !== (this.gridTextStep || 1))
             };
 
             try {

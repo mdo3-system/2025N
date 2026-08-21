@@ -121,9 +121,11 @@ window.Parsers = {
 
                         if (isGrid) {
                             if (['TEXT', 'MTEXT'].includes(offEnt.type)) {
-                                const txt = offEnt.text || offEnt.string || "";
-                                const pos = offEnt.startPoint || offEnt.position || offEnt.insertionPoint || {};
-                                newBgTexts.push({ text: txt, x: (pos.x || 0), y: (pos.y || 0), floor: 'ALL', layer: 'GRID', layerCategory: 'GRID', originalLayer: origL, isUnderlay: false, isGridText: true });
+                                if (!(layerMapping && layerMapping.skipGridText)) {
+                                    const txt = offEnt.text || offEnt.string || "";
+                                    const pos = offEnt.startPoint || offEnt.position || offEnt.insertionPoint || {};
+                                    newBgTexts.push({ text: txt, x: (pos.x || 0), y: (pos.y || 0), floor: 'ALL', layer: 'GRID', layerCategory: 'GRID', originalLayer: origL, isUnderlay: false, isGridText: true });
+                                }
                             } else {
                                 newBgLines.push({ ...offEnt, layer: 'GRID', layerCategory: 'GRID', originalLayer: origL, floor: 'ALL', isUnderlay: false, isGridLine: true });
                             }

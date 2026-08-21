@@ -97,10 +97,163 @@ window.FoundationSvgGenerator = {
         });
         svg += `</g>`;
 
-        // 2. 曲げモーメント図 M (kNm)
-        let y2 = y1 + h + spacing;
+        // 2. 曲げモーメント図 & 3. せん断力図（モデル別に完全分離・単一責任）
+        const y2 = y1 + h + spacing;
+        if (modelType === 'simple_beam') {
+            svg += this.drawSimpleBeamDiagram({ pillars, spans, seismic, getX, y1, y2, y3: y2 + h + spacing, maxM, maxQ, padX, width, lSpans, rSpans });
+        } else if (modelType === 'pillar_supported') {
+            svg += this.drawContinuousDiagram({ pillars, spans, seismic, getX, y1, y2, y3: y2 + h + spacing, maxM, maxQ, padX, width, modelLabel: '柱直下支点連続梁' });
+        } else {
+            svg += this.drawContinuousDiagram({ pillars, spans, seismic, getX, y1, y2, y3: y2 + h + spacing, maxM, maxQ, padX, width, modelLabel: '両端支点連続梁' });
+        }
+
+        // 凡例
+        svg += `<g class="legend" transform="translate(${padX}, ${svgHeight - 15})">
+            <line x1="0" y1="0" x2="15" y2="0" stroke="#3b82f6" stroke-width="2" />
+            <text x="20" y="3" font-size="9" fill="#1e293b">左加力(下加力)</text>
+            
+            <line x1="100" y1="0" x2="115" y2="0" stroke="#f97316" stroke-width="2" />
+            <text x="120" y="3" font-size="9" fill="#1e293b">右加力(上加力)</text>
+            
+            <line x1="200" y1="0" x2="215" y2="0" stroke="#10b981" stroke-width="1.5" stroke-dasharray="2,2" />
+            <text x="220" y="3" font-size="9" fill="#1e293b">長期荷重</text>
+        </g>`;
+
+        svg += `</svg>`;
+        return svg;
+    },
+
+    /**
+     * 【単一責任】単純梁モデルの M図・Q図 SVG生成 (山形モーメント・開口スパンせん断力)
+     */
+    drawSimpleBeamDiagram: function({ pillars, spans, seismic, getX, y1, y2, y3, maxM, maxQ, padX, width, lSpans, rSpans }) {
+        let svg = '';
+
+        // 2. 曲げモーメント図 M (kNm) - 単純梁
         svg += `<g class="chart-moment">
-            <text x="${padX}" y="${y2 - 35}" font-size="11" font-weight="bold" fill="#1e293b">■ 曲げモーメント図 M (kNm)</text>
+            <text x="${padX}" y="${y2 - 35}" font-size="11" font-weight="bold" fill="#1e293b">■ 曲げモーメント図 M (kNm) [単純梁モデル]</text>
+            <line x1="${padX - 10}" y1="${y2}" x2="${width - padX + 10}" y2="${y2}" stroke="#94a3b8" stroke-width="1.5" />
+        `;
+        pillars.forEach((p) => {
+            const px = getX(p.x);
+            svg += `<line x1="${px}" y1="${y2 - 5}" x2="${px}" y2="${y2 + 5}" stroke="#cbd5e1" stroke-width="1" />`;
+        });
+
+        spans.forEach((span, sIdx) => {
+            const pLeft = pillars[sIdx];
+            const pRight = pillars[sIdx + 1];
+            if (!pLeft || !pRight) return;
+
+            const xL = getX(pLeft.x);
+            const xR = getX(pRight.x);
+            const xMid = (xL + xR) / 2;
+
+            // 長期荷重（等分布）二次曲線
+            const mE_left = span.M_end_left !== undefined ? span.M_end_left : (span.M_end || 0);
+            const mE_right = span.M_end_right !== undefined ? span.M_end_right : (span.M_end || 0);
+            const mM = span.M_mid || 0;
+            const lt_yLeft = y2 + (mE_left / maxM) * 35;
+            const lt_yRight = y2 + (mE_right / maxM) * 35;
+            const lt_yMid = y2 + (mM / maxM) * 35;
+            svg += `<path d="M ${xL} ${lt_yLeft} Q ${xMid} ${lt_yMid} ${xR} ${lt_yRight}" fill="none" stroke="#10b981" stroke-width="1.5" stroke-dasharray="2,2" />`;
+
+            const ls = lSpans[sIdx] || {};
+            const rs = rSpans[sIdx] || {};
+            const isWall = ls.isWall || rs.isWall;
+
+            if (isWall) {
+                // 壁スパン：中央曲げモーメント M水（山形ライン: 両端0 ➡ 中央M_wf）
+                const l_mwf = ls.M_wf || 0;
+                const r_mwf = rs.M_wf || 0;
+                const l_yMid = y2 + (l_mwf / maxM) * 35;
+                const r_yMid = y2 + (r_mwf / maxM) * 35;
+
+                svg += `<polyline points="${xL},${y2} ${xMid},${l_yMid} ${xR},${y2}" stroke="#3b82f6" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round" />`;
+                svg += `<polyline points="${xL},${y2} ${xMid},${r_yMid} ${xR},${y2}" stroke="#f97316" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round" />`;
+
+                if (Math.abs(l_mwf) > 0.001) {
+                    svg += `<text x="${xMid}" y="${l_yMid - 6}" font-size="8" text-anchor="middle" fill="#1d4ed8" font-weight="bold">${l_mwf.toFixed(3)}</text>`;
+                }
+                if (Math.abs(r_mwf) > 0.001) {
+                    svg += `<text x="${xMid}" y="${r_yMid + 14}" font-size="8" text-anchor="middle" fill="#c2410c" font-weight="bold">${r_mwf.toFixed(3)}</text>`;
+                }
+            } else {
+                // 開口スパン：端部モーメント lM水f, rM水f
+                const l_lMf = ls.lM_wf || 0, l_rMf = ls.rM_wf || 0;
+                const r_lMf = rs.lM_wf || 0, r_rMf = rs.rM_wf || 0;
+                const l_yL = y2 + (l_lMf / maxM) * 35, l_yR = y2 + (l_rMf / maxM) * 35;
+                const r_yL = y2 + (r_lMf / maxM) * 35, r_yR = y2 + (r_rMf / maxM) * 35;
+
+                svg += `<line x1="${xL}" y1="${l_yL}" x2="${xR}" y2="${l_yR}" stroke="#3b82f6" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />`;
+                svg += `<line x1="${xL}" y1="${r_yL}" x2="${xR}" y2="${r_yR}" stroke="#f97316" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />`;
+
+                if (Math.abs(l_lMf) > 0.001) {
+                    svg += `<text x="${xL + 15}" y="${l_yL - 6}" font-size="8" text-anchor="middle" fill="#1d4ed8" font-weight="bold">${l_lMf.toFixed(3)}</text>`;
+                }
+                if (Math.abs(l_rMf) > 0.001) {
+                    svg += `<text x="${xR - 15}" y="${l_rMf - 6}" font-size="8" text-anchor="middle" fill="#1d4ed8" font-weight="bold">${l_rMf.toFixed(3)}</text>`;
+                }
+            }
+        });
+        svg += `</g>`;
+
+        // 3. せん断力図 Q (kN) - 単純梁
+        svg += `<g class="chart-shear">
+            <text x="${padX}" y="${y3 - 35}" font-size="11" font-weight="bold" fill="#1e293b">■ せん断力図 Q (kN) [単純梁モデル]</text>
+            <line x1="${padX - 10}" y1="${y3}" x2="${width - padX + 10}" y2="${y3}" stroke="#94a3b8" stroke-width="1.5" />
+        `;
+        pillars.forEach((p) => {
+            const px = getX(p.x);
+            svg += `<line x1="${px}" y1="${y3 - 5}" x2="${px}" y2="${y3 + 5}" stroke="#cbd5e1" stroke-width="1" />`;
+        });
+        spans.forEach((span, sIdx) => {
+            const pLeft = pillars[sIdx];
+            const pRight = pillars[sIdx + 1];
+            if (!pLeft || !pRight) return;
+
+            const xL = getX(pLeft.x);
+            const xR = getX(pRight.x);
+            const xMid = (xL + xR) / 2;
+
+            // 長期荷重せん断力
+            const q_L = span.Q_L || 0;
+            const lt_y1 = y3 - (q_L / maxQ) * 35;
+            const lt_y2 = y3 + (q_L / maxQ) * 35;
+            svg += `<line x1="${xL}" y1="${lt_y1}" x2="${xMid}" y2="${lt_y1}" stroke="#10b981" stroke-width="1" stroke-dasharray="2,2" />`;
+            svg += `<line x1="${xMid}" y1="${lt_y1}" x2="${xMid}" y2="${lt_y2}" stroke="#10b981" stroke-width="1" stroke-dasharray="2,2" />`;
+            svg += `<line x1="${xMid}" y1="${lt_y2}" x2="${xR}" y2="${lt_y2}" stroke="#10b981" stroke-width="1" stroke-dasharray="2,2" />`;
+
+            const ls = lSpans[sIdx] || {};
+            const rs = rSpans[sIdx] || {};
+            const l_q = ls.Qe || 0;
+            const r_q = rs.Qe || 0;
+            const l_y = y3 - (l_q / maxQ) * 35;
+            const r_y = y3 - (r_q / maxQ) * 35;
+
+            svg += `<line x1="${xL}" y1="${l_y}" x2="${xR}" y2="${l_y}" stroke="#3b82f6" stroke-width="1.5" />`;
+            svg += `<line x1="${xL}" y1="${r_y}" x2="${xR}" y2="${r_y}" stroke="#f97316" stroke-width="1.5" />`;
+
+            if (Math.abs(l_q) > 0.001) {
+                svg += `<text x="${xMid}" y="${l_y - 6}" font-size="8" text-anchor="middle" fill="#1d4ed8" font-weight="bold">${l_q.toFixed(3)}</text>`;
+            }
+            if (Math.abs(r_q) > 0.001) {
+                svg += `<text x="${xMid}" y="${r_y + 14}" font-size="8" text-anchor="middle" fill="#c2410c" font-weight="bold">${r_q.toFixed(3)}</text>`;
+            }
+        });
+        svg += `</g>`;
+
+        return svg;
+    },
+
+    /**
+     * 【単一責任】連続梁モデル（柱直下支点・両端支点）の M図・Q図 SVG生成
+     */
+    drawContinuousDiagram: function({ pillars, spans, seismic, getX, y1, y2, y3, maxM, maxQ, padX, width, modelLabel }) {
+        let svg = '';
+
+        // 2. 曲げモーメント図 M (kNm) - 連続梁
+        svg += `<g class="chart-moment">
+            <text x="${padX}" y="${y2 - 35}" font-size="11" font-weight="bold" fill="#1e293b">■ 曲げモーメント図 M (kNm) [${modelLabel}]</text>
             <line x1="${padX - 10}" y1="${y2}" x2="${width - padX + 10}" y2="${y2}" stroke="#94a3b8" stroke-width="1.5" />
         `;
         pillars.forEach((p) => {
@@ -124,68 +277,33 @@ window.FoundationSvgGenerator = {
             const lt_yMid = y2 + (mM / maxM) * 35;
             svg += `<path d="M ${xL} ${lt_yLeft} Q ${xMid} ${lt_yMid} ${xR} ${lt_yRight}" fill="none" stroke="#10b981" stroke-width="1.5" stroke-dasharray="2,2" />`;
 
-            if (isSimpleBeam) {
-                const ls = lSpans[sIdx] || {};
-                const rs = rSpans[sIdx] || {};
-                const isWall = ls.isWall || rs.isWall;
+            const l_mL = seismic.leftward?.Mf?.[sIdx] || 0;
+            const l_mR = seismic.leftward?.Mf?.[sIdx + 1] || 0;
+            const l_yL = y2 + (l_mL / maxM) * 35;
+            const l_yR = y2 + (l_mR / maxM) * 35;
+            svg += `<line x1="${xL}" y1="${l_yL}" x2="${xR}" y2="${l_yR}" stroke="#3b82f6" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />`;
 
-                if (isWall) {
-                    // 単純梁 壁スパン：スパン中央曲げモーメント M水（山形ライン）
-                    const l_mwf = ls.M_wf || 0;
-                    const r_mwf = rs.M_wf || 0;
-                    const l_yMid = y2 + (l_mwf / maxM) * 35;
-                    const r_yMid = y2 + (r_mwf / maxM) * 35;
+            const r_mL = seismic.rightward?.Mf?.[sIdx] || 0;
+            const r_mR = seismic.rightward?.Mf?.[sIdx + 1] || 0;
+            const r_yL = y2 + (r_mL / maxM) * 35;
+            const r_yR = y2 + (r_mR / maxM) * 35;
+            svg += `<line x1="${xL}" y1="${r_yL}" x2="${xR}" y2="${r_yR}" stroke="#f97316" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />`;
 
-                    svg += `<polyline points="${xL},${y2} ${xMid},${l_yMid} ${xR},${y2}" stroke="#3b82f6" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round" />`;
-                    svg += `<polyline points="${xL},${y2} ${xMid},${r_yMid} ${xR},${y2}" stroke="#f97316" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round" />`;
+            const shiftL_blue = (sIdx % 2 === 0) ? -6 : -14;
+            const shiftL_orange = (sIdx % 2 === 0) ? 12 : 18;
 
-                    if (Math.abs(l_mwf) > 0.001) {
-                        svg += `<text x="${xMid}" y="${l_yMid - 6}" font-size="8" text-anchor="middle" fill="#1d4ed8" font-weight="bold">${l_mwf.toFixed(3)}</text>`;
-                    }
-                    if (Math.abs(r_mwf) > 0.001) {
-                        svg += `<text x="${xMid}" y="${r_yMid + 14}" font-size="8" text-anchor="middle" fill="#c2410c" font-weight="bold">${r_mwf.toFixed(3)}</text>`;
-                    }
-                } else {
-                    // 単純梁 開口スパン：端部モーメント lM水f, rM水f
-                    const l_lMf = ls.lM_wf || 0, l_rMf = ls.rM_wf || 0;
-                    const r_lMf = rs.lM_wf || 0, r_rMf = rs.rM_wf || 0;
-                    const l_yL = y2 + (l_lMf / maxM) * 35, l_yR = y2 + (l_rMf / maxM) * 35;
-                    const r_yL = y2 + (r_lMf / maxM) * 35, r_yR = y2 + (r_rMf / maxM) * 35;
-
-                    svg += `<line x1="${xL}" y1="${l_yL}" x2="${xR}" y2="${l_yR}" stroke="#3b82f6" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />`;
-                    svg += `<line x1="${xL}" y1="${r_yL}" x2="${xR}" y2="${r_yR}" stroke="#f97316" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />`;
-                }
-            } else {
-                // 連続梁モデル
-                const l_mL = seismic.leftward?.Mf?.[sIdx] || 0;
-                const l_mR = seismic.leftward?.Mf?.[sIdx + 1] || 0;
-                const l_yL = y2 + (l_mL / maxM) * 35;
-                const l_yR = y2 + (l_mR / maxM) * 35;
-                svg += `<line x1="${xL}" y1="${l_yL}" x2="${xR}" y2="${l_yR}" stroke="#3b82f6" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />`;
-
-                const r_mL = seismic.rightward?.Mf?.[sIdx] || 0;
-                const r_mR = seismic.rightward?.Mf?.[sIdx + 1] || 0;
-                const r_yL = y2 + (r_mL / maxM) * 35;
-                const r_yR = y2 + (r_mR / maxM) * 35;
-                svg += `<line x1="${xL}" y1="${r_yL}" x2="${xR}" y2="${r_yR}" stroke="#f97316" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />`;
-
-                const shiftL_blue = (sIdx % 2 === 0) ? -6 : -14;
-                const shiftL_orange = (sIdx % 2 === 0) ? 12 : 18;
-
-                if (sIdx === 0) {
-                    svg += `<text x="${xL}" y="${l_yL + shiftL_blue}" font-size="8" text-anchor="middle" fill="#1d4ed8" font-weight="bold">${l_mL.toFixed(3)}</text>`;
-                    svg += `<text x="${xL}" y="${r_yL + shiftL_orange}" font-size="8" text-anchor="middle" fill="#c2410c" font-weight="bold">${r_mL.toFixed(3)}</text>`;
-                }
-                svg += `<text x="${xR}" y="${l_yR + shiftL_blue}" font-size="8" text-anchor="middle" fill="#1d4ed8" font-weight="bold">${l_mR.toFixed(3)}</text>`;
-                svg += `<text x="${xR}" y="${r_yR + shiftL_orange}" font-size="8" text-anchor="middle" fill="#c2410c" font-weight="bold">${r_mR.toFixed(3)}</text>`;
+            if (sIdx === 0) {
+                svg += `<text x="${xL}" y="${l_yL + shiftL_blue}" font-size="8" text-anchor="middle" fill="#1d4ed8" font-weight="bold">${l_mL.toFixed(3)}</text>`;
+                svg += `<text x="${xL}" y="${r_yL + shiftL_orange}" font-size="8" text-anchor="middle" fill="#c2410c" font-weight="bold">${r_mL.toFixed(3)}</text>`;
             }
+            svg += `<text x="${xR}" y="${l_yR + shiftL_blue}" font-size="8" text-anchor="middle" fill="#1d4ed8" font-weight="bold">${l_mR.toFixed(3)}</text>`;
+            svg += `<text x="${xR}" y="${r_yR + shiftL_orange}" font-size="8" text-anchor="middle" fill="#c2410c" font-weight="bold">${r_mR.toFixed(3)}</text>`;
         });
         svg += `</g>`;
 
-        // 3. Q図 (せん断力図)
-        let y3 = y2 + h + spacing;
+        // 3. せん断力図 Q (kN) - 連続梁
         svg += `<g class="chart-shear">
-            <text x="${padX}" y="${y3 - 35}" font-size="11" font-weight="bold" fill="#1e293b">■ せん断力図 Q (kN)</text>
+            <text x="${padX}" y="${y3 - 35}" font-size="11" font-weight="bold" fill="#1e293b">■ せん断力図 Q (kN) [${modelLabel}]</text>
             <line x1="${padX - 10}" y1="${y3}" x2="${width - padX + 10}" y2="${y3}" stroke="#94a3b8" stroke-width="1.5" />
         `;
         pillars.forEach((p) => {
@@ -208,19 +326,19 @@ window.FoundationSvgGenerator = {
             svg += `<line x1="${xMid}" y1="${lt_y1}" x2="${xMid}" y2="${lt_y2}" stroke="#10b981" stroke-width="1" stroke-dasharray="2,2" />`;
             svg += `<line x1="${xMid}" y1="${lt_y2}" x2="${xR}" y2="${lt_y2}" stroke="#10b981" stroke-width="1" stroke-dasharray="2,2" />`;
 
-            const l_q = isSimpleBeam ? (lSpans[sIdx]?.Qe ?? (span.leftward?.Q || 0)) : (span.leftward?.Q || 0);
+            const l_q = span.leftward?.Q || 0;
             const l_y = y3 - (l_q / maxQ) * 35;
             svg += `<line x1="${xL}" y1="${l_y}" x2="${xR}" y2="${l_y}" stroke="#3b82f6" stroke-width="1.5" />`;
-            if (sIdx > 0 && !isSimpleBeam) {
+            if (sIdx > 0) {
                 const prev_l_q = spans[sIdx - 1].leftward?.Q || 0;
                 const prev_l_y = y3 - (prev_l_q / maxQ) * 35;
                 svg += `<line x1="${xL}" y1="${prev_l_y}" x2="${xL}" y2="${l_y}" stroke="#3b82f6" stroke-width="1.5" />`;
             }
 
-            const r_q = isSimpleBeam ? (rSpans[sIdx]?.Qe ?? (span.rightward?.Q || 0)) : (span.rightward?.Q || 0);
+            const r_q = span.rightward?.Q || 0;
             const r_y = y3 - (r_q / maxQ) * 35;
             svg += `<line x1="${xL}" y1="${r_y}" x2="${xR}" y2="${r_y}" stroke="#f97316" stroke-width="1.5" />`;
-            if (sIdx > 0 && !isSimpleBeam) {
+            if (sIdx > 0) {
                 const prev_r_q = spans[sIdx - 1].rightward?.Q || 0;
                 const prev_r_y = y3 - (prev_r_q / maxQ) * 35;
                 svg += `<line x1="${xL}" y1="${prev_r_y}" x2="${xL}" y2="${r_y}" stroke="#f97316" stroke-width="1.5" />`;
@@ -238,19 +356,6 @@ window.FoundationSvgGenerator = {
         });
         svg += `</g>`;
 
-        // 凡例
-        svg += `<g class="legend" transform="translate(${padX}, ${svgHeight - 15})">
-            <line x1="0" y1="0" x2="15" y2="0" stroke="#3b82f6" stroke-width="2" />
-            <text x="20" y="3" font-size="9" fill="#1e293b">左加力(下加力)</text>
-            
-            <line x1="100" y1="0" x2="115" y2="0" stroke="#f97316" stroke-width="2" />
-            <text x="120" y="3" font-size="9" fill="#1e293b">右加力(上加力)</text>
-            
-            <line x1="200" y1="0" x2="215" y2="0" stroke="#10b981" stroke-width="1.5" stroke-dasharray="2,2" />
-            <text x="220" y="3" font-size="9" fill="#1e293b">長期荷重</text>
-        </g>`;
-
-        svg += `</svg>`;
         return svg;
     },
 

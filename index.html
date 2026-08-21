@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>上善如水 - 壁量計算WEB (v3.13.16)</title>
+    <title>木造壁E��・四�E割・N値・見付面積�E基礎梁�Eスラブ計算シスチE�� (2025年法改正対忁E v3.13.17</title>
     <script src="https://cdn.jsdelivr.net/npm/dxf-parser@1.1.2/dist/dxf-parser.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/encoding-japanese/2.0.0/encoding.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/clipper-lib@6.4.2/clipper.js"></script>
@@ -260,7 +260,7 @@
             margin: auto;
         }
 
-        /* マジックリンク認証モーダル用スタイル */
+        /* マジチE��リンク認証モーダル用スタイル */
         #modal-auth-login {
             display: none !important;
             position: fixed;
@@ -497,47 +497,46 @@
 <body>
 
     <!-- ========================================== -->
-    <!-- ログイン認証モーダル (マジックリンク) -->
+    <!-- ログイン認証モーダル (マジチE��リンク) -->
     <!-- ========================================== -->
     <div id="modal-auth-login" style="display:none !important;">
         <div class="auth-card">
             <div style="font-size:40px; margin-bottom:10px;">📐</div>
             <div class="auth-title">上善如水 構造計算WEB</div>
             <div class="auth-subtitle">
-                登録済みメールアドレスを入力してください。<br>ログイン用マジックリンクを送信いたします。
-            </div>
+                登録済みメールアドレスを�E力してください、Ebr>ログイン用マジチE��リンクを送信ぁE��します、E            </div>
             
             <form id="auth-form" onsubmit="handleSendMagicLink(event)">
                 <input type="email" id="auth-email" class="auth-input" placeholder="example@domain.com" required>
-                <button type="submit" id="auth-submit-btn" class="auth-btn">✉️ ログインリンクを送信</button>
+                <button type="submit" id="auth-submit-btn" class="auth-btn">✉︁Eログインリンクを送信</button>
             </form>
 
             <div id="auth-status-msg" style="display:none;" class="auth-msg"></div>
 
             <div style="margin-top:20px; font-size:11px; color:#94a3b8;">
-                送信元: <code>noreply@2025.eie.jp</code>
+                送信允E <code>noreply@2025.eie.jp</code>
             </div>
         </div>
     </div>
-    <!-- 免責事項・利用条件 同意モーダル -->
+    <!-- 免責事頁E�E利用条件 同意モーダル -->
     <div id="modal-disclaimer" class="modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.8); z-index:20000; align-items:center; justify-content:center; backdrop-filter:blur(3px);">
         <div class="modal-content" style="max-width:650px; width:92%; background:#fff; border-radius:12px; padding:25px; box-shadow:0 15px 40px rgba(0,0,0,0.5); font-family:sans-serif;">
             <div style="text-align:center; border-bottom:2px solid #e74c3c; padding-bottom:12px; margin-bottom:15px;">
-                <div style="font-size:32px; margin-bottom:5px;">⚠️</div>
-                <h3 style="margin:0; color:#c0392b; font-size:19px;">免責事項およびご利用条件への同意</h3>
+                <div style="font-size:32px; margin-bottom:5px;">⚠�E�E/div>
+                <h3 style="margin:0; color:#c0392b; font-size:19px;">免責事頁E��よ�Eご利用条件への同意</h3>
             </div>
             
             <div style="font-size:13px; color:#333; line-height:1.7; max-height:55vh; overflow-y:auto; padding:12px; background:#f9f9f9; border:1px solid #e2e8f0; border-radius:8px; margin-bottom:18px;">
-                <p style="margin-top:0;">本システム（「上善如水 壁量計算WEB」）のご利用にあたっては、以下の免責事項および条件をご確認の上、ご同意いただく必要があります。</p>
+                <p style="margin-top:0;">本シスチE���E�「上善如水 壁E��計算WEB」）�Eご利用にあたっては、以下�E免責事頁E��よ�E条件をご確認�E上、ご同意ぁE��だく忁E��があります、E/p>
                 <ol style="padding-left:20px; margin-bottom:0;">
-                    <li><strong>法適合性確認の補助ツール:</strong> 本ツールは木造軸組工法における構造安全性の事前検証・試算を支援する補助ツールです。最終的な計算書を用いた確認申請等に関する一切の法的責任は、設計責任者（建築士・設計者ご本人様）に帰属いたします。</li>
-                    <li><strong>計算機能と料金体系:</strong> 画面上の作図、壁量計算、見附求積、重心剛心の計算試算は無償です。計算書の一括印刷（完成版PDFダウンロード）および柱N値・金物選定表示・軸力図の閲覧には有償サブスクリプション契約が必要です。</li>
-                    <li><strong>1アカウント1人利用の厳守:</strong> セキュリティ保護およびデータ保全のため、同一アカウントでの複数端末からの同時ログインは禁止されています。同時ログイン検知時は先のセッションが自動ログアウトされます。</li>
+                    <li><strong>法適合性確認�E補助チE�Eル:</strong> 本チE�Eルは木造軸絁E��法における構造安�E性の事前検証・試算を支援する補助チE�Eルです。最終的な計算書を用ぁE��確認申請等に関する一刁E�E法的責任は、設計責任老E��建築士・設計老E��本人様）に帰属いたします、E/li>
+                    <li><strong>計算機�Eと料��体系:</strong> 画面上�E作図、壁E��計算、見附求積、E��忁E��忁E�E計算試算�E無償です。計算書の一括印刷�E�完�E牁EDFダウンロード）およ�E柱N値・金物選定表示・軸力図の閲覧には有償サブスクリプション契紁E��忁E��です、E/li>
+                    <li><strong>1アカウンチE人利用の厳宁E</strong> セキュリチE��保護およびチE�Eタ保�Eのため、同一アカウントでの褁E��端末からの同時ログインは禁止されてぁE��す。同時ログイン検知時�E先�EセチE��ョンが�E動ログアウトされます、E/li>
                 </ol>
             </div>
 
             <div style="text-align:center;">
-                <button type="button" onclick="agreeDisclaimer()" style="background:#27ae60; color:#fff; border:none; padding:12px 35px; border-radius:6px; font-size:15px; font-weight:bold; cursor:pointer; box-shadow:0 4px 10px rgba(39,174,96,0.3);">✅ 同意して利用を開始する</button>
+                <button type="button" onclick="agreeDisclaimer()" style="background:#27ae60; color:#fff; border:none; padding:12px 35px; border-radius:6px; font-size:15px; font-weight:bold; cursor:pointer; box-shadow:0 4px 10px rgba(39,174,96,0.3);">✁E同意して利用を開始すめE/button>
             </div>
         </div>
     </div>
@@ -551,13 +550,13 @@
         document.addEventListener('DOMContentLoaded', checkDisclaimer);
     </script>
 
-    <!-- 各種モーダル群 -->
+    <!-- 吁E��モーダル群 -->
     
-    <!-- 見附面積プレビューモーダル -->
+    <!-- 見附面積�Eレビューモーダル -->
     <div id="modal-area" class="modal-overlay">
         <div class="modal-content" style="max-width:90%; width:1200px;">
-            <button class="btn-close-modal" onclick="document.getElementById('modal-area').style.display='none'" style="position:absolute; top:10px; right:10px; font-size:20px; background:none; border:none; cursor:pointer; color:#333; z-index:100;">✕</button>
-            <h2 style="margin-top:0; color:#0056b3;">🖼️ 求積図・見付面積プレビュー</h2>
+            <button class="btn-close-modal" onclick="document.getElementById('modal-area').style.display='none'" style="position:absolute; top:10px; right:10px; font-size:20px; background:none; border:none; cursor:pointer; color:#333; z-index:100;">✁E/button>
+            <h2 style="margin-top:0; color:#0056b3;">🖼�E�E求積図・見付面積�Eレビュー</h2>
             <div id="scroll-area-prev" style="padding:0; overflow-y:auto; max-height:80vh;">
                 <div id="area-preview-container" style="display:flex; flex-wrap:wrap; gap:15px;"></div>
             </div>
@@ -567,8 +566,8 @@
     <div id="modal-center" class="modal-overlay">
         <div class="modal-content" style="max-width:700px;">
             <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid #0056b3; padding-bottom:10px; margin-bottom:15px;">
-                <h2 style="margin:0; color:#0056b3;">🧲 重心・剛心 算出根拠</h2>
-                <button class="action-btn btn-close-modal" style="background:#6c757d;">✖ 閉じる</button>
+                <h2 style="margin:0; color:#0056b3;">🧲 重忁E�E剛忁E算�E根拠</h2>
+                <button class="action-btn btn-close-modal" style="background:#6c757d;">✁E閉じめE/button>
             </div>
             <div id="scroll-area-center" style="padding:0; overflow-y:auto; max-height:80vh;">
                 <div id="center-calc-container"></div>
@@ -580,12 +579,11 @@
         <div class="modal-content" style="max-width:600px;">
             <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid #d35400; padding-bottom:10px; margin-bottom:15px;">
                 <h2 style="margin:0; color:#d35400;">📐 直下率</h2>
-                <button class="action-btn btn-close-modal" style="background:#6c757d;">✖ 閉じる</button>
+                <button class="action-btn btn-close-modal" style="background:#6c757d;">✁E閉じめE/button>
             </div>
             <div id="scroll-area-ratio" style="padding:0; overflow-y:auto; max-height:75vh;">
                 <div style="font-size:12px; color:#555; margin-bottom:15px; background:#fff3cd; padding:8px; border:1px solid #ffeeba; border-radius:4px;">
-                    ※この機能は設計のバランスを確認するための補助ツールであり、確認申請等の審査対象ではありません。
-                </div>
+                    ※こ�E機�Eは設計�Eバランスを確認するため�E補助チE�Eルであり、確認申請等�E審査対象ではありません、E                </div>
                 <div id="ratio-container"></div>
             </div>
         </div>
@@ -599,101 +597,99 @@
                 <button class="btn-close-modal" onclick="document.getElementById('modal-align-origin').style.display='none'" style="background:none; border:none; font-size:24px; cursor:pointer; color:#666;">&times;</button>
             </div>
             <div style="font-size:12px; color:#555; margin-bottom:15px; background:#f0f4f8; padding:10px; border-radius:6px; border:1px solid #d0dbe5; line-height:1.5;">
-                1Fと2Fの下絵位置にわずかなズレがある場合、以下の矢印ボタンで対象階の下絵を前後左右に微調整できます。
-            </div>
+                1Fと2Fの下絵位置にわずかなズレがある場合、以下�E矢印ボタンで対象階�E下絵を前後左右に微調整できます、E            </div>
 
             <div style="margin-bottom:12px;">
-                <label style="font-weight:bold; display:block; margin-bottom:5px;">調整対象階:</label>
+                <label style="font-weight:bold; display:block; margin-bottom:5px;">調整対象隁E</label>
                 <select id="align-target-floor" style="width:100%; padding:8px; font-size:13px;">
-                    <option value="2F" selected>2階 (2F)</option>
-                    <option value="1F">1階 (1F)</option>
-                    <option value="1RF">1階 屋根 (1RF)</option>
-                    <option value="RF">2階 屋根伏 (RF)</option>
+                    <option value="2F" selected>2隁E(2F)</option>
+                    <option value="1F">1隁E(1F)</option>
+                    <option value="1RF">1隁E屋根 (1RF)</option>
+                    <option value="RF">2隁E屋根企E(RF)</option>
                 </select>
             </div>
 
             <div style="text-align:center; margin:15px 0;">
                 <div style="margin-bottom:8px;">
-                    <button type="button" class="action-btn" style="background:#34495e; padding:8px 20px;" onclick="if(window.shiftFloorOffset) window.shiftFloorOffset(document.getElementById('align-target-floor').value, 0, 100)">⬆ 上 +100mm</button>
-                    <button type="button" class="action-btn" style="background:#7f8c8d; padding:8px 12px;" onclick="if(window.shiftFloorOffset) window.shiftFloorOffset(document.getElementById('align-target-floor').value, 0, 10)">⬆ +10mm</button>
+                    <button type="button" class="action-btn" style="background:#34495e; padding:8px 20px;" onclick="if(window.shiftFloorOffset) window.shiftFloorOffset(document.getElementById('align-target-floor').value, 0, 100)">⬁E丁E+100mm</button>
+                    <button type="button" class="action-btn" style="background:#7f8c8d; padding:8px 12px;" onclick="if(window.shiftFloorOffset) window.shiftFloorOffset(document.getElementById('align-target-floor').value, 0, 10)">⬁E+10mm</button>
                 </div>
                 <div style="display:flex; justify-content:center; gap:8px; align-items:center; margin-bottom:8px;">
-                    <button type="button" class="action-btn" style="background:#34495e; padding:8px 15px;" onclick="if(window.shiftFloorOffset) window.shiftFloorOffset(document.getElementById('align-target-floor').value, -100, 0)">⬅ 左 -100mm</button>
-                    <button type="button" class="action-btn" style="background:#7f8c8d; padding:8px 10px;" onclick="if(window.shiftFloorOffset) window.shiftFloorOffset(document.getElementById('align-target-floor').value, -10, 0)">⬅ -10mm</button>
+                    <button type="button" class="action-btn" style="background:#34495e; padding:8px 15px;" onclick="if(window.shiftFloorOffset) window.shiftFloorOffset(document.getElementById('align-target-floor').value, -100, 0)">⬁E左 -100mm</button>
+                    <button type="button" class="action-btn" style="background:#7f8c8d; padding:8px 10px;" onclick="if(window.shiftFloorOffset) window.shiftFloorOffset(document.getElementById('align-target-floor').value, -10, 0)">⬁E-10mm</button>
                     <span style="font-weight:bold; color:#8e44ad; font-size:13px; margin:0 5px;">移動調整</span>
                     <button type="button" class="action-btn" style="background:#7f8c8d; padding:8px 10px;" onclick="if(window.shiftFloorOffset) window.shiftFloorOffset(document.getElementById('align-target-floor').value, 10, 0)">+10mm ➡</button>
                     <button type="button" class="action-btn" style="background:#34495e; padding:8px 15px;" onclick="if(window.shiftFloorOffset) window.shiftFloorOffset(document.getElementById('align-target-floor').value, 100, 0)">+100mm 右 ➡</button>
                 </div>
                 <div>
-                    <button type="button" class="action-btn" style="background:#34495e; padding:8px 20px;" onclick="if(window.shiftFloorOffset) window.shiftFloorOffset(document.getElementById('align-target-floor').value, 0, -100)">⬇ 下 -100mm</button>
-                    <button type="button" class="action-btn" style="background:#7f8c8d; padding:8px 12px;" onclick="if(window.shiftFloorOffset) window.shiftFloorOffset(document.getElementById('align-target-floor').value, 0, -10)">⬇ -10mm</button>
+                    <button type="button" class="action-btn" style="background:#34495e; padding:8px 20px;" onclick="if(window.shiftFloorOffset) window.shiftFloorOffset(document.getElementById('align-target-floor').value, 0, -100)">⬁E丁E-100mm</button>
+                    <button type="button" class="action-btn" style="background:#7f8c8d; padding:8px 12px;" onclick="if(window.shiftFloorOffset) window.shiftFloorOffset(document.getElementById('align-target-floor').value, 0, -10)">⬁E-10mm</button>
                 </div>
             </div>
 
             <div style="text-align:right; margin-top:15px;">
-                <button type="button" class="action-btn" style="background:#27ae60; padding:8px 25px;" onclick="document.getElementById('modal-align-origin').style.display='none'">完了</button>
+                <button type="button" class="action-btn" style="background:#27ae60; padding:8px 25px;" onclick="document.getElementById('modal-align-origin').style.display='none'">完亁E/button>
             </div>
         </div>
     </div>
 
-    <!-- DXFステップバイステップ読込ウィザードモーダル (modal-dxf-mapper) -->
+    <!-- DXFスチE��プバイスチE��プ読込ウィザードモーダル (modal-dxf-mapper) -->
     <div id="modal-dxf-mapper" class="modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.85); z-index:25000; align-items:center; justify-content:center; backdrop-filter:blur(6px);">
         <div class="modal-content" style="max-width:920px; width:92%; max-height:95vh; background:#1e272e; color:#f5f6fa; border-radius:12px; padding:20px; box-shadow:0 20px 50px rgba(0,0,0,0.8); border:1px solid #485460; font-family:sans-serif; display:flex; flex-direction:column;">
             
-            <!-- ウィザードヘッダー -->
+            <!-- ウィザード�EチE��ー -->
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; border-bottom:1px solid #485460; padding-bottom:10px; flex-shrink:0;">
                 <h3 style="margin:0; font-size:18px; color:#00d2d3; display:flex; align-items:center; gap:8px;">
-                    📂 DXF図面 階層別ステップバイステップ読込ウィザード
-                </h3>
+                    📂 DXF図面 階層別スチE��プバイスチE��プ読込ウィザーチE                </h3>
                 <span id="dxf-mapper-layer-count" style="font-size:12px; color:#a4b0be; background:#2f3640; padding:4px 10px; border-radius:4px;">ロード済みファイル: 0 件</span>
             </div>
 
-            <!-- ステップ進行ステータスバー -->
+            <!-- スチE��プ進行スチE�Eタスバ�E -->
             <div style="display:flex; justify-content:space-between; margin-bottom:12px; background:#2f3640; padding:6px; border-radius:8px; flex-shrink:0;">
                 <div id="wizard-step-badge-1" class="wizard-step-badge" style="flex:1; text-align:center; padding:8px 4px; background:#00d2d3; color:#1e272e; font-weight:bold; border-radius:6px; font-size:12px; margin:0 3px;">Step 1: 1階図面</div>
                 <div id="wizard-step-badge-2" class="wizard-step-badge" style="flex:1; text-align:center; padding:8px 4px; background:#353b48; color:#a4b0be; font-weight:bold; border-radius:6px; font-size:12px; margin:0 3px;">Step 2: 2階図面</div>
-                <div id="wizard-step-badge-3" class="wizard-step-badge" style="flex:1; text-align:center; padding:8px 4px; background:#353b48; color:#a4b0be; font-weight:bold; border-radius:6px; font-size:12px; margin:0 3px;">Step 3: 1階屋根 (任意)</div>
-                <div id="wizard-step-badge-4" class="wizard-step-badge" style="flex:1; text-align:center; padding:8px 4px; background:#353b48; color:#a4b0be; font-weight:bold; border-radius:6px; font-size:12px; margin:0 3px;">Step 4: 2階屋根 (任意)</div>
+                <div id="wizard-step-badge-3" class="wizard-step-badge" style="flex:1; text-align:center; padding:8px 4px; background:#353b48; color:#a4b0be; font-weight:bold; border-radius:6px; font-size:12px; margin:0 3px;">Step 3: 1階屋根 (任愁E</div>
+                <div id="wizard-step-badge-4" class="wizard-step-badge" style="flex:1; text-align:center; padding:8px 4px; background:#353b48; color:#a4b0be; font-weight:bold; border-radius:6px; font-size:12px; margin:0 3px;">Step 4: 2階屋根 (任愁E</div>
             </div>
 
             <!-- プレビューキャンバス領域 (巨大・クリア表示) -->
             <div style="background:#0f172a; padding:10px; border-radius:8px; margin-bottom:12px; border:1px solid #334155; position:relative; flex:1; min-height:300px; display:flex; flex-direction:column;">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-                    <span id="wizard-step-title" style="color:#38bdf8; font-weight:bold; font-size:14px;">🏠 【Step 1 / 4】1階図面 (1f.dxf) の読込・原点設定</span>
+                    <span id="wizard-step-title" style="color:#38bdf8; font-weight:bold; font-size:14px;">🏠 【Step 1 / 4、E階図面 (1f.dxf) の読込・原点設宁E/span>
                     <button type="button" id="btn-preview-zoom-fit" style="background:#334155; color:#fff; border:none; padding:4px 10px; border-radius:4px; font-size:11px; cursor:pointer; font-weight:bold;">🔍 全体表示 (Fit)</button>
                 </div>
                 <div style="flex:1; position:relative; min-height:280px;">
                     <canvas id="dxf-origin-preview-canvas" width="860" height="300" style="background:#020617; border-radius:6px; border:1px solid #1e293b; cursor:crosshair; width:100%; height:100%; display:block;"></canvas>
                     <div id="wizard-preview-overlay-info" style="position:absolute; bottom:12px; left:12px; background:rgba(15,23,42,0.9); border:1px solid #0284c7; color:#38bdf8; padding:6px 12px; border-radius:6px; font-size:12px; font-weight:bold; box-shadow:0 4px 10px rgba(0,0,0,0.5);">
-                        🎯 画面上の通り芯交点をクリックして基準原点(0,0)を指定してください
+                        🎯 画面上�E通り芯交点をクリチE��して基準原点(0,0)を指定してください
                     </div>
                 </div>
             </div>
 
             <!-- 現在Stepの入力コントロールパネル -->
             <div id="wizard-step-control-container" style="background:#2f3640; padding:12px 16px; border-radius:8px; border-left:5px solid #00d2d3; margin-bottom:12px; flex-shrink:0;">
-                <!-- DxfLayerMapperController で動的にステップごとのフォームを生成 -->
+                <!-- DxfLayerMapperController で動的にスチE��プごとのフォームを生戁E-->
             </div>
 
             <!-- フッターボタン領域 -->
             <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid #485460; padding-top:10px; flex-shrink:0;">
-                <button type="button" id="btn-wizard-prev" style="background:#576574; color:#fff; border:none; padding:8px 18px; border-radius:6px; cursor:pointer; font-weight:bold; font-size:13px; display:none;">◀ 前のStepへ</button>
+                <button type="button" id="btn-wizard-prev" style="background:#576574; color:#fff; border:none; padding:8px 18px; border-radius:6px; cursor:pointer; font-weight:bold; font-size:13px; display:none;">◀ 前�EStepへ</button>
                 <div style="display:flex; gap:10px; margin-left:auto;">
                     <button type="button" id="btn-wizard-cancel" style="background:#8395a7; color:#fff; border:none; padding:8px 16px; border-radius:6px; cursor:pointer; font-weight:bold; font-size:13px;">キャンセル</button>
-                    <button type="button" id="btn-wizard-skip" style="background:#54a0ff; color:#fff; border:none; padding:8px 16px; border-radius:6px; cursor:pointer; font-weight:bold; font-size:13px; display:none;">⏩ スキップして完了</button>
-                    <button type="button" id="btn-wizard-next" style="background:linear-gradient(135deg, #10ac84, #1dd1a1); color:#fff; border:none; padding:10px 25px; border-radius:6px; cursor:pointer; font-weight:bold; font-size:13px; box-shadow:0 4px 12px rgba(29,209,161,0.4);">確定して次へ ➔</button>
+                    <button type="button" id="btn-wizard-skip" style="background:#54a0ff; color:#fff; border:none; padding:8px 16px; border-radius:6px; cursor:pointer; font-weight:bold; font-size:13px; display:none;">⏩ スキチE�Eして完亁E/button>
+                    <button type="button" id="btn-wizard-next" style="background:linear-gradient(135deg, #10ac84, #1dd1a1); color:#fff; border:none; padding:10px 25px; border-radius:6px; cursor:pointer; font-weight:bold; font-size:13px; box-shadow:0 4px 12px rgba(29,209,161,0.4);">確定して次へ ➁E/button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- DXF解析中プログレスバーモーダル (modal-dxf-loading) -->
+    <!-- DXF解析中プログレスバ�Eモーダル (modal-dxf-loading) -->
     <div id="modal-dxf-loading" class="modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.8); z-index:30000; align-items:center; justify-content:center; backdrop-filter:blur(5px);">
         <div class="modal-content" style="max-width:480px; width:88%; background:#1e272e; color:#f5f6fa; border-radius:14px; padding:30px 25px; box-shadow:0 25px 60px rgba(0,0,0,0.7); text-align:center; border:1px solid #485460; font-family:sans-serif;">
             <div style="font-size:36px; margin-bottom:12px;">⏳</div>
-            <h3 style="margin:0 0 8px 0; font-size:18px; color:#00d2d3;">DXF図面データを解析中...</h3>
+            <h3 style="margin:0 0 8px 0; font-size:18px; color:#00d2d3;">DXF図面チE�Eタを解析中...</h3>
             <p id="dxf-loading-msg" style="font-size:13px; color:#dcdde1; margin-bottom:20px; min-height:36px; display:flex; align-items:center; justify-content:center;">
-                📂 ファイル構造をロードしています...
+                📂 ファイル構造をロードしてぁE��ぁE..
             </p>
             
             <div style="width:100%; background:#2f3640; border-radius:10px; height:14px; overflow:hidden; border:1px solid #485460; box-shadow:inset 0 2px 4px rgba(0,0,0,0.5); margin-bottom:12px;">
@@ -701,7 +697,7 @@
             </div>
             
             <div style="display:flex; justify-content:space-between; font-size:11px; color:#a4b0be;">
-                <span>システム稼働中</span>
+                <span>シスチE��稼働中</span>
                 <span id="dxf-loading-percent">10%</span>
             </div>
         </div>
@@ -715,101 +711,100 @@
         </div>
     </div>
 
-    <!-- 壁の仕様設定モーダル (壁ツール選択時・仕様変更ボタン押下時に表示) -->
+    <!-- 壁�E仕様設定モーダル (壁ツール選択時・仕様変更ボタン押下時に表示) -->
     <div id="modal-wall-settings" class="modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.6); z-index:10000; align-items:center; justify-content:center; backdrop-filter:blur(2px);">
         <div class="modal-content" style="max-width:500px; width:90%; background:#fff; border-radius:10px; padding:20px; box-shadow:0 10px 30px rgba(0,0,0,0.4);">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; border-bottom:2px solid #27ae60; padding-bottom:10px;">
-                <h3 style="margin:0; color:#27ae60; font-size:18px;">🧱 耐力壁の仕様設定</h3>
+                <h3 style="margin:0; color:#27ae60; font-size:18px;">🧱 耐力壁�E仕様設宁E/h3>
                 <button class="btn-close-modal" onclick="document.getElementById('modal-wall-settings').style.display='none'" style="background:none; border:none; font-size:24px; cursor:pointer; color:#666;">&times;</button>
             </div>
 
             <div style="background:#f9f9f9; padding:12px; border-radius:6px; border:1px solid #ddd; margin-bottom:15px; text-align:center;">
                 <div style="font-size:12px; color:#666;">現在の合計壁倍率</div>
-                <div style="font-size:26px; font-weight:bold; color:#27ae60;"><span id="total-val-modal">0.0</span> 倍</div>
-                <div style="font-size:10px; color:#e74c3c; margin-top:2px;">※上限 7.0倍</div>
+                <div style="font-size:26px; font-weight:bold; color:#27ae60;"><span id="total-val-modal">0.0</span> 倁E/div>
+                <div style="font-size:10px; color:#e74c3c; margin-top:2px;">※上限 7.0倁E/div>
             </div>
 
             <div style="margin-bottom:12px;">
-                <label style="font-weight:bold; display:block; margin-bottom:5px; font-size:13px;">面材 1面目 (外側):</label>
+                <label style="font-weight:bold; display:block; margin-bottom:5px; font-size:13px;">面杁E1面目 (外�E):</label>
                 <select id="wall-p1-modal" style="width:100%; padding:8px; border-radius:4px; border:1px solid #ccc; font-size:13px;" onchange="if(window.UIView) window.UIView.updateModalWallTotal()"></select>
             </div>
             <div style="margin-bottom:12px;">
-                <label style="font-weight:bold; display:block; margin-bottom:5px; font-size:13px;">面材 2面目 (内側):</label>
+                <label style="font-weight:bold; display:block; margin-bottom:5px; font-size:13px;">面杁E2面目 (冁E�E):</label>
                 <select id="wall-p2-modal" style="width:100%; padding:8px; border-radius:4px; border:1px solid #ccc; font-size:13px;" onchange="if(window.UIView) window.UIView.updateModalWallTotal()"></select>
             </div>
             <div style="margin-bottom:20px;">
-                <label style="font-weight:bold; display:block; margin-bottom:5px; font-size:13px;">筋交い仕様:</label>
+                <label style="font-weight:bold; display:block; margin-bottom:5px; font-size:13px;">筋交ぁE��槁E</label>
                 <select id="wall-b-modal" style="width:100%; padding:8px; border-radius:4px; border:1px solid #ccc; font-size:13px;" onchange="if(window.UIView) window.UIView.updateModalWallTotal()">
-                    <option value="b0">なし</option>
-                    <option value="b1">筋交い 15x90 片掛け(／) 1.5倍</option>
-                    <option value="b2">筋交い 15x90 片掛け(＼) 1.5倍</option>
-                    <option value="b3">筋交い 45x90 片掛け(／) 2.0倍</option>
-                    <option value="b4">筋交い 45x90 片掛け(＼) 2.0倍</option>
-                    <option value="b5">筋交い 90x90 片掛け(／) 3.0倍</option>
-                    <option value="b6">筋交い 90x90 片掛け(＼) 3.0倍</option>
-                    <option value="b7">筋交い 45x90 たすき(Ｘ) 4.0倍</option>
-                    <option value="b8">筋交い 90x90 たすき(Ｘ) 5.0倍</option>
+                    <option value="b0">なぁE/option>
+                    <option value="b1">筋交ぁE15x90 牁E��ぁE�E�E 1.5倁E/option>
+                    <option value="b2">筋交ぁE15x90 牁E��ぁE�E�) 1.5倁E/option>
+                    <option value="b3">筋交ぁE45x90 牁E��ぁE�E�E 2.0倁E/option>
+                    <option value="b4">筋交ぁE45x90 牁E��ぁE�E�) 2.0倁E/option>
+                    <option value="b5">筋交ぁE90x90 牁E��ぁE�E�E 3.0倁E/option>
+                    <option value="b6">筋交ぁE90x90 牁E��ぁE�E�) 3.0倁E/option>
+                    <option value="b7">筋交ぁE45x90 たすぁE�E�) 4.0倁E/option>
+                    <option value="b8">筋交ぁE90x90 たすぁE�E�) 5.0倁E/option>
                 </select>
             </div>
 
             <div style="text-align:center;">
-                <button id="btn-apply-wall-settings" onclick="if(window.UIView) window.UIView.applyWallSettingsFromModal(); document.getElementById('modal-wall-settings').style.display='none';" style="background:#27ae60; color:#fff; border:none; padding:12px 40px; border-radius:6px; cursor:pointer; font-weight:bold; font-size:15px; box-shadow:0 3px 6px rgba(0,0,0,0.15);">この仕様で作図を開始する</button>
+                <button id="btn-apply-wall-settings" onclick="if(window.UIView) window.UIView.applyWallSettingsFromModal(); document.getElementById('modal-wall-settings').style.display='none';" style="background:#27ae60; color:#fff; border:none; padding:12px 40px; border-radius:6px; cursor:pointer; font-weight:bold; font-size:15px; box-shadow:0 3px 6px rgba(0,0,0,0.15);">こ�E仕様で作図を開始すめE/button>
             </div>
         </div>
     </div>
 
-    <!-- 面積・柱負担面積の設定モーダル -->
+    <!-- 面積�E柱負拁E��積�E設定モーダル -->
     <div id="modal-area-settings" class="modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.6); z-index:10000; align-items:center; justify-content:center; backdrop-filter:blur(2px);">
         <div class="modal-content" style="max-width:500px; width:90%; background:#fff; border-radius:10px; padding:20px; box-shadow:0 10px 30px rgba(0,0,0,0.4);">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; border-bottom:2px solid #0056b3; padding-bottom:10px;">
-                <h3 style="margin:0; color:#0056b3; font-size:18px;">📐 面積・柱負担面積の設定</h3>
+                <h3 style="margin:0; color:#0056b3; font-size:18px;">📐 面積�E柱負拁E��積�E設宁E/h3>
                 <button class="btn-close-modal" onclick="document.getElementById('modal-area-settings').style.display='none'" style="background:none; border:none; font-size:24px; cursor:pointer; color:#666;">&times;</button>
             </div>
             
             <div style="margin-bottom:15px;">
-                <label style="font-weight:bold; display:block; margin-bottom:5px; font-size:13px;">1. 作図する面積の種類:</label>
+                <label style="font-weight:bold; display:block; margin-bottom:5px; font-size:13px;">1. 作図する面積�E種顁E</label>
                 <select id="area-type-select" style="width:100%; padding:8px; border-radius:4px; border:1px solid #ccc; font-size:13px;">
-                    <option value="floor">床面積 (通常)</option>
-                    <option value="attic">小屋裏収納</option>
-                    <option value="balcony">持ち出しバルコニー</option>
-                    <option value="void">吹き抜け (2階作図用)</option>
-                    <option value="porch">ポーチ・屋根</option>
+                    <option value="floor">床面穁E(通常)</option>
+                    <option value="attic">小屋裏収紁E/option>
+                    <option value="balcony">持ち出しバルコニ�E</option>
+                    <option value="void">吹き抜ぁE(2階作図用)</option>
+                    <option value="porch">ポ�Eチ�E屋根</option>
                 </select>
                 <div style="font-size:11px; color:#666; margin-top:5px; line-height:1.4;">
-                    ※基準法では吹き抜け等は除外されますが、性能表示（見上げ）では算入が必要です。
-                </div>
+                    ※基準法では吹き抜け等�E除外されますが、性能表示�E�見上げ�E�では算�Eが忁E��です、E                </div>
             </div>
 
             <div style="margin-bottom:15px; padding:10px; background:#e8f4f8; border-radius:4px; border:1px solid #bce8f1;">
-                <label style="font-weight:bold; display:block; margin-bottom:5px; font-size:13px;">2. 柱負担面積図の計算方式:</label>
+                <label style="font-weight:bold; display:block; margin-bottom:5px; font-size:13px;">2. 柱負拁E��積図の計算方弁E</label>
                 <select id="area-calc-sub-select" style="width:100%; padding:8px; border-radius:4px; border:1px solid #ccc; font-size:13px;" onchange="if(window.AppController) window.AppController.refreshAll()">
-                    <option value="auto">左パネル(地震力判定)に連動</option>
-                    <option value="kijun">建築基準法 (見下げ面積を算出)</option>
-                    <option value="seinou">住宅性能表示 (見上げ面積を算出)</option>
+                    <option value="auto">左パネル(地霁E��判宁Eに連勁E/option>
+                    <option value="kijun">建築基準況E(見下げ面積を算�E)</option>
+                    <option value="seinou">住宁E��能表示 (見上げ面積を算�E)</option>
                 </select>
             </div>
 
             <div style="margin-bottom:15px; padding:10px; background:#fdfefe; border-radius:6px; border:1px solid #d5dbdb;">
-                <div style="font-weight:bold; color:#d35400; font-size:13px; margin-bottom:8px; border-bottom:1px solid #eee; padding-bottom:3px;">🏠 建物荷重仕様 (屋根・外壁・太陽光)</div>
+                <div style="font-weight:bold; color:#d35400; font-size:13px; margin-bottom:8px; border-bottom:1px solid #eee; padding-bottom:3px;">🏠 建物荷重仕槁E(屋根・外壁�E太陽允E</div>
                 <div class="calc-row" style="margin-bottom:5px; display:flex; justify-content:space-between; align-items:center;">
-                    <label style="font-size:12px; margin:0;">屋根材仕様:</label>
+                    <label style="font-size:12px; margin:0;">屋根材仕槁E</label>
                     <select id="prop-roof-type" style="width:140px; padding:3px; font-size:12px;" onchange="if(window.AppState) { window.AppState.config.weights.roof = parseFloat(this.value); if(window.AppController) window.AppController.refreshAll(); }">
-                        <option value="500" selected>金属板ぶき (500)</option>
-                        <option value="740">スレートぶき (740)</option>
-                        <option value="990">瓦ぶき (990)</option>
+                        <option value="500" selected>金属板ぶぁE(500)</option>
+                        <option value="740">スレート�EぁE(740)</option>
+                        <option value="990">瓦ぶぁE(990)</option>
                     </select>
                 </div>
                 <div class="calc-row" style="margin-bottom:5px; display:flex; justify-content:space-between; align-items:center;">
                     <label style="font-size:12px; margin:0;">太陽光発電:</label>
                     <select id="prop-solar" style="width:140px; padding:3px; font-size:12px;" onchange="if(window.AppState) { window.AppState.config.weights.solar = parseFloat(this.value); if(window.AppController) window.AppController.refreshAll(); }">
-                        <option value="0" selected>なし (0 N/㎡)</option>
+                        <option value="0" selected>なぁE(0 N/㎡)</option>
                         <option value="200">あり (200 N/㎡)</option>
                     </select>
                 </div>
                 <div class="calc-row" style="margin-bottom:5px; display:flex; justify-content:space-between; align-items:center;">
-                    <label style="font-size:12px; margin:0;">外壁材仕様:</label>
+                    <label style="font-size:12px; margin:0;">外壁材仕槁E</label>
                     <select id="prop-ext-wall" style="width:140px; padding:3px; font-size:12px;" onchange="if(window.AppState) { window.AppState.config.weights.exteriorWall = parseFloat(this.value); if(window.AppController) window.AppController.refreshAll(); }">
-                        <option value="600" selected>サイディング (600)</option>
+                        <option value="600" selected>サイチE��ング (600)</option>
                         <option value="1000">モルタル (1000)</option>
                         <option value="350">下見板張 (350)</option>
                     </select>
@@ -825,49 +820,49 @@
             </div>
 
             <div style="margin-bottom:20px;">
-                <label style="font-weight:bold; display:block; margin-bottom:5px; font-size:13px;">3. 小屋裏の平均天井高(m):</label>
+                <label style="font-weight:bold; display:block; margin-bottom:5px; font-size:13px;">3. 小屋裏�E平坁E��井髁Em):</label>
                 <input type="number" id="attic-height-modal" value="1.4" max="1.4" step="0.01" style="width:100px; padding:6px; font-size:13px;" oninput="const el = document.getElementById('attic-height'); if(el) el.value = this.value; if(window.AppController) window.AppController.refreshAll();">
             </div>
 
             <div style="text-align:right;">
-                <button class="btn-close-modal" onclick="document.getElementById('modal-area-settings').style.display='none'" style="background:#0056b3; color:#fff; border:none; padding:8px 20px; border-radius:4px; cursor:pointer; font-weight:bold;">設定を閉じる</button>
+                <button class="btn-close-modal" onclick="document.getElementById('modal-area-settings').style.display='none'" style="background:#0056b3; color:#fff; border:none; padding:8px 20px; border-radius:4px; cursor:pointer; font-weight:bold;">設定を閉じめE/button>
             </div>
         </div>
     </div>
 
-    <!-- 耐力壁の軸力図 (立面) モーダル -->
+    <!-- 耐力壁�E軸力図 (立面) モーダル -->
     <div id="modal-elevation-viewer" class="modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.6); z-index:9000; align-items:center; justify-content:center; backdrop-filter:blur(2px);">
         <div style="background:#fff; width:95%; max-width:950px; max-height:98vh; border-radius:8px; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 5px 25px rgba(0,0,0,0.5);">
             <!-- ヘッダー -->
             <div style="background:#2c3e50; color:#fff; padding:12px 16px; display:flex; justify-content:space-between; align-items:center;">
-                <h3 style="margin:0; font-size:16px;">📊 耐力壁の軸力図 (立面)</h3>
-                <button onclick="document.getElementById('modal-elevation-viewer').style.display='none'" style="background:#e74c3c; border:none; color:#fff; cursor:pointer; font-size:14px; padding:4px 8px; border-radius:4px; font-weight:bold;">✖ 閉じる</button>
+                <h3 style="margin:0; font-size:16px;">📊 耐力壁�E軸力図 (立面)</h3>
+                <button onclick="document.getElementById('modal-elevation-viewer').style.display='none'" style="background:#e74c3c; border:none; color:#fff; cursor:pointer; font-size:14px; padding:4px 8px; border-radius:4px; font-weight:bold;">✁E閉じめE/button>
             </div>
             <!-- コントロール -->
             <div style="padding:10px; background:#f8f9fa; border-bottom:1px solid #ddd; display:flex; gap:15px; align-items:center;">
-                <div style="font-size:13px; font-weight:bold;">加力方向:</div>
-                <label style="cursor:pointer; font-size:13px;"><input type="radio" name="el-dir" value="left" checked onchange="if(window.updateElevationViewer) window.updateElevationViewer()"> ⬅ 左加力 (<-)</label>
-                <label style="cursor:pointer; font-size:13px;"><input type="radio" name="el-dir" value="right" onchange="if(window.updateElevationViewer) window.updateElevationViewer()"> ➡ 右加力 (->)</label>
+                <div style="font-size:13px; font-weight:bold;">加力方吁E</div>
+                <label style="cursor:pointer; font-size:13px;"><input type="radio" name="el-dir" value="left" checked onchange="if(window.updateElevationViewer) window.updateElevationViewer()"> ⬁E左加劁E(<-)</label>
+                <label style="cursor:pointer; font-size:13px;"><input type="radio" name="el-dir" value="right" onchange="if(window.updateElevationViewer) window.updateElevationViewer()"> ➡ 右加劁E(->)</label>
             </div>
-            <!-- タブコンテナ -->
+            <!-- タブコンチE�� -->
             <div id="elevation-axis-tabs" style="display:flex; flex-wrap:nowrap; overflow-x:auto; overflow-y:hidden; background:#ecf0f1; border-bottom:1px solid #bdc3c7; padding:0 10px; height:48px; min-height:48px; align-items:center; white-space:nowrap; -webkit-overflow-scrolling:touch;">
-                <!-- 動的生成されるタブボタン -->
+                <!-- 動的生�Eされるタブ�Eタン -->
             </div>
-            <!-- SVG表示コンテナ -->
+            <!-- SVG表示コンチE�� -->
             <div id="elevation-svg-container" style="flex:1; padding:20px; overflow-x:auto; overflow-y:auto; background:#fff; text-align:center;">
             </div>
         </div>
     </div>
 
-    <!-- 存在壁量・壁量検定モーダル -->
+    <!-- 存在壁E��・壁E��検定モーダル -->
     <div id="modal-wall-summary" class="modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.7); z-index:10000; align-items:center; justify-content:center; padding:15px; box-sizing:border-box;">
         <div class="modal-content" style="width:95%; max-width:1100px; height:90vh; max-height:90vh; display:flex; flex-direction:column; background:#fff; border-radius:8px; overflow:hidden; box-shadow:0 10px 30px rgba(0,0,0,0.5);">
             <div style="background:#27ae60; color:#fff; padding:12px 16px; display:flex; justify-content:space-between; align-items:center; flex-shrink:0;">
-                <h3 style="margin:0; font-size:16px;">🧱 2. 耐力壁配置図 ＆ 壁量検定</h3>
-                <button onclick="document.getElementById('modal-wall-summary').style.display='none'" style="background:#e74c3c; border:none; color:#fff; cursor:pointer; font-size:14px; padding:4px 8px; border-radius:4px; font-weight:bold;">✖ 閉じる</button>
+                <h3 style="margin:0; font-size:16px;">🧱 2. 耐力壁E�E置図 �E�E壁E��検宁E/h3>
+                <button onclick="document.getElementById('modal-wall-summary').style.display='none'" style="background:#e74c3c; border:none; color:#fff; cursor:pointer; font-size:14px; padding:4px 8px; border-radius:4px; font-weight:bold;">✁E閉じめE/button>
             </div>
             <div id="wall-summary-modal-container" style="flex:1; overflow-y:auto; padding:20px; font-family:sans-serif;">
-                <div style="text-align:center; padding:40px; color:#666;">データを計算中...</div>
+                <div style="text-align:center; padding:40px; color:#666;">チE�Eタを計算中...</div>
             </div>
         </div>
     </div>
@@ -875,75 +870,70 @@
     <!-- 左パネル -->
     <div id="left-panel">
         <h1 style="font-size:16px; margin:0 0 10px 0; color:#2c3e50; border-bottom:2px solid #2ecc71; padding-bottom:5px; display:flex; justify-content:space-between; align-items:center;">
-            <span>上善如水 <span style="font-size:12px; color:#7f8c8d;">壁量計算WEB <span id="app-version-title">v3.12.56</span></span></span>
+            <span>上善如水 <span style="font-size:12px; color:#7f8c8d;">壁E��計算WEB <span id="app-version-title">v3.12.56</span></span></span>
         </h1>
 
         <div style="display:flex; gap:5px; margin-bottom:15px;">
             <a href="manual/manual_full_v3.html" target="_blank" style="flex:1.2; background:#27ae60; color:white; text-decoration:none; padding:8px 5px; border-radius:4px; font-size:12px; font-weight:bold; text-align:center; box-sizing:border-box;">📖 マニュアル (v3.13)</a>
-            <a href="pricing.html" target="_blank" style="flex:1; background:#0ea5e9; color:white; text-decoration:none; padding:8px 5px; border-radius:4px; font-size:12px; font-weight:bold; text-align:center; box-sizing:border-box;">💳 機能・料金</a>
-            <a href="tokusho.html" target="_blank" style="flex:1; background:#8e44ad; color:white; text-decoration:none; padding:8px 5px; border-radius:4px; font-size:12px; font-weight:bold; text-align:center; box-sizing:border-box;">⚖️ 特商法表記</a>
-            <a href="portal.php" style="flex:1; background:#95a5a6; color:white; text-decoration:none; padding:8px 5px; border-radius:4px; font-size:12px; font-weight:bold; text-align:center; box-sizing:border-box;">⚙️ 契約管理</a>
+            <a href="pricing.html" target="_blank" style="flex:1; background:#0ea5e9; color:white; text-decoration:none; padding:8px 5px; border-radius:4px; font-size:12px; font-weight:bold; text-align:center; box-sizing:border-box;">💳 機�E・料��</a>
+            <a href="tokusho.html" target="_blank" style="flex:1; background:#8e44ad; color:white; text-decoration:none; padding:8px 5px; border-radius:4px; font-size:12px; font-weight:bold; text-align:center; box-sizing:border-box;">⚖︁E特啁E��表訁E/a>
+            <a href="portal.php" style="flex:1; background:#95a5a6; color:white; text-decoration:none; padding:8px 5px; border-radius:4px; font-size:12px; font-weight:bold; text-align:center; box-sizing:border-box;">⚙︁E契紁E��琁E/a>
         </div>
 
-        <h2 style="margin-bottom: 10px;">📊 出力 ＆ サマリー</h2>
+        <h2 style="margin-bottom: 10px;">📊 出劁E�E�Eサマリー</h2>
         <div style="display:flex; gap:5px; flex-wrap:wrap; margin-bottom:10px;">
-            <button class="btn-table doc" style="flex:100%;" id="btn-gen-doc">📑 計算書を一括出力 (PDF)</button>
+            <button class="btn-table doc" style="flex:100%;" id="btn-gen-doc">📑 計算書を一括出劁E(PDF)</button>
             <div style="display:flex; width:100%; gap:5px;">
-                <button class="btn-table calc" style="flex:1; background:#2980b9; color:#fff;" id="btn-elevation-viewer-left" onclick="if(window.openElevationViewer) { window.openElevationViewer(); } else { const m = document.getElementById('modal-elevation-viewer'); if(m) m.style.display='flex'; if(window.updateElevationViewer) window.updateElevationViewer(); }">📊 耐力壁の軸力図 (立面)</button>
-                <button class="btn-table calc" style="flex:1; background:#27ae60; color:#fff;" id="btn-show-wall-summary" onclick="if(window.showWallSummaryModal) window.showWallSummaryModal();">🧱 存在壁量 ＆ 壁量検定</button>
+                <button class="btn-table calc" style="flex:1; background:#2980b9; color:#fff;" id="btn-elevation-viewer-left" onclick="if(window.openElevationViewer) { window.openElevationViewer(); } else { const m = document.getElementById('modal-elevation-viewer'); if(m) m.style.display='flex'; if(window.updateElevationViewer) window.updateElevationViewer(); }">📊 耐力壁�E軸力図 (立面)</button>
+                <button class="btn-table calc" style="flex:1; background:#27ae60; color:#fff;" id="btn-show-wall-summary" onclick="if(window.showWallSummaryModal) window.showWallSummaryModal();">🧱 存在壁E�� �E�E壁E��検宁E/button>
             </div>
             <div style="display:flex; width:100%; gap:5px;">
-                <button class="btn-table calc" style="flex:1;" id="btn-show-area">🖼️ 見付面積</button>
+                <button class="btn-table calc" style="flex:1;" id="btn-show-area">🖼�E�E見付面穁E/button>
                 <button class="btn-table calc" style="flex:1; background-color:#e67e22;" id="btn-show-ratio">📐 直下率</button>
-                <button class="btn-table calc" style="flex:1;" id="btn-show-center">🧲 重心剛心</button>
-                <button class="btn-table csv" style="flex:1;" id="btn-export-csv">📥 CSV保存</button>
+                <button class="btn-table calc" style="flex:1;" id="btn-show-center">🧲 重忁E��忁E/button>
+                <button class="btn-table csv" style="flex:1;" id="btn-export-csv">📥 CSV保孁E/button>
             </div>
         </div>
 
         
         <!-- [v2.7.0] 屋根伏図・見付面積計算モード専用パネル -->
         <div id="roof-mode-panel" style="display:none;">
-            <h2 style="color:#2980b9;">🏠 屋根伏図・見付面積 プロパティ</h2>
+            <h2 style="color:#2980b9;">🏠 屋根伏図・見付面穁Eプロパティ</h2>
 
             <div style="padding:10px; background:#1b4f72; border-radius:6px; margin-bottom:12px;">
-                <div style="font-size:11px; font-weight:bold; color:#a9cddc; margin-bottom:8px;">🖊 作図サブモード</div>
+                <div style="font-size:11px; font-weight:bold; color:#a9cddc; margin-bottom:8px;">🖊 作図サブモーチE/div>
                 <div style="display:flex; flex-direction:column; gap:5px;" id="roof-mode-selector">
                     <label class="roof-mode-label" style="display:flex; align-items:center; gap:7px; cursor:pointer; font-size:12px; color:#ecf0f1; background:#2980b9; padding:6px 8px; border-radius:4px; font-weight:bold;">
                         <input type="radio" name="roof_mode" value="roof_select" checked onchange="updateRoofModeUI('roof_select')">
-                        👆 選択・編集
-                    </label>
+                        👆 選択�E編雁E                    </label>
                     <label class="roof-mode-label" style="display:flex; align-items:center; gap:7px; cursor:pointer; font-size:12px; color:#ecf0f1; background:#1b4f72; padding:6px 8px; border-radius:4px;">
                         <input type="radio" name="roof_mode" value="roof-add-grid" onchange="updateRoofModeUI('roof-add-grid')">
-                        📏 屋根グリッド追加(オフセット)
+                        📏 屋根グリチE��追加(オフセチE��)
                     </label>
                     <label class="roof-mode-label" style="display:flex; align-items:center; gap:7px; cursor:pointer; font-size:12px; color:#ecf0f1; background:#1b4f72; padding:6px 8px; border-radius:4px;">
                         <input type="radio" name="roof_mode" value="draw-roof" onchange="updateRoofModeUI('draw-roof')">
-                        📐 屋根面を引く（多角形）
-                    </label>
+                        📐 屋根面を引く�E�多角形�E�E                    </label>
                     <label class="roof-mode-label" style="display:flex; align-items:center; gap:7px; cursor:pointer; font-size:12px; color:#ecf0f1; background:#1b4f72; padding:6px 8px; border-radius:4px;">
                         <input type="radio" name="roof_mode" value="roof-del-grid" onchange="updateRoofModeUI('roof-del-grid')">
-                        ❌ 屋根グリッド削除
+                        ❁E屋根グリチE��削除
                     </label>
                     <label class="roof-mode-label" style="display:flex; align-items:center; gap:7px; cursor:pointer; font-size:12px; color:#ecf0f1; background:#1b4f72; padding:6px 8px; border-radius:4px;">
                         <input type="radio" name="roof_mode" value="draw-ext-wall" onchange="updateRoofModeUI('draw-ext-wall')">
-                        ✏️ 外壁線を引く（多角形）
-                    </label>
+                        ✏︁E外壁線を引く�E�多角形�E�E                    </label>
                     <label class="roof-mode-label" style="display:flex; align-items:center; gap:7px; cursor:pointer; font-size:12px; color:#f1948a; background:#1b4f72; padding:6px 8px; border-radius:4px; border:1px solid #e74c3c;">
                         <input type="radio" name="roof_mode" value="delete-roof" onchange="updateRoofModeUI('delete-roof')">
-                        ❌ 屋根要素の削除（クリック）
-                    </label>
+                        ❁E屋根要素の削除�E�クリチE���E�E                    </label>
                 </div>
                 <div style="font-size:10px; color:#a9cddc; margin-top:8px; line-height:1.5;">
-                    💡 ヒント：<b>右クリック</b> or <b>Escキー</b>で作図中の操作をキャンセルできます。<br>
-                    屋根面はグリッド交点を選んで外形をなぞり、<b>始点に戻ってクリック</b>で閉じます。その後、勾配基準線の2点をクリックしてください。
-                </div>
+                    💡 ヒント！Eb>右クリチE��</b> or <b>Escキー</b>で作図中の操作をキャンセルできます、Ebr>
+                    屋根面はグリチE��交点を選んで外形をなぞり、Eb>始点に戻ってクリチE��</b>で閉じます。その後、勾配基準線�E2点をクリチE��してください、E                </div>
             </div>
 
-            <!-- 屋根要素のプロパティポップアップ -->
+            <!-- 屋根要素のプロパティポップアチE�E -->
             <div id="roof-property-popup" style="display:none; position:fixed; z-index:5000; background:#fff; border:1px solid #2980b9; border-radius:8px; box-shadow:0 4px 20px rgba(0,0,0,0.3); width:400px; max-height:80vh; overflow-y:auto; font-family:sans-serif;">
                 <div id="roof-popup-header" style="background:#2980b9; color:#fff; padding:8px 12px; display:flex; justify-content:space-between; align-items:center; border-radius:7px 7px 0 0;">
                     <span style="font-weight:bold; font-size:13px;">🏠 屋根面のプロパティ</span>
-                    <button onclick="document.getElementById('roof-property-popup').style.display='none'" style="background:#e74c3c; border:none; color:#fff; padding:2px 6px; border-radius:3px; cursor:pointer; font-size:11px;">✖</button>
+                    <button onclick="document.getElementById('roof-property-popup').style.display='none'" style="background:#e74c3c; border:none; color:#fff; padding:2px 6px; border-radius:3px; cursor:pointer; font-size:11px;">✁E/button>
                 </div>
                 <div id="roof-popup-content" style="padding:12px;"></div>
             </div>
@@ -951,48 +941,45 @@
 
         <!-- [v3.0.42] 基礎計算モード専用パネル -->
         <div id="foundation-mode-panel" style="display:none;">
-            <h2 style="color:#8e44ad;">🏗️ 基礎構造計算 プロパティ</h2>
+            <h2 style="color:#8e44ad;">🏗�E�E基礎構造計箁Eプロパティ</h2>
 
-            <!-- 作図サブモード切替 -->
+            <!-- 作図サブモード�E替 -->
             <div style="padding:10px; background:#4a235a; border-radius:6px; margin-bottom:12px;">
-                <div style="font-size:11px; font-weight:bold; color:#d7bde2; margin-bottom:8px;">🖊 作図サブモード</div>
+                <div style="font-size:11px; font-weight:bold; color:#d7bde2; margin-bottom:8px;">🖊 作図サブモーチE/div>
                 <div style="display:flex; flex-direction:column; gap:5px;" id="fd-mode-selector">
                     <label class="fd-mode-label" style="display:flex; align-items:center; gap:7px; cursor:pointer; font-size:12px; color:#ecf0f1; background:#4a235a; padding:6px 8px; border-radius:4px;">
                         <input type="radio" name="f_mode" value="f_select" onchange="if(window.updateFdModeUI) updateFdModeUI('f_select')">
-                        👆 選択・プロパティ
+                        👆 選択�Eプロパティ
                     </label>
                     <label class="fd-mode-label" style="display:flex; align-items:center; gap:7px; cursor:pointer; font-size:12px; color:#ecf0f1; background:#6c3483; padding:6px 8px; border-radius:4px; font-weight:bold;">
                         <input type="radio" name="f_mode" value="f_slab" checked onchange="if(window.updateFdModeUI) updateFdModeUI('f_slab')">
-                        🟦 スラブを引く（多角形）
-                    </label>
+                        🟦 スラブを引く�E�多角形�E�E                    </label>
                     <label class="fd-mode-label" style="display:flex; align-items:center; gap:7px; cursor:pointer; font-size:12px; color:#ecf0f1; background:#4a235a; padding:6px 8px; border-radius:4px;">
                         <input type="radio" name="f_mode" value="f_beam" onchange="if(window.updateFdModeUI) updateFdModeUI('f_beam')">
-                        🏗 基礎梁を引く (2点クリック)
+                        🏗 基礎梁を引く (2点クリチE��)
                     </label>
                     <label class="fd-mode-label" style="display:flex; align-items:center; gap:7px; cursor:pointer; font-size:12px; color:#ecf0f1; background:#4a235a; padding:6px 8px; border-radius:4px;">
                         <input type="radio" name="f_mode" value="f_manhole" onchange="if(window.updateFdModeUI) updateFdModeUI('f_manhole')">
-                        🚪 人通口を配置
+                        🚪 人通口を�E置
                     </label>
                     <label class="fd-mode-label" style="display:flex; align-items:center; gap:7px; cursor:pointer; font-size:12px; color:#f1948a; background:#4a235a; padding:6px 8px; border-radius:4px; border:1px solid #e74c3c;">
                         <input type="radio" name="f_mode" value="f_delete" onchange="if(window.updateFdModeUI) updateFdModeUI('f_delete')">
-                        ❌ 削除（クリックした要素）
-                    </label>
+                        ❁E削除�E�クリチE��した要素�E�E                    </label>
                 </div>
                 <div style="font-size:10px; color:#a569bd; margin-top:8px; line-height:1.5;">
-                    💡 ヒント：<b>右クリック</b> or <b>Escキー</b>で作図キャンセル。<br>
-                    基礎梁は2点クリック。スラブは頂点を順次クリックし<b>始点に戻って確定</b>。
-                </div>
+                    💡 ヒント！Eb>右クリチE��</b> or <b>Escキー</b>で作図キャンセル、Ebr>
+                    基礎梁�E2点クリチE��。スラブ�E頂点を頁E��クリチE��ぁEb>始点に戻って確宁E/b>、E                </div>
             </div>
 
-            <!-- 基礎計算 デフォルト設定 -->
+            <!-- 基礎計箁EチE��ォルト設宁E-->
             <div style="padding:12px; background:#f5eef8; border:1px solid #d2b4de; border-radius:6px; margin-bottom:15px;">
-                <div style="font-size:12px; font-weight:bold; color:#8e44ad; margin-bottom:10px;">⚙️ 基礎計算 デフォルト設定</div>
+                <div style="font-size:12px; font-weight:bold; color:#8e44ad; margin-bottom:10px;">⚙︁E基礎計箁EチE��ォルト設宁E/div>
                 
                 <div class="calc-row" style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; background:#fff; padding:4px 6px; border-radius:4px; border:1px solid #d2b4de;">
                     <label style="font-size:11px; color:#4a235a; margin-bottom:0;">コンクリート強度 (Fc)</label>
                     <select id="global-fc" style="padding:3px; border-radius:4px; border:1px solid #8e44ad; font-size:11px; width:90px; font-weight:bold; color:#4a235a; background:#fff;" onchange="if(window.AppState){ window.AppState.config.fc = parseFloat(this.value); if(window.FoundationEngine) window.FoundationEngine.runAnalysis(window.AppState); if(window.AppController) window.AppController.refreshAll(); }">
                         <option value="18">Fc18</option>
-                        <option value="21" selected>Fc21 (標準)</option>
+                        <option value="21" selected>Fc21 (標溁E</option>
                         <option value="24">Fc24</option>
                         <option value="27">Fc27</option>
                         <option value="30">Fc30</option>
@@ -1000,18 +987,18 @@
                 </div>
 
                 <div class="calc-row">
-                    <label>スラブ仕様</label>
+                    <label>スラブ仕槁E/label>
                     <div style="display: flex; gap: 4px; flex: 1;">
                         <button type="button" id="btn-preset-fs1" onclick="if(window.setSlabPresetBtn) setSlabPresetBtn('FS1')" style="flex:1; padding:5px 2px; font-size:10px; font-weight:bold; border-radius:4px; border:1px solid #8e44ad; background:#8e44ad; color:#fff; cursor:pointer;">FS1</button>
                         <button type="button" id="btn-preset-fs2" onclick="if(window.setSlabPresetBtn) setSlabPresetBtn('FS2')" style="flex:1; padding:5px 2px; font-size:10px; font-weight:bold; border-radius:4px; border:1px solid #d2b4de; background:#fff; color:#8e44ad; cursor:pointer;">FS2</button>
                         <button type="button" id="btn-preset-fs3" onclick="if(window.setSlabPresetBtn) setSlabPresetBtn('FS3')" style="flex:1; padding:5px 2px; font-size:10px; font-weight:bold; border-radius:4px; border:1px solid #d2b4de; background:#fff; color:#8e44ad; cursor:pointer;">FS3</button>
                     </div>
                 </div>
-                <div class="calc-row"><label>スラブ 符号</label><input type="text" id="fd-slab-symbol" value="FS1" style="text-align:left;"></div>
-                <div class="calc-row"><label>スラブ厚さ(mm)</label><input type="number" id="fd-slab-thickness" value="150" step="10" min="120"></div>
-                <div class="calc-row"><label>スラブ天端高(mm)</label><input type="number" id="fd-slab-top-height" value="50" step="10"></div>
+                <div class="calc-row"><label>スラチE符号</label><input type="text" id="fd-slab-symbol" value="FS1" style="text-align:left;"></div>
+                <div class="calc-row"><label>スラブ厚ぁEmm)</label><input type="number" id="fd-slab-thickness" value="150" step="10" min="120"></div>
+                <div class="calc-row"><label>スラブ天端髁Emm)</label><input type="number" id="fd-slab-top-height" value="50" step="10"></div>
                 <div class="calc-row">
-                    <label>短辺主筋</label>
+                    <label>短辺主筁E/label>
                     <select id="fd-slab-short-type" style="width:70px;">
                         <option value="D13" selected>D13</option>
                         <option value="D10">D10</option>
@@ -1021,7 +1008,7 @@
                     <input type="number" id="fd-slab-short-pitch" value="150" style="width:45px;">
                 </div>
                 <div class="calc-row">
-                    <label>長辺主筋</label>
+                    <label>長辺主筁E/label>
                     <select id="fd-slab-long-type" style="width:70px;">
                         <option value="D13" selected>D13</option>
                         <option value="D10">D10</option>
@@ -1034,29 +1021,29 @@
                 <hr style="border:0; border-top:1px dashed #d2b4de; margin:10px 0;">
                 
                 <div class="calc-row">
-                    <label>基礎梁仕様</label>
+                    <label>基礎梁仕槁E/label>
                     <div style="display: flex; gap: 4px; flex: 1;">
                         <button type="button" id="btn-preset-fg1" onclick="if(window.setBeamPresetBtn) setBeamPresetBtn('FG1')" style="flex:1; padding:5px 2px; font-size:10px; font-weight:bold; border-radius:4px; border:1px solid #8e44ad; background:#8e44ad; color:#fff; cursor:pointer;">FG1</button>
                         <button type="button" id="btn-preset-fg2" onclick="if(window.setBeamPresetBtn) setBeamPresetBtn('FG2')" style="flex:1; padding:5px 2px; font-size:10px; font-weight:bold; border-radius:4px; border:1px solid #d2b4de; background:#fff; color:#8e44ad; cursor:pointer;">FG2</button>
                         <button type="button" id="btn-preset-fg3" onclick="if(window.setBeamPresetBtn) setBeamPresetBtn('FG3')" style="flex:1; padding:5px 2px; font-size:10px; font-weight:bold; border-radius:4px; border:1px solid #d2b4de; background:#fff; color:#8e44ad; cursor:pointer;">FG3</button>
                     </div>
                 </div>
-                <div class="calc-row"><label>梁 符号</label><input type="text" id="fd-beam-symbol" value="FG1" style="text-align:left;"></div>
-                <div class="calc-row"><label>梁幅 W(mm)</label><input type="number" id="fd-beam-width" value="150" step="5" min="120"></div>
-                <div class="calc-row"><label>梁成 H(mm)</label><input type="number" id="fd-beam-height" value="640" step="10" min="350"></div>
-                <div class="calc-row"><label>根入れ深さ h(mm)</label><input type="number" id="fd-embed-depth" value="250" step="10" min="100"></div>
+                <div class="calc-row"><label>梁E符号</label><input type="text" id="fd-beam-symbol" value="FG1" style="text-align:left;"></div>
+                <div class="calc-row"><label>梁幁EW(mm)</label><input type="number" id="fd-beam-width" value="150" step="5" min="120"></div>
+                <div class="calc-row"><label>梁�E H(mm)</label><input type="number" id="fd-beam-height" value="640" step="10" min="350"></div>
+                <div class="calc-row"><label>根入れ深ぁEh(mm)</label><input type="number" id="fd-embed-depth" value="250" step="10" min="100"></div>
 
-                <div class="calc-row"><label>上主筋</label><input type="text" id="fd-top-rebar" value="1-D13" style="text-align:left;"></div>
-                <div class="calc-row"><label>下主筋</label><input type="text" id="fd-bot-rebar" value="1-D13" style="text-align:left;"></div>
-                <div class="calc-row"><label>ST筋</label><input type="text" id="fd-stirrup" value="1-D10@200" style="text-align:left;"></div>
+                <div class="calc-row"><label>上主筁E/label><input type="text" id="fd-top-rebar" value="1-D13" style="text-align:left;"></div>
+                <div class="calc-row"><label>下主筁E/label><input type="text" id="fd-bot-rebar" value="1-D13" style="text-align:left;"></div>
+                <div class="calc-row"><label>ST筁E/label><input type="text" id="fd-stirrup" value="1-D10@200" style="text-align:left;"></div>
             </div>
 
             <div id="fd-element-list-panel" style="width:100%; margin-top:8px; background:#f4f6f7; border:1px solid #bdc3c7; border-radius:5px; padding:8px; box-sizing:border-box;">
                 <div style="font-size:11px; font-weight:bold; color:#2c3e50; margin-bottom:5px; display:flex; justify-content:space-between; align-items:center;">
-                    <span>🏗️ 基礎要素 一覧・選択 (帳票No.対応)</span>
+                    <span>🏗�E�E基礎要素 一覧・選抁E(帳票No.対忁E</span>
                 </div>
                 <div style="display:flex; gap:4px; margin-bottom:5px;">
-                    <button class="btn-table calc" style="flex:1; background:#8e44ad; color:#fff; padding:6px 2px; font-size:11px;" onclick="window.toggleFdElementList('slab')">🏗️ 全スラブ一覧</button>
+                    <button class="btn-table calc" style="flex:1; background:#8e44ad; color:#fff; padding:6px 2px; font-size:11px;" onclick="window.toggleFdElementList('slab')">🏗�E�E全スラブ一覧</button>
                     <button class="btn-table calc" style="flex:1; background:#2980b9; color:#fff; padding:6px 2px; font-size:11px;" onclick="window.toggleFdElementList('beam')">🧱 全基礎梁一覧</button>
                 </div>
                 <div id="fd-element-list-container" style="background:#fff; border:1px solid #ccc; border-radius:4px; padding:6px; font-size:11px; display:none; max-height:none; overflow:visible;"></div>
@@ -1064,47 +1051,47 @@
         </div>
 
         <div id="wall-mode-panel">
-            <h2>⚙️ 計算モード</h2>
+            <h2>⚙︁E計算モーチE/h2>
             <div style="padding: 10px; background: #fff3cd; border: 1px solid #ffeeba; border-radius: 4px; margin-bottom: 15px;">
-                <label style="font-weight: bold; color: #d35400; font-size:12px; display:block; margin-bottom:5px;">面積算出・地震力判定モード:</label>
+                <label style="font-weight: bold; color: #d35400; font-size:12px; display:block; margin-bottom:5px;">面積算�E・地霁E��判定モーチE</label>
                 <select id="calc-mode-select" style="width:100%; padding:4px;" onchange="triggerUpdate()">
-                    <option value="kijun">建築基準法 (見下げ面積)</option>
-                    <option value="seinou">性能表示 (見上げ面積)</option>
+                    <option value="kijun">建築基準況E(見下げ面穁E</option>
+                    <option value="seinou">性能表示 (見上げ面穁E</option>
                 </select>
             </div>
 
             <details open>
-                <summary>▼ 物件情報 ＆ 面積の登録</summary>
+                <summary>▼ 物件惁E�� �E�E面積�E登録</summary>
                 <div class="calc-content">
                     <div class="calc-box" style="background:#fff3cd; border-color:#ffeeba;">
-                        <div style="font-size:11px; font-weight:bold; margin-bottom:5px; color:#d35400;">🏢 物件・設計者情報</div>
-                        <div class="calc-row"><label style="width:50px;">案件名</label><input type="text" id="info-prj" value="〇〇邸 新築工事" style="width:calc(100% - 60px); text-align:left;"></div>
-                        <div class="calc-row"><label style="width:50px;">事務所</label><input type="text" id="info-office" value="上善如水 建築設計" style="width:calc(100% - 60px); text-align:left;"></div>
-                        <div class="calc-row"><label style="width:50px;">建築士</label><input type="text" id="info-license" value="一級 第00000号" style="width:calc(100% - 60px); text-align:left;"></div>
-                        <div class="calc-row"><label style="width:50px;">設計者</label><input type="text" id="info-name" value="上善 如水" style="width:calc(100% - 60px); text-align:left;"></div>
+                        <div style="font-size:11px; font-weight:bold; margin-bottom:5px; color:#d35400;">🏢 物件・設計老E��報</div>
+                        <div class="calc-row"><label style="width:50px;">案件吁E/label><input type="text" id="info-prj" value="、E��E�� 新築工亁E style="width:calc(100% - 60px); text-align:left;"></div>
+                        <div class="calc-row"><label style="width:50px;">事務所</label><input type="text" id="info-office" value="上善如水 建築設訁E style="width:calc(100% - 60px); text-align:left;"></div>
+                        <div class="calc-row"><label style="width:50px;">建築士</label><input type="text" id="info-license" value="一紁E第00000号" style="width:calc(100% - 60px); text-align:left;"></div>
+                        <div class="calc-row"><label style="width:50px;">設計老E/label><input type="text" id="info-name" value="上善 如水" style="width:calc(100% - 60px); text-align:left;"></div>
                     </div>
 
                     <div class="calc-box" style="border-color:#3498db; background:#f0f8ff; margin-top:10px; padding:8px; border-radius:6px;">
-                        <div style="font-size:11px; font-weight:bold; margin-bottom:6px; color:#2980b9; border-bottom:1px solid #bce8f1;">🏠 建物荷重仕様 (屋根・天井・外壁・太陽光)</div>
+                        <div style="font-size:11px; font-weight:bold; margin-bottom:6px; color:#2980b9; border-bottom:1px solid #bce8f1;">🏠 建物荷重仕槁E(屋根・天井�E外壁�E太陽允E</div>
                         <div class="calc-row" style="margin-bottom:4px; display:flex; justify-content:space-between; align-items:center;">
-                            <label style="font-size:10px; width:75px; margin:0;">屋根材仕様</label>
+                            <label style="font-size:10px; width:75px; margin:0;">屋根材仕槁E/label>
                             <select id="left-prop-roof-type" style="width:130px; font-size:10px; padding:2px;" onchange="if(window.AppState) { window.AppState.config.weights.roof = parseFloat(this.value); const el = document.getElementById('prop-roof-type'); if(el) el.value = this.value; if(window.AppController) window.AppController.refreshAll(); }">
-                                <option value="500" selected>金属板ぶき (500 N/㎡)</option>
-                                <option value="740">スレートぶき (740 N/㎡)</option>
-                                <option value="990">瓦ぶき (990 N/㎡)</option>
+                                <option value="500" selected>金属板ぶぁE(500 N/㎡)</option>
+                                <option value="740">スレート�EぁE(740 N/㎡)</option>
+                                <option value="990">瓦ぶぁE(990 N/㎡)</option>
                             </select>
                         </div>
                         <div class="calc-row" style="margin-bottom:4px; display:flex; justify-content:space-between; align-items:center;">
                             <label style="font-size:10px; width:75px; margin:0;">太陽光発電</label>
                             <select id="left-prop-solar" style="width:130px; font-size:10px; padding:2px;" onchange="if(window.AppState) { window.AppState.config.weights.solar = parseFloat(this.value); const el = document.getElementById('prop-solar'); if(el) el.value = this.value; if(window.AppController) window.AppController.refreshAll(); }">
-                                <option value="0" selected>なし (0 N/㎡)</option>
+                                <option value="0" selected>なぁE(0 N/㎡)</option>
                                 <option value="200">あり (200 N/㎡)</option>
                             </select>
                         </div>
                         <div class="calc-row" style="margin-bottom:4px; display:flex; justify-content:space-between; align-items:center;">
-                            <label style="font-size:10px; width:75px; margin:0;">外壁仕様</label>
+                            <label style="font-size:10px; width:75px; margin:0;">外壁仕槁E/label>
                             <select id="left-prop-ext-wall" style="width:130px; font-size:10px; padding:2px;" onchange="if(window.AppState) { window.AppState.config.weights.exteriorWall = parseFloat(this.value); const el = document.getElementById('prop-ext-wall'); if(el) el.value = this.value; if(window.AppController) window.AppController.refreshAll(); }">
-                                <option value="600" selected>サイディング (600 N/㎡)</option>
+                                <option value="600" selected>サイチE��ング (600 N/㎡)</option>
                                 <option value="1000">土塗り・モルタル (1000 N/㎡)</option>
                                 <option value="350">下見板張 (350 N/㎡)</option>
                             </select>
@@ -1122,63 +1109,63 @@
                     </div>
 
                     <div class="calc-box" style="background:#fef9e7; border:1px solid #f9e79f; padding:8px; border-radius:6px; margin-top:10px;">
-                        <div style="font-size:11px; font-weight:bold; margin-bottom:6px; color:#b7950b; border-bottom:1px solid #f9e79f;">📐 単位必要壁量 (地震力・風圧力)</div>
+                        <div style="font-size:11px; font-weight:bold; margin-bottom:6px; color:#b7950b; border-bottom:1px solid #f9e79f;">📐 単位忁E��壁E�� (地霁E��・風圧劁E</div>
                         <div class="calc-row" style="margin-bottom:4px; display:flex; justify-content:space-between; align-items:center;">
-                            <label style="font-size:10px; width:110px; margin:0;">1階 地震力 cq1 (m/㎡)</label>
+                            <label style="font-size:10px; width:110px; margin:0;">1隁E地霁E�� cq1 (m/㎡)</label>
                             <input type="number" id="c-q1" value="0.29" step="0.01" style="width:55px; text-align:right; font-size:10px; padding:2px;" oninput="if(window.AppState && window.AppState.config.reqWallCoeffs['1F']){ window.AppState.config.reqWallCoeffs['1F'].seismic = parseFloat(this.value)||0; } if(window.AppController) window.AppController.refreshAll();">
                         </div>
                         <div class="calc-row" style="margin-bottom:4px; display:flex; justify-content:space-between; align-items:center;">
-                            <label style="font-size:10px; width:110px; margin:0;">2階 地震力 cq2 (m/㎡)</label>
+                            <label style="font-size:10px; width:110px; margin:0;">2隁E地霁E�� cq2 (m/㎡)</label>
                             <input type="number" id="c-q2" value="0.15" step="0.01" style="width:55px; text-align:right; font-size:10px; padding:2px;" oninput="if(window.AppState && window.AppState.config.reqWallCoeffs['2F']){ window.AppState.config.reqWallCoeffs['2F'].seismic = parseFloat(this.value)||0; } if(window.AppController) window.AppController.refreshAll();">
                         </div>
                         <div class="calc-row" style="margin-bottom:0; display:flex; justify-content:space-between; align-items:center;">
-                            <label style="font-size:10px; width:110px; margin:0;">風圧力 cw (m/㎡)</label>
+                            <label style="font-size:10px; width:110px; margin:0;">風圧劁Ecw (m/㎡)</label>
                             <input type="number" id="c-w" value="0.50" step="0.01" style="width:55px; text-align:right; font-size:10px; padding:2px;" oninput="if(window.AppState){ if(window.AppState.config.reqWallCoeffs['1F']) window.AppState.config.reqWallCoeffs['1F'].wind = parseFloat(this.value)||0; if(window.AppState.config.reqWallCoeffs['2F']) window.AppState.config.reqWallCoeffs['2F'].wind = parseFloat(this.value)||0; } if(window.AppController) window.AppController.refreshAll();">
                         </div>
                     </div>
 
                     <div class="calc-box" style="background:#fff5f5; border:1px solid #ffcdd2; padding:8px; border-radius:6px; margin-top:10px;">
-                        <div style="font-size:11px; font-weight:bold; margin-bottom:6px; color:#c62828; border-bottom:1px solid #ffcdd2;">🏢 柱寸法・軸組階高</div>
+                        <div style="font-size:11px; font-weight:bold; margin-bottom:6px; color:#c62828; border-bottom:1px solid #ffcdd2;">🏢 柱寸法�E軸絁E��髁E/div>
                         <div style="display:flex; gap:6px;">
                             <div style="flex:1;">
                                 <div style="background:#2ecc71; color:#fff; text-align:center; font-size:9px; font-weight:bold; padding:1px; border-radius:3px; margin-bottom:4px;">1F</div>
-                                <div class="calc-row" style="margin-bottom:3px;"><label style="font-size:9px; width:70px;">階高 h(m)</label><input type="number" id="n-h1" value="2.70" step="0.01" style="width:45px; font-size:10px;"></div>
-                                <div class="calc-row"><label style="font-size:9px; width:70px;">柱径 d(mm)</label><input type="number" id="p-d1" value="105" step="1" style="width:45px; font-size:10px;"></div>
+                                <div class="calc-row" style="margin-bottom:3px;"><label style="font-size:9px; width:70px;">階髁Eh(m)</label><input type="number" id="n-h1" value="2.70" step="0.01" style="width:45px; font-size:10px;"></div>
+                                <div class="calc-row"><label style="font-size:9px; width:70px;">柱征Ed(mm)</label><input type="number" id="p-d1" value="105" step="1" style="width:45px; font-size:10px;"></div>
                             </div>
                             <div style="flex:1;">
                                 <div style="background:#e67e22; color:#fff; text-align:center; font-size:9px; font-weight:bold; padding:1px; border-radius:3px; margin-bottom:4px;">2F</div>
-                                <div class="calc-row" style="margin-bottom:3px;"><label style="font-size:9px; width:70px;">階高 h(m)</label><input type="number" id="n-h2" value="2.70" step="0.01" style="width:45px; font-size:10px;"></div>
-                                <div class="calc-row"><label style="font-size:9px; width:70px;">柱径 d(mm)</label><input type="number" id="p-d2" value="105" step="1" style="width:45px; font-size:10px;"></div>
+                                <div class="calc-row" style="margin-bottom:3px;"><label style="font-size:9px; width:70px;">階髁Eh(m)</label><input type="number" id="n-h2" value="2.70" step="0.01" style="width:45px; font-size:10px;"></div>
+                                <div class="calc-row"><label style="font-size:9px; width:70px;">柱征Ed(mm)</label><input type="number" id="p-d2" value="105" step="1" style="width:45px; font-size:10px;"></div>
                             </div>
                         </div>
                     </div>
 
                     <div class="calc-box" style="background:#fff; border:1px solid #ddd; padding:10px; border-radius:6px; margin-top:10px;">
-                        <div style="font-size:11px; font-weight:bold; margin-bottom:8px; color:#555; border-bottom:1px solid #eee;">📐 床面積 ＆ 4分割面積</div>
+                        <div style="font-size:11px; font-weight:bold; margin-bottom:8px; color:#555; border-bottom:1px solid #eee;">📐 床面穁E�E�E4刁E��面穁E/div>
                         
-                        <div style="background:#2ecc71; color:#fff; text-align:center; font-size:10px; font-weight:bold; padding:2px; border-radius:3px; margin-bottom:5px;">1階 データ</div>
-                        <div class="calc-row"><label style="width:110px;">床面積(㎡)</label><input type="number" id="a-f1" value="0.00" step="0.01" style="width:60px;"></div>
-                        <div class="calc-row"><label style="width:110px;">小屋裏(㎡)</label><input type="number" id="a-attic1" value="0.00" step="0.01" style="width:60px;"></div>
-                        <div class="calc-row"><label style="width:110px;">バルコニー(㎡)</label><input type="number" id="a-balcony1" value="0.00" step="0.01" style="width:60px;"></div>
-                        <div class="calc-row"><label style="width:110px;">ポーチ・屋根(㎡)</label><input type="number" id="a-porch1" value="0.00" step="0.01" style="width:60px;"></div>
+                        <div style="background:#2ecc71; color:#fff; text-align:center; font-size:10px; font-weight:bold; padding:2px; border-radius:3px; margin-bottom:5px;">1隁EチE�Eタ</div>
+                        <div class="calc-row"><label style="width:110px;">床面穁E㎡)</label><input type="number" id="a-f1" value="0.00" step="0.01" style="width:60px;"></div>
+                        <div class="calc-row"><label style="width:110px;">小屋裁E㎡)</label><input type="number" id="a-attic1" value="0.00" step="0.01" style="width:60px;"></div>
+                        <div class="calc-row"><label style="width:110px;">バルコニ�E(㎡)</label><input type="number" id="a-balcony1" value="0.00" step="0.01" style="width:60px;"></div>
+                        <div class="calc-row"><label style="width:110px;">ポ�Eチ�E屋根(㎡)</label><input type="number" id="a-porch1" value="0.00" step="0.01" style="width:60px;"></div>
                         <div style="display:grid; grid-template-columns: 1fr 1fr; gap:2px 5px; margin-top:5px; padding:5px; background:#f9f9f9; border-radius:4px;">
-                            <div class="calc-row"><label style="font-size:9px; width:45px;">X上(奥)</label><input type="number" id="e-x-t1" value="0.00" step="0.001" style="width:45px; font-size:10px;"></div>
+                            <div class="calc-row"><label style="font-size:9px; width:45px;">X丁E奥)</label><input type="number" id="e-x-t1" value="0.00" step="0.001" style="width:45px; font-size:10px;"></div>
                             <div class="calc-row"><label style="font-size:9px; width:45px;">Y左</label><input type="number" id="e-y-l1" value="0.00" step="0.001" style="width:45px; font-size:10px;"></div>
-                            <div class="calc-row"><label style="font-size:9px; width:45px;">X下(前)</label><input type="number" id="e-x-b1" value="0.00" step="0.001" style="width:45px; font-size:10px;"></div>
+                            <div class="calc-row"><label style="font-size:9px; width:45px;">X丁E剁E</label><input type="number" id="e-x-b1" value="0.00" step="0.001" style="width:45px; font-size:10px;"></div>
                             <div class="calc-row"><label style="font-size:9px; width:45px;">Y右</label><input type="number" id="e-y-r1" value="0.00" step="0.001" style="width:45px; font-size:10px;"></div>
                         </div>
 
                         <hr style="border:0; border-top:1px dashed #ccc; margin:10px 0;">
 
-                        <div style="background:#e67e22; color:#fff; text-align:center; font-size:10px; font-weight:bold; padding:2px; border-radius:3px; margin-bottom:5px;">2階 データ</div>
-                        <div class="calc-row"><label style="width:110px;">床面積(㎡)</label><input type="number" id="a-f2" value="0.00" step="0.01" style="width:60px;"></div>
-                        <div class="calc-row"><label style="width:110px;">小屋裏(㎡)</label><input type="number" id="a-attic2" value="0.00" step="0.01" style="width:60px;"></div>
-                        <div class="calc-row"><label style="width:110px;">バルコニー(㎡)</label><input type="number" id="a-balcony2" value="0.00" step="0.01" style="width:60px;"></div>
-                        <div class="calc-row"><label style="width:110px;">吹き抜け(㎡)</label><input type="number" id="a-void2" value="0.00" step="0.01" style="width:60px;"></div>
+                        <div style="background:#e67e22; color:#fff; text-align:center; font-size:10px; font-weight:bold; padding:2px; border-radius:3px; margin-bottom:5px;">2隁EチE�Eタ</div>
+                        <div class="calc-row"><label style="width:110px;">床面穁E㎡)</label><input type="number" id="a-f2" value="0.00" step="0.01" style="width:60px;"></div>
+                        <div class="calc-row"><label style="width:110px;">小屋裁E㎡)</label><input type="number" id="a-attic2" value="0.00" step="0.01" style="width:60px;"></div>
+                        <div class="calc-row"><label style="width:110px;">バルコニ�E(㎡)</label><input type="number" id="a-balcony2" value="0.00" step="0.01" style="width:60px;"></div>
+                        <div class="calc-row"><label style="width:110px;">吹き抜ぁE㎡)</label><input type="number" id="a-void2" value="0.00" step="0.01" style="width:60px;"></div>
                         <div style="display:grid; grid-template-columns: 1fr 1fr; gap:2px 5px; margin-top:5px; padding:5px; background:#f9f9f9; border-radius:4px;">
-                            <div class="calc-row"><label style="font-size:9px; width:45px;">X上(奥)</label><input type="number" id="e-x-t2" value="0.00" step="0.001" style="width:45px; font-size:10px;"></div>
+                            <div class="calc-row"><label style="font-size:9px; width:45px;">X丁E奥)</label><input type="number" id="e-x-t2" value="0.00" step="0.001" style="width:45px; font-size:10px;"></div>
                             <div class="calc-row"><label style="font-size:9px; width:45px;">Y左</label><input type="number" id="e-y-l2" value="0.00" step="0.001" style="width:45px; font-size:10px;"></div>
-                            <div class="calc-row"><label style="font-size:9px; width:45px;">X下(前)</label><input type="number" id="e-x-b2" value="0.00" step="0.001" style="width:45px; font-size:10px;"></div>
+                            <div class="calc-row"><label style="font-size:9px; width:45px;">X丁E剁E</label><input type="number" id="e-x-b2" value="0.00" step="0.001" style="width:45px; font-size:10px;"></div>
                             <div class="calc-row"><label style="font-size:9px; width:45px;">Y右</label><input type="number" id="e-y-r2" value="0.00" step="0.001" style="width:45px; font-size:10px;"></div>
                         </div>
                     </div>
@@ -1192,20 +1179,20 @@
     <div id="center-panel">
         <div class="canvas-header">
             <div style="display: flex; align-items: center; gap: 5px;">
-                <button class="tab-btn" id="tab-foundation">基礎</button>
-                <button class="tab-btn active" id="tab-1f">1階 作図</button>
-                <button class="tab-btn" id="tab-2f">2階 作図</button>
-                <button class="tab-btn" id="tab-1r">1階 屋根</button>
-                <button class="tab-btn" id="tab-2r">2階 屋根</button>
+                <button class="tab-btn" id="tab-foundation">基礁E/button>
+                <button class="tab-btn active" id="tab-1f">1隁E作図</button>
+                <button class="tab-btn" id="tab-2f">2隁E作図</button>
+                <button class="tab-btn" id="tab-1r">1隁E屋根</button>
+                <button class="tab-btn" id="tab-2r">2隁E屋根</button>
                 <button class="tab-btn" id="btn-open-3d" style="background:#8e44ad; color:#fff; border-color:#8e44ad;" onclick="window.ThreeDPreviewController.open()">🔮 3Dプレビュー</button>
                 <div style="width: 1px; height: 20px; background: #ccc; margin: 0 5px;"></div>
-                <button class="action-btn save" id="btn-save">💾 保存</button>
+                <button class="action-btn save" id="btn-save">💾 保孁E/button>
                 <input type="file" id="json-upload" accept=".json" style="display: none;">
-                <label for="json-upload" class="action-btn load">📂 復元</label>
+                <label for="json-upload" class="action-btn load">📂 復允E/label>
             </div>
             <div style="display: flex; align-items: center; gap: 5px;">
-                <button class="btn-undo" id="btn-undo">↩ 戻る</button>
-                <button class="btn-undo" id="btn-toggle-layer" style="background:#2980b9; color:#fff; font-weight:bold; cursor:pointer;">🗂 レイヤ設定</button>
+                <button class="btn-undo" id="btn-undo">↩ 戻めE/button>
+                <button class="btn-undo" id="btn-toggle-layer" style="background:#2980b9; color:#fff; font-weight:bold; cursor:pointer;">🗂 レイヤ設宁E/button>
                 <button class="btn-undo" id="btn-zoom-fit" style="background:#27ae60; color:#fff;" onclick="window.zoomFit()">🔍 全体表示</button>
             </div>
         </div>
@@ -1214,21 +1201,21 @@
             <!-- DXFレイヤ表示設定パネル -->
             <div id="dxf-layer-panel" style="display:none; position:absolute; top:45px; right:20px; z-index:4000; background:#ffffff; border:1px solid #0056b3; border-radius:6px; box-shadow:0 4px 15px rgba(0,0,0,0.2); width:280px; padding:12px;">
                 <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #eee; padding-bottom:6px; margin-bottom:8px;">
-                    <span style="font-weight:bold;"><button class="top-menu-btn" onclick="if(window.ModalController && window.ModalController.openDxfLayerToggleModal) window.ModalController.openDxfLayerToggleModal(); return false;">🎨 DXFレイヤ表示設定</button></span>
-                    <button onclick="document.getElementById('dxf-layer-panel').style.display='none'" style="background:none; border:none; font-size:14px; cursor:pointer; color:#666;">✖</button>
+                    <span style="font-weight:bold;"><button class="top-menu-btn" onclick="if(window.ModalController && window.ModalController.openDxfLayerToggleModal) window.ModalController.openDxfLayerToggleModal(); return false;">🎨 DXFレイヤ表示設宁E/button></span>
+                    <button onclick="document.getElementById('dxf-layer-panel').style.display='none'" style="background:none; border:none; font-size:14px; cursor:pointer; color:#666;">✁E/button>
                 </div>
                 <div id="layer-list-container" style="max-height:250px; overflow-y:auto; font-size:11px;"></div>
             </div>
 
             <canvas id="cad-canvas"></canvas>
             <div style="position: absolute; bottom: 10px; right: 10px; font-size: 11px; color: #aaa; background: rgba(0,0,0,0.7); padding: 5px; border-radius: 4px;">
-                <span style="color:#3498db; font-weight:bold;">● G: 重心</span> / <span style="color:#e74c3c; font-weight:bold;">● C: 剛心</span>
+                <span style="color:#3498db; font-weight:bold;">◁EG: 重忁E/span> / <span style="color:#e74c3c; font-weight:bold;">◁EC: 剛忁E/span>
             </div>
-            <!-- [v3.0.10] 基礎要素のプロパティポップアップ（フローティング）を復元 -->
+            <!-- [v3.0.10] 基礎要素のプロパティポップアチE�E�E�フローチE��ング�E�を復允E-->
             <div id="fd-property-popup" style="display:none; position:fixed; z-index:5000; background:#fff; border:1px solid #8e44ad; border-radius:8px; box-shadow:0 4px 20px rgba(0,0,0,0.3); width:480px; max-height:80vh; overflow-y:auto; font-family:sans-serif;">
                 <div id="fd-popup-header" style="background:#8e44ad; color:#fff; padding:8px 12px; display:flex; justify-content:space-between; align-items:center; border-radius:7px 7px 0 0; cursor: move; font-weight:bold; font-size:13px;">
                     <span id="fd-popup-title">要素プロパティ</span>
-                    <button onclick="if(window.PropertyController) window.PropertyController.hideFdPopup(); else this.closest('#fd-property-popup').style.display='none';" style="background:#c0392b; border:none; border-radius:4px; padding:4px 8px; color:#fff; cursor:pointer; font-size:12px; font-weight:bold; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">✖ 閉じる</button>
+                    <button onclick="if(window.PropertyController) window.PropertyController.hideFdPopup(); else this.closest('#fd-property-popup').style.display='none';" style="background:#c0392b; border:none; border-radius:4px; padding:4px 8px; color:#fff; cursor:pointer; font-size:12px; font-weight:bold; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">✁E閉じめE/button>
                 </div>
                 <div id="fd-popup-content" style="padding:12px;"></div>
             </div>
@@ -1238,17 +1225,16 @@
     <!-- 右パネル -->
     <div id="right-panel">
         <details style="margin-bottom: 15px; border-color:#e67e22;">
-            <summary style="background:#fdebd0; color:#d35400;">📂 1. DXFデータ読込 (必須)</summary>
+            <summary style="background:#fdebd0; color:#d35400;">📂 1. DXFチE�Eタ読込 (忁E��E</summary>
             <div style="padding:10px; background:#fff; font-size:11px;">
                 <div style="margin-bottom:10px; padding:8px; background:#fff3cd; border:1px solid #ffeeba; border-radius:4px; line-height:1.5;">
-                    <b style="color:#d35400;">【DXF読込 ＆ レイヤー表示ルール】</b><br>
-                    ・読込ボタン押下後、ダイアログにて<b>通り芯レイヤー、1階柱レイヤー、2階柱レイヤー、1階屋根レイヤー、2階屋根レイヤー、1階背景レイヤー、2階背景レイヤー</b>を選択・割り当てて読み込んでください。<br>
-                    ・画面上に表示する背景レイヤーは、中央パネル上部の<b>「🗂 レイヤ設定」</b>ボタンを押し、チェックが入っているレイヤーが表示されます。
-                </div>
+                    <b style="color:#d35400;">【DXF読込 �E�Eレイヤー表示ルール、E/b><br>
+                    ・読込ボタン押下後、ダイアログにて<b>通り芯レイヤー、E階柱レイヤー、E階柱レイヤー、E階屋根レイヤー、E階屋根レイヤー、E階背景レイヤー、E階背景レイヤー</b>を選択�E割り当てて読み込んでください、Ebr>
+                    ・画面上に表示する背景レイヤーは、中央パネル上部の<b>「🗁Eレイヤ設定、E/b>ボタンを押し、チェチE��が�EってぁE��レイヤーが表示されます、E                </div>
 
-                <b style="color:#0056b3;">① 平面図 DXF読込 (マスト)</b>
+                <b style="color:#0056b3;">① 平面図 DXF読込 (マスチE</b>
                 <input type="file" id="dxf-upload" accept=".dxf" multiple style="display: none;">
-                <label for="dxf-upload" class="action-btn" style="width:100%; box-sizing:border-box; padding:8px; font-size:12px; margin-top:6px;">📂 DXFファイルを選択して読込 (単一/複数対応)</label>
+                <label for="dxf-upload" class="action-btn" style="width:100%; box-sizing:border-box; padding:8px; font-size:12px; margin-top:6px;">📂 DXFファイルを選択して読込 (単一/褁E��対忁E</label>
 
                 <input type="hidden" id="scale-sub" value="100">
                 <input type="hidden" id="scale-plan" value="100">
@@ -1256,81 +1242,81 @@
             </div>
         </details>
 
-        <!-- 表示設定 (Layer Control) -->
+        <!-- 表示設宁E(Layer Control) -->
         <details open class="layer-control" id="element-visibility-panel" style="margin-bottom:15px; border:1px solid #bdc3c7; border-radius:4px;">
-            <summary style="background:#f1c40f; color:#333; padding:5px 8px; font-weight:bold; cursor:pointer;">👁 表示設定 (表示/非表示の切替)</summary>
+            <summary style="background:#f1c40f; color:#333; padding:5px 8px; font-weight:bold; cursor:pointer;">👁 表示設宁E(表示/非表示の刁E��)</summary>
             <div style="padding:10px; font-size:11px; background:#fff; display:flex; flex-direction:column; gap:8px;">
                 <div>
-                    <div style="font-weight:bold; color:#2980b9; margin-bottom:3px; border-bottom:1px dashed #ccc;">共通</div>
+                    <div style="font-weight:bold; color:#2980b9; margin-bottom:3px; border-bottom:1px dashed #ccc;">共送E/div>
                     <div style="display:flex; gap:12px; flex-wrap:wrap;">
-                        <label style="display:inline-flex; align-items:center; gap:3px; cursor:pointer; width:auto; font-size:11px; color:#333; margin:0;"><input type="checkbox" id="v-layer-grids" checked style="width:auto; margin:0;"> 通り芯・グリッド</label>
-                        <label style="display:inline-flex; align-items:center; gap:3px; cursor:pointer; width:auto; font-size:11px; color:#333; margin:0;"><input type="checkbox" id="v-layer-roofGrids" checked style="width:auto; margin:0;"> 屋根グリッド</label>
+                        <label style="display:inline-flex; align-items:center; gap:3px; cursor:pointer; width:auto; font-size:11px; color:#333; margin:0;"><input type="checkbox" id="v-layer-grids" checked style="width:auto; margin:0;"> 通り芯・グリチE��</label>
+                        <label style="display:inline-flex; align-items:center; gap:3px; cursor:pointer; width:auto; font-size:11px; color:#333; margin:0;"><input type="checkbox" id="v-layer-roofGrids" checked style="width:auto; margin:0;"> 屋根グリチE��</label>
                     </div>
                 </div>
                 <div>
-                    <div style="font-weight:bold; color:#27ae60; margin-bottom:3px; border-bottom:1px dashed #ccc;">作図モード用 (柱・壁量入力)</div>
+                    <div style="font-weight:bold; color:#27ae60; margin-bottom:3px; border-bottom:1px dashed #ccc;">作図モード用 (柱・壁E��入劁E</div>
                     <div style="display:grid; grid-template-columns: 1fr 1fr; gap:3px;">
                         <label style="display:inline-flex; align-items:center; gap:3px; cursor:pointer; width:auto; font-size:11px; color:#333; margin:0;"><input type="checkbox" id="v-layer-pillars" checked style="width:auto; margin:0;"> 柱</label>
-                        <label style="display:inline-flex; align-items:center; gap:3px; cursor:pointer; width:auto; font-size:11px; color:#333; margin:0;"><input type="checkbox" id="v-layer-pillarNValues" checked style="width:auto; margin:0;"> N値・金物名</label>
-                        <label style="display:inline-flex; align-items:center; gap:3px; cursor:pointer; width:auto; font-size:11px; color:#333; margin:0;"><input type="checkbox" id="vis-wall" checked style="width:auto; margin:0;"> 耐力壁</label>
+                        <label style="display:inline-flex; align-items:center; gap:3px; cursor:pointer; width:auto; font-size:11px; color:#333; margin:0;"><input type="checkbox" id="v-layer-pillarNValues" checked style="width:auto; margin:0;"> N値・金物吁E/label>
+                        <label style="display:inline-flex; align-items:center; gap:3px; cursor:pointer; width:auto; font-size:11px; color:#333; margin:0;"><input type="checkbox" id="vis-wall" checked style="width:auto; margin:0;"> 耐力壁E/label>
                         <label style="display:inline-flex; align-items:center; gap:3px; cursor:pointer; width:auto; font-size:11px; color:#333; margin:0;"><input type="checkbox" id="v-layer-windows" checked style="width:auto; margin:0;"> 開口部</label>
-                        <label style="display:inline-flex; align-items:center; gap:3px; cursor:pointer; width:auto; font-size:11px; color:#333; margin:0;"><input type="checkbox" id="vis-diaph" checked style="width:auto; margin:0;"> 面積（エリア）</label>
-                        <label style="display:inline-flex; align-items:center; gap:3px; cursor:pointer; width:auto; font-size:11px; color:#333; margin:0;"><input type="checkbox" id="v-layer-div4-sub" checked style="width:auto; margin:0;"> 4分割枠</label>
+                        <label style="display:inline-flex; align-items:center; gap:3px; cursor:pointer; width:auto; font-size:11px; color:#333; margin:0;"><input type="checkbox" id="vis-diaph" checked style="width:auto; margin:0;"> 面積（エリア�E�E/label>
+                        <label style="display:inline-flex; align-items:center; gap:3px; cursor:pointer; width:auto; font-size:11px; color:#333; margin:0;"><input type="checkbox" id="v-layer-div4-sub" checked style="width:auto; margin:0;"> 4刁E��枠</label>
                     </div>
                 </div>
                 <div>
                     <div style="font-weight:bold; color:#d35400; margin-bottom:3px; border-bottom:1px dashed #ccc;">屋根・見附面積作図モード用</div>
                     <div style="display:grid; grid-template-columns: 1fr 1fr; gap:3px;">
                         <label style="display:inline-flex; align-items:center; gap:3px; cursor:pointer; width:auto; font-size:11px; color:#333; margin:0;"><input type="checkbox" id="v-layer-roofs" checked style="width:auto; margin:0;"> 🏠 屋根</label>
-                        <label style="display:inline-flex; align-items:center; gap:3px; cursor:pointer; width:auto; font-size:11px; color:#333; margin:0;"><input type="checkbox" id="v-layer-f_ext_walls" checked style="width:auto; margin:0;"> ✏️ 外壁線</label>
+                        <label style="display:inline-flex; align-items:center; gap:3px; cursor:pointer; width:auto; font-size:11px; color:#333; margin:0;"><input type="checkbox" id="v-layer-f_ext_walls" checked style="width:auto; margin:0;"> ✏︁E外壁緁E/label>
                     </div>
                 </div>
                 <div>
                     <div style="font-weight:bold; color:#8e44ad; margin-bottom:3px; border-bottom:1px dashed #ccc;">基礎モード用</div>
                     <div style="display:grid; grid-template-columns: 1fr 1fr; gap:3px;">
-                        <label style="display:inline-flex; align-items:center; gap:3px; cursor:pointer; width:auto; font-size:11px; color:#333; margin:0;"><input type="checkbox" id="v-layer-f_slabs" checked style="width:auto; margin:0;"> スラブ</label>
-                        <label style="display:inline-flex; align-items:center; gap:3px; cursor:pointer; width:auto; font-size:11px; color:#333; margin:0;"><input type="checkbox" id="v-layer-f_beams" checked style="width:auto; margin:0;"> 基礎梁</label>
+                        <label style="display:inline-flex; align-items:center; gap:3px; cursor:pointer; width:auto; font-size:11px; color:#333; margin:0;"><input type="checkbox" id="v-layer-f_slabs" checked style="width:auto; margin:0;"> スラチE/label>
+                        <label style="display:inline-flex; align-items:center; gap:3px; cursor:pointer; width:auto; font-size:11px; color:#333; margin:0;"><input type="checkbox" id="v-layer-f_beams" checked style="width:auto; margin:0;"> 基礎梁E/label>
                         <label style="display:inline-flex; align-items:center; gap:3px; cursor:pointer; width:auto; font-size:11px; color:#333; margin:0;"><input type="checkbox" id="v-layer-f_manholes" checked style="width:auto; margin:0;"> 人通口</label>
                     </div>
                 </div>
             </div>
         </details>
 
-        <!-- 操作モード -->
-        <h2>🛠️ 操作モード</h2>
+        <!-- 操作モーチE-->
+        <h2>🛠�E�E操作モーチE/h2>
         <div class="mode-selector">
             <label style="background: #fff8e1; display: block; padding: 5px; border-radius: 4px; margin-bottom: 5px; border: 1px solid #ffe082;">
-                <input type="radio" name="mode" value="select"> 🔍 <b>選択・プロパティ編集</b>
+                <input type="radio" name="mode" value="select"> 🔍 <b>選択�Eプロパティ編雁E/b>
             </label>
             
             <div style="display:flex; align-items:center; gap:10px; margin-bottom:5px;">
-                <label style="margin:0;"><input type="radio" name="mode" value="draw-area"> 📐 1. 面積の作図</label>
-                <button class="btn-open-area-settings" onclick="document.getElementById('modal-area-settings').style.display='flex';" style="background:#0056b3; color:#fff; border:none; padding:2px 6px; border-radius:3px; font-size:10px; cursor:pointer;">⚙️ 仕様設定</button>
+                <label style="margin:0;"><input type="radio" name="mode" value="draw-area"> 📐 1. 面積�E作図</label>
+                <button class="btn-open-area-settings" onclick="document.getElementById('modal-area-settings').style.display='flex';" style="background:#0056b3; color:#fff; border:none; padding:2px 6px; border-radius:3px; font-size:10px; cursor:pointer;">⚙︁E仕様設宁E/button>
             </div>
             
-            <label><input type="radio" name="mode" value="window"> 🪟 2. 開口部の配置</label><br>
+            <label><input type="radio" name="mode" value="window"> 🪁E2. 開口部の配置</label><br>
             
             <div style="display:flex; align-items:center; gap:10px; margin-bottom:5px;">
-                <label style="margin:0;"><input type="radio" name="mode" value="wall" checked> 🟩 3. 壁の配置</label>
-                <button class="btn-open-wall-settings" onclick="if(window.UIView && typeof window.UIView.openWallSettingsModal === 'function') window.UIView.openWallSettingsModal(); else { document.getElementById('modal-wall-settings').style.display='flex'; }" style="background:#27ae60; color:#fff; border:none; padding:2px 6px; border-radius:3px; font-size:10px; cursor:pointer;">⚙️ 仕様変更</button>
+                <label style="margin:0;"><input type="radio" name="mode" value="wall" checked> 🟩 3. 壁�E配置</label>
+                <button class="btn-open-wall-settings" onclick="if(window.UIView && typeof window.UIView.openWallSettingsModal === 'function') window.UIView.openWallSettingsModal(); else { document.getElementById('modal-wall-settings').style.display='flex'; }" style="background:#27ae60; color:#fff; border:none; padding:2px 6px; border-radius:3px; font-size:10px; cursor:pointer;">⚙︁E仕様変更</button>
             </div>
 
-            <label><input type="radio" name="mode" value="delete-unified"> ❌ 5. 削除(柱/壁/窓/面積)</label>
+            <label><input type="radio" name="mode" value="delete-unified"> ❁E5. 削除(柱/壁E突E面穁E</label>
             <hr style="border:0; border-top:1px dashed #ccc; margin:5px 0;">
-            <label><input type="radio" name="mode" value="add-grid"> 📏 グリッド追加(オフセット)</label><br>
-            <label><input type="radio" name="mode" value="del-grid"> ❌ グリッド削除</label><br>
-            <label><input type="radio" name="mode" value="edit-text"> 📝 通り芯文字の編集</label><br>
+            <label><input type="radio" name="mode" value="add-grid"> 📏 グリチE��追加(オフセチE��)</label><br>
+            <label><input type="radio" name="mode" value="del-grid"> ❁EグリチE��削除</label><br>
+            <label><input type="radio" name="mode" value="edit-text"> 📝 通り芯斁E���E編雁E/label><br>
             <label><input type="radio" name="mode" value="add-pillar"> 🔵 柱の追加</label>
             <hr style="border:0; border-top:1px dashed #ccc; margin:5px 0;">
-            <label><input type="radio" name="mode" value="n-value"> 🧲 <b>N値計算・金物図</b></label><br>
+            <label><input type="radio" name="mode" value="n-value"> 🧲 <b>N値計算�E金物図</b></label><br>
             
             <div style="margin-bottom:5px;">
-                <label style="display:block;"><input type="radio" name="mode" value="area"> 🔲 <b>柱負担面積図 (壁非表示)</b></label>
+                <label style="display:block;"><input type="radio" name="mode" value="area"> 🔲 <b>柱負拁E��積図 (壁E��表示)</b></label>
                 <div id="area-calc-sub-mode-inline" style="margin: 5px 0 0 20px; padding:5px; background:#e8f4f8; border-radius:4px; display:none;">
                     <select id="area-calc-sub-select" style="width:100%; font-size:11px; padding:2px;" onchange="AppController.refreshAll()">
-                        <option value="auto">左パネル(地震力判定)に連動</option>
-                        <option value="kijun">見下げ面積 (基準法)</option>
-                        <option value="seinou">見上げ面積 (性能表示)</option>
+                        <option value="auto">左パネル(地霁E��判宁Eに連勁E/option>
+                        <option value="kijun">見下げ面穁E(基準況E</option>
+                        <option value="seinou">見上げ面穁E(性能表示)</option>
                     </select>
                 </div>
             </div>
@@ -1339,27 +1325,26 @@
 
         <div id="area-tools">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
-                <h2 style="margin:0;">📐 面積の作図</h2>
-                <button class="btn-open-area-settings" onclick="document.getElementById('modal-area-settings').style.display='flex';" style="background:#0056b3; color:#fff; border:none; padding:4px 8px; border-radius:4px; font-size:11px; cursor:pointer;">⚙️ 設定</button>
+                <h2 style="margin:0;">📐 面積�E作図</h2>
+                <button class="btn-open-area-settings" onclick="document.getElementById('modal-area-settings').style.display='flex';" style="background:#0056b3; color:#fff; border:none; padding:4px 8px; border-radius:4px; font-size:11px; cursor:pointer;">⚙︁E設宁E/button>
             </div>
             <div id="area-type-display" style="font-size:12px; color:#333; background:#fff; border:1px solid #ddd; padding:8px; border-radius:4px; margin-bottom:5px; font-weight:bold; text-align:center;">
-                作図中: <span id="current-area-type-label">床面積 (通常)</span>
+                作図中: <span id="current-area-type-label">床面穁E(通常)</span>
             </div>
             <div id="area-calc-sub-mode-display" style="font-size:10px; color:#0056b3; text-align:center; margin-bottom:10px;">
-                負担面積: <span id="current-area-calc-mode-label">左パネル連動</span>
+                負拁E��穁E <span id="current-area-calc-mode-label">左パネル連勁E/span>
             </div>
         </div>
 
         <div id="wall-tools">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
-                <h2 style="margin:0;">🧱 壁の仕様</h2>
-                <button class="btn-open-wall-settings" onclick="if(window.UIView && typeof window.UIView.openWallSettingsModal === 'function') window.UIView.openWallSettingsModal(); else { document.getElementById('modal-wall-settings').style.display='flex'; }" style="background:#27ae60; color:#fff; border:none; padding:4px 8px; border-radius:4px; font-size:11px; cursor:pointer;">⚙️ 変更</button>
+                <h2 style="margin:0;">🧱 壁�E仕槁E/h2>
+                <button class="btn-open-wall-settings" onclick="if(window.UIView && typeof window.UIView.openWallSettingsModal === 'function') window.UIView.openWallSettingsModal(); else { document.getElementById('modal-wall-settings').style.display='flex'; }" style="background:#27ae60; color:#fff; border:none; padding:4px 8px; border-radius:4px; font-size:11px; cursor:pointer;">⚙︁E変更</button>
             </div>
             <div style="background:#fff; border:1px solid #ddd; padding:8px; border-radius:4px; margin-bottom:10px;">
-                <div style="font-size:12px; font-weight:bold; color:#27ae60; text-align:center; margin-bottom:4px;">合計 <span id="total-val">0.0</span> 倍</div>
+                <div style="font-size:12px; font-weight:bold; color:#27ae60; text-align:center; margin-bottom:4px;">合訁E<span id="total-val">0.0</span> 倁E/div>
                 <div style="font-size:10px; color:#333; line-height:1.4;" id="wall-spec-summary">
-                    面材1: なし / 面材2: なし<br>筋交: なし
-                </div>
+                    面杁E: なぁE/ 面杁E: なぁEbr>筋交: なぁE                </div>
             </div>
             <input type="hidden" id="wall-p1" value="opt0">
             <input type="hidden" id="wall-p2" value="opt0">
@@ -1367,44 +1352,43 @@
         </div>
 
         <details>
-            <summary style="font-size:12px; margin-top:10px;">⚙️ 任意 面材・金物仕様の登録</summary>
+            <summary style="font-size:12px; margin-top:10px;">⚙︁E任愁E面材�E金物仕様�E登録</summary>
             <div class="calc-box" style="background:#eef5f9; border-color:#bce8f1; margin-top:5px; padding:10px;">
-                <div style="font-size:11px; font-weight:bold; margin-bottom:5px; color:#0056b3;">■ 面材仕様</div>
+                <div style="font-size:11px; font-weight:bold; margin-bottom:5px; color:#0056b3;">■ 面材仕槁E/div>
                 <div id="custom-wall-container">
                     <div class="calc-row cust-wall-row" style="margin-bottom:5px;">
                         <input type="text" class="cust-w-n" placeholder="名称" style="width:130px; margin:0;">
                         <input type="number" class="cust-w-v" placeholder="倍率" step="0.1" style="margin:0;">
                     </div>
                 </div>
-                <button id="btn-add-cust-wall" class="btn-add-item">＋ 面材を追加</button>
+                <button id="btn-add-cust-wall" class="btn-add-item">�E�E面材を追加</button>
                 <hr style="border:0; border-top:1px dashed #ccc; margin:10px 0;">
-                <div style="font-size:11px; font-weight:bold; margin-bottom:5px; color:#0056b3;">■ 金物仕様</div>
+                <div style="font-size:11px; font-weight:bold; margin-bottom:5px; color:#0056b3;">■ 金物仕槁E/div>
                 <div id="custom-hw-container">
                     <div class="calc-row cust-hw-row" style="margin-bottom:5px;">
                         <input type="text" class="cust-h-n" placeholder="記号" style="width:130px; margin:0;">
                         <input type="number" class="cust-h-v" placeholder="耐力(kN)" step="0.1" style="margin:0;">
                     </div>
                 </div>
-                <button id="btn-add-cust-hw" class="btn-add-item">＋ 金物を追加</button>
+                <button id="btn-add-cust-hw" class="btn-add-item">�E�E金物を追加</button>
             </div>
         </details>
 
-        <button class="btn-table" style="background:#8e44ad; color:#fff; border-radius:6px; padding:12px; cursor:pointer; font-weight:bold; font-size:14px; margin-top:10px;" id="btn-export-dxf">📥 壁・金物 DXF出力 (CAD逆輸入)</button>
+        <button class="btn-table" style="background:#8e44ad; color:#fff; border-radius:6px; padding:12px; cursor:pointer; font-weight:bold; font-size:14px; margin-top:10px;" id="btn-export-dxf">📥 壁�E金物 DXF出劁E(CAD送E��入)</button>
 
         <div id="pillar-props" style="display:none; background:#fff3cd; padding:10px; border:1px solid #ffeeba; border-radius:4px; margin-top:10px;">
             <b style="color:#d35400;">📍 柱のプロパティ: <span id="prop-id"></span></b>
             <div style="margin-top:5px; font-size:11px;">
                 <label style="display:flex; align-items:center; margin-bottom:5px;">
-                    <input type="checkbox" id="prop-corner" style="width:auto; margin-right:5px;"> 出隅(角)として強制計算
-                </label>
+                    <input type="checkbox" id="prop-corner" style="width:auto; margin-right:5px;"> 出隁E见Eとして強制計箁E                </label>
                 <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:5px;">
-                    <label style="margin:0;">L値の算出:</label>
+                    <label style="margin:0;">L値の算�E:</label>
                     <select id="prop-lcalc" style="margin:0; padding:2px; width:100px;">
-                        <option value="auto">簡易(告示)</option>
-                        <option value="detail">詳細(負担面積)</option>
+                        <option value="auto">簡昁E告示)</option>
+                        <option value="detail">詳細(負拁E��穁E</option>
                     </select>
                 </div>
-                <label>手動 金物指定:</label>
+                <label>手動 金物持E��E</label>
                 <select id="prop-mark" style="margin-bottom:0;"></select>
                 <div id="prop-hw-alert" style="color:red; font-weight:bold; margin-top:5px;"></div>
                 <div id="prop-detail" style="font-family:monospace; margin-top:5px; color:#555; line-height:1.4; white-space:pre-wrap; background:#fdfdfd; padding:5px; border:1px solid #ddd;"></div>
@@ -1412,15 +1396,15 @@
         </div>
     </div>
 
-    <!-- [v3.0.42] 統合プロパティエディタ・モーダルを復元 -->
+    <!-- [v3.0.42] 統合�EロパティエチE��タ・モーダルを復允E-->
     <div id="modal-property-editor" class="modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:10000; align-items:center; justify-content:center; backdrop-filter:blur(2px);">
         <div style="background:#fff; width:50vw; max-width:50vw; max-height:85vh; border-radius:10px; overflow:hidden; box-shadow:0 10px 30px rgba(0,0,0,0.3); display:flex; flex-direction:column;">
             <div id="modal-prop-header" style="background:#34495e; color:#fff; padding:12px 15px; display:flex; justify-content:space-between; align-items:center;">
-                <h3 style="margin:0; font-size:16px;">🔍 要素のプロパティ編集</h3>
-                <button class="btn-close-modal" onclick="document.getElementById('modal-property-editor').style.display='none'" style="background:#e74c3c; border:none; color:#fff; cursor:pointer; font-size:14px; padding:4px 8px; border-radius:4px; font-weight:bold;">✖</button>
+                <h3 style="margin:0; font-size:16px;">🔍 要素のプロパティ編雁E/h3>
+                <button class="btn-close-modal" onclick="document.getElementById('modal-property-editor').style.display='none'" style="background:#e74c3c; border:none; color:#fff; cursor:pointer; font-size:14px; padding:4px 8px; border-radius:4px; font-weight:bold;">✁E/button>
             </div>
             <div id="modal-prop-body" style="padding:20px; flex:1; overflow-y:auto; font-size:12px; color:#333;">
-                <!-- ここに動的にフォームが生成されます -->
+                <!-- ここに動的にフォームが生成されまぁE-->
             </div>
             <div style="padding:15px; background:#f8f9fa; border-top:1px solid #ddd; display:flex; justify-content:flex-end; gap:10px;">
                 <button onclick="document.getElementById('modal-property-editor').style.display='none'" style="padding:8px 20px; border-radius:5px; border:1px solid #ccc; background:#fff; cursor:pointer;">キャンセル</button>
@@ -1429,91 +1413,91 @@
         </div>
     </div>
 
-    <!-- [v3.0.42] 柱詳細計算根拠モーダルの復元 -->
+    <!-- [v3.0.42] 柱詳細計算根拠モーダルの復允E-->
     <div id="modal-pillar-detail" class="modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:10000; align-items:center; justify-content:center; backdrop-filter:blur(2px);">
         <div style="background:#fff; width:60vw; max-width:60vw; max-height:85vh; border-radius:10px; overflow:hidden; box-shadow:0 10px 30px rgba(0,0,0,0.3); display:flex; flex-direction:column;">
             <div style="background:#0056b3; color:#fff; padding:12px 15px; display:flex; justify-content:space-between; align-items:center;">
-                <h3 style="margin:0; font-size:16px;">📐 柱のＮ値計算根拠詳細</h3>
-                <button class="btn-close-modal" onclick="document.getElementById('modal-pillar-detail').style.display='none'" style="background:#e74c3c; border:none; color:#fff; cursor:pointer; font-size:14px; padding:4px 8px; border-radius:4px; font-weight:bold;">✖</button>
+                <h3 style="margin:0; font-size:16px;">📐 柱の�E�値計算根拠詳細</h3>
+                <button class="btn-close-modal" onclick="document.getElementById('modal-pillar-detail').style.display='none'" style="background:#e74c3c; border:none; color:#fff; cursor:pointer; font-size:14px; padding:4px 8px; border-radius:4px; font-weight:bold;">✁E/button>
             </div>
             <div style="padding:20px; flex:1; overflow-y:auto;">
                 <pre id="pillar-detail-text" style="font-family:monospace; font-size:11px; line-height:1.5; background:#f9f9f9; padding:10px; border:1px solid #ddd; border-radius:4px; margin:0; white-space:pre-wrap; word-wrap:break-word;"></pre>
             </div>
             <div style="padding:15px; background:#f8f9fa; border-top:1px solid #ddd; display:flex; justify-content:flex-end;">
-                <button onclick="document.getElementById('modal-pillar-detail').style.display='none'" style="padding:8px 20px; border-radius:5px; border:1px solid #ccc; background:#fff; cursor:pointer;">閉じる</button>
+                <button onclick="document.getElementById('modal-pillar-detail').style.display='none'" style="padding:8px 20px; border-radius:5px; border:1px solid #ccc; background:#fff; cursor:pointer;">閉じめE/button>
             </div>
         </div>
     </div>
 
     <!-- JavaScript モジュール群 -->
     <script src="assets/js/modules/wall_4split/Version.js?v=3.13.13"></script>
-    <script src="assets/js/modules/wall_4split/state/Specs.js?v=3.13.16"></script>
-    <script src="assets/js/modules/wall_4split/state/AppState.js?v=3.13.16"></script>
-    <script src="assets/js/modules/wall_4split/wall_4split_bridge.js?v=3.13.16"></script>
-    <script src="assets/js/modules/wall_4split/logic/ServiceContainer.js?v=3.13.16"></script>
-    <script src="assets/js/modules/wall_4split/logic/MathUtils.js?v=3.13.16"></script>
-    <script src="assets/js/modules/wall_4split/logic/Parsers.js?v=3.13.16"></script>
-    <script src="assets/js/modules/wall_4split/logic/WallEngine.js?v=3.13.16"></script>
-    <script src="assets/js/modules/wall_4split/logic/CadEngine.js?v=3.13.16"></script>
-    <script src="assets/js/modules/wall_4split/logic/GridEngine.js?v=3.13.16"></script>
-    <script src="assets/js/modules/wall_4split/logic/StructuralEngine.js?v=3.13.16"></script>
-    <script src="assets/js/modules/wall_4split/logic/DocumentEngine.js?v=3.13.16"></script>
-    <script src="assets/js/modules/wall_4split/logic/NValueEngine.js?v=3.13.16"></script>
-    <script src="assets/js/modules/wall_4split/logic/AreaEngine.js?v=3.13.16"></script>
-    <script src="assets/js/modules/wall_4split/logic/AxialEngine.js?v=3.13.16"></script>
-    <script src="assets/js/modules/wall_4split/logic/SlabBeamSynchronizer.js?v=3.13.16"></script>
-    <script src="assets/js/modules/wall_4split/logic/FoundationSlabAnalysisEngine.js?v=3.13.16"></script>
-    <script src="assets/js/modules/wall_4split/logic/FoundationBeamEngine.js?v=3.13.16"></script>
-    <script src="assets/js/modules/wall_4split/logic/FoundationEngine.js?v=3.13.16"></script>
-    <script src="assets/js/modules/wall_4split/logic/ReportEngine.js?v=3.13.16"></script>
-    <script src="assets/js/modules/wall_4split/logic/RoofEngine.js?v=3.13.16"></script>
-    <script src="assets/js/modules/wall_4split/logic/MitsukeEngine.js?v=3.13.16"></script>
-    <script src="assets/js/modules/wall_4split/controllers/PropertyController.js?v=3.13.16"></script>
-    <script src="assets/js/modules/wall_4split/controllers/PillarPropertyController.js?v=3.13.16"></script>
-    <script src="assets/js/modules/wall_4split/controllers/WallPropertyController.js?v=3.13.16"></script>
-    <script src="assets/js/modules/wall_4split/controllers/FoundationPropertyController.js?v=3.13.16"></script>
-    <script src="assets/js/modules/wall_4split/controllers/RoofPropertyController.js?v=3.13.16"></script>
-    <script src="assets/js/modules/wall_4split/controllers/FoundationPropertyHandler.js?v=3.13.16"></script>
-    <script src="assets/js/modules/wall_4split/controllers/PillarPropertyHandler.js?v=3.13.16"></script>
-    <script src="assets/js/modules/wall_4split/controllers/WallPropertyHandler.js?v=3.13.16"></script>
-    <script src="assets/js/modules/wall_4split/controllers/InputController.js?v=3.13.16"></script>
-    <script src="assets/js/modules/wall_4split/controllers/ModalController.js?v=3.13.16"></script>
-    <script src="assets/js/modules/wall_4split/controllers/DxfLayerMapperController.js?v=3.13.16"></script>
-    <script src="assets/js/modules/wall_4split/controllers/AppController.js?v=3.13.16"></script>
-    <script src="assets/js/modules/wall_4split/controllers/FoundationInputController.js?v=3.13.16"></script>
-    <script src="assets/js/modules/wall_4split/controllers/RoofInputController.js?v=3.13.16"></script>
-    <script src="assets/js/modules/wall_4split/view/UIView.js?v=3.13.16"></script>
-    <script src="assets/js/modules/wall_4split/view/GridRenderer.js?v=3.13.16"></script>
-    <script src="assets/js/modules/wall_4split/view/WallCadRenderer.js?v=3.13.16"></script>
-    <script src="assets/js/modules/wall_4split/view/PillarCadRenderer.js?v=3.13.16"></script>
-    <script src="assets/js/modules/wall_4split/view/MainRenderer.js?v=3.13.16"></script>
-    <script src="assets/js/modules/wall_4split/view/FoundationSvgGenerator.js?v=3.13.16"></script>
-    <script src="assets/js/modules/wall_4split/view/FoundationRenderer.js?v=3.13.16"></script>
-    <script src="assets/js/modules/wall_4split/view/DocumentRenderer.js?v=3.13.16"></script>
-    <script src="assets/js/modules/wall_4split/view/ElevationRenderer.js?v=3.13.16"></script>
-    <script src="assets/js/modules/wall_4split/view/RoofRenderer.js?v=3.13.16"></script>
-    <script src="assets/js/modules/wall_4split/view/ReportHeaderView.js?v=3.13.16"></script>
-    <script src="assets/js/modules/wall_4split/view/ReportAreaView.js?v=3.13.16"></script>
-    <script src="assets/js/modules/wall_4split/view/ReportWallTableView.js?v=3.13.16"></script>
-    <script src="assets/js/modules/wall_4split/view/ReportWallView.js?v=3.13.16"></script>
-    <script src="assets/js/modules/wall_4split/view/ReportNValueView.js?v=3.13.16"></script>
-    <script src="assets/js/modules/wall_4split/view/ReportMitsukeView.js?v=3.13.16"></script>
-    <script src="assets/js/modules/wall_4split/view/FoundationBeamReportView.js?v=3.13.16"></script>
-    <script src="assets/js/modules/wall_4split/view/PreviewModalView.js?v=3.13.16"></script>
-    <script src="assets/js/modules/wall_4split/view/PropertyModalView.js?v=3.13.16"></script>
-    <script src="assets/js/modules/wall_4split/view/ThreeDPreviewController.js?v=3.13.16"></script>
-    <script src="assets/js/modules/wall_4split/wall_4split_export.js?v=3.13.16"></script>
-    <script src="assets/js/modules/wall_4split/wall_4split_cad.js?v=3.13.16"></script>
-    <script src="assets/js/modules/wall_4split/wall_4split_render.js?v=3.13.16"></script>
-    <script src="assets/js/modules/wall_4split/view/PdfReportView.js?v=3.13.16"></script>
-    <script src="assets/js/modules/wall_4split/wall_4split_pdf.js?v=3.13.16"></script>
-    <script src="assets/js/modules/wall_4split/wall_4split_calc.js?v=3.13.16"></script>
-    <script src="assets/js/modules/wall_4split/wall_4split_foundation_engine.js?v=3.13.16"></script>
-    <script src="assets/js/modules/wall_4split/wall_4split_report.js?v=3.13.16"></script>
-    <script src="assets/js/modules/wall_4split/wall_4split_input.js?v=3.13.16"></script>
-    <script src="assets/js/modules/wall_4split/wall_4split_main.js?v=3.13.16"></script>
+    <script src="assets/js/modules/wall_4split/state/Specs.js?v=3.13.17"></script>
+    <script src="assets/js/modules/wall_4split/state/AppState.js?v=3.13.17"></script>
+    <script src="assets/js/modules/wall_4split/wall_4split_bridge.js?v=3.13.17"></script>
+    <script src="assets/js/modules/wall_4split/logic/ServiceContainer.js?v=3.13.17"></script>
+    <script src="assets/js/modules/wall_4split/logic/MathUtils.js?v=3.13.17"></script>
+    <script src="assets/js/modules/wall_4split/logic/Parsers.js?v=3.13.17"></script>
+    <script src="assets/js/modules/wall_4split/logic/WallEngine.js?v=3.13.17"></script>
+    <script src="assets/js/modules/wall_4split/logic/CadEngine.js?v=3.13.17"></script>
+    <script src="assets/js/modules/wall_4split/logic/GridEngine.js?v=3.13.17"></script>
+    <script src="assets/js/modules/wall_4split/logic/StructuralEngine.js?v=3.13.17"></script>
+    <script src="assets/js/modules/wall_4split/logic/DocumentEngine.js?v=3.13.17"></script>
+    <script src="assets/js/modules/wall_4split/logic/NValueEngine.js?v=3.13.17"></script>
+    <script src="assets/js/modules/wall_4split/logic/AreaEngine.js?v=3.13.17"></script>
+    <script src="assets/js/modules/wall_4split/logic/AxialEngine.js?v=3.13.17"></script>
+    <script src="assets/js/modules/wall_4split/logic/SlabBeamSynchronizer.js?v=3.13.17"></script>
+    <script src="assets/js/modules/wall_4split/logic/FoundationSlabAnalysisEngine.js?v=3.13.17"></script>
+    <script src="assets/js/modules/wall_4split/logic/FoundationBeamEngine.js?v=3.13.17"></script>
+    <script src="assets/js/modules/wall_4split/logic/FoundationEngine.js?v=3.13.17"></script>
+    <script src="assets/js/modules/wall_4split/logic/ReportEngine.js?v=3.13.17"></script>
+    <script src="assets/js/modules/wall_4split/logic/RoofEngine.js?v=3.13.17"></script>
+    <script src="assets/js/modules/wall_4split/logic/MitsukeEngine.js?v=3.13.17"></script>
+    <script src="assets/js/modules/wall_4split/controllers/PropertyController.js?v=3.13.17"></script>
+    <script src="assets/js/modules/wall_4split/controllers/PillarPropertyController.js?v=3.13.17"></script>
+    <script src="assets/js/modules/wall_4split/controllers/WallPropertyController.js?v=3.13.17"></script>
+    <script src="assets/js/modules/wall_4split/controllers/FoundationPropertyController.js?v=3.13.17"></script>
+    <script src="assets/js/modules/wall_4split/controllers/RoofPropertyController.js?v=3.13.17"></script>
+    <script src="assets/js/modules/wall_4split/controllers/FoundationPropertyHandler.js?v=3.13.17"></script>
+    <script src="assets/js/modules/wall_4split/controllers/PillarPropertyHandler.js?v=3.13.17"></script>
+    <script src="assets/js/modules/wall_4split/controllers/WallPropertyHandler.js?v=3.13.17"></script>
+    <script src="assets/js/modules/wall_4split/controllers/InputController.js?v=3.13.17"></script>
+    <script src="assets/js/modules/wall_4split/controllers/ModalController.js?v=3.13.17"></script>
+    <script src="assets/js/modules/wall_4split/controllers/DxfLayerMapperController.js?v=3.13.17"></script>
+    <script src="assets/js/modules/wall_4split/controllers/AppController.js?v=3.13.17"></script>
+    <script src="assets/js/modules/wall_4split/controllers/FoundationInputController.js?v=3.13.17"></script>
+    <script src="assets/js/modules/wall_4split/controllers/RoofInputController.js?v=3.13.17"></script>
+    <script src="assets/js/modules/wall_4split/view/UIView.js?v=3.13.17"></script>
+    <script src="assets/js/modules/wall_4split/view/GridRenderer.js?v=3.13.17"></script>
+    <script src="assets/js/modules/wall_4split/view/WallCadRenderer.js?v=3.13.17"></script>
+    <script src="assets/js/modules/wall_4split/view/PillarCadRenderer.js?v=3.13.17"></script>
+    <script src="assets/js/modules/wall_4split/view/MainRenderer.js?v=3.13.17"></script>
+    <script src="assets/js/modules/wall_4split/view/FoundationSvgGenerator.js?v=3.13.17"></script>
+    <script src="assets/js/modules/wall_4split/view/FoundationRenderer.js?v=3.13.17"></script>
+    <script src="assets/js/modules/wall_4split/view/DocumentRenderer.js?v=3.13.17"></script>
+    <script src="assets/js/modules/wall_4split/view/ElevationRenderer.js?v=3.13.17"></script>
+    <script src="assets/js/modules/wall_4split/view/RoofRenderer.js?v=3.13.17"></script>
+    <script src="assets/js/modules/wall_4split/view/ReportHeaderView.js?v=3.13.17"></script>
+    <script src="assets/js/modules/wall_4split/view/ReportAreaView.js?v=3.13.17"></script>
+    <script src="assets/js/modules/wall_4split/view/ReportWallTableView.js?v=3.13.17"></script>
+    <script src="assets/js/modules/wall_4split/view/ReportWallView.js?v=3.13.17"></script>
+    <script src="assets/js/modules/wall_4split/view/ReportNValueView.js?v=3.13.17"></script>
+    <script src="assets/js/modules/wall_4split/view/ReportMitsukeView.js?v=3.13.17"></script>
+    <script src="assets/js/modules/wall_4split/view/FoundationBeamReportView.js?v=3.13.17"></script>
+    <script src="assets/js/modules/wall_4split/view/PreviewModalView.js?v=3.13.17"></script>
+    <script src="assets/js/modules/wall_4split/view/PropertyModalView.js?v=3.13.17"></script>
+    <script src="assets/js/modules/wall_4split/view/ThreeDPreviewController.js?v=3.13.17"></script>
+    <script src="assets/js/modules/wall_4split/wall_4split_export.js?v=3.13.17"></script>
+    <script src="assets/js/modules/wall_4split/wall_4split_cad.js?v=3.13.17"></script>
+    <script src="assets/js/modules/wall_4split/wall_4split_render.js?v=3.13.17"></script>
+    <script src="assets/js/modules/wall_4split/view/PdfReportView.js?v=3.13.17"></script>
+    <script src="assets/js/modules/wall_4split/wall_4split_pdf.js?v=3.13.17"></script>
+    <script src="assets/js/modules/wall_4split/wall_4split_calc.js?v=3.13.17"></script>
+    <script src="assets/js/modules/wall_4split/wall_4split_foundation_engine.js?v=3.13.17"></script>
+    <script src="assets/js/modules/wall_4split/wall_4split_report.js?v=3.13.17"></script>
+    <script src="assets/js/modules/wall_4split/wall_4split_input.js?v=3.13.17"></script>
+    <script src="assets/js/modules/wall_4split/wall_4split_main.js?v=3.13.17"></script>
 
-    <!-- マジックリンク認証制御JS -->
+    <!-- マジチE��リンク認証制御JS -->
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             checkAuth();
@@ -1554,15 +1538,15 @@
                     emailInput.value = '';
                 } else {
                     msgBox.className = 'auth-msg error';
-                    msgBox.textContent = data.message || '送信に失敗しました。';
+                    msgBox.textContent = data.message || '送信に失敗しました、E;
                 }
             } catch (err) {
                 msgBox.style.display = 'block';
                 msgBox.className = 'auth-msg error';
-                msgBox.textContent = '通信エラーが発生しました。';
+                msgBox.textContent = '通信エラーが発生しました、E;
             } finally {
                 submitBtn.disabled = false;
-                submitBtn.textContent = '✉️ ログインリンクを送信';
+                submitBtn.textContent = '✉︁Eログインリンクを送信';
             }
         }
     </script>
@@ -1572,3 +1556,4 @@
 </body>
 
 </html>
+

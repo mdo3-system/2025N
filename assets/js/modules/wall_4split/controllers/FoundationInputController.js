@@ -424,16 +424,36 @@ window.updateFdElementList = function(targetType = null) {
         if (beams.length === 0) {
             html = '<div style="padding:5px; color:#7f8c8d;">※ 基礎梁が配置されていません</div>';
         } else {
-            // 図面上の配置位置に従い自動ソート: 1: Yが大きい(上)順, 2: Xが小さい(左)順
+            // 基礎梁の厳密ソート: 1: X方向梁（水平梁）を上から順(Y降順), 2: その後にY方向梁（鉛直梁）を左から順(X昇順)
             const sortedBeams = [...beams].sort((a, b) => {
-                const aMaxY = Math.max(a.p1.y, a.p2.y);
-                const bMaxY = Math.max(b.p1.y, b.p2.y);
-                if (Math.abs(bMaxY - aMaxY) > 10) {
-                    return bMaxY - aMaxY; // 図面上の上(Y大)優先
+                const dxA = Math.abs(a.p2.x - a.p1.x), dyA = Math.abs(a.p2.y - a.p1.y);
+                const dxB = Math.abs(b.p2.x - b.p1.x), dyB = Math.abs(b.p2.y - b.p1.y);
+                const isHA = dxA >= dyA; // 水平（X方向梁）
+                const isHB = dxB >= dyB; // 水平（X方向梁）
+
+                // 1. X方向梁（水平）を先に、Y方向梁（鉛直）を後に
+                if (isHA && !isHB) return -1;
+                if (!isHA && isHB) return 1;
+
+                if (isHA && isHB) {
+                    // X方向梁同士：上から順（Y座標降順：北から南へ）
+                    const yA = (a.p1.y + a.p2.y) / 2;
+                    const yB = (b.p1.y + b.p2.y) / 2;
+                    if (Math.abs(yA - yB) > 5) return yB - yA;
+                    // 同一Yなら左から順（X昇順）
+                    const xA = Math.min(a.p1.x, a.p2.x);
+                    const xB = Math.min(b.p1.x, b.p2.x);
+                    return xA - xB;
+                } else {
+                    // Y方向梁同士：左から順（X座標昇順：西から東へ）
+                    const xA = (a.p1.x + a.p2.x) / 2;
+                    const xB = (b.p1.x + b.p2.x) / 2;
+                    if (Math.abs(xA - xB) > 5) return xA - xB;
+                    // 同一Xなら上から順（Y降順）
+                    const yA = Math.max(a.p1.y, a.p2.y);
+                    const yB = Math.max(b.p1.y, b.p2.y);
+                    return yB - yA;
                 }
-                const aMinX = Math.min(a.p1.x, a.p2.x);
-                const bMinX = Math.min(b.p1.x, b.p2.x);
-                return aMinX - bMinX; // 図面上の左(X小)優先
             });
 
             html = `<div style="font-weight:bold; margin-bottom:4px; color:#2980b9;">🧱 登録済み基礎梁 一覧 (${sortedBeams.length}件)</div>`;

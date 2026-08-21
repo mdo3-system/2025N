@@ -330,131 +330,151 @@ window.FoundationEngine = {
                     }
                 }
                 // 【確定仕様】当該基礎梁の通り芯上に耐力壁が存在しない場合は厳密に val = 0（直交方向の軸力は一切混入させない）
-                return (isLeft ? val : -val) * (bp.modelType === 'pillar_supported' ? 1.0 : (bp.B_val || 0.5)) / 1000;
+                const B_val = bp.B_val !== undefined ? parseFloat(bp.B_val) : 0.5;
+                return (isLeft ? val : -val) * B_val / 1000;
             });
             const modelType = bp.modelType || 'both_ends';
-            let R = [];
-            let R_l = 0, R_r = 0;
 
             if (modelType === 'simple_beam') {
-                // 単純梁モデル: 各スパン独立で端部モーメント・せん断力を算定
-                const n = pillars.length;
-                R = pillars.map(() => 0);
-                R_l = 0; R_r = 0;
+                return this.calculateSimpleBeamModel(Td, pillars);
             } else if (modelType === 'pillar_supported') {
-                const n = pillars.length;
-                const x = pillars.map(p => p.x);
-                const Sx = x.reduce((sum, xi) => sum + xi, 0);
-                const Sxx = x.reduce((sum, xi) => sum + xi * xi, 0);
-                const ST = Td.reduce((sum, ti) => sum + ti, 0);
-                const STx = Td.reduce((sum, ti, idx) => sum + ti * x[idx], 0);
-
-                const det = n * Sxx - Sx * Sx;
-                let A = 0, B = 0;
-                if (Math.abs(det) > 1e-9) {
-                    A = (-ST * Sxx + STx * Sx) / det;
-                    B = (-n * STx + Sx * ST) / det;
-                } else {
-                    A = -ST / Math.max(1, n);
-                    B = 0;
-                }
-
-                R = x.map(xi => A + B * xi);
-                R_l = R[0];
-                R_r = R[n - 1];
+                return this.calculatePillarSupportedContinuous(Td, pillars);
             } else {
-                const L = Math.max(0.001, pillars[pillars.length - 1].x - pillars[0].x);
-                let sumM = 0, sumT = 0;
-                Td.forEach((t, i) => { sumM += t * (pillars[i].x - pillars[0].x); sumT += t; });
-                R_r = -sumM / L;
-                R_l = -sumT - R_r;
-                R = Td.map((_, i) => {
-                    if (i === 0) return R_l;
-                    if (i === pillars.length - 1) return R_r;
-                    return 0;
+                return this.calculateBothEndsContinuous(Td, pillars);
+            }
+        };
+        return { leftward: calculateDir(true), rightward: calculateDir(false), axisName };
+    },
+
+    /**
+     * 【単一責任】両端支点連続梁モデルの地震時応力算定
+     */
+    calculateBothEndsContinuous: function(Td, pillars) {
+        const n = pillars.length;
+        const L = Math.max(0.001, pillars[n - 1].x - pillars[0].x);
+        let sumM = 0, sumT = 0;
+        Td.forEach((t, i) => { sumM += t * (pillars[i].x - pillars[0].x); sumT += t; });
+        const R_r = -sumM / L;
+        const R_l = -sumT - R_r;
+        const R = Td.map((_, i) => {
+            if (i === 0) return R_l;
+            if (i === n - 1) return R_r;
+            return 0;
+        });
+
+        const Qe = [], Mf = []; let currQ = 0;
+        Td.forEach((t, i) => {
+            currQ += t + R[i];
+            Qe.push(currQ);
+
+            const xi = pillars[i].x - pillars[0].x;
+            let m = 0;
+            for (let k = 0; k < i; k++) {
+                const xk = pillars[k].x - pillars[0].x;
+                m += (Td[k] + R[k]) * (xi - xk);
+            }
+            Mf.push(m);
+        });
+
+        const sumTd = Td.reduce((s, t) => s + t, 0);
+        const sumR  = R.reduce((s, r) => s + r, 0);
+        return { Td, Qe, Mf, R, R_left: R_l, R_right: R_r, supportIdx1: 0, supportIdx2: n - 1, sumTd, sumR, simpleBeamSpans: [] };
+    },
+
+    /**
+     * 【単一責任】柱直下支点連続梁モデルの地震時応力算定
+     */
+    calculatePillarSupportedContinuous: function(Td, pillars) {
+        const n = pillars.length;
+        const x = pillars.map(p => p.x);
+        const Sx = x.reduce((sum, xi) => sum + xi, 0);
+        const Sxx = x.reduce((sum, xi) => sum + xi * xi, 0);
+        const ST = Td.reduce((sum, ti) => sum + ti, 0);
+        const STx = Td.reduce((sum, ti, idx) => sum + ti * x[idx], 0);
+
+        const det = n * Sxx - Sx * Sx;
+        let A = 0, B = 0;
+        if (Math.abs(det) > 1e-9) {
+            A = (-ST * Sxx + STx * Sx) / det;
+            B = (-n * STx + Sx * ST) / det;
+        } else {
+            A = -ST / Math.max(1, n);
+            B = 0;
+        }
+
+        const R = x.map(xi => A + B * xi);
+        const R_l = R[0];
+        const R_r = R[n - 1];
+
+        const Qe = [], Mf = []; let currQ = 0;
+        Td.forEach((t, i) => {
+            currQ += t + R[i];
+            Qe.push(currQ);
+
+            const xi = pillars[i].x - pillars[0].x;
+            let m = 0;
+            for (let k = 0; k < i; k++) {
+                const xk = pillars[k].x - pillars[0].x;
+                m += (Td[k] + R[k]) * (xi - xk);
+            }
+            Mf.push(m);
+        });
+
+        const sumTd = Td.reduce((s, t) => s + t, 0);
+        const sumR  = R.reduce((s, r) => s + r, 0);
+        return { Td, Qe, Mf, R, R_left: R_l, R_right: R_r, supportIdx1: 0, supportIdx2: n - 1, sumTd, sumR, simpleBeamSpans: [] };
+    },
+
+    /**
+     * 【単一責任】単純梁モデルのスパン別地震時応力算定 (アーキトレンド完全一致)
+     */
+    calculateSimpleBeamModel: function(Td, pillars) {
+        const simpleBeamSpans = [];
+        const n = pillars.length;
+        const R = pillars.map(() => 0);
+        const Qe_nodes = pillars.map(() => 0);
+        const Mf_nodes = pillars.map(() => 0);
+
+        if (n >= 2) {
+            // 1. 各スパンの壁判定・M水算定 (アーキトレンド公式: M水 = (lTd - rTd)/2 * L)
+            for (let i = 0; i < n - 1; i++) {
+                const lTd_val = Td[i];
+                const rTd_val = Td[i + 1];
+                const L_span  = pillars[i + 1].x - pillars[i].x;
+                const isWall  = (Math.abs(lTd_val) > 1e-6 || Math.abs(rTd_val) > 1e-6);
+                const M_wf    = (lTd_val - rTd_val) / 2 * L_span;
+                simpleBeamSpans.push({
+                    idx_l: i, idx_r: i + 1,
+                    lTd: lTd_val, rTd: rTd_val,
+                    L: L_span, isWall, M_wf,
+                    Qe: 0, lM_wf: 0, rM_wf: 0
                 });
             }
 
-            const Qe = [], Mf = []; let currQ = 0;
-            Td.forEach((t, i) => {
-                currQ += t + R[i];
-                Qe.push(currQ);
+            // 2. 開口スパンの伝達モーメント・せん断力算定
+            for (let i = 0; i < simpleBeamSpans.length; i++) {
+                const sp = simpleBeamSpans[i];
+                if (sp.isWall) continue;
 
-                const xi = pillars[i].x - pillars[0].x;
-                let m = R_l * xi;
-                for (let k = 0; k < i; k++) {
-                    const xk = pillars[k].x - pillars[0].x;
-                    m += Td[k] * (xi - xk);
+                let leftWall = null;
+                for (let j = i - 1; j >= 0; j--) {
+                    if (simpleBeamSpans[j].isWall) { leftWall = simpleBeamSpans[j]; break; }
                 }
-                Mf.push(m);
-            });
-
-            // ΣTd, ΣR の集計（「計」行表示用）
-            const sumTd = Td.reduce((s, t) => s + t, 0);
-            const sumR  = R.reduce((s, r) => s + r, 0);
-
-            // --- 単純梁モデル専用：スパン別解析 ---
-            // 各スパンに対して lTd, rTd, M水, Qe, lM水f, rM水f を算定
-            // 壁スパン：いずれかの端に Td != 0 → lTd, rTd, M水 を表示
-            // 開口スパン：両端 Td ≈ 0 → Qe, lM水f, rM水f を表示
-            const simpleBeamSpans = [];
-            if (modelType === 'simple_beam' && pillars.length >= 2) {
-                // ①スパン別の基本データ構築
-                for (let i = 0; i < pillars.length - 1; i++) {
-                    const lTd_val = Td[i];
-                    const rTd_val = Td[i + 1];
-                    const L_span  = pillars[i + 1].x - pillars[i].x; // m
-                    const isWall  = (Math.abs(lTd_val) > 1e-6 || Math.abs(rTd_val) > 1e-6);
-                    // M水 = (|lTd| + |rTd|) × L / 2 （壁スパン確定公式）
-                    const M_wf    = (Math.abs(lTd_val) + Math.abs(rTd_val)) * L_span / 2;
-                    simpleBeamSpans.push({
-                        idx_l: i, idx_r: i + 1,
-                        lTd: lTd_val, rTd: rTd_val,
-                        L: L_span, isWall, M_wf,
-                        Qe: null, lM_wf: null, rM_wf: null
-                    });
+                let rightWall = null;
+                for (let j = i + 1; j < simpleBeamSpans.length; j++) {
+                    if (simpleBeamSpans[j].isWall) { rightWall = simpleBeamSpans[j]; break; }
                 }
 
-                // ②開口スパンの Qe・lM水f・rM水f を計算
-                // 開口スパンは左右に最も近い壁スパンの M水 から
-                // 梁端部モーメントを三点モーメント法（簡易）で按分する
-                // lM_wf = M水_left × L_right / (L_left + L_right)
-                // rM_wf = -M水_right × L_left / (L_left + L_right)
-                for (let i = 0; i < simpleBeamSpans.length; i++) {
-                    const sp = simpleBeamSpans[i];
-                    if (sp.isWall) continue;
+                const M_left  = leftWall ? leftWall.M_wf : 0;
+                const M_right = rightWall ? rightWall.M_wf : 0;
 
-                    // 左側の壁スパンを探す
-                    let leftWallIdx = -1;
-                    for (let j = i - 1; j >= 0; j--) {
-                        if (simpleBeamSpans[j].isWall) { leftWallIdx = j; break; }
-                    }
-                    // 右側の壁スパンを探す
-                    let rightWallIdx = -1;
-                    for (let j = i + 1; j < simpleBeamSpans.length; j++) {
-                        if (simpleBeamSpans[j].isWall) { rightWallIdx = j; break; }
-                    }
-
-                    const M_left  = leftWallIdx  >= 0 ? simpleBeamSpans[leftWallIdx].M_wf  : 0;
-                    const M_right = rightWallIdx >= 0 ? simpleBeamSpans[rightWallIdx].M_wf : 0;
-                    const L_left  = leftWallIdx  >= 0 ? simpleBeamSpans[leftWallIdx].L     : 1;
-                    const L_right = rightWallIdx >= 0 ? simpleBeamSpans[rightWallIdx].L    : 1;
-                    // 両端への伝達モーメントを按分（三点法簡易）
-                    const L_sum  = L_left + L_right;
-                    // 左壁スパンの rTd と右壁スパンの lTd の符号で方向を決定
-                    const sign_l = (leftWallIdx  >= 0 ? (simpleBeamSpans[leftWallIdx].rTd  >= 0 ? 1 : -1) : 1);
-                    const sign_r = (rightWallIdx >= 0 ? (simpleBeamSpans[rightWallIdx].lTd >= 0 ? 1 : -1) : 1);
-                    const lM = sign_l * M_left  * L_right / L_sum;
-                    const rM = -sign_r * M_right * L_left  / L_sum;
-                    sp.lM_wf = lM;
-                    sp.rM_wf = rM;
-                    sp.Qe    = sp.L > 1e-9 ? (lM - rM) / sp.L : 0;
-                }
+                sp.lM_wf = M_left / 2;
+                sp.rM_wf = -M_right / 2;
+                sp.Qe    = sp.L > 1e-9 ? (sp.lM_wf - sp.rM_wf) / sp.L : 0;
             }
+        }
 
-            return { Td, Qe, Mf, R, R_left: R_l, R_right: R_r, supportIdx1: 0, supportIdx2: pillars.length - 1, sumTd, sumR, simpleBeamSpans };
-        };
-        return { leftward: calculateDir(true), rightward: calculateDir(false), axisName };
+        return { Td, Qe: Qe_nodes, Mf: Mf_nodes, R, R_left: 0, R_right: 0, supportIdx1: 0, supportIdx2: n - 1, sumTd: 0, sumR: 0, simpleBeamSpans };
     },
 
     runFoundationBeamAnalysis: function(beams, slabs, state) {

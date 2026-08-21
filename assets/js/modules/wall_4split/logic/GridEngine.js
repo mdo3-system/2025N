@@ -182,7 +182,12 @@ window.GridEngine = {
             });
 
             combinedTexts.forEach(ct => {
-                const cleaned = ct.text.replace(/通り/g, '').trim();
+                let cleaned = ct.text.replace(/通り/g, '').trim();
+                // 同一トークン反復（例: Y7Y7Y7 ➡ Y7, X3aX3a ➡ X3a）のクリーンアップ
+                const matchToken = cleaned.match(/^([XYxy]\d+[a-zA-Z]?)/);
+                if (matchToken) {
+                    cleaned = matchToken[1];
+                }
                 if (/^[X|x]/i.test(cleaned)) {
                     masterXs.forEach(mx => {
                         if (Math.abs(mx - ct.x) < 350) {
