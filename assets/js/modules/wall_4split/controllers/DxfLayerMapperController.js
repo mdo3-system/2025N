@@ -141,6 +141,56 @@ window.DxfLayerMapperController = {
     },
 
     /**
+     * 各ステップでのDXFファイル追加ハンドラー
+     */
+    handleAddDxfFile: function(e, stepNum) {
+        const file = e.target.files && e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+            const rawTxt = evt.target.result;
+            const lines = this.parseDxfRawLinesDirect(rawTxt);
+            const lSet = new Set();
+            lines.forEach(l => { if (l.layer) lSet.add(l.layer.toUpperCase().trim()); });
+
+            const newIdx = this.loadedFiles.length;
+            this.loadedFiles.push({
+                name: file.name,
+                rawTxt: rawTxt,
+                layers: Array.from(lSet).sort()
+            });
+
+            // 現在のステップに対象ファイルを即座に割り当て
+            this.stepData[stepNum].fileIdx = newIdx;
+
+            // レイヤー自動マッチング
+            const activeFileObj = this.loadedFiles[newIdx];
+            const fileLayers = activeFileObj.layers;
+            const findLayer = (pat) => fileLayers.find(l => pat.test(l)) || '';
+
+            if (stepNum === 1) {
+                this.stepData[1].gridLayer = findLayer(/(GRID|GLID|通り芯|軸線)/i);
+                this.stepData[1].colLayer = findLayer(/(柱|COL|HASHIRA)/i);
+                this.stepData[1].backLayer = '__ALL_LAYERS__';
+            } else if (stepNum === 2) {
+                this.stepData[2].gridLayer = findLayer(/(GRID|GLID|通り芯|軸線)/i);
+                this.stepData[2].colLayer = findLayer(/(柱|COL|HASHIRA)/i);
+                this.stepData[2].backLayer = '__ALL_LAYERS__';
+            } else if (stepNum === 3 || stepNum === 4) {
+                this.stepData[stepNum].gridLayer = findLayer(/(GRID|GLID|通り芯|軸線)/i);
+                this.stepData[stepNum].roofLayer = findLayer(/(屋根|ROOF|下屋|大屋根)/i) || '__ALL_LAYERS__';
+            }
+
+            const countEl = document.getElementById('dxf-mapper-layer-count');
+            if (countEl) countEl.innerText = `ロード済みファイル: ${this.loadedFiles.length} 件`;
+
+            this.renderStep(stepNum);
+        };
+        reader.readAsText(file);
+    },
+
+    /**
      * 指定ステップのUIコントロールおよびプレビュー描画 (全ステップ通り芯スロット完備)
      */
     renderStep: function(stepNum) {
@@ -206,10 +256,14 @@ window.DxfLayerMapperController = {
         if (stepNum === 1) {
             container.style.borderLeftColor = '#00d2d3';
             html = `
-                <div style="display:grid; grid-template-columns: 1.2fr 1fr 1fr 1fr; gap:10px; align-items:center;">
+                <div style="display:grid; grid-template-columns: 1.3fr 1fr 1fr 1fr; gap:10px; align-items:center;">
                     <div>
                         <span style="font-size:11px; color:#a4b0be; display:block;">📁 1階対象ファイル:</span>
-                        <select id="w-file-select" style="width:100%; padding:6px; background:#1e272e; color:#fff; border:1px solid #485460; border-radius:4px; font-size:12px;"></select>
+                        <div style="display:flex; gap:4px; align-items:center;">
+                            <select id="w-file-select" style="flex:1; min-width:0; padding:6px; background:#1e272e; color:#fff; border:1px solid #485460; border-radius:4px; font-size:12px;"></select>
+                            <button type="button" onclick="document.getElementById('w-file-add-input').click()" style="padding:6px 8px; background:#2980b9; color:#fff; border:none; border-radius:4px; font-size:11px; cursor:pointer; white-space:nowrap;" title="DXFファイルを追加">➕ 追加</button>
+                            <input type="file" id="w-file-add-input" accept=".dxf" style="display:none;" onchange="window.DxfLayerMapperController.handleAddDxfFile(event, ${stepNum})" />
+                        </div>
                     </div>
                     <div>
                         <span style="font-size:11px; color:#00d2d3; font-weight:bold; display:block;">📐 通り芯レイヤー:</span>
@@ -229,10 +283,14 @@ window.DxfLayerMapperController = {
         } else if (stepNum === 2) {
             container.style.borderLeftColor = '#ff9ff3';
             html = `
-                <div style="display:grid; grid-template-columns: 1.2fr 1fr 1fr 1fr; gap:10px; align-items:center;">
+                <div style="display:grid; grid-template-columns: 1.3fr 1fr 1fr 1fr; gap:10px; align-items:center;">
                     <div>
                         <span style="font-size:11px; color:#a4b0be; display:block;">📁 2階対象ファイル:</span>
-                        <select id="w-file-select" style="width:100%; padding:6px; background:#1e272e; color:#fff; border:1px solid #485460; border-radius:4px; font-size:12px;"></select>
+                        <div style="display:flex; gap:4px; align-items:center;">
+                            <select id="w-file-select" style="flex:1; min-width:0; padding:6px; background:#1e272e; color:#fff; border:1px solid #485460; border-radius:4px; font-size:12px;"></select>
+                            <button type="button" onclick="document.getElementById('w-file-add-input').click()" style="padding:6px 8px; background:#2980b9; color:#fff; border:none; border-radius:4px; font-size:11px; cursor:pointer; white-space:nowrap;" title="DXFファイルを追加">➕ 追加</button>
+                            <input type="file" id="w-file-add-input" accept=".dxf" style="display:none;" onchange="window.DxfLayerMapperController.handleAddDxfFile(event, ${stepNum})" />
+                        </div>
                     </div>
                     <div>
                         <span style="font-size:11px; color:#00d2d3; font-weight:bold; display:block;">📐 2階通り芯レイヤー:</span>
@@ -253,10 +311,14 @@ window.DxfLayerMapperController = {
             container.style.borderLeftColor = (stepNum === 3) ? '#feca57' : '#ff6b6b';
             const label = (stepNum === 3) ? '1階屋根 (下屋) レイヤー:' : '2階屋根 (大屋根) レイヤー:';
             html = `
-                <div style="display:grid; grid-template-columns: 1.2fr 1fr 1fr; gap:10px; align-items:center;">
+                <div style="display:grid; grid-template-columns: 1.3fr 1fr 1fr; gap:10px; align-items:center;">
                     <div>
                         <span style="font-size:11px; color:#a4b0be; display:block;">📁 屋根対象ファイル:</span>
-                        <select id="w-file-select" style="width:100%; padding:6px; background:#1e272e; color:#fff; border:1px solid #485460; border-radius:4px; font-size:12px;"></select>
+                        <div style="display:flex; gap:4px; align-items:center;">
+                            <select id="w-file-select" style="flex:1; min-width:0; padding:6px; background:#1e272e; color:#fff; border:1px solid #485460; border-radius:4px; font-size:12px;"></select>
+                            <button type="button" onclick="document.getElementById('w-file-add-input').click()" style="padding:6px 8px; background:#2980b9; color:#fff; border:none; border-radius:4px; font-size:11px; cursor:pointer; white-space:nowrap;" title="DXFファイルを追加">➕ 追加</button>
+                            <input type="file" id="w-file-add-input" accept=".dxf" style="display:none;" onchange="window.DxfLayerMapperController.handleAddDxfFile(event, ${stepNum})" />
+                        </div>
                     </div>
                     <div>
                         <span style="font-size:11px; color:#00d2d3; font-weight:bold; display:block;">📐 通り芯レイヤー:</span>

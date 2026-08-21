@@ -158,46 +158,73 @@ window.GridEngine = {
         const detectedGridX = {};
         const detectedGridY = {};
         if (state.bgTextsOriginal && state.bgTextsOriginal.length > 0) {
-            const rawGridTexts = state.bgTextsOriginal.filter(t => t.isGridText || /(GRID|GLID|通り芯|軸線)/i.test(t.layer || '') || /(^[XYxy]\d+[a-zA-Z]?$)/.test((t.text || '').trim()));
-            const combinedTexts = [];
-            const usedIndices = new Set();
-            rawGridTexts.forEach((t1, i) => {
-                if (usedIndices.has(i)) return;
+            // 通り芯レイヤーまたは通り芯名候補のテキストを抽出
+            const rawGridTexts = state.bgTextsOriginal.filter(t => {
+                if (t.isGridText) return true;
+                if (/(GRID|GLID|通り芯|軸線)/i.test(t.layer || '')) return true;
+                const txt = (t.text || '').trim();
+                // 1〜5文字の通り芯名パターン（X1, Y1, X4a, い, ろ, い1a, A, B等、カンマや単位を含まない）
+                return /^[A-Za-z0-9\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF_-]{1,6}$/.test(txt) && !txt.includes(',') && !/^(Fix|UP|FL|CH|GL|mm|㎡|100|200)$/i.test(txt);
+            });
+
+            const singleChars = rawGridTexts.filter(t => (t.text || '').trim().length === 1);
+            const multiChars = rawGridTexts.filter(t => (t.text || '').trim().length > 1);
+
+            // 1文字エンティティ同士のみを横方向にクラスタリング結合（例: X + 4 + a ➡ X4a, い + a ➡ いa）
+            const combinedSingle = [];
+            const usedSingle = new Set();
+            singleChars.forEach((t1, i) => {
+                if (usedSingle.has(i)) return;
                 const cluster = [t1];
-                usedIndices.add(i);
-                rawGridTexts.forEach((t2, j) => {
-                    if (i !== j && !usedIndices.has(j)) {
-                        const dist = Math.hypot(t1.x - t2.x, t1.y - t2.y);
-                        if (dist < 200) {
+                usedSingle.add(i);
+                singleChars.forEach((t2, j) => {
+                    if (i !== j && !usedSingle.has(j)) {
+                        // 横方向に並んでいる近接1文字エンティティ（Y差 50mm以内、X差 150mm以内）
+                        if (Math.abs(t1.y - t2.y) < 50 && Math.abs(t1.x - t2.x) < 150) {
                             cluster.push(t2);
-                            usedIndices.add(j);
+                            usedSingle.add(j);
                         }
                     }
                 });
                 cluster.sort((a, b) => a.x - b.x);
-                const mergedText = cluster.map(c => (c.text || '').trim()).join('');
-                const avgX = cluster.reduce((sum, c) => sum + c.x, 0) / cluster.length;
-                const avgY = cluster.reduce((sum, c) => sum + c.y, 0) / cluster.length;
-                combinedTexts.push({ text: mergedText, x: avgX, y: avgY });
+                combinedSingle.push({
+                    text: cluster.map(c => c.text.trim()).join(''),
+                    x: cluster[0].x,
+                    y: cluster[0].y
+                });
             });
 
-            combinedTexts.forEach(ct => {
+            // 単独完全体テキストと結合後テキストを統合
+            const allCandidateTexts = [
+                ...multiChars.map(m => ({ text: (m.text || '').trim(), x: m.x, y: m.y })),
+                ...combinedSingle
+            ];
+
+            allCandidateTexts.forEach(ct => {
                 let cleaned = ct.text.replace(/通り/g, '').trim();
-                // 同一トークン反復（例: Y7Y7Y7 ➡ Y7, X3aX3a ➡ X3a）のクリーンアップ
-                const matchToken = cleaned.match(/^([XYxy]\d+[a-zA-Z]?)/);
-                if (matchToken) {
-                    cleaned = matchToken[1];
+                // 誤結合による繰り返し（例: Y1Y1 ➡ Y1, X1X1 ➡ X1）の正規化
+                const matchRepeat = cleaned.match(/^([A-Za-z\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]+[0-9]*[A-Za-z0-9]*)/);
+                if (matchRepeat) {
+                    cleaned = matchRepeat[1];
                 }
-                if (/^[X|x]/i.test(cleaned)) {
+
+                // 1. X軸（縦の通り芯：masterXs）へのマッチング
+                if (/^[X|x]/i.test(cleaned) || !/^[Y|y]/i.test(cleaned)) {
                     masterXs.forEach(mx => {
                         if (Math.abs(mx - ct.x) < 350) {
-                            detectedGridX[Math.round(mx)] = cleaned;
+                            if (/^[X|x]/i.test(cleaned) || !detectedGridX[Math.round(mx)]) {
+                                detectedGridX[Math.round(mx)] = cleaned;
+                            }
                         }
                     });
-                } else if (/^[Y|y]/i.test(cleaned)) {
+                }
+                // 2. Y軸（横の通り芯：masterYs）へのマッチング
+                if (/^[Y|y]/i.test(cleaned) || !/^[X|x]/i.test(cleaned)) {
                     masterYs.forEach(my => {
                         if (Math.abs(my - ct.y) < 350) {
-                            detectedGridY[Math.round(my)] = cleaned;
+                            if (/^[Y|y]/i.test(cleaned) || !detectedGridY[Math.round(my)]) {
+                                detectedGridY[Math.round(my)] = cleaned;
+                            }
                         }
                     });
                 }
