@@ -24,7 +24,9 @@ window.Parsers = {
         function collect(entities, blocks, parentLayer = "", parentX = 0, parentY = 0) {
             entities.forEach(ent => {
                 let L = (ent.layer || "").toUpperCase().trim();
-                if (!L || L === "0") L = (parentLayer || "0").toUpperCase().trim();
+                if (!L || L === "0" || parentLayer) {
+                    L = (parentLayer || L || "0").toUpperCase().trim();
+                }
                 ent.layer = L;
 
                 if (ent.type === 'INSERT') {
@@ -109,11 +111,13 @@ window.Parsers = {
                             const clone = JSON.parse(JSON.stringify(e));
                             if (clone.start) { clone.start.x += parentX; clone.start.y += parentY; }
                             if (clone.end) { clone.end.x += parentX; clone.end.y += parentY; }
-                            if (clone.vertices) {
+                            if (clone.vertices && Array.isArray(clone.vertices)) {
                                 clone.vertices.forEach(v => { v.x += parentX; v.y += parentY; });
                             }
                             if (clone.center) { clone.center.x += parentX; clone.center.y += parentY; }
                             if (clone.position) { clone.position.x += parentX; clone.position.y += parentY; }
+                            if (clone.startPoint) { clone.startPoint.x += parentX; clone.startPoint.y += parentY; }
+                            if (clone.insertionPoint) { clone.insertionPoint.x += parentX; clone.insertionPoint.y += parentY; }
                             return clone;
                         };
                         const offEnt = (parentX || parentY) ? applyOffset(ent) : ent;
