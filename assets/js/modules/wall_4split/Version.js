@@ -1,2 +1,2 @@
-window.APP_VERSION = "v3.13.21"; // Fix: DXF block (INSERT) entity transform & layer inheritance for accurate grid intersection snapping
+window.APP_VERSION = "v3.13.22"; // Fix: DXF wizard grid layer auto-select state sync & magnetic grid intersection snapping
 

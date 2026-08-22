@@ -395,10 +395,22 @@ window.DxfLayerMapperController = {
                 el.appendChild(opt);
             });
 
+            // 【即時ステート同期】選択中（または自動マッチングされた）の要素を直ちに curData へ保存
+            if (el.value) {
+                if (elId === 'w-select-grid') curData.gridLayer = el.value;
+                if (elId === 'w-select-dim')  curData.dimLayer  = el.value;
+                if (elId === 'w-select-col')  curData.colLayer  = el.value;
+                if (elId === 'w-select-back') curData.backLayer = el.value;
+                if (elId === 'w-select-roof') curData.roofLayer = el.value;
+            }
+
             // 変更イベントでプレビューをリアルタイム更新
             el.onchange = () => {
                 if (elId === 'w-select-grid') curData.gridLayer = el.value;
-                if (elId === 'w-select-dim')  curData.dimLayer = el.value;
+                if (elId === 'w-select-dim')  curData.dimLayer  = el.value;
+                if (elId === 'w-select-col')  curData.colLayer  = el.value;
+                if (elId === 'w-select-back') curData.backLayer = el.value;
+                if (elId === 'w-select-roof') curData.roofLayer = el.value;
                 this.renderPreviewCanvas();
             };
         };
@@ -808,23 +820,30 @@ window.DxfLayerMapperController = {
 
         // 指定された通り芯レイヤー内の線分同士の交点をリアルタイム抽出
         const gridL = curData.gridLayer;
-        const targetGridLines = rawLines.filter(l => {
+        let targetGridLines = rawLines.filter(l => {
             if (!gridL) return /(GRID|GLID|通り芯|軸線|°)/i.test(l.layer);
             return l.layer && (l.layer.toUpperCase().trim() === gridL.toUpperCase().trim());
         });
 
-        const vertGrid = targetGridLines.filter(l => Math.abs(l.x1 - l.x2) < 80).slice(0, 50);
-        const horizGrid = targetGridLines.filter(l => Math.abs(l.y1 - l.y2) < 80).slice(0, 50);
+        // レイヤー指定で通り芯線が極少の場合は、図面全体から長尺線分をバックアップ参照
+        if (targetGridLines.length < 2) {
+            targetGridLines = rawLines.filter(l => /(GRID|GLID|通り芯|軸線|°)/i.test(l.layer) || Math.hypot(l.x2 - l.x1, l.y2 - l.y1) > 1000);
+        }
+
+        const vertGrid = targetGridLines.filter(l => Math.abs(l.x1 - l.x2) < 250);
+        const horizGrid = targetGridLines.filter(l => Math.abs(l.y1 - l.y2) < 250);
         const intersections = [];
 
         vertGrid.forEach(vl => {
             const vx = (vl.x1 + vl.x2) / 2;
-            const vMinY = Math.min(vl.y1, vl.y2) - 500, vMaxY = Math.max(vl.y1, vl.y2) + 500;
+            const vMinY = Math.min(vl.y1, vl.y2) - 5000, vMaxY = Math.max(vl.y1, vl.y2) + 5000;
             horizGrid.forEach(hl => {
                 const hy = (hl.y1 + hl.y2) / 2;
-                const hMinX = Math.min(hl.x1, hl.x2) - 500, hMaxX = Math.max(hl.x1, hl.x2) + 500;
+                const hMinX = Math.min(hl.x1, hl.x2) - 5000, hMaxX = Math.max(hl.x1, hl.x2) + 5000;
                 if (vx >= hMinX && vx <= hMaxX && hy >= vMinY && hy <= vMaxY) {
-                    if (!intersections.some(pt => Math.hypot(pt.x - vx, pt.y - hy) < 20)) intersections.push({ x: vx, y: hy });
+                    if (!intersections.some(pt => Math.hypot(pt.x - vx, pt.y - hy) < 30)) {
+                        intersections.push({ x: Math.round(vx), y: Math.round(hy) });
+                    }
                 }
             });
         });
@@ -995,9 +1014,9 @@ window.DxfLayerMapperController = {
             const clickedWorldX = bounds.minX + (mouseX - padding - panX) / bounds.scale - alignOffset.dx;
             const clickedWorldY = bounds.minY + (cvs.height - mouseY - padding + panY) / bounds.scale - alignOffset.dy;
 
-            // 指定された通り芯レイヤーの交点リストから、クリック位置近く（画面上45px以内）の交点を探索
+            // 指定された通り芯レイヤーの交点リストから、クリック位置近く（画面上60px以内）の交点を探索
             let closestGridIntersection = null;
-            let minSnapDistWorld = 45 / bounds.scale; // 磁石スナップ半径
+            let minSnapDistWorld = 60 / bounds.scale; // 磁石スナップ半径（画面上60px）
 
             (this.currentStepGridIntersections || []).forEach(pt => {
                 const d = Math.hypot(pt.x - clickedWorldX, pt.y - clickedWorldY);
@@ -1007,8 +1026,26 @@ window.DxfLayerMapperController = {
                 }
             });
 
-            // 通り芯交点が見つかればそれに精密磁石スナップ！なければクリックされた場所を採用
-            const targetPt = closestGridIntersection || { x: clickedWorldX, y: clickedWorldY };
+            // フォールバック: 事前抽出交点がスナップ判定範囲外でも、1500mm以内の最寄り交点へ自動引込み
+            if (!closestGridIntersection && (this.currentStepGridIntersections || []).length > 0) {
+                let bestPt = null;
+                let minDist = Infinity;
+                (this.currentStepGridIntersections || []).forEach(pt => {
+                    const d = Math.hypot(pt.x - clickedWorldX, pt.y - clickedWorldY);
+                    if (d < minDist) {
+                        minDist = d;
+                        bestPt = pt;
+                    }
+                });
+                if (bestPt && minDist < 1500) {
+                    closestGridIntersection = bestPt;
+                }
+            }
+
+            // 通り芯交点が見つかればそれに精密磁石スナップ！なければ四捨五入整数座標を採用
+            const targetPt = closestGridIntersection 
+                ? { x: Math.round(closestGridIntersection.x), y: Math.round(closestGridIntersection.y) }
+                : { x: Math.round(clickedWorldX), y: Math.round(clickedWorldY) };
 
             this.selectedVisualOriginPt = targetPt;
             this.stepData[this.currentStep].originPt = targetPt;
