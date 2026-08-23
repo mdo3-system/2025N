@@ -1012,43 +1012,85 @@ window.DxfLayerMapperController = {
     },
 
     /**
-     * キャンバスイベント初期化（指定通り芯レイヤー交点へのスマート磁石スナップ＆100%ダイレクト指定）
+     * キャンバスイベント初期化（マウス位置追従スマートズーム＆マルチボタンドラッグ＆交点磁石スナップ）
      */
     initPreviewCanvasEvents: function() {
         const cvs = document.getElementById('dxf-origin-preview-canvas');
         if (!cvs) return;
 
         let isDragging = false;
-        let lastMousePos = { x: 0, y: 0 };
+        let dragStartPos = { x: 0, y: 0 };
+        let didDrag = false;
 
+        // 右クリック時のコンテキストメニュー表示を防止（右ドラッグパンを快適にするため）
+        cvs.oncontextmenu = (ev) => {
+            ev.preventDefault();
+        };
+
+        // [v3.13.26] マウスカーソル位置を中心としたスマート拡大・縮小（CAD / Google Maps 準拠）
         cvs.onwheel = (ev) => {
             ev.preventDefault();
-            const zoomFactor = ev.deltaY < 0 ? 1.15 : 0.85;
-            this.previewZoomScale = Math.max(0.2, Math.min(10.0, (this.previewZoomScale || 1.0) * zoomFactor));
+            const rect = cvs.getBoundingClientRect();
+            const scaleX = cvs.width / (rect.width || cvs.width);
+            const scaleY = cvs.height / (rect.height || cvs.height);
+            const mouseX = (ev.clientX - rect.left) * scaleX;
+            const mouseY = (ev.clientY - rect.top) * scaleY;
+
+            const padding = 25;
+            const oldZoom = this.previewZoomScale || 1.0;
+            const zoomFactor = ev.deltaY < 0 ? 1.20 : 0.82;
+            const newZoom = Math.max(0.05, Math.min(50.0, oldZoom * zoomFactor));
+            const actualFactor = newZoom / oldZoom;
+
+            if (!this.previewPanOffset) this.previewPanOffset = { x: 0, y: 0 };
+            const panXOld = this.previewPanOffset.x;
+            const panYOld = this.previewPanOffset.y;
+
+            // マウスカーソル直下のワールド座標を完全に維持するパンオフセット幾何補正
+            this.previewPanOffset.x = (mouseX - padding) * (1 - actualFactor) + panXOld * actualFactor;
+            this.previewPanOffset.y = (mouseY - cvs.height + padding) * (1 - actualFactor) + panYOld * actualFactor;
+            this.previewZoomScale = newZoom;
+
             this.renderPreviewCanvas();
         };
 
+        // 左クリック(0)、中クリック/ホイール押し込み(1)、右クリック(2)のすべてでパン移動可能
         cvs.onmousedown = (ev) => {
             isDragging = true;
-            lastMousePos = { x: ev.clientX, y: ev.clientY };
+            didDrag = false;
+            dragStartPos = { x: ev.clientX, y: ev.clientY };
         };
 
         cvs.onmousemove = (ev) => {
             if (isDragging) {
-                const dx = ev.clientX - lastMousePos.x;
-                const dy = ev.clientY - lastMousePos.y;
+                const dx = ev.clientX - dragStartPos.x;
+                const dy = ev.clientY - dragStartPos.y;
+                if (Math.hypot(dx, dy) > 3) {
+                    didDrag = true;
+                }
+                const rect = cvs.getBoundingClientRect();
+                const scaleX = cvs.width / (rect.width || cvs.width);
+                const scaleY = cvs.height / (rect.height || cvs.height);
+
                 if (!this.previewPanOffset) this.previewPanOffset = { x: 0, y: 0 };
-                this.previewPanOffset.x += dx;
-                this.previewPanOffset.y += dy;
-                lastMousePos = { x: ev.clientX, y: ev.clientY };
+                this.previewPanOffset.x += dx * scaleX;
+                this.previewPanOffset.y += dy * scaleY;
+                dragStartPos = { x: ev.clientX, y: ev.clientY };
                 this.renderPreviewCanvas();
             }
         };
 
-        cvs.onmouseup = cvs.onmouseleave = () => { isDragging = false; };
+        cvs.onmouseup = () => { isDragging = false; };
+        cvs.onmouseleave = () => { isDragging = false; };
 
         // クリックイベント：指定された通り芯レイヤー内の直線交点に優先磁石スナップ！
         cvs.onclick = (ev) => {
+            // ドラッグ操作だった場合は交点選択をスキップ
+            if (didDrag) {
+                didDrag = false;
+                return;
+            }
+
             const rect = cvs.getBoundingClientRect();
             // [v3.13.25] CSS表示サイズとCanvas内部解像度（860x300）のスケーリング比率を厳密補正
             const scaleX = cvs.width / (rect.width || cvs.width);
@@ -1080,7 +1122,7 @@ window.DxfLayerMapperController = {
                 }
             });
 
-            // フォールバック: 事前抽出交点がスナップ判定範囲外でも、1500mm以内の最寄り交点へ自動引込み
+            // フォールバック: 事前抽出交点がスナップ判定範囲外でも、最寄り交点（ワールド1500mm以内）へ自動引込み
             if (!closestGridIntersection && (this.currentStepGridIntersections || []).length > 0) {
                 let bestPt = null;
                 let minDist = Infinity;

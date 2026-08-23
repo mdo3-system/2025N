@@ -1,2 +1,2 @@
-window.APP_VERSION = "v3.13.25"; // Fix: Canvas CSS/Buffer coordinate scaling in onclick, INSERT block expansion with layer inheritance (data/03 full support)
+window.APP_VERSION = "v3.13.26"; // Feature: Mouse-centered canvas zoom & multi-button pan, high-precision grid snapping for complex DXF (data/05 support)
 
