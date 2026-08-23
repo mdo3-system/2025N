@@ -1,2 +1,2 @@
-window.APP_VERSION = "v3.13.23"; // Fix: DXF grid layer name matching (通芯/通り芯 generalized), handleAddDxfFile Shift-JIS support, robust fallback intersection
+window.APP_VERSION = "v3.13.24"; // Fix: DXF parser i+=2 strict pairing, SECTION header skip, smart dynamic scale fallback for 100% sample DXF support
 

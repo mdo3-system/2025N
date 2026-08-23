@@ -743,16 +743,21 @@ window.DxfLayerMapperController = {
             }
         };
 
-        for (let i = 0; i < rawLines.length - 1; i++) {
+        // [v3.13.24] 厳密な (groupCode, value) ペア読み込み (i += 2)
+        for (let i = 0; i < rawLines.length - 1; i += 2) {
             const code = rawLines[i].trim();
             const val = rawLines[i + 1] ? rawLines[i + 1].trim() : "";
 
             if (code === '0' && val === 'SECTION') {
                 const nextCode = rawLines[i + 2] ? rawLines[i + 2].trim() : "";
                 const nextVal = rawLines[i + 3] ? rawLines[i + 3].trim() : "";
-                if (nextCode === '2') section = nextVal;
+                if (nextCode === '2') {
+                    section = nextVal;
+                    i += 2; // "2 SECTION_NAME" ペアをスキップ
+                    continue;
+                }
             }
-            if (code === '0' && val === 'ENDSEC') section = null;
+            if (code === '0' && val === 'ENDSEC') { section = null; continue; }
 
             if (section === 'BLOCKS') {
                 if (code === '0' && val === 'BLOCK') { pushBlockEnt(); curBlockName = null; curBlockEnts = []; }
@@ -848,17 +853,21 @@ window.DxfLayerMapperController = {
             return GRID_LAYER_PAT.test(l.layer);
         });
 
-        // [v3.13.23] フォールバック: gridL が指定されているが一致するレイヤーが無い場合
-        // → パターンマッチのみに切り替え（他レイヤーの長尺線分を混入させない）
+        // [v3.13.24] フォールバック: gridL が指定されているが一致するレイヤーが無い場合
+        // → パターンマッチのみに切り替え、または動的スケール対応のスマート長尺線分抽出
         if (targetGridLines.length < 2) {
             const byPattern = rawLines.filter(l => l.layer && GRID_LAYER_PAT.test(l.layer));
             if (byPattern.length >= 2) {
                 console.warn(`⚠️ [DXF Wizard] gridLayer="${gridL}" に一致するレイヤーが見つからず、パターンマッチ(${byPattern.length}件)へフォールバック`);
                 targetGridLines = byPattern;
             } else {
-                // 最終フォールバック: 純粋な長尺線分（LINE種のみ、1000mm超）
-                targetGridLines = rawLines.filter(l => l.type === 'LINE' && Math.hypot(l.x2 - l.x1, l.y2 - l.y1) > 1000);
-                console.warn(`⚠️ [DXF Wizard] 長尺LINEエンティティ(${targetGridLines.length}件)を通り芯候補として使用`);
+                // スマート長尺フォールバック (メートル/ミリ/ペーパー空間の全スケール対応)
+                const linesWithLen = rawLines.map(l => ({ ...l, len: Math.hypot(l.x2 - l.x1, l.y2 - l.y1) }))
+                                             .sort((a, b) => b.len - a.len);
+                const maxLen = linesWithLen.length > 0 ? linesWithLen[0].len : 0;
+                const minGridLen = Math.max(10, maxLen * 0.10); // 上位長さの10%以上かつ10単位以上
+                targetGridLines = linesWithLen.filter(l => l.len >= minGridLen);
+                console.warn(`⚠️ [DXF Wizard] 動的スケール長尺エンティティ(${targetGridLines.length}件, minLen=${minGridLen.toFixed(1)})を通り芯候補として使用`);
             }
         }
 
