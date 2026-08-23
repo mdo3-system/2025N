@@ -149,7 +149,21 @@ window.DxfLayerMapperController = {
 
         const reader = new FileReader();
         reader.onload = (evt) => {
-            const rawTxt = evt.target.result;
+            // [v3.13.23] readAsArrayBuffer + Encoding.js でShift-JIS DXFに対応（文字化け防止）
+            let rawTxt = "";
+            const buffer = new Uint8Array(evt.target.result);
+            try {
+                if (typeof window.Encoding !== 'undefined' && window.Encoding.detect) {
+                    const detected = window.Encoding.detect(buffer);
+                    rawTxt = window.Encoding.convert(buffer, { to: 'UNICODE', from: detected || 'AUTO', type: 'STRING' });
+                } else {
+                    const utf8Txt = new TextDecoder('UTF-8').decode(buffer);
+                    rawTxt = utf8Txt.includes('\uFFFD') ? new TextDecoder('Shift_JIS').decode(buffer) : utf8Txt;
+                }
+            } catch(err) {
+                rawTxt = new TextDecoder('UTF-8').decode(buffer);
+            }
+
             const lines = this.parseDxfRawLinesDirect(rawTxt);
             const lSet = new Set();
             lines.forEach(l => { if (l.layer) lSet.add(l.layer.toUpperCase().trim()); });
@@ -164,23 +178,24 @@ window.DxfLayerMapperController = {
             // 現在のステップに対象ファイルを即座に割り当て
             this.stepData[stepNum].fileIdx = newIdx;
 
-            // レイヤー自動マッチング
+            // レイヤー自動マッチング [v3.13.23] 「通芯」も含む拡張パターン
             const activeFileObj = this.loadedFiles[newIdx];
             const fileLayers = activeFileObj.layers;
             const findLayer = (pat) => fileLayers.find(l => pat.test(l)) || '';
+            const GRID_PAT = /(GRID|GLID|通り芯|通芯|軸線)/i;
 
             if (stepNum === 1) {
-                this.stepData[1].gridLayer = findLayer(/(GRID|GLID|通り芯|軸線)/i);
+                this.stepData[1].gridLayer = findLayer(GRID_PAT);
                 this.stepData[1].colLayer = findLayer(/(柱|COL|HASHIRA)/i);
                 this.stepData[1].dimLayer = findLayer(/(DIM|寸法|SUNPO|DIMENSION)/i);
                 this.stepData[1].backLayer = '__ALL_LAYERS__';
             } else if (stepNum === 2) {
-                this.stepData[2].gridLayer = findLayer(/(GRID|GLID|通り芯|軸線)/i);
+                this.stepData[2].gridLayer = findLayer(GRID_PAT);
                 this.stepData[2].colLayer = findLayer(/(柱|COL|HASHIRA)/i);
                 this.stepData[2].dimLayer = findLayer(/(DIM|寸法|SUNPO|DIMENSION)/i);
                 this.stepData[2].backLayer = '__ALL_LAYERS__';
             } else if (stepNum === 3 || stepNum === 4) {
-                this.stepData[stepNum].gridLayer = findLayer(/(GRID|GLID|通り芯|軸線)/i);
+                this.stepData[stepNum].gridLayer = findLayer(GRID_PAT);
                 this.stepData[stepNum].dimLayer = findLayer(/(DIM|寸法|SUNPO|DIMENSION)/i);
                 this.stepData[stepNum].roofLayer = findLayer(/(屋根|ROOF|下屋|大屋根)/i) || '__ALL_LAYERS__';
             }
@@ -190,7 +205,7 @@ window.DxfLayerMapperController = {
 
             this.renderStep(stepNum);
         };
-        reader.readAsText(file);
+        reader.readAsArrayBuffer(file); // [v3.13.23] ArrayBufferで読んでShift-JIS対応
     },
 
     /**
@@ -415,7 +430,8 @@ window.DxfLayerMapperController = {
             };
         };
 
-        populateSelect('w-select-grid', /(GRID|GLID|通り芯|軸線|°)/i, curData.gridLayer);
+        // [v3.13.23] 「通芯」「通り芯」両方のパターンに対応
+        populateSelect('w-select-grid', /(GRID|GLID|通り芯|通芯|軸線|°)/i, curData.gridLayer);
         populateSelect('w-select-dim', /(DIM|寸法|SUNPO|DIMENSION)/i, curData.dimLayer);
 
         if (stepNum === 1) {
@@ -486,8 +502,9 @@ window.DxfLayerMapperController = {
      */
     deduplicateGridLines: function(bgLines) {
         if (!Array.isArray(bgLines)) return [];
-        const gridLines = bgLines.filter(l => l.layerCategory === 'GRID' || /(GRID|GLID|通り芯|軸線|°)/i.test(l.layer));
-        const otherLines = bgLines.filter(l => !(l.layerCategory === 'GRID' || /(GRID|GLID|通り芯|軸線|°)/i.test(l.layer)));
+        // [v3.13.23] 「通芯」も含む拡張パターン
+        const gridLines = bgLines.filter(l => l.layerCategory === 'GRID' || /(GRID|GLID|通り芯|通芯|軸線|°)/i.test(l.layer));
+        const otherLines = bgLines.filter(l => !(l.layerCategory === 'GRID' || /(GRID|GLID|通り芯|通芯|軸線|°)/i.test(l.layer)));
 
         const uniqueGrids = [];
         gridLines.forEach(line => {
@@ -818,21 +835,43 @@ window.DxfLayerMapperController = {
             if (this.established1FGridLines.length === 0) this.established1FGridLines = rawLines.slice(0, 100);
         }
 
-        // 指定された通り芯レイヤー内の線分同士の交点をリアルタイム抽出
+        // [v3.13.23] 指定された通り芯レイヤー内の線分同士の交点をリアルタイム抽出
+        // レイヤー名マッチング：完全一致 OR パターン（通芯・通り芯両対応）
+        const GRID_LAYER_PAT = /(GRID|GLID|通り芯|通芯|軸線|°)/i;
         const gridL = curData.gridLayer;
         let targetGridLines = rawLines.filter(l => {
-            if (!gridL) return /(GRID|GLID|通り芯|軸線|°)/i.test(l.layer);
-            return l.layer && (l.layer.toUpperCase().trim() === gridL.toUpperCase().trim());
+            if (!l.layer) return false;
+            const lUp = l.layer.toUpperCase().trim();
+            // gridL 指定がある場合：完全一致 OR gridL の部分文字列一致
+            if (gridL) return lUp === gridL.toUpperCase().trim();
+            // 未指定の場合：パターンマッチ
+            return GRID_LAYER_PAT.test(l.layer);
         });
 
-        // レイヤー指定で通り芯線が極少の場合は、図面全体から長尺線分をバックアップ参照
+        // [v3.13.23] フォールバック: gridL が指定されているが一致するレイヤーが無い場合
+        // → パターンマッチのみに切り替え（他レイヤーの長尺線分を混入させない）
         if (targetGridLines.length < 2) {
-            targetGridLines = rawLines.filter(l => /(GRID|GLID|通り芯|軸線|°)/i.test(l.layer) || Math.hypot(l.x2 - l.x1, l.y2 - l.y1) > 1000);
+            const byPattern = rawLines.filter(l => l.layer && GRID_LAYER_PAT.test(l.layer));
+            if (byPattern.length >= 2) {
+                console.warn(`⚠️ [DXF Wizard] gridLayer="${gridL}" に一致するレイヤーが見つからず、パターンマッチ(${byPattern.length}件)へフォールバック`);
+                targetGridLines = byPattern;
+            } else {
+                // 最終フォールバック: 純粋な長尺線分（LINE種のみ、1000mm超）
+                targetGridLines = rawLines.filter(l => l.type === 'LINE' && Math.hypot(l.x2 - l.x1, l.y2 - l.y1) > 1000);
+                console.warn(`⚠️ [DXF Wizard] 長尺LINEエンティティ(${targetGridLines.length}件)を通り芯候補として使用`);
+            }
+        }
+
+        console.log(`📐 [DXF Wizard Step${curNum}] gridLayer="${gridL}" → 対象線分: ${targetGridLines.length}件`);
+        if (targetGridLines.length > 0) {
+            const sampleLayers = [...new Set(targetGridLines.slice(0,5).map(l => l.layer))];
+            console.log('  レイヤー名サンプル:', sampleLayers);
         }
 
         const vertGrid = targetGridLines.filter(l => Math.abs(l.x1 - l.x2) < 250);
         const horizGrid = targetGridLines.filter(l => Math.abs(l.y1 - l.y2) < 250);
         const intersections = [];
+        console.log(`  垂直線: ${vertGrid.length}本, 水平線: ${horizGrid.length}本`);
 
         vertGrid.forEach(vl => {
             const vx = (vl.x1 + vl.x2) / 2;
@@ -847,6 +886,7 @@ window.DxfLayerMapperController = {
                 }
             });
         });
+        console.log(`  ✅ 交点算出: ${intersections.length}件`);
         this.currentStepGridIntersections = intersections;
 
         // デフォルト選択原点（最初の通り芯交点、または図面中央）
