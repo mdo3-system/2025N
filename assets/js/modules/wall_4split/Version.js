@@ -1,2 +1,2 @@
-window.APP_VERSION = "v3.13.24"; // Fix: DXF parser i+=2 strict pairing, SECTION header skip, smart dynamic scale fallback for 100% sample DXF support
+window.APP_VERSION = "v3.13.25"; // Fix: Canvas CSS/Buffer coordinate scaling in onclick, INSERT block expansion with layer inheritance (data/03 full support)
 

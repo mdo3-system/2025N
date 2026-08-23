@@ -804,13 +804,15 @@ window.DxfLayerMapperController = {
         }
         pushEntity();
 
+        // [v3.13.25] INSERT ブロック参照の座標展開（AutoCAD互換レイヤー継承対応）
         inserts.forEach(ins => {
-            const blkEnts = blocks[ins.name] || [];
-            blkEnts.forEach(ent => {
-                const x1 = ent.x1 + ins.x, y1 = ent.y1 + ins.y;
-                const x2 = ent.x2 + ins.x, y2 = ent.y2 + ins.y;
-                lines.push({ type: ent.type || 'LINE', layer: ins.layer || ent.layer || '', x1, y1, x2, y2 });
-            });
+            const blkEnts = blocks[ins.name];
+            if (blkEnts) {
+                blkEnts.forEach(be => {
+                    const effectiveLayer = (be.layer && be.layer !== '0') ? be.layer : (ins.layer || '0');
+                    lines.push({ ...be, layer: effectiveLayer, x1: be.x1 + ins.x, y1: be.y1 + ins.y, x2: be.x2 + ins.x, y2: be.y2 + ins.y });
+                });
+            }
         });
 
         return lines;
@@ -1048,8 +1050,11 @@ window.DxfLayerMapperController = {
         // クリックイベント：指定された通り芯レイヤー内の直線交点に優先磁石スナップ！
         cvs.onclick = (ev) => {
             const rect = cvs.getBoundingClientRect();
-            const mouseX = ev.clientX - rect.left;
-            const mouseY = ev.clientY - rect.top;
+            // [v3.13.25] CSS表示サイズとCanvas内部解像度（860x300）のスケーリング比率を厳密補正
+            const scaleX = cvs.width / (rect.width || cvs.width);
+            const scaleY = cvs.height / (rect.height || cvs.height);
+            const mouseX = (ev.clientX - rect.left) * scaleX;
+            const mouseY = (ev.clientY - rect.top) * scaleY;
 
             const padding = 25;
             const panX = this.previewPanOffset ? this.previewPanOffset.x : 0;
@@ -1059,7 +1064,7 @@ window.DxfLayerMapperController = {
 
             const alignOffset = bounds.alignOffset || { dx: 0, dy: 0 };
 
-            // クリック位置のワールド生座標
+            // クリック位置のワールド生座標（内部解像度から正確に逆変換）
             const clickedWorldX = bounds.minX + (mouseX - padding - panX) / bounds.scale - alignOffset.dx;
             const clickedWorldY = bounds.minY + (cvs.height - mouseY - padding + panY) / bounds.scale - alignOffset.dy;
 
