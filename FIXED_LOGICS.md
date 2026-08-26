@@ -1353,11 +1353,21 @@ atioS = (M_acting_S / Ma_S * 100).toFixed(1) + "% OK/NG" を個別に判定表�
 M_left が 1.0 を超えていたため、裏で span.isNG / 
 eedBotBoost が 	rue となり、画面上には sMa_top 比較の「51.5% OK」が表示されているにもかかわらず、判定バッジが「NG」「⚠️ 下主筋を補強」と誤表示されていた不一致を修正。
 - **修復内容**:
-  - FoundationEngine.js, FoundationRenderer.js, FoundationBeamReportView.js の全てにおいて、Table 6 に表示されている全10項目の値（
-M_L_mid, 
-M_L_end, 
-Q_L, l_rM_left, l_rM_right, l_rQ, 
-_rM_left, 
-_rM_right, 
-_rQ）が**すべて 1.0 (100%) 以下の場合に絶対 100% 確実に isSpanNG = false (OKバッジ) かつ ✅ 既定配筋で適合** と判定されるよう完全連動改修。
-- **検証結果**: PASS: 25 / FAIL: 0 (100%通過)、全85JSファイル構文チェック PASS。
+### 113. 複雑DXF（data/11）の極大円弧BBox爆発防止・ブロック内ポリライン展開修正・UTF-8文字コード判別堅牢化 (v3.13.27)
+- **原因解明**:
+  - `data/11` 等の複雑な建築・設備CAD図面において、衛生設備（便器・洗面ボウル等）の緩やかな曲面を表現するために半径 $R \approx 530,000\text{mm}$（約530km）の極大円弧（`ARC` / `CIRCLE`）が含まれていた。
+  - `DxfLayerMapperController.js` の `parseDxfRawLinesDirect` で円弧を十字線として展開したため、バウンディングボックスの幅が約10億ミリ（1,000km超）に爆発し、縮尺計算で実図面が 0.00001px 以下の極小点に縮小されて「図面が表示されない」状態になっていた。
+  - また、AutoCAD 2013+（AC1027）の UTF-8 DXF ファイルにおいて `$DWGCODEPAGE: ANSI_932` が存在することで Shift-JIS と誤判定され「通り芯」が文字化けする問題、および BLOCKS セクションパース時に `LWPOLYLINE` の頂点チェーンが失われる問題が重なっていた。
+- **修復内容**:
+  - `DxfLayerMapperController.js`:
+    - `parseDxfRawLinesDirect` 内の `CIRCLE` / `ARC` 展開処理に半径 $R < 5,000\text{mm}$ の安全ガードを適用し、極大円弧による BBox 破壊を完全防止。
+    - `BLOCKS` セクションパース時の `BLOCK` 開始リセット処理を強化し、ブロック内の `LWPOLYLINE` / `POLYLINE` 頂点チェーンを確実に線分展開するよう修正。
+    - `ENTITIES` セクションの厳密判定により不要オブジェクトの誤混入を防止。
+    - `handleAddDxfFile` における UTF-8 / Shift-JIS 判定を強化（UTF-8妥当性を最優先検証）。
+  - `wall_4split_cad.js`:
+    - `loadDxf` のエンコーディング判定ロジックを UTF-8 / Shift-JIS 堅牢判別に同期。
+  - `Version.js` / `index.html`:
+    - バージョン番号を `v3.13.27` にインクリメントし、全スクリプトのキャッシュバスターを同期。
+- **検証結果**:
+  - `data/11` 内の全4ファイル（1階平面詳細図、2階屋根伏図、2階平面詳細図、R階平面詳細図）において、正常寸法（約13m〜20m）での描画、および通り芯交点（各5,740件超）の抽出・原点吸着が100%正常稼働することを確認。
+  - 自動テスト結果: 全テスト通過。

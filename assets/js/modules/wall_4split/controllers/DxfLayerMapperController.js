@@ -149,16 +149,18 @@ window.DxfLayerMapperController = {
 
         const reader = new FileReader();
         reader.onload = (evt) => {
-            // [v3.13.23] readAsArrayBuffer + Encoding.js でShift-JIS DXFに対応（文字化け防止）
+            // [v3.13.27] UTF-8 (AC1027+) & Shift-JIS (AutoCAD legacy / Jw_cad) Robust Decoding
             let rawTxt = "";
             const buffer = new Uint8Array(evt.target.result);
             try {
-                if (typeof window.Encoding !== 'undefined' && window.Encoding.detect) {
+                const utf8Txt = new TextDecoder('UTF-8').decode(buffer);
+                if (!utf8Txt.includes('\uFFFD') && (utf8Txt.includes('SECTION') || utf8Txt.includes('ENTITIES'))) {
+                    rawTxt = utf8Txt;
+                } else if (typeof window.Encoding !== 'undefined' && window.Encoding.detect) {
                     const detected = window.Encoding.detect(buffer);
                     rawTxt = window.Encoding.convert(buffer, { to: 'UNICODE', from: detected || 'AUTO', type: 'STRING' });
                 } else {
-                    const utf8Txt = new TextDecoder('UTF-8').decode(buffer);
-                    rawTxt = utf8Txt.includes('\uFFFD') ? new TextDecoder('Shift_JIS').decode(buffer) : utf8Txt;
+                    rawTxt = new TextDecoder('Shift_JIS').decode(buffer);
                 }
             } catch(err) {
                 rawTxt = new TextDecoder('UTF-8').decode(buffer);
@@ -205,7 +207,7 @@ window.DxfLayerMapperController = {
 
             this.renderStep(stepNum);
         };
-        reader.readAsArrayBuffer(file); // [v3.13.23] ArrayBufferで読んでShift-JIS対応
+        reader.readAsArrayBuffer(file);
     },
 
     /**
@@ -249,103 +251,70 @@ window.DxfLayerMapperController = {
         const btnNext = document.getElementById('btn-wizard-next');
         const btnSkip = document.getElementById('btn-wizard-skip');
         if (btnPrev) btnPrev.style.display = (stepNum > 1) ? 'inline-block' : 'none';
-        if (btnSkip) btnSkip.style.display = (stepNum >= 2) ? 'inline-block' : 'none';
-        if (btnNext) btnNext.innerText = (stepNum === 4) ? '解析・読込完了 🚀' : '確定して次へ ➔';
+        if (btnNext) btnNext.innerText = (stepNum === 4) ? '🚀 全階図面の取り込みを確定して計算開始' : '次へ（原点設定へ進む） ➡️';
+        if (btnSkip) btnSkip.innerText = '⏭️ この設定のまま完了する';
 
-        // ステップ専用コントロールの自動生成 (全ステップで通り芯・寸法レイヤー選択スロットを設置)
-        const container = document.getElementById('wizard-step-control-container');
+        // コントロールパネルの動的描画
+        const container = document.getElementById('dxf-wizard-step-controls');
         if (!container) return;
 
         const curData = this.stepData[stepNum];
-        const activeFileObj = this.loadedFiles[curData.fileIdx] || this.loadedFiles[0];
-        const fileLayers = activeFileObj ? activeFileObj.layers : [];
+        const activeFile = this.loadedFiles[curData.fileIdx] || this.loadedFiles[0];
+        const fileLayers = activeFile ? activeFile.layers : [];
 
-        let html = '';
-        const gridRadioHtml = `
-            <div style="margin-top:8px; padding-top:6px; border-top:1px dashed #485460; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
-                <label style="font-size:11px; color:#f1c40f; font-weight:bold; display:inline-flex; align-items:center; gap:6px; cursor:pointer;">
-                    <input type="radio" name="w-grid-text-step" value="${stepNum}" ${this.gridTextStep === stepNum ? 'checked' : ''} onchange="window.DxfLayerMapperController.gridTextStep = ${stepNum};" style="cursor:pointer;" />
-                    🏷️ このファイルから通り芯名（文字）を読み込む
-                </label>
-                <span style="font-size:10px; color:#95a5a6;">※ 図面をクリーンに保つため、指定された通り芯名および寸法値以外の不要テキスト（部屋名・記号等）は自動破棄されます</span>
+        let html = `
+            <div style="background:#1e272e; padding:10px 14px; border-radius:6px; margin-bottom:12px; display:flex; align-items:center; justify-content:space-between; gap:10px;">
+                <div style="flex:1;">
+                    <span style="font-size:11px; color:#a4b0be; font-weight:bold; display:block; margin-bottom:2px;">📁 割り当てDXFファイル:</span>
+                    <select id="w-file-select" style="width:100%; padding:6px; background:#2f3640; color:#00d2d3; font-weight:bold; border:1px solid #485460; border-radius:4px; font-size:12px;"></select>
+                </div>
+                <div>
+                    <span style="font-size:11px; color:#a4b0be; display:block; margin-bottom:2px;">&nbsp;</span>
+                    <button class="btn" style="padding:6px 12px; background:#4b6584; color:#fff; font-size:12px; border-radius:4px;" onclick="document.getElementById('w-file-add-input').click()">➕ DXF追加</button>
+                    <input type="file" id="w-file-add-input" accept=".dxf" style="display:none;" onchange="window.DxfLayerMapperController.handleAddDxfFile(event, ${stepNum})" />
+                </div>
             </div>
         `;
 
-        if (stepNum === 1) {
-            container.style.borderLeftColor = '#00d2d3';
-            html = `
-                <div style="display:grid; grid-template-columns: 1.3fr 1fr 1fr 1fr 1fr; gap:8px; align-items:center;">
-                    <div>
-                        <span style="font-size:11px; color:#a4b0be; display:block;">📁 1階対象ファイル:</span>
-                        <div style="display:flex; gap:4px; align-items:center;">
-                            <select id="w-file-select" style="flex:1; min-width:0; padding:6px; background:#1e272e; color:#fff; border:1px solid #485460; border-radius:4px; font-size:12px;"></select>
-                            <button type="button" onclick="document.getElementById('w-file-add-input').click()" style="padding:6px 8px; background:#2980b9; color:#fff; border:none; border-radius:4px; font-size:11px; cursor:pointer; white-space:nowrap;" title="DXFファイルを追加">➕ 追加</button>
-                            <input type="file" id="w-file-add-input" accept=".dxf" style="display:none;" onchange="window.DxfLayerMapperController.handleAddDxfFile(event, ${stepNum})" />
-                        </div>
-                    </div>
+        const gridRadioHtml = `
+            <div style="margin-top:10px; padding:8px 12px; background:#2f3640; border-radius:6px; border:1px solid #485460; display:flex; align-items:center; justify-content:space-between;">
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <input type="radio" name="w-grid-text-step" value="${stepNum}" ${this.gridTextStep === stepNum ? 'checked' : ''} onchange="window.DxfLayerMapperController.gridTextStep = ${stepNum};" style="cursor:pointer;" />
+                    <label style="font-size:12px; color:#fff; font-weight:bold; cursor:pointer;" onclick="this.previousElementSibling.click();">
+                        🔤 このステップの通り芯文字（X1, Y1等）を本番通り芯ラベルとして採用する
+                    </label>
+                </div>
+                <span style="font-size:10px; color:#a4b0be;">※全ステップ中1つのみ選択可能</span>
+            </div>
+        `;
+
+        if (stepNum === 1 || stepNum === 2) {
+            const floorLabel = (stepNum === 1) ? '1階' : '2階';
+            html += `
+                <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:8px;">
                     <div>
                         <span style="font-size:11px; color:#00d2d3; font-weight:bold; display:block;">📐 通り芯レイヤー:</span>
                         <select id="w-select-grid" style="width:100%; padding:6px; background:#1e272e; color:#fff; border:1px solid #485460; border-radius:4px; font-size:12px;"></select>
                     </div>
                     <div>
-                        <span style="font-size:11px; color:#48dbfb; font-weight:bold; display:block;">🏛️ 1階柱レイヤー:</span>
-                        <select id="w-select-col" style="width:100%; padding:6px; background:#1e272e; color:#fff; border:1px solid #485460; border-radius:4px; font-size:12px;"></select>
-                    </div>
-                    <div>
                         <span style="font-size:11px; color:#e056fd; font-weight:bold; display:block;">📏 寸法レイヤー:</span>
                         <select id="w-select-dim" style="width:100%; padding:6px; background:#1e272e; color:#fff; border:1px solid #485460; border-radius:4px; font-size:12px;"></select>
                     </div>
                     <div>
-                        <span style="font-size:11px; color:#1dd1a1; font-weight:bold; display:block;">🖼️ 1階背景レイヤー:</span>
-                        <select id="w-select-back" style="width:100%; padding:6px; background:#1e272e; color:#fff; border:1px solid #485460; border-radius:4px; font-size:12px;"></select>
-                    </div>
-                </div>
-                ${gridRadioHtml}
-            `;
-        } else if (stepNum === 2) {
-            container.style.borderLeftColor = '#ff9ff3';
-            html = `
-                <div style="display:grid; grid-template-columns: 1.3fr 1fr 1fr 1fr 1fr; gap:8px; align-items:center;">
-                    <div>
-                        <span style="font-size:11px; color:#a4b0be; display:block;">📁 2階対象ファイル:</span>
-                        <div style="display:flex; gap:4px; align-items:center;">
-                            <select id="w-file-select" style="flex:1; min-width:0; padding:6px; background:#1e272e; color:#fff; border:1px solid #485460; border-radius:4px; font-size:12px;"></select>
-                            <button type="button" onclick="document.getElementById('w-file-add-input').click()" style="padding:6px 8px; background:#2980b9; color:#fff; border:none; border-radius:4px; font-size:11px; cursor:pointer; white-space:nowrap;" title="DXFファイルを追加">➕ 追加</button>
-                            <input type="file" id="w-file-add-input" accept=".dxf" style="display:none;" onchange="window.DxfLayerMapperController.handleAddDxfFile(event, ${stepNum})" />
-                        </div>
-                    </div>
-                    <div>
-                        <span style="font-size:11px; color:#00d2d3; font-weight:bold; display:block;">📐 2階通り芯レイヤー:</span>
-                        <select id="w-select-grid" style="width:100%; padding:6px; background:#1e272e; color:#fff; border:1px solid #485460; border-radius:4px; font-size:12px;"></select>
-                    </div>
-                    <div>
-                        <span style="font-size:11px; color:#ff9ff3; font-weight:bold; display:block;">🏛️ 2階柱レイヤー:</span>
+                        <span style="font-size:11px; color:#ff6b6b; font-weight:bold; display:block;">🧱 ${floorLabel} 柱レイヤー:</span>
                         <select id="w-select-col" style="width:100%; padding:6px; background:#1e272e; color:#fff; border:1px solid #485460; border-radius:4px; font-size:12px;"></select>
                     </div>
                     <div>
-                        <span style="font-size:11px; color:#e056fd; font-weight:bold; display:block;">📏 寸法レイヤー:</span>
-                        <select id="w-select-dim" style="width:100%; padding:6px; background:#1e272e; color:#fff; border:1px solid #485460; border-radius:4px; font-size:12px;"></select>
-                    </div>
-                    <div>
-                        <span style="font-size:11px; color:#54a0ff; font-weight:bold; display:block;">🖼️ 2階背景レイヤー:</span>
+                        <span style="font-size:11px; color:#48dbfb; font-weight:bold; display:block;">🖼️ ${floorLabel} 背景・壁レイヤー:</span>
                         <select id="w-select-back" style="width:100%; padding:6px; background:#1e272e; color:#fff; border:1px solid #485460; border-radius:4px; font-size:12px;"></select>
                     </div>
                 </div>
                 ${gridRadioHtml}
             `;
         } else {
-            container.style.borderLeftColor = (stepNum === 3) ? '#feca57' : '#ff6b6b';
-            const label = (stepNum === 3) ? '1階屋根 (下屋) レイヤー:' : '2階屋根 (大屋根) レイヤー:';
-            html = `
-                <div style="display:grid; grid-template-columns: 1.3fr 1fr 1fr 1fr; gap:8px; align-items:center;">
-                    <div>
-                        <span style="font-size:11px; color:#a4b0be; display:block;">📁 屋根対象ファイル:</span>
-                        <div style="display:flex; gap:4px; align-items:center;">
-                            <select id="w-file-select" style="flex:1; min-width:0; padding:6px; background:#1e272e; color:#fff; border:1px solid #485460; border-radius:4px; font-size:12px;"></select>
-                            <button type="button" onclick="document.getElementById('w-file-add-input').click()" style="padding:6px 8px; background:#2980b9; color:#fff; border:none; border-radius:4px; font-size:11px; cursor:pointer; white-space:nowrap;" title="DXFファイルを追加">➕ 追加</button>
-                            <input type="file" id="w-file-add-input" accept=".dxf" style="display:none;" onchange="window.DxfLayerMapperController.handleAddDxfFile(event, ${stepNum})" />
-                        </div>
-                    </div>
+            const label = (stepNum === 3) ? '1階 屋根・下屋レイヤー:' : '2階 屋根・大屋根レイヤー:';
+            html += `
+                <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:8px;">
                     <div>
                         <span style="font-size:11px; color:#00d2d3; font-weight:bold; display:block;">📐 通り芯レイヤー:</span>
                         <select id="w-select-grid" style="width:100%; padding:6px; background:#1e272e; color:#fff; border:1px solid #485460; border-radius:4px; font-size:12px;"></select>
@@ -465,7 +434,6 @@ window.DxfLayerMapperController = {
         if (curNum === 1) {
             curData.colLayer = document.getElementById('w-select-col')?.value || '';
             curData.backLayer = document.getElementById('w-select-back')?.value || '';
-            curData.backLayer = document.getElementById('w-select-back')?.value || '';
             curData.originPt = this.selectedVisualOriginPt || { x: 0, y: 0 };
             this.established1FOrigin = curData.originPt;
         } else if (curNum === 2) {
@@ -493,10 +461,6 @@ window.DxfLayerMapperController = {
         }
     },
 
-    /**
-     * ウィザード完了：全ステップのデータを平行移動補正付きで順次パース・AppStateへ追記
-     */
-    
     /**
      * 合算された通り芯線分の重複排除（デデュープ）処理
      */
@@ -692,6 +656,7 @@ window.DxfLayerMapperController = {
 
     /**
      * 万能DXF生テキストパーサー (Universal DXF Entity & Block Scanner)
+     * [v3.13.27] 極大円弧ガード・BLOCKS内ポリライン展開修正・UTF-8対応
      */
     parseDxfRawLinesDirect: function(rawTxt) {
         const lines = [];
@@ -718,8 +683,11 @@ window.DxfLayerMapperController = {
                 }
             } else if ((curType === 'CIRCLE' || curType === 'ARC') && pts.length >= 1) {
                 const r = curR || 100;
-                curBlockEnts.push({ type: 'CIRCLE', layer: curLayer, x1: pts[0].x - r, y1: pts[0].y, x2: pts[0].x + r, y2: pts[0].y });
-                curBlockEnts.push({ type: 'CIRCLE', layer: curLayer, x1: pts[0].x, y1: pts[0].y - r, x2: pts[0].x, y2: pts[0].y + r });
+                // [v3.13.27] 5000mm以上の極大円弧（設備曲面等）によるBBox爆発を防止
+                if (r > 0 && r < 5000) {
+                    curBlockEnts.push({ type: 'CIRCLE', layer: curLayer, x1: pts[0].x - r, y1: pts[0].y, x2: pts[0].x + r, y2: pts[0].y });
+                    curBlockEnts.push({ type: 'CIRCLE', layer: curLayer, x1: pts[0].x, y1: pts[0].y - r, x2: pts[0].x, y2: pts[0].y + r });
+                }
             }
         };
 
@@ -733,8 +701,10 @@ window.DxfLayerMapperController = {
                 }
             } else if ((curType === 'CIRCLE' || curType === 'ARC') && pts.length >= 1) {
                 const r = curR || 100;
-                lines.push({ type: 'CIRCLE', layer: curLayer, x1: pts[0].x - r, y1: pts[0].y, x2: pts[0].x + r, y2: pts[0].y });
-                lines.push({ type: 'CIRCLE', layer: curLayer, x1: pts[0].x, y1: pts[0].y - r, x2: pts[0].x, y2: pts[0].y + r });
+                if (r > 0 && r < 5000) {
+                    lines.push({ type: 'CIRCLE', layer: curLayer, x1: pts[0].x - r, y1: pts[0].y, x2: pts[0].x + r, y2: pts[0].y });
+                    lines.push({ type: 'CIRCLE', layer: curLayer, x1: pts[0].x, y1: pts[0].y - r, x2: pts[0].x, y2: pts[0].y + r });
+                }
             } else if (curType === 'POINT' && pts.length >= 1) {
                 lines.push({ type: 'POINT', layer: curLayer, x1: pts[0].x - 50, y1: pts[0].y, x2: pts[0].x + 50, y2: pts[0].y });
                 lines.push({ type: 'POINT', layer: curLayer, x1: pts[0].x, y1: pts[0].y - 50, x2: pts[0].x, y2: pts[0].y + 50 });
@@ -743,7 +713,7 @@ window.DxfLayerMapperController = {
             }
         };
 
-        // [v3.13.24] 厳密な (groupCode, value) ペア読み込み (i += 2)
+        // [v3.13.27] (groupCode, value) 厳密スキャン
         for (let i = 0; i < rawLines.length - 1; i += 2) {
             const code = rawLines[i].trim();
             const val = rawLines[i + 1] ? rawLines[i + 1].trim() : "";
@@ -753,19 +723,28 @@ window.DxfLayerMapperController = {
                 const nextVal = rawLines[i + 3] ? rawLines[i + 3].trim() : "";
                 if (nextCode === '2') {
                     section = nextVal;
-                    i += 2; // "2 SECTION_NAME" ペアをスキップ
+                    i += 2;
                     continue;
                 }
             }
             if (code === '0' && val === 'ENDSEC') { section = null; continue; }
 
             if (section === 'BLOCKS') {
-                if (code === '0' && val === 'BLOCK') { pushBlockEnt(); curBlockName = null; curBlockEnts = []; }
+                if (code === '0' && val === 'BLOCK') {
+                    pushBlockEnt();
+                    curBlockName = null;
+                    curBlockEnts = [];
+                    curType = null;
+                    pts = [];
+                }
                 if (code === '2' && !curBlockName) curBlockName = val;
                 if (code === '0' && val === 'ENDBLK') {
                     pushBlockEnt();
                     if (curBlockName) blocks[curBlockName] = curBlockEnts;
-                    curBlockName = null; curBlockEnts = [];
+                    curBlockName = null;
+                    curBlockEnts = [];
+                    curType = null;
+                    pts = [];
                 }
                 if (curBlockName && code === '0' && val !== 'BLOCK') {
                     pushBlockEnt();

@@ -21,16 +21,15 @@ function loadDxf(event) {
                 const buffer = new Uint8Array(ev.target.result);
                 let dxfRaw = "";
 
-                if (typeof window.Encoding !== 'undefined' && window.Encoding.detect) {
+                // [v3.13.27] UTF-8 (AC1027+) & Shift-JIS (AutoCAD legacy / Jw_cad) Robust Decoding
+                const utf8Txt = new TextDecoder('UTF-8').decode(buffer);
+                if (!utf8Txt.includes('\uFFFD') && (utf8Txt.includes('SECTION') || utf8Txt.includes('ENTITIES'))) {
+                    dxfRaw = utf8Txt;
+                } else if (typeof window.Encoding !== 'undefined' && window.Encoding.detect) {
                     const detected = window.Encoding.detect(buffer);
                     dxfRaw = window.Encoding.convert(buffer, { to: 'UNICODE', from: detected || 'AUTO', type: 'STRING' });
                 } else {
-                    const utf8Txt = new TextDecoder('UTF-8').decode(buffer);
-                    if (utf8Txt.includes('\uFFFD')) {
-                        dxfRaw = new TextDecoder('Shift_JIS').decode(buffer);
-                    } else {
-                        dxfRaw = utf8Txt;
-                    }
+                    dxfRaw = new TextDecoder('Shift_JIS').decode(buffer);
                 }
 
                 fileList.push({ name: file.name, rawTxt: dxfRaw });

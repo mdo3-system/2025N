@@ -1,2 +1,2 @@
-window.APP_VERSION = "v3.13.26"; // Feature: Mouse-centered canvas zoom & multi-button pan, high-precision grid snapping for complex DXF (data/05 support)
+window.APP_VERSION = "v3.13.27"; // Fix: Large arc bbox explosion guard, BLOCKS lwpolyline scan & UTF-8 AC1027 DXF support (data/11 support)
 
