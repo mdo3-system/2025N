@@ -163,10 +163,65 @@ window.InputController = {
             if (el) el.addEventListener(event, refresh);
         };
 
+        // 表計算ツール連動による必要壁量自動算定・同期
+        const syncReqWall = () => {
+            if (window.RequiredWallCalculator && typeof window.RequiredWallCalculator.syncAndCalculateFromUI === 'function') {
+                window.RequiredWallCalculator.syncAndCalculateFromUI(window.AppState);
+            }
+        };
+        window.triggerRequiredWallUpdate = () => {
+            syncReqWall();
+            refresh();
+        };
+
+        const autoSyncIds = [
+            'calc-mode-select', 'calc-building-use', 'calc-seismic-grade',
+            'left-prop-roof-type', 'left-prop-solar', 'left-prop-ext-wall',
+            'left-prop-ceiling-ins', 'left-prop-wall-ins',
+            'prop-roof-type', 'prop-solar', 'prop-ext-wall',
+            'n-h1', 'n-h2', 'a-f1', 'a-f2'
+        ];
+        autoSyncIds.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                const eventName = (id.includes('ins') || id.includes('h') || id.includes('f')) ? 'input' : 'change';
+                el.addEventListener(eventName, () => {
+                    syncReqWall();
+                });
+            }
+        });
+
+        // ユーザーが手動で cq1, cq2 を編集した時は自動算定トグルを解除
+        ['c-q1', 'c-q2'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                el.addEventListener('input', () => {
+                    const toggle = document.getElementById('auto-calc-wall-coeff');
+                    if (toggle) toggle.checked = false;
+                    const badge = document.getElementById('auto-calc-badge');
+                    if (badge) badge.style.display = 'none';
+                });
+            }
+        });
+
+        const autoToggle = document.getElementById('auto-calc-wall-coeff');
+        if (autoToggle) {
+            autoToggle.addEventListener('change', (e) => {
+                if (e.target.checked) {
+                    syncReqWall();
+                    refresh();
+                } else {
+                    const badge = document.getElementById('auto-calc-badge');
+                    if (badge) badge.style.display = 'none';
+                }
+            });
+        }
+
         // 1. Configuration & Area Basis (Standardized in v2.3.24)
         const globalIds = [
-            'calc-mode-select', 'attic-height', 'global-fc', 'global-triangle-mult',
+            'calc-mode-select', 'calc-building-use', 'calc-seismic-grade', 'attic-height', 'global-fc', 'global-triangle-mult',
             'prop-ext-wall', 'prop-roof-type', 'prop-eaves-len', 'prop-solar', 'prop-ceiling-ins', 'prop-wall-ins',
+            'left-prop-ext-wall', 'left-prop-roof-type', 'left-prop-solar', 'left-prop-ceiling-ins', 'left-prop-wall-ins',
             'prop-wall-thickness', 'prop-max-height', 'prop-max-eaves-height',
             'prop-base-height', 'prop-base-pack', 'prop-base-sill', 'prop-floor-thick-1f', 'prop-floor-thick-2f', 'prop-roof-thickness',
             'n-h1', 'n-h2', 'p-d1', 'p-d2', 'c-w'
