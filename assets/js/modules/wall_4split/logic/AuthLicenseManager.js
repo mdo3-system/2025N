@@ -75,7 +75,7 @@
 
         /**
          * 有料機能の権限チェック
-         * @param {string} feature 'pdf_report' | 'pillar_detail'
+         * @param {string} feature 'pdf_report' | 'pillar_detail' | 'foundation'
          * @returns {boolean} true: 利用可能, false: ロック（モーダル表示）
          */
         checkPermission: function(feature) {
@@ -104,11 +104,14 @@
             let descText = 'この機能のご利用には、有料サブスクリプションのご契約またはログインが必要です。';
 
             if (feature === 'pdf_report') {
-                titleText = '📑 構造計算書の一括印刷・PDF出力';
-                descText = '確認申請にそのまま提出可能な完成版構造計算書（A4判一括印刷・PDF出力）は、有料プラン専用の機能となっております。';
+                titleText = '📑 壁量計算書の一括印刷・PDF出力';
+                descText = '確認申請にそのまま提出可能な完成版壁量計算書（A4判一括印刷・PDF出力）は、有料プラン専用の機能となっております。';
             } else if (feature === 'pillar_detail') {
                 titleText = '📐 柱N値計算根拠詳細・金物表示';
                 descText = '柱ごとのN値詳細計算式・負担面積・選定金物の詳細根拠の閲覧は、有料プラン専用の機能となっております。';
+            } else if (feature === 'foundation') {
+                titleText = '🏗️ 基礎構造計算（基礎梁・基礎スラブ解析）';
+                descText = '基礎スラブ・基礎梁の断面検定、人通口補強筋、NMQ応力図解析などの基礎構造計算機能は、有料プラン（Stripe決済後）専用の機能となっております。';
             }
 
             if (titleEl) titleEl.textContent = titleText;

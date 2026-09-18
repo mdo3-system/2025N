@@ -202,21 +202,81 @@
 <body>
 
     <div class="header">
-        <h1>🏠 上善如水 構造計算WEB 完全操作マニュアル <span class="badge-ver">v3.13版</span></h1>
+        <h1>🏠 上善如水 壁量計算WEB 完全操作マニュアル <span class="badge-ver">v3.13版</span></h1>
         <p>木造軸組工法における「壁量計算・N値金物計算・風力用見附面積求積・基礎構造計算（スラブ/基礎梁）」統合WEBアプリケーション実務ガイド</p>
     </div>
 
     <!-- 契約・免責・同時ログイン規約 -->
-    <div class="section" style="border-top: 6px solid #27ae60;">
+    <div class="section" id="sec-pricing" style="border-top: 6px solid #27ae60;">
         <h2>💳 料金が発生する機能（無料範囲と有料サブスクリプション機能）</h2>
-        <p>本ツールは、基本作図や判定結果の試算を無料でご利用いただけます。料金が発生する（有料サブスクリプション契約が必要な）機能は以下の2点のみです。</p>
+        <p>本ツールは、基本作図や壁量・4分割法等の判定試算を<strong>完全無料</strong>でご利用いただけます。Stripe決済による有料サブスクリプション契約が必要な機能は以下の項目です。</p>
+
+        <!-- 無料で出来ること・課金後にできること 対比テーブル -->
+        <div style="background:#f8fafc; border:1px solid #cbd5e1; padding:20px; border-radius:10px; margin:18px 0; box-shadow:0 2px 8px rgba(0,0,0,0.05);">
+            <div style="font-size:16px; font-weight:bold; color:#1e293b; margin-bottom:12px; text-align:center;">📋 無料プラン（Free）と有料プラン（Stripe決済後）の機能対比一覧</div>
+            
+            <table style="width:100%; border-collapse:collapse; background:#fff; font-size:13.5px;">
+                <thead>
+                    <tr style="background:#f1f5f9; border-bottom:2px solid #cbd5e1;">
+                        <th style="padding:10px; text-align:left; width:28%;">機能項目</th>
+                        <th style="padding:10px; text-align:left; width:36%; color:#16a34a;">🟢 無料プランで出来ること</th>
+                        <th style="padding:10px; text-align:left; width:36%; color:#2563eb;">⭐ 課金後（有料プラン）にできること</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr style="border-bottom:1px solid #e2e8f0;">
+                        <td style="padding:10px; font-weight:bold;">壁量計算（地震力・風圧力）</td>
+                        <td style="padding:10px;">リアルタイム自動計算・充足率判定</td>
+                        <td style="padding:10px; background:#eff6ff;">無料の全機能を含む</td>
+                    </tr>
+                    <tr style="border-bottom:1px solid #e2e8f0;">
+                        <td style="padding:10px; font-weight:bold;">仕様入力による必要壁量自動算出</td>
+                        <td style="padding:10px;">表計算ツール（多機能版ver1.2.1）準拠の自動算定・転記</td>
+                        <td style="padding:10px; background:#eff6ff;">無料の全機能を含む</td>
+                    </tr>
+                    <tr style="border-bottom:1px solid #e2e8f0;">
+                        <td style="padding:10px; font-weight:bold;">四分割法（壁配置バランス）</td>
+                        <td style="padding:10px;">側端部充足率・壁率比のOK/NGリアルタイム判定</td>
+                        <td style="padding:10px; background:#eff6ff;">無料の全機能を含む</td>
+                    </tr>
+                    <tr style="border-bottom:1px solid #e2e8f0;">
+                        <td style="padding:10px; font-weight:bold;">柱頭柱脚 N値計算</td>
+                        <td style="padding:10px;">柱ごとの概略金物判定・OK/NGのリアルタイム目視確認</td>
+                        <td style="padding:10px; background:#eff6ff;"><strong>柱N値詳細算定根拠・手動金物選定・ボロノイ支配面積図の閲覧出力</strong></td>
+                    </tr>
+                    <tr style="border-bottom:1px solid #e2e8f0;">
+                        <td style="padding:10px; font-weight:bold;">🏗️ 基礎構造計算</td>
+                        <td style="padding:10px; color:#94a3b8;">🔒 ご利用不可（案内モーダル表示）</td>
+                        <td style="padding:10px; background:#eff6ff;"><strong>基礎スラブ・基礎梁の断面検定、人通口補強筋、NMQ応力図解析の全機能</strong></td>
+                    </tr>
+                    <tr style="border-bottom:1px solid #e2e8f0;">
+                        <td style="padding:10px; font-weight:bold;">CADインポート ＆ 3D表示</td>
+                        <td style="padding:10px;">DXF図面のレイヤー割当インポート ＆ 空間3Dプレビュー</td>
+                        <td style="padding:10px; background:#eff6ff;">無料の全機能を含む</td>
+                    </tr>
+                    <tr style="border-bottom:1px solid #e2e8f0;">
+                        <td style="padding:10px; font-weight:bold;">プロジェクトデータの保存</td>
+                        <td style="padding:10px;">ローカルJSON形式での安全な保存 ＆ 読込復元</td>
+                        <td style="padding:10px; background:#eff6ff;">無料の全機能を含む</td>
+                    </tr>
+                    <tr>
+                        <td style="padding:10px; font-weight:bold;">帳票印刷・CAD出力</td>
+                        <td style="padding:10px;">画面上での計算結果・判定の確認</td>
+                        <td style="padding:10px; background:#eff6ff;"><strong>確認申請用A4完成版壁量計算書の一括印刷・PDFダウンロード、各種DXF出力</strong></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
         <div style="background:#f0fdf4; border:1px solid #bbf7d0; padding:18px; border-radius:8px; margin:15px 0;">
-            <strong style="color:#166534; font-size:16px;">【有料プラン（月額サブスクリプション）で解放される機能】</strong>
-            <ol style="margin-top:10px; margin-bottom:8px; padding-left:22px; font-weight:bold; font-size:15px; color:#1e293b;">
-                <li>📑 構造計算書の一括印刷・PDF出力機能（確認申請に提出可能な完成版計算書PDFのダウンロード）</li>
-                <li>📊 柱のN値計算・金物選定結果の表示および耐力壁の軸力図（立面）の出力機能</li>
+            <strong style="color:#166534; font-size:16px;">【有料サブスクリプション（Stripe決済後）で解放される機能】</strong>
+            <ol style="margin-top:10px; margin-bottom:8px; padding-left:22px; font-weight:bold; font-size:14.5px; color:#1e293b; line-height:1.7;">
+                <li>📑 <strong>完成版壁量計算書の一括印刷・PDF出力機能:</strong> 確認申請にそのまま提出可能なA4判完成版計算書PDFのダウンロード</li>
+                <li>🏗️ <strong>基礎構造計算（基礎スラブ・基礎梁解析）:</strong> スラブ・基礎梁断面検定、亀甲分割による負担幅算定、柱直下/両端支点連続梁モデルによるNMQ応力図解析</li>
+                <li>📐 <strong>柱N値詳細算定式・金物手動選定 ＆ 柱負担面積図:</strong> 柱ごとのN値詳細計算式・ボロノイ支配面積図の閲覧および金物の手動指定</li>
+                <li>🧱 <strong>各種CAD（DXF）無制限出力:</strong> 壁配置図、基礎伏図、N値確認図のDXFデータエクスポート</li>
             </ol>
-            <span style="font-size:13px; color:#475569;">※上記以外の作図、見附面積、壁量判定、重心剛心の画面上試算はすべて無料で何度でもお試しいただけます。サブスク未契約時に有料ボタンを押すと案内ダイアログが表示されます。</span>
+            <span style="font-size:13px; color:#475569;">※作図、見附面積、壁量判定、四分割法、重心剛心、概要N値の画面上試算・保存復元はすべて無料で何度でもご利用いただけます。</span>
         </div>
 
         <h3 style="margin-top:20px; color:#27ae60; border:none;">🔄 いつでも簡単に解約可能です（ご契約と解約について）</h3>
@@ -246,6 +306,7 @@
     <div class="toc">
         <h2>📌 目次</h2>
         <ul>
+            <li><a href="#sec-pricing">💳 無料プランと有料サブスクリプション機能の比較一覧（無料で出来ること・課金後にできること）</a></li>
             <li><a href="#sec1">1. CADでの作図 ＆ DXF読み込みルール（最重要）</a></li>
             <li><a href="#sec2">2. 建物荷重仕様の設定 ＆ 表計算ツールからの必要壁量転記</a></li>
             <li><a href="#sec3">3. 柱寸法 ＆ 軸組工法階高の設定（有効細長比算出用）</a></li>
@@ -360,6 +421,24 @@
         <h2>2. 建物荷重仕様の設定 ＆ 表計算ツール連動による必要壁量の自動算定・転記</h2>
         <p>左パネル「2. 建物荷重仕様 (屋根・天井・外壁・太陽光)」および「⚙️ 計算モード」では、建物の仕様・用途・耐震等級を設定することで、<strong>公益財団法人 日本住宅・木材技術センター配布の「令和7年施行・表計算ツール（多機能版 ver1.2.1）」に完全準拠した単位必要壁量（1階 $c_{q1}$, 2階 $c_{q2}$）がリアルタイムに自動算定され、入力スロットへ自動転記</strong>されます。</p>
 
+        <!-- 【最重要確認事項】表計算ツールとの数値整合確認 -->
+        <div class="alert alert-important" style="border: 3px solid #e74c3c; background: #fff5f5; padding: 22px; border-radius: 10px; margin: 22px 0; box-shadow: 0 4px 15px rgba(231,76,60,0.15);">
+            <div style="font-size: 19px; font-weight: bold; color: #c0392b; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+                ⚠️ 【最重要確認事項】表計算ツール算出値との数値整合について
+            </div>
+            <p style="font-size: 16px; font-weight: 800; color: #b71c1c; line-height: 1.8; margin-bottom: 12px; background: #fee2e2; padding: 12px; border-radius: 6px; border-left: 5px solid #dc2626;">
+                必ずリンク先からファイルをダウンロードし、表計算ツールで算出された必要壁量と、本ツール上で表示されている必要壁量が整合していることを必ずご確認ください。
+            </p>
+            <p style="font-size: 13.5px; color: #334155; line-height: 1.7; margin-bottom: 16px;">
+                本ツールは建物仕様（階高・屋根仕様・外壁仕様・太陽光発電の有無・建築用途・耐震等級など）から単位必要壁量を自動算出・自動転記しますが、<strong>確認申請審査や実務上の設計責任を担保するため、設計者自身の手で日本住宅・木材技術センター公式の「表計算ツール（多機能版 ver1.2.1）」をダウンロードの上、算出結果が完全に一致していることを必ず照合・検算</strong>してください。
+            </p>
+            <div style="text-align: center;">
+                <a href="https://www.howtec.or.jp/publics/index/441/" target="_blank" style="display: inline-flex; align-items: center; gap: 8px; background: #2563eb; color: #ffffff; text-decoration: none; font-size: 15px; font-weight: bold; padding: 12px 28px; border-radius: 8px; box-shadow: 0 4px 10px rgba(37,99,235,0.3); transition: background 0.2s;">
+                    🔗 公益財団法人 日本住宅・木材技術センター「表計算ツール」配布ページを開く
+                </a>
+            </div>
+        </div>
+
         <table>
             <thead>
                 <tr>
@@ -448,7 +527,8 @@
         </div>
         <ul>
             <li><strong>🏗️ 基礎の構造計算（基礎スラブ・基礎梁）:</strong><br>
-            木造2階建て住宅の建築確認申請においては、<strong>基礎の構造計算書は提出不要</strong>です（審査機関への提出用計算書は「壁量計算書のみ」で適合します）。本アプリの基礎計算機能は、自社の安全設計確認および施工検討用としてご活用ください。</li>
+            木造2階建て住宅の建築確認申請においては、<strong>基礎の構造計算書は提出不要</strong>です（審査機関への提出用計算書は「壁量計算書のみ」で適合します）。本アプリの基礎計算機能は、自社の安全設計確認および施工検討用としてご活用ください。<br>
+            <span style="color:#d97706; font-weight:bold;">※ 基礎構造計算機能（基礎梁・スラブ断面検定・応力解析）は、Stripe決済完了後（有料サブスクリプション契約者）限定の機能となっております。</span></li>
             
             <li><strong>⚖️ 直下率（柱直下率・壁直下率） ＆ 重心・剛心計算:</strong><br>
             これらも建築確認申請の審査においては<strong>提出不要（審査対象外）</strong>です。壁量充足率および4分割法の壁バランス比が適合していれば確認申請はクリアとなります。</li>
@@ -666,6 +746,12 @@
     <!-- 9. 基礎計算 -->
     <div class="section" id="sec9">
         <h2>9. 基礎計算（グレー本2025準拠 スラブ・基礎梁・NMQ応力図）完全ガイド</h2>
+
+        <div class="alert alert-important" style="background:#fef3c7; border-left-color:#f59e0b; color:#92400e;">
+            <strong>🔒 【有料サブスクリプション限定機能】:</strong><br>
+            「基礎」タブでの基礎構造計算（基礎梁・スラブの配置、断面検定、人通口補強筋、NMQ応力図解析）は、<strong>Stripe決済による有料プラン（週額1,650円〜 / 月額 / 年額）のご契約後にご利用いただける専用機能</strong>となっております。<br>
+            ※未契約状態では、「基礎」タブ選択時に有料プラン案内モーダルが表示されます。
+        </div>
 
         <div class="alert alert-note">
             <strong>📖 グレー本2025（木造軸組工法住宅の許容応力度設計）完全準拠仕様:</strong><br>

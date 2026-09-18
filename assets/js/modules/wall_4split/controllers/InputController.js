@@ -115,7 +115,12 @@ window.InputController = {
     bindNavigationHandlers: function() {
         const bC = (id, fn) => { let el = document.getElementById(id); if (el) el.addEventListener('click', fn); };
         
-        bC('tab-foundation', () => window.AppController.switchAppMode('foundation'));
+        bC('tab-foundation', () => {
+            if (window.AuthLicenseManager && !window.AuthLicenseManager.checkPermission('foundation')) {
+                return;
+            }
+            window.AppController.switchAppMode('foundation');
+        });
         bC('tab-1f', () => window.AppController.setFloor('1F'));
         bC('tab-2f', () => window.AppController.setFloor('2F'));
         bC('tab-1r', () => window.AppController.setRoofFloor('1R'));

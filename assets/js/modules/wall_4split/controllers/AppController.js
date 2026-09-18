@@ -278,6 +278,11 @@ window.AppController = {
         if (roofPanel) roofPanel.style.display = (mode === 'roof') ? 'block' : 'none';
 
         if (mode === 'foundation') {
+            if (window.AuthLicenseManager && typeof window.AuthLicenseManager.checkPermission === 'function') {
+                if (!window.AuthLicenseManager.checkPermission('foundation')) {
+                    return; // 未契約・未ログイン時は基礎モードへの遷移を遮断
+                }
+            }
             this.setDefaultLayerVisibility('1F');
             this.updateFoundationUI();
             // [v2.5.16 修正] スケールが初期デフォルト値(1.0)かつオフセットもゼロ（＝完全未初期化状態）の場合のみ初期ビューを計算する

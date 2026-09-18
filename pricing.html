@@ -564,6 +564,7 @@
                         </div>
                         <ul class="plan-features">
                             <li>全壁量計算機能（壁量/4分割/N値）</li>
+                            <li><strong>基礎構造計算（基礎梁・スラブ検定）</strong></li>
                             <li>DXFインポート & 3D表示</li>
                             <li>帳票PDF・CAD（DXF）無制限出力</li>
                             <li>プロジェクトのローカル保存（JSON復元）</li>
@@ -584,6 +585,7 @@
                         </div>
                         <ul class="plan-features">
                             <li>全壁量計算機能（壁量/4分割/N値）</li>
+                            <li><strong>基礎構造計算（基礎梁・スラブ検定）</strong></li>
                             <li>DXFインポート & 3D表示</li>
                             <li>帳票PDF・CAD（DXF）無制限出力</li>
                             <li>プロジェクト保存（ローカルJSON保存・復元）</li>
@@ -605,6 +607,7 @@
                         </div>
                         <ul class="plan-features">
                             <li>スタンダードプランの全機能</li>
+                            <li><strong>基礎構造計算（基礎梁・スラブ検定）</strong></li>
                             <li>年間一括払い（実質2ヶ月分お得）</li>
                             <li>帳票PDF・CAD（DXF）無制限出力</li>
                             <li>プロジェクト保存（ローカルJSON保存・復元）</li>
@@ -612,6 +615,64 @@
                         </ul>
                     </div>
                     <button onclick="startCheckout('annual')" class="btn-plan btn-plan-primary">年額プランで始める</button>
+                </div>
+            </div>
+
+            <!-- 無料プランと有料プランの機能比較表 -->
+            <div style="max-width:960px; margin:3.5rem auto 0; background:#fff; border:1px solid var(--border); border-radius:var(--radius); padding:2rem; box-shadow:var(--shadow);">
+                <h3 style="text-align:center; font-size:1.3rem; font-weight:700; color:var(--text-main); margin-bottom:1.5rem;">📋 無料で出来ること・課金後にできること</h3>
+                <div style="overflow-x:auto;">
+                    <table style="width:100%; border-collapse:collapse; text-align:left; font-size:0.95rem;">
+                        <thead>
+                            <tr style="background:#f1f5f9; border-bottom:2px solid #cbd5e1;">
+                                <th style="padding:12px 16px; width:30%;">機能分類</th>
+                                <th style="padding:12px 16px; width:35%; color:#16a34a;">🟢 無料プラン（Free）</th>
+                                <th style="padding:12px 16px; width:35%; color:#2563eb;">⭐ 課金後（有料サブスクリプション）</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr style="border-bottom:1px solid #e2e8f0;">
+                                <td style="padding:12px 16px; font-weight:600;">壁量計算（地震力・風圧力）</td>
+                                <td style="padding:12px 16px;">リアルタイム自動計算・充足率判定</td>
+                                <td style="padding:12px 16px; background:#eff6ff;">無料の全機能を含む</td>
+                            </tr>
+                            <tr style="border-bottom:1px solid #e2e8f0;">
+                                <td style="padding:12px 16px; font-weight:600;">仕様入力による必要壁量自動算出</td>
+                                <td style="padding:12px 16px;">表計算ツール（多機能版）準拠の自動算定</td>
+                                <td style="padding:12px 16px; background:#eff6ff;">無料の全機能を含む</td>
+                            </tr>
+                            <tr style="border-bottom:1px solid #e2e8f0;">
+                                <td style="padding:12px 16px; font-weight:600;">四分割法（壁配置バランス）</td>
+                                <td style="padding:12px 16px;">側端部充足率・壁率比のリアルタイム判定</td>
+                                <td style="padding:12px 16px; background:#eff6ff;">無料の全機能を含む</td>
+                            </tr>
+                            <tr style="border-bottom:1px solid #e2e8f0;">
+                                <td style="padding:12px 16px; font-weight:600;">柱頭柱脚 N値計算</td>
+                                <td style="padding:12px 16px;">概略金物判定・OK/NGのリアルタイム目視確認</td>
+                                <td style="padding:12px 16px; background:#eff6ff;"><strong>詳細算定根拠・ボロノイ支配面積図・金物手動選定</strong></td>
+                            </tr>
+                            <tr style="border-bottom:1px solid #e2e8f0;">
+                                <td style="padding:12px 16px; font-weight:600;">🏗️ 基礎構造計算</td>
+                                <td style="padding:12px 16px; color:#94a3b8;">🔒 ご利用不可（案内モーダル表示）</td>
+                                <td style="padding:12px 16px; background:#eff6ff;"><strong>基礎スラブ・基礎梁断面検定、人通口補強筋、NMQ応力図解析</strong></td>
+                            </tr>
+                            <tr style="border-bottom:1px solid #e2e8f0;">
+                                <td style="padding:12px 16px; font-weight:600;">CADインポート ＆ 3Dプレビュー</td>
+                                <td style="padding:12px 16px;">DXFインポート ＆ 空間3Dプレビュー表示</td>
+                                <td style="padding:12px 16px; background:#eff6ff;">無料の全機能を含む</td>
+                            </tr>
+                            <tr style="border-bottom:1px solid #e2e8f0;">
+                                <td style="padding:12px 16px; font-weight:600;">プロジェクトデータの保存</td>
+                                <td style="padding:12px 16px;">ローカルJSON形式での安全な保存・復元</td>
+                                <td style="padding:12px 16px; background:#eff6ff;">無料の全機能を含む</td>
+                            </tr>
+                            <tr>
+                                <td style="padding:12px 16px; font-weight:600;">計算書PDF・CAD出力</td>
+                                <td style="padding:12px 16px;">画面上での判定結果・応力の確認</td>
+                                <td style="padding:12px 16px; background:#eff6ff;"><strong>確認申請用A4完成版壁量計算書 一括印刷・PDF出力、各種DXF出力</strong></td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
 
