@@ -1,2 +1,2 @@
-// v3.13.33: Foundation calculation paywall restriction & manual update (required wall spec auto-calc & free vs paid feature matrix)
-window.APP_VERSION = "v3.13.33";
+// v3.13.34: Unified copyright & program license attribution (MDO3 Structural Systems / 株式会社住ま居る)
+window.APP_VERSION = "v3.13.34";
