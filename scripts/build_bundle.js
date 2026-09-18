@@ -34,6 +34,7 @@ const SCRIPT_FILES = [
     'assets/js/modules/wall_4split/logic/RoofEngine.js',
     'assets/js/modules/wall_4split/logic/MitsukeEngine.js',
     'assets/js/modules/wall_4split/logic/WasmBridge.js',
+    'assets/js/modules/wall_4split/logic/AuthLicenseManager.js',
     'assets/js/modules/wall_4split/logic/RequiredWallCalculator.js',
     'assets/js/modules/wall_4split/controllers/PropertyController.js',
     'assets/js/modules/wall_4split/controllers/PillarPropertyController.js',

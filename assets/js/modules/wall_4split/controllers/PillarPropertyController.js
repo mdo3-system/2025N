@@ -106,6 +106,9 @@ window.PillarPropertyController = {
      * @param {string|number} id - 柱ID
      */
     showPillarDetail: function(id) {
+        if (window.AuthLicenseManager && !window.AuthLicenseManager.checkPermission('pillar_detail')) {
+            return;
+        }
         const s = window.AppState;
         if (!s || !s.pillars) return;
         const p = s.pillars.find(p => p.id == id);

@@ -94,7 +94,12 @@ window.InputController = {
         });
         bC('btn-export-csv', () => { if (window.AppExport) window.AppExport.exportCSV(); });
         bC('btn-export-dxf', () => { if (window.AppExport) window.AppExport.exportDXF(); });
-        bC('btn-gen-doc', () => { if (window.DocumentEngine) window.DocumentEngine.generateFullReport(); });
+        bC('btn-gen-doc', () => { 
+            if (window.AuthLicenseManager && !window.AuthLicenseManager.checkPermission('pdf_report')) {
+                return;
+            }
+            if (window.DocumentEngine) window.DocumentEngine.generateFullReport(); 
+        });
 
         document.querySelectorAll('.btn-close-modal').forEach(btn => {
             btn.addEventListener('click', function () { this.closest('.modal-overlay').style.display = 'none'; });

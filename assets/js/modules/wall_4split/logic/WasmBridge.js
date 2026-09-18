@@ -26,6 +26,26 @@
         wasmInstance: null,
         domainHash: 0,
         loadError: null,
+        licenseState: {
+            isAuthenticated: false,
+            isSubscribed: false,
+            planKey: null
+        },
+
+        /**
+         * 認証・ライセンス状態の設定
+         */
+        setLicenseState: function(state) {
+            this.licenseState = Object.assign(this.licenseState, state || {});
+            console.log('🛡️ [WasmBridge] License State Updated:', this.licenseState.isSubscribed ? 'Subscribed' : 'Free');
+        },
+
+        /**
+         * 有効なライセンス（サブスクまたは社内無償）を保有しているか
+         */
+        isLicenseActive: function() {
+            return !!(this.licenseState && this.licenseState.isSubscribed);
+        },
 
         /**
          * Wasmモジュールを非同期初期化

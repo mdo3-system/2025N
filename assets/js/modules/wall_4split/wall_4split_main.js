@@ -48,6 +48,13 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
+        // 0.2. 会員認証・サブスクリプションライセンス初期化 (フェーズ3)
+        if (window.AuthLicenseManager && typeof window.AuthLicenseManager.init === 'function') {
+            window.AuthLicenseManager.init().catch(e => {
+                console.warn('[Main] AuthLicenseManager init error:', e);
+            });
+        }
+
         // 1. 迥ｶ諷九蛻晄悄蛹
         if (window.AppState && typeof window.AppState.init === 'function') {
             window.AppState.init();

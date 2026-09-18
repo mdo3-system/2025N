@@ -48,6 +48,7 @@ const filesToLoad = [
     '../logic/AreaEngine.js',
     '../logic/MitsukeEngine.js',
     '../logic/WasmBridge.js',
+    '../logic/AuthLicenseManager.js',
     '../logic/RequiredWallCalculator.js',
     '../controllers/PillarPropertyController.js',
     '../controllers/WallPropertyController.js',
@@ -89,7 +90,8 @@ const testFiles = [
     'ReportNValueView.test.js',
     'GridPersistence.test.js',
     'RequiredWallCalculator.test.js',
-    'WasmBridge.test.js'
+    'WasmBridge.test.js',
+    'AuthLicenseManager.test.js'
 ];
 
 testFiles.forEach(f => {

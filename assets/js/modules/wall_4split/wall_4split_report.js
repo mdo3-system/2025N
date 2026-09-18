@@ -61,6 +61,9 @@ function showPillarProps(p) {
 }
 
 function showPillarDetail(id) {
+    if (window.AuthLicenseManager && !window.AuthLicenseManager.checkPermission('pillar_detail')) {
+        return;
+    }
     const p = window.AppState.pillars.find(p => p.id == id);
     if (!p) return;
     const pdText = document.getElementById('pillar-detail-text');
