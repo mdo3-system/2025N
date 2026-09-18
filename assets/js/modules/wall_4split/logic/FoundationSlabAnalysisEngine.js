@@ -243,7 +243,46 @@ window.FoundationSlabAnalysisEngine = {
             const Ma_short = 195 * at_short * j / 1e6;
             const Ma_long  = 195 * at_long  * j / 1e6;
 
-            if (slab.props.support === '片持ち') {
+            let stressResult = null;
+            if (typeof window !== 'undefined' && window.WasmBridge && window.WasmBridge.calculateSlabStress) {
+                stressResult = window.WasmBridge.calculateSlabStress({
+                    qTotal,
+                    lx,
+                    ly,
+                    support: slab.props.support,
+                    thickness: D,
+                    coverDepth: dt,
+                    at_short,
+                    at_long,
+                    cantileverLength: slab.props.cantileverLength || 0.9
+                });
+            }
+
+            if (stressResult) {
+                slab.fdStress = {
+                    qTotal,
+                    axialPressure: axial_kN / area,
+                    stemPressure: stem_kN / area,
+                    totalAxial_kN: axial_kN,
+                    stemWeight_kN: stem_kN,
+                    floorLoad: 1.740,
+                    deadLoad: qTotal - 1.740,
+                    area,
+                    supportName: slab.props.support,
+                    lx, ly,
+                    Mx_center: stressResult.Mx_center,
+                    Mx_end: stressResult.Mx_end,
+                    My_center: stressResult.My_center,
+                    My_end: stressResult.My_end,
+                    Ma_short: stressResult.Ma_short,
+                    Ma_long: stressResult.Ma_long,
+                    ratioShort: stressResult.ratioShort,
+                    ratioLong: stressResult.ratioLong,
+                    isNG: stressResult.isNG,
+                    cantileverLength: slab.props.cantileverLength || 0.9,
+                    at_short, at_long, j, d
+                };
+            } else if (slab.props.support === '片持ち') {
                 const Mx = 0.5 * qTotal * ((slab.props.cantileverLength || 0.9) ** 2);
                 slab.fdStress = { qTotal, axialPressure: axial_kN/area, stemPressure: stem_kN/area, totalAxial_kN: axial_kN, stemWeight_kN: stem_kN, floorLoad: 1.740, deadLoad: qTotal - 1.740, area, supportName: '片持ち', Mx_center: Mx, Ma_short, ratioShort: Mx / (Ma_short || 1), isNG: Mx > Ma_short, cantileverLength: slab.props.cantileverLength || 0.9, at_short, at_long, j, d };
             } else {

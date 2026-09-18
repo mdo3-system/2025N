@@ -16,24 +16,38 @@ window.FoundationBeamEngine = {
 
         const L = beam.length || 1.82; // 梁スパン(m)
         const loadPerM = beam.tributaryLoad || 12.5; // 従属単位荷重(kN/m)
-        
+        const b = beam.width || 150;
+        const D = beam.height || 450;
+        const rebarArea = beam.rebarArea || 253.4; // D13 2本 (126.7 * 2)
+        const ft = 195; // N/mm2 (鉄筋 SD295)
+
+        // WebAssembly Core による保護された応力算定を優先実行
+        if (typeof window !== 'undefined' && window.WasmBridge && window.WasmBridge.calculateBeamStress) {
+            const res = window.WasmBridge.calculateBeamStress({
+                beamId: beam.id || 'FB-1',
+                length: L,
+                tributaryLoad: loadPerM,
+                width: b,
+                height: D,
+                rebarArea: rebarArea,
+                ft: ft
+            });
+            if (res) return res;
+        }
+
+        // JSフォールバック
         // 1. 曲げモーメント (M = w * L^2 / 8)
         const M_max = (loadPerM * L * L) / 8.0;
 
         // 2. せん断力 (Q = w * L / 2)
         const Q_max = (loadPerM * L) / 2.0;
 
-        // 3. 梁せい・梁幅
-        const b = beam.width || 150;
-        const D = beam.height || 450;
-        const d = D - 70; // 有効せい(mm)
+        // 3. 有効せい(mm)
+        const d = D - 70;
 
-        // 4. 許容曲げモーメント Ma (鉄筋 SD295)
-        const ft = 195; // N/mm2
-        const rebarArea = beam.rebarArea || 253.4; // D13 2本 (126.7 * 2)
-        const Ma = (rebarArea * ft * j_ratio(d)) / 1000000; // kN·m
-
+        // 4. 許容曲げモーメント Ma (kN·m)
         function j_ratio(effD) { return 0.875 * effD; }
+        const Ma = (rebarArea * ft * j_ratio(d)) / 1000000;
 
         const isOkM = M_max <= Ma;
         const ratioM = Ma > 0 ? (M_max / Ma) : 1.0;

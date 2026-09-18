@@ -46,6 +46,9 @@ window.NValueEngine = {
 
         // Table 3-14 Correction Factor
         const calcTable314Correction = (brace1, brace2) => {
+            if (typeof window !== 'undefined' && window.WasmBridge && window.WasmBridge.calculateTable314Correction) {
+                return window.WasmBridge.calculateTable314Correction(brace1, brace2);
+            }
             if (!brace1 && !brace2) return 0;
             if ((brace1 && brace1.m === 4.0) || (brace2 && brace2.m === 4.0)) return 0.5;
             if (!brace1 || !brace2) {
@@ -142,7 +145,9 @@ window.NValueEngine = {
                 // 細長比 (令第43条6項: λ <= 150) & 負担面積プロパティを柱オブジェクトに保存
                 p.d = parseFloat(p_d) || 105;
                 p.l_0 = parseFloat(p_h) || 2.7;
-                p.lambda = Math.round(((p.l_0 * 1000 * Math.sqrt(12)) / p.d) * 10) / 10;
+                p.lambda = (typeof window !== 'undefined' && window.WasmBridge && window.WasmBridge.calculateSlendernessRatio)
+                    ? window.WasmBridge.calculateSlendernessRatio(p.l_0, p.d)
+                    : Math.round(((p.l_0 * 1000 * Math.sqrt(12)) / p.d) * 10) / 10;
                 p.lambdaOK = (p.lambda <= 150);
                 p.usedArea = usedArea;
 
@@ -169,18 +174,46 @@ window.NValueEngine = {
                         
                         p.cStrX = fmt(aR, b, k_p, L, upX);
                         p.cStrY = fmt(aT, b, k_p, L, upY);
-                        p.nValue = Math.max(0, (aR * b * k_p) + (upper.Ax * b2 * k2) - L, (aT * b * k_p) + (upper.Ay * b2 * k2) - L);
+
+                        if (typeof window !== 'undefined' && window.WasmBridge && window.WasmBridge.calculatePillarN) {
+                            const res = window.WasmBridge.calculatePillarN({
+                                aX: aR, aY: aT, b: b, k: k_p, L: L,
+                                upperAx: upper.Ax, upperAy: upper.Ay, upperB: b2, upperK: k2,
+                                hasUpper: true
+                            });
+                            p.nValue = res.nValue;
+                        } else {
+                            p.nValue = Math.max(0, (aR * b * k_p) + (upper.Ax * b2 * k2) - L, (aT * b * k_p) + (upper.Ay * b2 * k2) - L);
+                        }
                     } else {
                         p.cStrX = fmt(aR, b, k_p, L);
                         p.cStrY = fmt(aT, b, k_p, L);
-                        p.nValue = Math.max(0, aR * b * k_p - L, aT * b * k_p - L);
+
+                        if (typeof window !== 'undefined' && window.WasmBridge && window.WasmBridge.calculatePillarN) {
+                            const res = window.WasmBridge.calculatePillarN({
+                                aX: aR, aY: aT, b: b, k: k_p, L: L,
+                                hasUpper: false
+                            });
+                            p.nValue = res.nValue;
+                        } else {
+                            p.nValue = Math.max(0, aR * b * k_p - L, aT * b * k_p - L);
+                        }
                     }
                 } else {
                     let L = isDetail ? (wRoof * usedArea / 5.3) : (isC ? 0.4 : 0.6);
                     p.L_val = L;
                     p.cStrX = `(Σα: ${p.Ax.toFixed(2)} × B: ${b.toFixed(1)} × K: ${k_p.toFixed(2)})<br> － (押さえL: ${L.toFixed(2)})`;
                     p.cStrY = `(Σα: ${p.Ay.toFixed(2)} × B: ${b.toFixed(1)} × K: ${k_p.toFixed(2)})<br> － (押さえL: ${L.toFixed(2)})`;
-                    p.nValue = Math.max(0, p.Ax * b * k_p - L, p.Ay * b * k_p - L);
+
+                    if (typeof window !== 'undefined' && window.WasmBridge && window.WasmBridge.calculatePillarN) {
+                        const res = window.WasmBridge.calculatePillarN({
+                            aX: p.Ax, aY: p.Ay, b: b, k: k_p, L: L,
+                            hasUpper: false
+                        });
+                        p.nValue = res.nValue;
+                    } else {
+                        p.nValue = Math.max(0, p.Ax * b * k_p - L, p.Ay * b * k_p - L);
+                    }
                 }
                 
                 // Hardware mapping
