@@ -12,9 +12,8 @@ if (!empty($staffEmailsEnv)) {
     $staffEmails = array_map('trim', explode(',', $staffEmailsEnv));
 } else {
     $staffEmails = [
-        'staff1@eie.jp',
-        'staff2@eie.jp',
-        'info@2025.eie.jp'
+        'eie@ymail.ne.jp',
+        'sato@t-smile.co.jp'
     ];
 }
 
