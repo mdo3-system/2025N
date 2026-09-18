@@ -1,0 +1,6 @@
+# AssemblyScript build dependencies
+node_modules/assemblyscript/
+node_modules/binaryen/
+node_modules/long/
+node_modules/.bin/
+node_modules/.package-lock.json

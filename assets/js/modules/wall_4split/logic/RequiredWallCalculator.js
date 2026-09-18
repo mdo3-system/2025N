@@ -61,10 +61,21 @@
 
         /**
          * 表計算ツール ver1.2.1 完全準拠の単位必要壁量算定
+         * （WebAssembly バイナリ優先 ＆ 透過的JavaScriptフォールバック）
          * @param {Object} params
          * @returns {Object} { cq1, cq2, q1_cm, q2_cm, details }
          */
         calculate: function(params) {
+            if (global.WasmBridge && typeof global.WasmBridge.isReady === 'function' && global.WasmBridge.isReady()) {
+                return global.WasmBridge.calculateRequiredWall(params);
+            }
+            return this._calculateJS(params);
+        },
+
+        /**
+         * 純粋JavaScriptによる内部計算ロジック（ローカル保守・開発・オフラインフォールバック用）
+         */
+        _calculateJS: function(params) {
             params = params || {};
 
             // 1. 階高 (m)
@@ -355,7 +366,8 @@
             // バッジ表示の更新
             const badgeEl = document.getElementById('auto-calc-badge');
             if (badgeEl) {
-                badgeEl.textContent = `⚡ 表計算ver1.2.1連動: 1F=${calcResult.q1_cm}cm/㎡, 2F=${calcResult.q2_cm}cm/㎡`;
+                const wasmTag = (calcResult.engine === 'wasm') ? ' 🛡️Wasm保護' : '';
+                badgeEl.textContent = `⚡ 表計算ver1.2.1連動${wasmTag}: 1F=${calcResult.q1_cm}cm/㎡, 2F=${calcResult.q2_cm}cm/㎡`;
                 badgeEl.style.display = 'inline-block';
             }
 

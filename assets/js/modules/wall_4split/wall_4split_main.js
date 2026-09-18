@@ -37,6 +37,17 @@ document.addEventListener('DOMContentLoaded', () => {
             document.title = `上善如水 - 壁量計算WEB (${window.APP_VERSION || 'v2.x'})`; // 印刷ヘッダー用
         }
 
+        // 0.1. WebAssembly コアエンジンの非同期初期化（IP保護＆ドメインロック）
+        if (window.WasmBridge && typeof window.WasmBridge.init === 'function') {
+            window.WasmBridge.init().then(() => {
+                if (window.RequiredWallCalculator && typeof window.RequiredWallCalculator.syncAndCalculateFromUI === 'function') {
+                    window.RequiredWallCalculator.syncAndCalculateFromUI(window.AppState);
+                }
+            }).catch(e => {
+                console.warn('[Main] WasmBridge init error:', e);
+            });
+        }
+
         // 1. 迥ｶ諷九蛻晄悄蛹
         if (window.AppState && typeof window.AppState.init === 'function') {
             window.AppState.init();
