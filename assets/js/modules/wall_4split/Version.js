@@ -1,2 +1,2 @@
-window.APP_VERSION = "v3.13.29"; // Feature: WebAssembly (Wasm) Calculation Core with Domain Locking for IP Protection & Transparent JS Fallback
+window.APP_VERSION = "v3.13.30"; // Feature: JavaScript Bundling & Code Obfuscation for IP Protection (Phase 1)
 

@@ -1,6 +1,6 @@
-# AssemblyScript build dependencies
-node_modules/assemblyscript/
-node_modules/binaryen/
-node_modules/long/
+# Ignore devDependencies while preserving tracked runtime packages
+node_modules/*
+!node_modules/dxf-parser/
+!node_modules/loglevel/
 node_modules/.bin/
 node_modules/.package-lock.json

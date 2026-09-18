@@ -4,9 +4,12 @@
   },
   "scripts": {
     "build:wasm": "asc assembly/index.ts --target release --outFile assets/wasm/wall_calculator.wasm --optimize",
+    "bundle": "node scripts/build_bundle.js",
+    "build:prod": "npm run build:wasm && npm run bundle",
     "test": "node assets/js/modules/wall_4split/tests/run_node_tests.js"
   },
   "devDependencies": {
-    "assemblyscript": "^0.28.20"
+    "assemblyscript": "^0.28.20",
+    "terser": "^5.51.2"
   }
 }
