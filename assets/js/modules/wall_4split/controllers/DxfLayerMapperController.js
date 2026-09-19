@@ -255,7 +255,7 @@ window.DxfLayerMapperController = {
         if (btnSkip) btnSkip.innerText = '⏭️ この設定のまま完了する';
 
         // コントロールパネルの動的描画
-        const container = document.getElementById('dxf-wizard-step-controls');
+        const container = document.getElementById('wizard-step-control-container') || document.getElementById('dxf-wizard-step-controls');
         if (!container) return;
 
         const curData = this.stepData[stepNum];

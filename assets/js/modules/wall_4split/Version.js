@@ -1,2 +1,2 @@
-// v3.13.34: Unified copyright & program license attribution (MDO3 Structural Systems / 株式会社住ま居る)
-window.APP_VERSION = "v3.13.34";
+// v3.13.35: Restore DXF wizard step file assignment & DXF addition UI controls
+window.APP_VERSION = "v3.13.35";
