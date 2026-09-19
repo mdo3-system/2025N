@@ -20,6 +20,11 @@ window.InputController = {
         
         // 4. State Binding (Global inputs)
         this.bindStateHandlers();
+
+        // 5. Initialize Mitsuke Area UI
+        if (window.AppController && typeof window.AppController.updateMitsukeInputUI === 'function') {
+            window.AppController.updateMitsukeInputUI();
+        }
     },
 
     bindFileHandlers: function() {

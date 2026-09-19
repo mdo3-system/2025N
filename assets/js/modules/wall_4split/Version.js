@@ -1,5 +1,5 @@
-// v3.13.36: Dynamic version synchronization & FIXED_LOGICS WebAssembly documentation
-window.APP_VERSION = "v3.13.36";
+// v3.13.37: Mitsuke area manual/DXF input mode, roof tabs disabling, and wizard integration
+window.APP_VERSION = "v3.13.37";
 
 (function() {
     function applyAppVersion() {

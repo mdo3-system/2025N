@@ -69,20 +69,32 @@ window.AppController = {
             window.GridEngine.analyzeGrids(state);
         }
 
-        // [v3.0.12] 0.2. 先に DOM からの値を同期 (init) してから、見附投影面積を自動計算し DOM へ書き戻す
+        // [v3.0.12] 0.2. 見附面積の同期処理 (屋根自動算出 vs DXF/手入力)
         state.init();
-        if (window.MitsukeEngine && window.MitsukeEngine.updateProjectedAreas) {
-            window.MitsukeEngine.updateProjectedAreas(state);
-            // 自動計算された見付面積をDOM入力フィールドへ逆書き込み
+        if (state.mitsukeMode === 'dxf_manual') {
+            // 手入力モード: DOMに入力された値をそのまま state.config.projectedAreas に反映
             ['1', '2'].forEach(lv => {
                 const f = lv + 'F';
-                const pxVal = state.config.projectedAreas[f]?.x || 0;
-                const pyVal = state.config.projectedAreas[f]?.y || 0;
                 const wxEl = document.getElementById('a-wx' + lv);
                 const wyEl = document.getElementById('a-wy' + lv);
-                if (wxEl) wxEl.value = pxVal.toFixed(3); // 平米（㎡）値をそのまま代入
-                if (wyEl) wyEl.value = pyVal.toFixed(3);
+                if (!state.config.projectedAreas[f]) state.config.projectedAreas[f] = { x: 0, y: 0 };
+                if (wxEl) state.config.projectedAreas[f].x = parseFloat(wxEl.value) || 0;
+                if (wyEl) state.config.projectedAreas[f].y = parseFloat(wyEl.value) || 0;
             });
+        } else {
+            // 屋根作図モード: 屋根シルエットから自動計算し DOM へ書き戻す
+            if (window.MitsukeEngine && window.MitsukeEngine.updateProjectedAreas) {
+                window.MitsukeEngine.updateProjectedAreas(state);
+                ['1', '2'].forEach(lv => {
+                    const f = lv + 'F';
+                    const pxVal = state.config.projectedAreas[f]?.x || 0;
+                    const pyVal = state.config.projectedAreas[f]?.y || 0;
+                    const wxEl = document.getElementById('a-wx' + lv);
+                    const wyEl = document.getElementById('a-wy' + lv);
+                    if (wxEl) wxEl.value = pxVal.toFixed(2);
+                    if (wyEl) wyEl.value = pyVal.toFixed(2);
+                });
+            }
         }
 
         // 1. 解析の実行 (Logic)
@@ -367,8 +379,43 @@ window.AppController = {
         if (tf) tf.className = 'tab-btn';
         if (t1) t1.className = (floor === '1F' && mode === 'wall') ? 'tab-btn active' : 'tab-btn';
         if (t2) t2.className = (floor === '2F' && mode === 'wall') ? 'tab-btn active' : 'tab-btn';
-        if (t1r) t1r.className = (floor === '1R' && mode === 'roof') ? 'tab-btn active' : 'tab-btn';
-        if (t2r) t2r.className = (floor === '2R' && mode === 'roof') ? 'tab-btn active' : 'tab-btn';
+        const isManual = (window.AppState && window.AppState.mitsukeMode === 'dxf_manual');
+        if (t1r) {
+            t1r.className = (floor === '1R' && mode === 'roof') ? 'tab-btn active' : 'tab-btn';
+            if (isManual) {
+                t1r.style.background = '#2c3e50';
+                t1r.style.color = '#7f8c8d';
+                t1r.style.opacity = '0.5';
+                t1r.style.pointerEvents = 'none';
+                t1r.style.cursor = 'not-allowed';
+                t1r.title = 'DXF/手入力モードのため屋根タブは選択できません';
+            } else {
+                t1r.style.background = '';
+                t1r.style.color = '';
+                t1r.style.opacity = '';
+                t1r.style.pointerEvents = '';
+                t1r.style.cursor = '';
+                t1r.title = '';
+            }
+        }
+        if (t2r) {
+            t2r.className = (floor === '2R' && mode === 'roof') ? 'tab-btn active' : 'tab-btn';
+            if (isManual) {
+                t2r.style.background = '#2c3e50';
+                t2r.style.color = '#7f8c8d';
+                t2r.style.opacity = '0.5';
+                t2r.style.pointerEvents = 'none';
+                t2r.style.cursor = 'not-allowed';
+                t2r.title = 'DXF/手入力モードのため屋根タブは選択できません';
+            } else {
+                t2r.style.background = '';
+                t2r.style.color = '';
+                t2r.style.opacity = '';
+                t2r.style.pointerEvents = '';
+                t2r.style.cursor = '';
+                t2r.title = '';
+            }
+        }
 
         const vis = window.AppState.elementVisibility;
         if (vis) {
@@ -621,6 +668,51 @@ window.AppController = {
 
             this.refreshAll();
         }
+    },
+
+    setMitsukeMode: function(mode) {
+        if (!window.AppState) return;
+        window.AppState.mitsukeMode = mode;
+
+        // ラジオボタンDOMへの同期
+        ['mitsuke-mode-auto', 'dxf-mitsuke-mode-auto'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.checked = (mode === 'auto_roof');
+        });
+        ['mitsuke-mode-manual', 'dxf-mitsuke-mode-manual'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.checked = (mode === 'dxf_manual');
+        });
+
+        // 手入力モードで屋根モード中だった場合、1F作図に切り替え
+        if (mode === 'dxf_manual' && window.AppState.currentAppMode === 'roof') {
+            this.setFloor('1F');
+        } else {
+            this.updateWallUI();
+        }
+
+        // 入力欄の readonly / 編集可能 の切り替え
+        this.updateMitsukeInputUI();
+
+        if (mode === 'auto_roof' && window.MitsukeEngine && window.MitsukeEngine.updateProjectedAreas) {
+            window.MitsukeEngine.updateProjectedAreas(window.AppState);
+        }
+
+        this.refreshAll();
+    },
+
+    updateMitsukeInputUI: function() {
+        const isManual = (window.AppState && window.AppState.mitsukeMode === 'dxf_manual');
+        const ids = ['a-wx1', 'a-wy1', 'a-wx2', 'a-wy2'];
+        ids.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                el.readOnly = !isManual;
+                el.style.backgroundColor = isManual ? '#ffffff' : '#f0f3f6';
+                el.style.color = isManual ? '#0056b3' : '#7f8c8d';
+                el.style.fontWeight = isManual ? 'bold' : 'normal';
+            }
+        });
     }
 };
 

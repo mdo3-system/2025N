@@ -168,7 +168,8 @@ window.AppExport = {
             foundationBeams: state.foundationBeams || [],
             manholes: state.manholes || [],
             concreteFc: state.concreteFc || 21,
-            averageGroundPressure: Math.max(0, state.averageGroundPressure || 0)
+            averageGroundPressure: Math.max(0, state.averageGroundPressure || 0),
+            mitsukeMode: state.mitsukeMode || 'auto_roof'
         };
         
         document.querySelectorAll('input:not([type="file"]),select').forEach(e => { if (e.id) d.inputs[e.id] = e.value; });

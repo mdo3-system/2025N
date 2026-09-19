@@ -188,16 +188,18 @@ window.StructuralEngine = {
         });
     },
 
-    updateAverageGroundPressure: function() {
-        const state = window.AppState;
+    updateAverageGroundPressure: function(inState) {
+        const state = inState || window.AppState;
+        if (!state || !state.config) return;
         const c = state.config;
-        const a1 = c.floorAreas['1F'] || 0;
-        const a2 = c.floorAreas['2F'] || 0;
+        const a1 = (c.floorAreas && c.floorAreas['1F']) ? c.floorAreas['1F'] : 0;
+        const a2 = (c.floorAreas && c.floorAreas['2F']) ? c.floorAreas['2F'] : 0;
         const aRoof = Math.max(a1, a2);
         
-        const wRoof = (Number(c.weights.roof) + Number(c.weights.solar) + Number(c.weights.ceilingIns)) / 1000;
+        const weights = c.weights || { roof: 500, solar: 0, ceilingIns: 100, exteriorWall: 600, wallIns: 70 };
+        const wRoof = (Number(weights.roof || 500) + Number(weights.solar || 0) + Number(weights.ceilingIns || 100)) / 1000;
         const wFloor = 2.4; 
-        const wWallSpec = (Number(c.weights.exteriorWall) + Number(c.weights.wallIns)) / 1000;
+        const wWallSpec = (Number(weights.exteriorWall || 600) + Number(weights.wallIns || 70)) / 1000;
         const aWallEst = (a1 + a2) * 1.0; 
         
         const buildingW = (a1 * wFloor) + (a2 * wFloor) + (aRoof * wRoof) + (aWallEst * wWallSpec);

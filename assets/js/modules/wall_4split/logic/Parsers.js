@@ -343,6 +343,12 @@ window.Parsers = {
         s.pIdCounter = d.pIdCounter || (s.pillars.length + 100);
         s.currentAppMode = d.currentAppMode || 'structural';
         
+        // 見附算定モードの復元 (デフォルト: 'auto_roof')
+        s.mitsukeMode = d.mitsukeMode || 'auto_roof';
+        if (window.AppController && typeof window.AppController.setMitsukeMode === 'function') {
+            window.AppController.setMitsukeMode(s.mitsukeMode);
+        }
+
         // 5. Restore DOM Inputs
         if (d.inputs) {
             Object.keys(d.inputs).forEach(id => {

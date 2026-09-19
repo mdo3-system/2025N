@@ -17,6 +17,7 @@ window.AppState = {
     currentAppMode: 'wall', // 'wall' | 'foundation'
     foundationMode: 'f_select',
     isPrintMode: false,
+    mitsukeMode: 'auto_roof', // 'auto_roof' | 'dxf_manual'
 
     // [v2.3.25] UI Interaction State (Single Source of Truth)
     uiState: {
@@ -160,6 +161,14 @@ window.AppState = {
             c.reqWallCoeffs[f].seismic = getNum('c-q' + lv, f === '1F' ? 0.29 : 0.15);
             c.reqWallCoeffs[f].wind = getNum('c-w', 0.50);
         });
+
+        const autoRadio = document.getElementById('mitsuke-mode-auto');
+        const manualRadio = document.getElementById('mitsuke-mode-manual');
+        if (manualRadio && manualRadio.checked) {
+            this.mitsukeMode = 'dxf_manual';
+        } else if (autoRadio && autoRadio.checked) {
+            this.mitsukeMode = 'auto_roof';
+        }
 
         // [軸力図連携] 階高の同期
         c.floorHeight1F = getNum('n-h1', 2.7);

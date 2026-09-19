@@ -8,6 +8,7 @@ window.DxfLayerMapperController = {
     onConfirmCallback: null,
 
     currentStep: 1, // 1: 1F, 2: 2F, 3: 1F_ROOF, 4: 2F_ROOF
+    mitsukeMode: 'auto_roof', // 'auto_roof' | 'dxf_manual'
 
     stepData: {
         1: { fileIdx: 0, gridLayer: '', colLayer: '', backLayer: '', originPt: null },
@@ -51,8 +52,15 @@ window.DxfLayerMapperController = {
         this.onConfirmCallback = callback;
         this.loadedFiles = [];
         this.currentStep = 1;
+        this.mitsukeMode = (window.AppState && window.AppState.mitsukeMode) ? window.AppState.mitsukeMode : 'auto_roof';
         this.established1FOrigin = null;
         this.established1FGridLines = [];
+
+        // モーダル内ラジオボタン同期
+        const autoRadio = document.getElementById('w-mitsuke-mode-auto');
+        const manualRadio = document.getElementById('w-mitsuke-mode-manual');
+        if (autoRadio) autoRadio.checked = (this.mitsukeMode === 'auto_roof');
+        if (manualRadio) manualRadio.checked = (this.mitsukeMode === 'dxf_manual');
 
         this.gridTextStep = 1; // 通り芯文字を読み込むステップ（1: 1F, 2: 2F, 3: 1RF, 4: 2RF）
         // ステップデータの初期化（全ステップで gridLayer, dimLayer をサポート）
@@ -140,6 +148,15 @@ window.DxfLayerMapperController = {
         if (modal) modal.style.display = 'none';
     },
 
+    setMitsukeMode: function(mode) {
+        this.mitsukeMode = mode;
+        const autoRadio = document.getElementById('w-mitsuke-mode-auto');
+        const manualRadio = document.getElementById('w-mitsuke-mode-manual');
+        if (autoRadio) autoRadio.checked = (mode === 'auto_roof');
+        if (manualRadio) manualRadio.checked = (mode === 'dxf_manual');
+        this.renderStep(this.currentStep);
+    },
+
     /**
      * 各ステップでのDXFファイル追加ハンドラー
      */
@@ -219,19 +236,34 @@ window.DxfLayerMapperController = {
         this.previewPanOffset = { x: 0, y: 0 };
         this.selectedVisualOriginPt = this.stepData[stepNum].originPt || null;
 
+        const isDxfManual = (this.mitsukeMode === 'dxf_manual');
+
         // タブバッジ表示切替
         for (let i = 1; i <= 4; i++) {
             const badge = document.getElementById(`wizard-step-badge-${i}`);
             if (badge) {
-                if (i === stepNum) {
-                    badge.style.background = '#00d2d3';
-                    badge.style.color = '#1e272e';
-                } else if (i < stepNum) {
-                    badge.style.background = '#10ac84';
-                    badge.style.color = '#fff';
+                if (isDxfManual && i >= 3) {
+                    badge.style.background = '#2f3640';
+                    badge.style.color = '#7f8c8d';
+                    badge.style.opacity = '0.35';
+                    badge.innerText = `Step ${i}: 屋根 (スキップ)`;
                 } else {
-                    badge.style.background = '#353b48';
-                    badge.style.color = '#a4b0be';
+                    badge.style.opacity = '1.0';
+                    if (i === 1) badge.innerText = 'Step 1: 1階図面';
+                    if (i === 2) badge.innerText = 'Step 2: 2階図面';
+                    if (i === 3) badge.innerText = 'Step 3: 1階屋根 (任意)';
+                    if (i === 4) badge.innerText = 'Step 4: 2階屋根 (任意)';
+
+                    if (i === stepNum) {
+                        badge.style.background = '#00d2d3';
+                        badge.style.color = '#1e272e';
+                    } else if (i < stepNum) {
+                        badge.style.background = '#10ac84';
+                        badge.style.color = '#fff';
+                    } else {
+                        badge.style.background = '#353b48';
+                        badge.style.color = '#a4b0be';
+                    }
                 }
             }
         }
@@ -239,8 +271,12 @@ window.DxfLayerMapperController = {
         // タイトルテキスト
         const titleEl = document.getElementById('wizard-step-title');
         const titles = {
-            1: '🏠 【Step 1 / 4】1階図面の原点指定 (通り芯レイヤーを選択し、交点をクリックして基準原点を設定)',
-            2: '🏢 【Step 2 / 4】2階図面の原点指定 (2階の通り芯レイヤーを選択し、1階原点🎯へ合わせる交点をクリック)',
+            1: isDxfManual 
+               ? '🏠 【Step 1 / 2】1階図面の原点指定 (通り芯レイヤーを選択し、交点をクリックして基準原点を設定)'
+               : '🏠 【Step 1 / 4】1階図面の原点指定 (通り芯レイヤーを選択し、交点をクリックして基準原点を設定)',
+            2: isDxfManual 
+               ? '🏢 【Step 2 / 2】2階図面の原点指定 (確定後、屋根をスキップして見附面積手入力へ進みます)'
+               : '🏢 【Step 2 / 4】2階図面の原点指定 (2階の通り芯レイヤーを選択し、1階原点🎯へ合わせる交点をクリック)',
             3: '🏠 【Step 3 / 4】1階屋根図面の原点指定 (屋根の通り芯レイヤーを選択し、1階原点🎯へ合わせる交点をクリック)',
             4: '🏠 【Step 4 / 4】2階屋根図面の原点指定 (屋根の通り芯レイヤーを選択し、1階原点🎯へ合わせる交点をクリック)'
         };
@@ -251,7 +287,15 @@ window.DxfLayerMapperController = {
         const btnNext = document.getElementById('btn-wizard-next');
         const btnSkip = document.getElementById('btn-wizard-skip');
         if (btnPrev) btnPrev.style.display = (stepNum > 1) ? 'inline-block' : 'none';
-        if (btnNext) btnNext.innerText = (stepNum === 4) ? '🚀 全階図面の取り込みを確定して計算開始' : '次へ（原点設定へ進む） ➡️';
+        if (btnNext) {
+            if (isDxfManual && stepNum === 2) {
+                btnNext.innerText = '🚀 平面図取込を確定し、見附手入力モードへ進む';
+            } else if (stepNum === 4) {
+                btnNext.innerText = '🚀 全階図面の取り込みを確定して計算開始';
+            } else {
+                btnNext.innerText = '次へ（原点設定へ進む） ➡️';
+            }
+        }
         if (btnSkip) btnSkip.innerText = '⏭️ この設定のまま完了する';
 
         // コントロールパネルの動的描画
@@ -445,7 +489,9 @@ window.DxfLayerMapperController = {
             curData.originPt = this.selectedVisualOriginPt || { x: 0, y: 0 };
         }
 
-        if (curNum < 4) {
+        if (this.mitsukeMode === 'dxf_manual' && curNum === 2) {
+            this.finishWizard();
+        } else if (curNum < 4) {
             this.renderStep(curNum + 1);
         } else {
             this.finishWizard();
@@ -641,6 +687,10 @@ window.DxfLayerMapperController = {
 
         if (typeof this.onConfirmCallback === 'function') {
             this.onConfirmCallback(fullMapping, this.loadedFiles);
+        }
+
+        if (window.AppController && typeof window.AppController.setMitsukeMode === 'function') {
+            window.AppController.setMitsukeMode(this.mitsukeMode || 'auto_roof');
         }
 
         if (window.AppController && window.AppController.refreshAll) {

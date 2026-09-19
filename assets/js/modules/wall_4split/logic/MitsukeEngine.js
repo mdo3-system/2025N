@@ -487,6 +487,14 @@ window.MitsukeEngine = {
     updateProjectedAreas: function(state) {
         const s = state || window.AppState;
         if (!s || !s.config) return;
+
+        // [見附算定モード] 'dxf_manual' の場合は手入力値を保護し、自動計算で上書きしない
+        if (s.mitsukeMode === 'dxf_manual') {
+            if (window.StructuralEngine && window.StructuralEngine.updateAverageGroundPressure) {
+                window.StructuralEngine.updateAverageGroundPressure(s);
+            }
+            return;
+        }
         
         const projX = this.generateElevationAreas('X', s);
         const projY = this.generateElevationAreas('Y', s);

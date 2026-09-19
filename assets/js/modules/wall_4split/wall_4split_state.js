@@ -22,6 +22,9 @@ window.AppState = {
     // [基礎計算追加 Phase1] アプリ全体のメインモード ('wall' = 壁量計算, 'foundation' = 基礎計算)
     currentAppMode: 'wall',
 
+    // [見附面積算定モード] 'auto_roof' (屋根伏図作図から自動算出) | 'dxf_manual' (DXF立面/手入力)
+    mitsukeMode: 'auto_roof',
+
     // [機能補完 最終調整] 三角形状割増係数 (風圧力計算用)
     triangleMultiplier: 1.33,
     
@@ -199,6 +202,14 @@ window.AppState = {
         this.config.projectedAreas['1F'].y = getVal('a-wy1') || 0;
         this.config.projectedAreas['2F'].x = getVal('a-wx2') || 0;
         this.config.projectedAreas['2F'].y = getVal('a-wy2') || 0;
+
+        const autoRadio = document.getElementById('mitsuke-mode-auto');
+        const manualRadio = document.getElementById('mitsuke-mode-manual');
+        if (manualRadio && manualRadio.checked) {
+            this.mitsukeMode = 'dxf_manual';
+        } else if (autoRadio && autoRadio.checked) {
+            this.mitsukeMode = 'auto_roof';
+        }
         
         // [軸力図連携] 階高の同期
         this.config.floorHeight1F = getVal('n-h1') || 2.7;
