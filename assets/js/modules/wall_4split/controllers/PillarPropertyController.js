@@ -52,25 +52,12 @@ window.PillarPropertyController = {
                 };
             }
 
-            // 出隅フラグ (#prop-corner)
+            // 出隅フラグ (#prop-corner: ユーザーによる手動指定)
             const pCorner = document.getElementById('prop-corner');
             if (pCorner) {
-                pCorner.checked = pillar.isManualCorner !== null ? pillar.isManualCorner : (pillar.isCornerAuto || false);
+                pCorner.checked = Boolean(pillar.isManualCorner);
                 pCorner.onchange = function() {
                     pillar.isManualCorner = this.checked;
-                    if (window.AppController && typeof window.AppController.refreshAll === 'function') {
-                        window.AppController.refreshAll();
-                    }
-                    window.PillarPropertyController.showPillarProps(pillar);
-                };
-            }
-
-            // L値計算モード (#prop-lcalc)
-            const pLcalc = document.getElementById('prop-lcalc');
-            if (pLcalc) {
-                pLcalc.value = pillar.lCalcMode || 'auto';
-                pLcalc.onchange = function() {
-                    pillar.lCalcMode = this.value;
                     if (window.AppController && typeof window.AppController.refreshAll === 'function') {
                         window.AppController.refreshAll();
                     }
@@ -120,17 +107,17 @@ window.PillarPropertyController = {
         let Nx = p.Ax != null ? p.Ax.toFixed(2) : '—';
         let Ny = p.Ay != null ? p.Ay.toFixed(2) : '—';
         let N = p.nValue != null ? p.nValue.toFixed(2) : '—';
-        let isC = p.isManualCorner !== null ? p.isManualCorner : p.isCornerAuto;
-        let L_str = p.lCalcMode === 'detail' ? `詳細(負担面積 ${p.usedArea?.toFixed(2)}㎡×荷重)` : `告示(${isC ? '角' : '一般'})`;
+        let isC = Boolean(p.isManualCorner);
+        let L_str = `告示1460号(${isC ? '出隅柱' : '一般柱'})`;
         
         let detail = '';
         if (p.nValue === undefined) {
             detail = '接続壁なし（計算未実行）';
         } else {
-            const areaWarn = (p.lCalcMode === 'detail' && !(p.usedArea > 0)) ? '\n⚠️ 負担面積=0: 隣接柱が未検出です。手動で面積を入力してください。' : '';
             detail = [
-                '【N値計算 - Ｎ値計算法（斜め壁はグレー本準拠）】',
+                '【N値計算 - 告示1460号準拠（Ｎ値計算法）】',
                 `柱: ${window.getPillarName ? window.getPillarName(p) : p.name || p.id}  (${p.floor})`,
+                `柱種別: ${isC ? '出隅柱 (B=0.8)' : '一般柱 (B=0.5)'}`,
                 `押さえ効果L: ${L_str} = ${p.L_val?.toFixed(2)}`,
                 '',
                 '─ X方向地震（Y方向壁 左右差）─',
@@ -143,9 +130,8 @@ window.PillarPropertyController = {
                 '',
                 `採用N値 = max(Nx, Ny, 0) = ${N}`,
                 `判定金物: ${p.nMark || '-'}`,
-                p.manualMark ? `※手動指定: ${p.manualMark}` : '',
-                areaWarn
-            ].filter(s => s !== null).join('\n');
+                p.manualMark ? `※手動指定: ${p.manualMark}` : ''
+            ].filter(s => s !== null && s !== '').join('\n');
         }
         pdText.innerText = detail;
         modal.style.display = 'flex';

@@ -178,16 +178,63 @@ window.InputController = {
             if (el) el.addEventListener(event, refresh);
         };
 
+        // [機能改善] 性能表示・耐震等級2/3選択時の「見下げ面積」選択不可UI制御
+        const updateCalcModeRestrictions = () => {
+            const gradeEl = document.getElementById('calc-seismic-grade');
+            const modeEl = document.getElementById('calc-mode-select');
+            const subAreaEl = document.getElementById('area-calc-sub-select');
+            if (!gradeEl || !modeEl) return;
+
+            const isGrade2or3 = (gradeEl.value === 'grade2' || gradeEl.value === 'grade3');
+
+            // 1. 面積算出・地震力判定モード側の制御（耐震等級2または3の場合は見下げ不可）
+            const kijunOptionInMode = modeEl.querySelector("option[value='kijun']");
+            if (kijunOptionInMode) {
+                if (isGrade2or3) {
+                    kijunOptionInMode.disabled = true;
+                    if (modeEl.value === 'kijun') {
+                        modeEl.value = 'seinou';
+                        if (window.AppState && window.AppState.config) {
+                            window.AppState.config.calcMode = 'seinou';
+                        }
+                    }
+                } else {
+                    kijunOptionInMode.disabled = false;
+                }
+            }
+
+            // 2. 柱負担面積図の計算方式側の制御（性能表示または耐震等級2/3の場合は見下げ不可）
+            if (subAreaEl) {
+                const kijunOptionInSub = subAreaEl.querySelector("option[value='kijun']");
+                if (kijunOptionInSub) {
+                    if (isGrade2or3 || modeEl.value === 'seinou') {
+                        kijunOptionInSub.disabled = true;
+                        if (subAreaEl.value === 'kijun') {
+                            subAreaEl.value = 'seinou';
+                        }
+                    } else {
+                        kijunOptionInSub.disabled = false;
+                    }
+                }
+            }
+        };
+        window.updateCalcModeRestrictions = updateCalcModeRestrictions;
+
         // 表計算ツール連動による必要壁量自動算定・同期
         const syncReqWall = () => {
+            updateCalcModeRestrictions();
             if (window.RequiredWallCalculator && typeof window.RequiredWallCalculator.syncAndCalculateFromUI === 'function') {
                 window.RequiredWallCalculator.syncAndCalculateFromUI(window.AppState);
             }
         };
         window.triggerRequiredWallUpdate = () => {
+            updateCalcModeRestrictions();
             syncReqWall();
             refresh();
         };
+
+        // 初期ロード時にも即時適用
+        setTimeout(updateCalcModeRestrictions, 200);
 
         const autoSyncIds = [
             'calc-mode-select', 'calc-building-use', 'calc-seismic-grade',

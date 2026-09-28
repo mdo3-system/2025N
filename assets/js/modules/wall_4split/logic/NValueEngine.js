@@ -131,7 +131,7 @@ window.NValueEngine = {
         // 2. Final N-Value Logic for all floors
         ['2F', '1F'].forEach(f => {
             s.pillars.filter(p => !p.isDeleted && !p.isInvalidPos && p.floor === f).forEach(p => {
-                const isC = p.isManualCorner != null ? p.isManualCorner : p.isCornerAuto;
+                const isC = Boolean(p.isManualCorner);
                 p.isC = isC;
                 const b = isC ? 0.8 : 0.5;
                 const baseH = f === '1F' ? h1 : h2;
@@ -140,7 +140,6 @@ window.NValueEngine = {
                 
                 const k_p = (p_h <= 3.2 ? 2.7 : p_h) / 2.7;
                 let usedArea = p.manualArea != null ? p.manualArea : (p.autoArea || 0);
-                let isDetail = p.lCalcMode === 'detail';
 
                 // 細長比 (令第43条6項: λ <= 150) & 負担面積プロパティを柱オブジェクトに保存
                 p.d = parseFloat(p_d) || 105;
@@ -156,7 +155,8 @@ window.NValueEngine = {
                     const underUpper = has2FAbove(p);
                     const { aR, aT, parts } = collectAlpha(p.id, '1F', p);
                     
-                    let L = isDetail ? ((underUpper ? (wRoof + wFloor) : wRoof) * usedArea / 5.3) : (underUpper ? (isC ? 1.0 : 1.6) : (isC ? 0.4 : 0.6));
+                    // 告示1460号に基づく押さえ効果L値 (建物重量減歩の詳細計算は行わない)
+                    let L = underUpper ? (isC ? 1.0 : 1.6) : (isC ? 0.4 : 0.6);
                     p.L_val = L;
 
                     const fmt = (val, b, k, l, upperPart = '') => {
@@ -167,7 +167,7 @@ window.NValueEngine = {
                     };
 
                     if (underUpper && upper) {
-                        const b2 = (upper.isManualCorner != null ? upper.isManualCorner : upper.isCornerAuto) ? 0.8 : 0.5;
+                        const b2 = Boolean(upper.isManualCorner) ? 0.8 : 0.5;
                         const k2 = ((upper.manualH || h2) <= 3.2 ? 2.7 : (upper.manualH || h2)) / 2.7;
                         const upX = (upper.Ax * b2 * k2).toFixed(2);
                         const upY = (upper.Ay * b2 * k2).toFixed(2);
@@ -200,7 +200,8 @@ window.NValueEngine = {
                         }
                     }
                 } else {
-                    let L = isDetail ? (wRoof * usedArea / 5.3) : (isC ? 0.4 : 0.6);
+                    // 2F: 告示1460号に基づく押さえ効果L値 (出隅0.4、一般0.6)
+                    let L = isC ? 0.4 : 0.6;
                     p.L_val = L;
                     p.cStrX = `(Σα: ${p.Ax.toFixed(2)} × B: ${b.toFixed(1)} × K: ${k_p.toFixed(2)})<br> － (押さえL: ${L.toFixed(2)})`;
                     p.cStrY = `(Σα: ${p.Ay.toFixed(2)} × B: ${b.toFixed(1)} × K: ${k_p.toFixed(2)})<br> － (押さえL: ${L.toFixed(2)})`;
@@ -227,5 +228,9 @@ window.NValueEngine = {
                 if (p.manualMark) p.nMark = p.manualMark;
             });
         });
+    },
+
+    calculate: function(state) {
+        return this.calculateNValues(state);
     }
 };

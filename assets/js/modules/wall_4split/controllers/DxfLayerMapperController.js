@@ -166,21 +166,17 @@ window.DxfLayerMapperController = {
 
         const reader = new FileReader();
         reader.onload = (evt) => {
-            // [v3.13.27] UTF-8 (AC1027+) & Shift-JIS (AutoCAD legacy / Jw_cad) Robust Decoding
+            // [v3.13.38] Standard Infallible Auto-Decoding: Strict UTF-8 first, fallback to Shift-JIS
             let rawTxt = "";
             const buffer = new Uint8Array(evt.target.result);
             try {
-                const utf8Txt = new TextDecoder('UTF-8').decode(buffer);
-                if (!utf8Txt.includes('\uFFFD') && (utf8Txt.includes('SECTION') || utf8Txt.includes('ENTITIES'))) {
-                    rawTxt = utf8Txt;
-                } else if (typeof window.Encoding !== 'undefined' && window.Encoding.detect) {
-                    const detected = window.Encoding.detect(buffer);
-                    rawTxt = window.Encoding.convert(buffer, { to: 'UNICODE', from: detected || 'AUTO', type: 'STRING' });
-                } else {
-                    rawTxt = new TextDecoder('Shift_JIS').decode(buffer);
+                rawTxt = new TextDecoder('utf-8', { fatal: true }).decode(buffer);
+            } catch (e) {
+                try {
+                    rawTxt = new TextDecoder('shift_jis').decode(buffer);
+                } catch (e2) {
+                    rawTxt = new TextDecoder('utf-8').decode(buffer);
                 }
-            } catch(err) {
-                rawTxt = new TextDecoder('UTF-8').decode(buffer);
             }
 
             const lines = this.parseDxfRawLinesDirect(rawTxt);

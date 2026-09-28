@@ -1021,9 +1021,27 @@ window.FoundationRenderer = {
                 const typeOptions = ["D13", "D16"].map(t => `<option value="${t}" ${t === barType ? 'selected' : ''}>${t}</option>`).join('');
                 const specOptions = ["スラブ内割増筋", "シングル配筋", "ダブル配筋"].map(s => `<option value="${s}" ${s === specName ? 'selected' : ''}>${s}</option>`).join('');
 
+                // 耐力壁直下の判定 (耐力壁下の人通口は非推奨)
+                let wallWarn = '';
+                if (s.walls && window.MathUtils) {
+                    const hasWall = s.walls.some(w => {
+                        if (w.isDeleted || w.floor !== '1F') return false;
+                        const wx1 = w.x1 ?? w.p1?.x ?? 0, wy1 = w.y1 ?? w.p1?.y ?? 0;
+                        const wx2 = w.x2 ?? w.p2?.x ?? 0, wy2 = w.y2 ?? w.p2?.y ?? 0;
+                        const dist = window.MathUtils.distToBeamLine(mh.x, mh.y, wx1, wy1, wx2, wy2);
+                        return dist < 150;
+                    });
+                    if (hasWall) {
+                        wallWarn = `<div style="color:#c0392b; font-size:9px; font-weight:bold; margin-top:2px;">⚠️ 耐力壁直下 (配置非推奨)</div>`;
+                    }
+                }
+
+                // 人通口断面図 (SVG: 梁高=スラブ厚のみ、上主筋黒塗り欠損、下主筋本数反映)
+                const sectionSvg = this.generateManholeRebarSvg(slabThickness, barCount, barType);
+
                 table7 += `
                 <tr>
-                    <td style="border:1px solid #bdc3c7; padding:4px; font-weight:bold;">${spanName}</td>
+                    <td style="border:1px solid #bdc3c7; padding:4px; font-weight:bold;">${spanName}${wallWarn}</td>
                     <td style="border:1px solid #bdc3c7; padding:4px;">
                         <select onchange="window.FoundationPropertyHandler.updateManholeProp('${mh.id}', 'spec', this.value)" style="font-size:9px; padding:1px; border:1px solid #ccc; border-radius:3px;">
                             ${specOptions}
@@ -1036,6 +1054,7 @@ window.FoundationRenderer = {
                         <select onchange="window.FoundationPropertyHandler.updateManholeProp('${mh.id}', 'bar_type', this.value)" style="font-size:9px; padding:1px; border:1px solid #ccc; border-radius:3px;">
                             ${typeOptions}
                         </select>
+                        <div style="margin-top:3px;">${sectionSvg}</div>
                     </td>
                     <td style="border:1px solid #bdc3c7; padding:4px;">${slabThickness} mm</td>
                     <td style="border:1px solid #bdc3c7; padding:4px;">${M_acting_L.toFixed(2)} / <strong style="color:#2980b9;">${Ma_L.toFixed(2)}</strong> kNm</td>
@@ -1076,5 +1095,55 @@ window.FoundationRenderer = {
             return window.FoundationSvgGenerator.generateFoundationTributarySvg(beam, state);
         }
         return '';
+    },
+
+    /**
+     * 人通口配筋断面図SVG (梁成=スラブ厚のみ、上主筋黒塗り欠損、下主筋本数反映)
+     */
+    generateManholeRebarSvg: function(slabThickness, barCount, barType) {
+        const t = slabThickness || 150;
+        const count = Math.max(1, Math.min(10, parseInt(barCount) || 2));
+        const w = 110, h = 55;
+        const bW = 70, bH = 36;
+        const bx = (w - bW) / 2;
+        const by = h - bH - 6;
+
+        let rebarCircles = '';
+        const rebarY = by + bH - 7;
+        const rebarR = 3.2;
+        const startX = bx + 10;
+        const endX = bx + bW - 10;
+        const stepX = count > 1 ? (endX - startX) / (count - 1) : 0;
+
+        for (let i = 0; i < count; i++) {
+            const rx = count === 1 ? (startX + endX) / 2 : startX + i * stepX;
+            rebarCircles += `<circle cx="${rx.toFixed(1)}" cy="${rebarY}" r="${rebarR}" fill="#8e44ad" stroke="#fff" stroke-width="0.8" />`;
+        }
+
+        // 上主筋の黒塗り欠損表示 (開口部のため上主筋は存在しない/黒塗り)
+        const topRebarY = by + 6;
+        const topRebar = `
+            <circle cx="${bx + 12}" cy="${topRebarY}" r="${rebarR}" fill="#2c3e50" />
+            <line x1="${bx + 8}" y1="${topRebarY - 4}" x2="${bx + 16}" y2="${topRebarY + 4}" stroke="#e74c3c" stroke-width="1.2" />
+            <circle cx="${bx + bW - 12}" cy="${topRebarY}" r="${rebarR}" fill="#2c3e50" />
+            <line x1="${bx + bW - 16}" y1="${topRebarY - 4}" x2="${bx + bW - 8}" y2="${topRebarY + 4}" stroke="#e74c3c" stroke-width="1.2" />
+        `;
+
+        return `
+        <svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" style="background:#fdfefe; border:1px solid #d2b4de; border-radius:4px; margin-top:2px;">
+            <!-- 開口部（上部立ち上がり欠損） -->
+            <rect x="${bx}" y="${by - 12}" width="${bW}" height="12" fill="none" stroke="#bdc3c7" stroke-dasharray="2,2" />
+            <text x="${w/2}" y="${by - 3}" font-size="7" fill="#95a5a6" text-anchor="middle">開口欠損</text>
+            <!-- スラブ厚コンクリート断面 -->
+            <rect x="${bx}" y="${by}" width="${bW}" height="${bH}" fill="#f5eef8" stroke="#8e44ad" stroke-width="1.5" rx="2" />
+            <!-- あばら筋 / 補強枠 -->
+            <rect x="${bx + 5}" y="${by + 4}" width="${bW - 10}" height="${bH - 8}" fill="none" stroke="#a569bd" stroke-width="1" stroke-dasharray="3,1" />
+            <!-- 上主筋（黒塗り・配筋欠損） -->
+            ${topRebar}
+            <!-- 下主筋（補強筋本数反映） -->
+            ${rebarCircles}
+            <!-- 寸法・注記 -->
+            <text x="${w/2}" y="${h - 1}" font-size="7.5" font-weight="bold" fill="#6c3483" text-anchor="middle">スラブ厚 ${t}mm / 下主筋${count}本</text>
+        </svg>`;
     }
 };

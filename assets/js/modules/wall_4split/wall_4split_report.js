@@ -108,7 +108,7 @@ function hidePillarProps() {
     if (pp) pp.style.display = 'none';
 }
 
-function showCenterCalc() {
+window.showCenterCalc = function showCenterCalc() {
     let html = '';
     ['2F', '1F'].forEach(f => {
         let b = window.GridEngine.get4DivisionBounds(f, window.AppState);

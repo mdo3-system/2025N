@@ -1520,15 +1520,11 @@
         <div id="pillar-props" style="display:none; background:#fff3cd; padding:10px; border:1px solid #ffeeba; border-radius:4px; margin-top:10px;">
             <b style="color:#d35400;">📍 柱のプロパティ: <span id="prop-id"></span></b>
             <div style="margin-top:5px; font-size:11px;">
-                <label style="display:flex; align-items:center; margin-bottom:5px;">
-                    <input type="checkbox" id="prop-corner" style="width:auto; margin-right:5px;"> 出隅(角)として強制計算
+                <label style="display:flex; align-items:center; margin-bottom:8px; font-weight:bold; color:#c0392b; cursor:pointer;">
+                    <input type="checkbox" id="prop-corner" style="width:auto; margin-right:6px;"> 出隅柱（隅柱）として指定
                 </label>
-                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:5px;">
-                    <label style="margin:0;">L値の算出:</label>
-                    <select id="prop-lcalc" style="margin:0; padding:2px; width:100px;">
-                        <option value="auto">簡易(告示)</option>
-                        <option value="detail">詳細(負担面積)</option>
-                    </select>
+                <div style="margin-bottom:6px; color:#666; font-size:10px;">
+                    ※告示1460号に基づくN値計算法（出隅係数B=0.8, 押さえL値）
                 </div>
                 <label>手動 金物指定:</label>
                 <select id="prop-mark" style="margin-bottom:0;"></select>
