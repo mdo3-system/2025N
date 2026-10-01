@@ -10,8 +10,33 @@ window.DocumentRenderer = {
     renderLayerFilteredImage: function(docType, targetLayers, bgLayers, floorStr, options = {}) {
         const { showAreaDims = true, dimScale = 1.0, isPrint = false } = options;
         const state = window.AppState;
-        const data = state.docDrawings[docType];
+        let data = state.docDrawings ? state.docDrawings[docType] : null;
         
+        // elev (見附図/立面図) の場合: state.docDrawings.elev が未設定なら bgLinesOriginal / bgTextsOriginal から自動収集
+        if (docType === 'elev' && (!data || !data.loaded || !data.entities || data.entities.length === 0)) {
+            const elevEnts = [];
+            const checkElevLayer = (l) => {
+                const upper = (l || "").toUpperCase().trim();
+                return upper.includes('AREA_X') || upper.includes('AREA_Y') || upper.includes('BG_X') || upper.includes('BG_Y') || upper.includes('ELEV');
+            };
+            (state.bgLinesOriginal || []).forEach(e => {
+                const l = e.originalLayer || e.layer;
+                if (checkElevLayer(l)) {
+                    elevEnts.push({ ...e, layer: l, isBg: l.toUpperCase().includes('BG_'), isTarget: l.toUpperCase().includes('AREA_') });
+                }
+            });
+            (state.bgTextsOriginal || []).forEach(t => {
+                const l = t.originalLayer || t.layer;
+                if (checkElevLayer(l)) {
+                    elevEnts.push({ ...t, layer: l, isBg: l.toUpperCase().includes('BG_'), isTarget: l.toUpperCase().includes('AREA_') });
+                }
+            });
+            if (elevEnts.length > 0) {
+                data = { entities: elevEnts, loaded: true };
+                if (state.docDrawings) state.docDrawings.elev = data;
+            }
+        }
+
         const isFloorMatched = (f1, f2) => window.isFloorMatched ? window.isFloorMatched(f1, f2) : (String(f1).toUpperCase().trim() === String(f2).toUpperCase().trim());
         const hasAreas = floorStr && state.areaLines.some(a => isFloorMatched(a.floor, floorStr));
         const hasBg = state.bgLinesOriginal && state.bgLinesOriginal.some(e => isFloorMatched(e.floor, floorStr) || e.floor === 'ALL' || (e.layer && e.layer.toUpperCase().includes('BG_' + floorStr)));
@@ -82,9 +107,9 @@ window.DocumentRenderer = {
 
         // 1. Draw Background CAD & DXF Underlay Lines (State bgLinesOriginal fallback)
         const isElevMitsuke = (docType === 'elev' || floorStr === 'mitsuke' || floorStr === 'elev');
-        const bgEnts = isElevMitsuke ? [] : filteredEnts.filter(e => e.isBg);
-        if (bgEnts.length > 0 && typeof _drawCADEntities === 'function') {
-            _drawCADEntities(ctx, bgEnts, toC, true, sfFinal, true);
+        const bgEnts = filteredEnts.filter(e => e.isBg);
+        if (bgEnts.length > 0) {
+            this.drawCADEntities(ctx, bgEnts, toC, true, sfFinal, isPrint);
         }
         
         // Ensure manual DXF & AppState background underlay lines (walls, pillars, floor grids) are rendered (Skip for Mitsuke)
@@ -129,8 +154,8 @@ window.DocumentRenderer = {
 
         // Draw Target Entities
         const targetEnts = filteredEnts.filter(e => e.isTarget);
-        if (targetEnts.length > 0 && typeof _drawCADEntities === 'function') {
-            _drawCADEntities(ctx, targetEnts, toC, false, sfFinal);
+        if (targetEnts.length > 0) {
+            this.drawCADEntities(ctx, targetEnts, toC, false, sfFinal, isPrint);
         }
 
         // Draw Scale Text
@@ -713,5 +738,68 @@ window.DocumentRenderer = {
         }
 
         ctx.restore();
+    },
+
+    /**
+     * CADエンティティ (線分・ポリライン・円・文字等) の描画
+     */
+    drawCADEntities: function(ctx, ents, toC, isBg, sfFinal, isPrint = false) {
+        ctx.save();
+        if (isBg) {
+            ctx.strokeStyle = isPrint ? '#cccccc' : '#888888';
+            ctx.fillStyle = isPrint ? '#cccccc' : '#888888';
+            ctx.lineWidth = isPrint ? 1.5 : 1.0;
+            ctx.globalAlpha = isPrint ? 1.0 : 0.85;
+            ctx.setLineDash([]);
+        } else {
+            ctx.strokeStyle = '#c0392b';
+            ctx.fillStyle = '#c0392b';
+            ctx.lineWidth = 2.0;
+            ctx.globalAlpha = 1.0;
+            ctx.setLineDash([]);
+        }
+
+        ents.forEach(ent => {
+            if (window.AppState && window.AppState.layerVisibility && ent.layer && window.AppState.layerVisibility[ent.layer] === false) return;
+            if (ent.isGridLine) return;
+
+            if (ent.type === 'LINE' && ent.vertices && ent.vertices.length >= 2) {
+                ctx.beginPath();
+                let p1 = toC(ent.vertices[0].x, ent.vertices[0].y), p2 = toC(ent.vertices[1].x, ent.vertices[1].y);
+                if (p1.cx != null && !isNaN(p1.cx) && p2.cx != null && !isNaN(p2.cx)) {
+                    ctx.moveTo(p1.cx, p1.cy); ctx.lineTo(p2.cx, p2.cy); ctx.stroke();
+                }
+            } else if (['LWPOLYLINE', 'POLYLINE'].includes(ent.type) && ent.vertices) {
+                ctx.beginPath();
+                ent.vertices.forEach((v, i) => {
+                    let p = toC(v.x, v.y);
+                    if (p.cx != null && !isNaN(p.cx)) { i === 0 ? ctx.moveTo(p.cx, p.cy) : ctx.lineTo(p.cx, p.cy); }
+                });
+                if (ent.closed) ctx.closePath();
+                ctx.stroke();
+            } else if (ent.type === 'CIRCLE') {
+                let p = toC(ent.center.x, ent.center.y);
+                if (p.cx != null && !isNaN(p.cx)) { ctx.beginPath(); ctx.arc(p.cx, p.cy, ent.radius * sfFinal, 0, 2 * Math.PI); ctx.stroke(); }
+            } else if (ent.type === 'ARC') {
+                let p = toC(ent.center.x, ent.center.y);
+                if (p.cx != null && !isNaN(p.cx)) { ctx.beginPath(); ctx.arc(p.cx, p.cy, ent.radius * sfFinal, -ent.endAngle * Math.PI / 180, -ent.startAngle * Math.PI / 180); ctx.stroke(); }
+            } else if (['TEXT', 'MTEXT'].includes(ent.type)) {
+                let txt = ent.text || ent.string || "";
+                const pos = ent.startPoint || ent.position || ent.insertionPoint || ent.insert || {};
+                let p = toC(pos.x ?? 0, pos.y ?? 0);
+                if (p.cx != null && !isNaN(p.cx)) {
+                    let pxHeight = (ent.height || 250) * sfFinal;
+                    ctx.font = `${isBg ? 'normal' : 'bold'} ${Math.max(pxHeight, 10)}px sans-serif`;
+                    ctx.textAlign = "left"; ctx.textBaseline = "bottom";
+                    ctx.fillText(txt, p.cx, p.cy);
+                }
+            }
+        });
+
+        ctx.restore();
     }
+};
+
+window._drawCADEntities = function(ctx, ents, toC, isBg, sfFinal, isPrint) {
+    return window.DocumentRenderer.drawCADEntities(ctx, ents, toC, isBg, sfFinal, isPrint);
 };

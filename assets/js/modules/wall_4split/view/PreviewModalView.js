@@ -74,8 +74,16 @@ window.PreviewModalView = {
             }
         }
 
-        const iAutoEX = window.generateAutoMitsukeCanvas ? window.generateAutoMitsukeCanvas('X', commonScale) : null;
-        const iAutoEY = window.generateAutoMitsukeCanvas ? window.generateAutoMitsukeCanvas('Y', commonScale) : null;
+        let iAutoEX = window.generateAutoMitsukeCanvas ? window.generateAutoMitsukeCanvas('X', commonScale) : null;
+        let iAutoEY = window.generateAutoMitsukeCanvas ? window.generateAutoMitsukeCanvas('Y', commonScale) : null;
+
+        // [v3.13.38] DXF立面図（AREA_X, AREA_Y, BG_X, BG_Y）取り込み時のフォールバック表示
+        if (!iAutoEX && window.createLayerFilteredImage) {
+            iAutoEX = window.createLayerFilteredImage('elev', ['AREA_X'], ['BG_X'], 'X', true, 1.0, true);
+        }
+        if (!iAutoEY && window.createLayerFilteredImage) {
+            iAutoEY = window.createLayerFilteredImage('elev', ['AREA_Y'], ['BG_Y'], 'Y', true, 1.0, true);
+        }
 
         // タブUI全体のHTML構築
         let tabHtml = `

@@ -35,8 +35,11 @@ window.DocumentEngine = {
     calculateBoundingBox: function(entities, floorStr, areaLines) {
         let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
 
-        entities.forEach(ent => {
-            if (!ent.isTarget) return;
+        // まず isTarget 要素を優先して探索。なければ全描画対象エンティティから算出
+        const targetEnts = entities.filter(ent => ent.isTarget);
+        const entsToScan = targetEnts.length > 0 ? targetEnts : entities;
+
+        entsToScan.forEach(ent => {
 
             if (ent.type === 'LINE' && ent.vertices) {
                 ent.vertices.forEach(v => {

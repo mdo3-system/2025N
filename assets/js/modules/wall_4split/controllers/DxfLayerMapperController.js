@@ -674,6 +674,30 @@ window.DxfLayerMapperController = {
         });
         s.layerMapping = fullMapping;
 
+        // [v3.13.38] 立面図・見附図DXF (AREA_X, AREA_Y, BG_X, BG_Y) の docDrawings.elev 自動登録
+        if (s.docDrawings) {
+            const checkElevLayer = (l) => {
+                const upper = (l || "").toUpperCase().trim();
+                return upper.includes('AREA_X') || upper.includes('AREA_Y') || upper.includes('BG_X') || upper.includes('BG_Y') || upper.includes('ELEV');
+            };
+            const elevEnts = [];
+            (s.bgLinesOriginal || []).forEach(e => {
+                const l = e.originalLayer || e.layer;
+                if (checkElevLayer(l)) {
+                    elevEnts.push({ ...e, layer: l, isBg: l.toUpperCase().includes('BG_'), isTarget: l.toUpperCase().includes('AREA_') });
+                }
+            });
+            (s.bgTextsOriginal || []).forEach(t => {
+                const l = t.originalLayer || t.layer;
+                if (checkElevLayer(l)) {
+                    elevEnts.push({ ...t, layer: l, isBg: l.toUpperCase().includes('BG_'), isTarget: l.toUpperCase().includes('AREA_') });
+                }
+            });
+            if (elevEnts.length > 0) {
+                s.docDrawings.elev = { entities: elevEnts, loaded: true };
+                console.log(`✅ [DXF Wizard] Registered ${elevEnts.length} elevation entities to docDrawings.elev`);
+            }
+        }
 
         if (window.GridEngine && window.GridEngine.analyzeGrids) {
             window.GridEngine.analyzeGrids(s);

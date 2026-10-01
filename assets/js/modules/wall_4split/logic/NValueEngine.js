@@ -131,7 +131,7 @@ window.NValueEngine = {
         // 2. Final N-Value Logic for all floors
         ['2F', '1F'].forEach(f => {
             s.pillars.filter(p => !p.isDeleted && !p.isInvalidPos && p.floor === f).forEach(p => {
-                const isC = Boolean(p.isManualCorner);
+                const isC = p.isManualCorner != null ? Boolean(p.isManualCorner) : Boolean(p.isCornerAuto);
                 p.isC = isC;
                 const b = isC ? 0.8 : 0.5;
                 const baseH = f === '1F' ? h1 : h2;
@@ -167,7 +167,7 @@ window.NValueEngine = {
                     };
 
                     if (underUpper && upper) {
-                        const b2 = Boolean(upper.isManualCorner) ? 0.8 : 0.5;
+                        const b2 = (upper.isManualCorner != null ? Boolean(upper.isManualCorner) : Boolean(upper.isCornerAuto)) ? 0.8 : 0.5;
                         const k2 = ((upper.manualH || h2) <= 3.2 ? 2.7 : (upper.manualH || h2)) / 2.7;
                         const upX = (upper.Ax * b2 * k2).toFixed(2);
                         const upY = (upper.Ay * b2 * k2).toFixed(2);

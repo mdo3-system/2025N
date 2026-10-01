@@ -57,10 +57,8 @@ window.MainRenderer = {
 
         const isAreaMode = (document.querySelector('input[name="mode"]:checked')?.value === 'area');
 
-        // 3. 背景図面 (DXF)
-        if (!isAreaMode) {
-            this.drawBackground(state);
-        }
+        // 3. 背景図面 (DXF) - 面積作図モード中も下絵として常に表示
+        this.drawBackground(state);
 
         // 4. グリッドと通り芯
         if (window.GridRenderer && typeof window.GridRenderer.drawGrids === 'function') {
@@ -77,14 +75,12 @@ window.MainRenderer = {
 
         // 7. 構造要素 (透過設定あり)
         ctx.save();
-        ctx.globalAlpha = existingAlpha;
-        if (!isAreaMode) {
-            this.drawWindows(state);
-            if (window.WallCadRenderer && typeof window.WallCadRenderer.drawWalls === 'function') {
-                window.WallCadRenderer.drawWalls(state);
-            } else {
-                this.drawWalls(state);
-            }
+        ctx.globalAlpha = isAreaMode ? (existingAlpha * 0.7) : existingAlpha;
+        this.drawWindows(state);
+        if (window.WallCadRenderer && typeof window.WallCadRenderer.drawWalls === 'function') {
+            window.WallCadRenderer.drawWalls(state);
+        } else {
+            this.drawWalls(state);
         }
         this.drawPillars(state);
         ctx.restore();

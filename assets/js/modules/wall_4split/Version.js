@@ -1,5 +1,5 @@
-// v3.13.37: Mitsuke area manual/DXF input mode, roof tabs disabling, and wizard integration
-window.APP_VERSION = "v3.13.37";
+// v3.13.38: Display DXF elevation drawing in mitsuke preview & enable DXF background during floor area drawing
+window.APP_VERSION = "v3.13.38";
 
 (function() {
     function applyAppVersion() {
