@@ -1,6 +1,7 @@
 /**
  * view/FoundationPlanSvgGenerator.js - SVG Generator for Foundation Plan (基礎伏図)
- * v3.14.4: Step 1 - Refine 45-degree sloped ticks geometry, cap, and uniform slash angle
+ * v3.14.5: Fix span node coordinate extraction (prioritize globalX/globalY over local x/y),
+ *          render all vertical/horizontal beam hooks correctly at their exact positions.
  * Displays: 
  *  1. Foundation beam symbols with hook lines & uniform 45-degree sloped ticks (/), rotated parallel for vertical beams, 
  *     exterior beams positioned outside, merged consecutive spans with same symbol to prevent text clutter.
@@ -26,21 +27,21 @@
             const beams = s.foundationBeams || [];
             const slabs = s.foundationSlabs || [];
             const pillars = (s.pillars || []).filter(p => !p.isDeleted && !p.isInvalidPos && (p.floor === 1 || p.floor === '1F' || p.floor === undefined));
-            const gridXC = (s.gridXCoords || []).map(Number).filter(isFinite);
-            const gridYC = (s.gridYCoords || []).map(Number).filter(isFinite);
-            const gridXN = s.gridXNames || [];
-            const gridYN = s.gridYNames || [];
+            const gridXC = (s.gridXCoords || s.gxc || []).map(Number).filter(isFinite);
+            const gridYC = (s.gridYCoords || s.gyc || []).map(Number).filter(isFinite);
+            const gridXN = s.gridXNames || s.gx || [];
+            const gridYN = s.gridYNames || s.gy || [];
 
-            // 座標抽出ヘルパー（p1/p2, startNode/endNode, globalX/globalY すべてに対応 & NaN完全防止）
+            // 座標抽出ヘルパー（globalX/globalY を最優先し、梁内相対距離 x/y による座標崩壊を完全防止）
             const extractPoint = (pt, fallbackPt) => {
                 if (pt) {
-                    const x = Number(pt.x ?? pt.globalX);
-                    const y = Number(pt.y ?? pt.globalY);
+                    const x = Number(pt.globalX !== undefined ? pt.globalX : pt.x);
+                    const y = Number(pt.globalY !== undefined ? pt.globalY : pt.y);
                     if (isFinite(x) && isFinite(y)) return { x, y };
                 }
                 if (fallbackPt) {
-                    const fx = Number(fallbackPt.x ?? fallbackPt.globalX);
-                    const fy = Number(fallbackPt.y ?? fallbackPt.globalY);
+                    const fx = Number(fallbackPt.globalX !== undefined ? fallbackPt.globalX : fallbackPt.x);
+                    const fy = Number(fallbackPt.globalY !== undefined ? fallbackPt.globalY : fallbackPt.y);
                     if (isFinite(fx) && isFinite(fy)) return { x: fx, y: fy };
                 }
                 return null;

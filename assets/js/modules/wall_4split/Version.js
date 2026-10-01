@@ -1,5 +1,5 @@
-// v3.14.4: Step 1 - Refine 45-degree sloped ticks geometry and uniform slash angle
-window.APP_VERSION = "v3.14.4";
+// v3.14.5: Fix span node coordinate extraction and display all vertical beam hooks correctly
+window.APP_VERSION = "v3.14.5";
 
 (function() {
     function applyAppVersion() {
