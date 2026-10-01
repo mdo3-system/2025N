@@ -1,5 +1,5 @@
-// v3.14.1: Fix Foundation Plan SVG bounding box coordinate extraction and scale NaN guard
-window.APP_VERSION = "v3.14.1";
+// v3.14.2: Fix foundation beam position extraction via startNode/endNode fallback and avoid slab symbol collisions
+window.APP_VERSION = "v3.14.2";
 
 (function() {
     function applyAppVersion() {

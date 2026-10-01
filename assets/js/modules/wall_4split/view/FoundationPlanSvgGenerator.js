@@ -1,12 +1,12 @@
 /**
  * view/FoundationPlanSvgGenerator.js - SVG Generator for Foundation Plan (基礎伏図)
- * v3.14.1: Single Responsibility Principle (SRP) - Visual CAD generator for Foundation Plan
+ * v3.14.2: Single Responsibility Principle (SRP) - Visual CAD generator for Foundation Plan
  * Displays: 
  *  1. Foundation beam symbols with hook lines & 45-degree sloped ticks, rotated parallel for vertical beams, 
  *     exterior beams positioned outside, and separated per beam span/specification.
- *  2. Slab symbols without rect boxes at the center of diagonal dashed lines.
- *  3. 1F pillars as square frames with Hold-down symbols (2, 3, 4, 5, 32) only.
- *  4. Robust coordinate extraction with NaN safeguards to ensure 100% reliable rendering.
+ *  2. Robust property fallback (startNode/endNode/polygon/name as well as p1/p2/vertices/props).
+ *  3. Collision avoidance: automatically shifts slab symbols away from foundation beam lines.
+ *  4. 1F pillars as square frames with Hold-down symbols (2, 3, 4, 5, 32) only.
  */
 
 (function(exports) {
@@ -31,7 +31,7 @@
             const gridXN = s.gridXNames || [];
             const gridYN = s.gridYNames || [];
 
-            // 座標抽出ヘルパー（NaN防止）
+            // 座標抽出ヘルパー（p1/p2, startNode/endNode, globalX/globalY すべてに対応 & NaN完全防止）
             const extractPoint = (pt, fallbackPt) => {
                 if (pt) {
                     const x = Number(pt.x ?? pt.globalX);
@@ -44,6 +44,15 @@
                     if (isFinite(fx) && isFinite(fy)) return { x: fx, y: fy };
                 }
                 return null;
+            };
+
+            // 点と線分の最短距離計算関数 (ピクセル単位の干渉判定用)
+            const distToSegment = (px, py, x1, y1, x2, y2) => {
+                const l2 = (x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1);
+                if (l2 === 0) return Math.hypot(px - x1, py - y1);
+                let t = ((px - x1) * (x2 - x1) + (py - y1) * (y2 - y1)) / l2;
+                t = Math.max(0, Math.min(1, t));
+                return Math.hypot(px - (x1 + t * (x2 - x1)), py - (y1 + t * (y2 - y1)));
             };
 
             // 1. バウンディングボックスの算出（厳密なNaNガード）
@@ -65,23 +74,24 @@
             gridYC.forEach(y => { minY = Math.min(minY, y); maxY = Math.max(maxY, y); });
 
             beams.forEach(b => {
-                addPointToBBox(b.p1);
-                addPointToBBox(b.p2);
+                const p1 = extractPoint(b.p1) || extractPoint(b.startNode);
+                const p2 = extractPoint(b.p2) || extractPoint(b.endNode);
+                addPointToBBox(p1);
+                addPointToBBox(p2);
                 if (b.spans && Array.isArray(b.spans)) {
                     b.spans.forEach(sp => {
-                        addPointToBBox(sp.startNode);
-                        addPointToBBox(sp.endNode);
-                        addPointToBBox(sp.p1);
-                        addPointToBBox(sp.p2);
+                        addPointToBBox(extractPoint(sp.startNode) || extractPoint(sp.p1));
+                        addPointToBBox(extractPoint(sp.endNode) || extractPoint(sp.p2));
                     });
                 }
             });
 
             slabs.forEach(sl => {
-                (sl.vertices || []).forEach(v => addPointToBBox(v));
+                const poly = sl.polygon || sl.vertices || [];
+                poly.forEach(v => addPointToBBox(extractPoint(v)));
             });
 
-            pillars.forEach(p => addPointToBBox(p));
+            pillars.forEach(p => addPointToBBox(extractPoint(p)));
 
             if (!isFinite(minX) || !isFinite(maxX) || !isFinite(minY) || !isFinite(maxY) || minX >= maxX || minY >= maxY) {
                 minX = 0; maxX = 7280; minY = 0; maxY = 5460;
@@ -201,11 +211,48 @@
             }
             svg += `  </g>\n`;
 
-            // 5. スラブ（隅・角を一点鎖線で結び、枠なしで中央にFS1などの符号を配置）
-            svg += `  <!-- スラブポリゴン & 対角線 & スラブ符号 (枠なし) -->\n  <g id="slabs">\n`;
+            // 梁セグメントの収集（干渉検出および描画用）
+            const allBeamSegments = [];
+
+            beams.forEach((beam, bIdx) => {
+                const bP1 = extractPoint(beam.p1) || extractPoint(beam.startNode);
+                const bP2 = extractPoint(beam.p2) || extractPoint(beam.endNode);
+                if (!bP1 || !bP2) return;
+
+                const bp = beam.props || {};
+
+                if (beam.spans && Array.isArray(beam.spans) && beam.spans.length > 0) {
+                    beam.spans.forEach((span, sIdx) => {
+                        const sp1 = extractPoint(span.startNode) || extractPoint(span.p1) || bP1;
+                        const sp2 = extractPoint(span.endNode) || extractPoint(span.p2) || bP2;
+                        const spProps = span.props || {};
+                        const sym = (spProps.symbol || span.symbol || span.name || bp.symbol || bp.name || beam.name || `FG${sIdx + 1}`).trim();
+                        allBeamSegments.push({
+                            p1: sp1,
+                            p2: sp2,
+                            symbol: sym,
+                            beam: beam,
+                            width: bp.width || 150
+                        });
+                    });
+                } else {
+                    const sym = (bp.symbol || bp.beamName || bp.name || beam.name || `FG${bIdx + 1}`).trim();
+                    allBeamSegments.push({
+                        p1: bP1,
+                        p2: bP2,
+                        symbol: sym,
+                        beam: beam,
+                        width: bp.width || 150
+                    });
+                }
+            });
+
+            // 5. スラブ（隅・角を一点鎖線で結び、枠なしで中央にFS1などの符号を配置 & 梁との被り自動回避）
+            svg += `  <!-- スラブポリゴン & 対角線 & スラブ符号 (枠なし・被り自動回避) -->\n  <g id="slabs">\n`;
             slabs.forEach((sl, idx) => {
-                if (!sl.vertices || sl.vertices.length < 3) return;
-                const validVerts = sl.vertices.map(v => extractPoint(v)).filter(Boolean);
+                const rawVerts = sl.polygon || sl.vertices || [];
+                if (!rawVerts || rawVerts.length < 3) return;
+                const validVerts = rawVerts.map(v => extractPoint(v)).filter(Boolean);
                 if (validVerts.length < 3) return;
 
                 const pts = validVerts.map(v => `${toSx(v.x).toFixed(1)},${toSy(v.y).toFixed(1)}`).join(' ');
@@ -230,11 +277,29 @@
 
                 const cx = validVerts.reduce((sum, v) => sum + v.x, 0) / validVerts.length;
                 const cy = validVerts.reduce((sum, v) => sum + v.y, 0) / validVerts.length;
-                const scx = toSx(cx);
-                const scy = toSy(cy);
+                let scx = toSx(cx);
+                let scy = toSy(cy);
+
+                // ★ スラブ符号が基礎梁と被るときは、位置を少しずらす
+                for (const bs of allBeamSegments) {
+                    const bx1 = toSx(bs.p1.x), by1 = toSy(bs.p1.y);
+                    const bx2 = toSx(bs.p2.x), by2 = toSy(bs.p2.y);
+                    const dist = distToSegment(scx, scy, bx1, by1, bx2, by2);
+                    if (dist < 15) {
+                        const isH = Math.abs(bx2 - bx1) >= Math.abs(by2 - by1);
+                        if (isH) {
+                            // 水平梁と被る場合: Y方向に少しずらす (スラブ重心側へシフト)
+                            scy += (scy < (by1 + by2) / 2) ? -13 : 13;
+                        } else {
+                            // 垂直梁と被る場合: X方向に少しずらす (スラブ重心側へシフト)
+                            scx += (scx < (bx1 + bx2) / 2) ? -13 : 13;
+                        }
+                        break;
+                    }
+                }
 
                 const sp = sl.props || {};
-                const slabName = sp.name || `FS${idx + 1}`;
+                const slabName = sl.name || sp.name || `FS${idx + 1}`;
 
                 svg += `    <text x="${scx.toFixed(1)}" y="${(scy + 4).toFixed(1)}" font-size="12" font-weight="bold" fill="#0284c7" text-anchor="middle" style="paint-order:stroke; stroke:#ffffff; stroke-width:3.5px; stroke-linejoin:round;">${slabName}</text>\n`;
             });
@@ -243,50 +308,7 @@
             // 6. 基礎梁（梁躯体 ＆ スパン別カギ線・端部45度傾斜ティック・外周外側配置・縦梁90度回転平行表示）
             svg += `  <!-- 基礎梁躯体 & スパン別カギ線付き梁符号 (枠なし) -->\n  <g id="beams">\n`;
 
-            const allItemsToDraw = [];
-
-            beams.forEach((beam, bIdx) => {
-                const bP1 = extractPoint(beam.p1);
-                const bP2 = extractPoint(beam.p2);
-                if (!bP1 || !bP2) return;
-
-                const sx1 = toSx(bP1.x), sy1 = toSy(bP1.y);
-                const sx2 = toSx(bP2.x), sy2 = toSy(bP2.y);
-                const bp = beam.props || {};
-                const widthMm = bp.width || 150;
-                const strokeW = Math.max(2.5, Math.min(6, widthMm * scale));
-
-                // 梁躯体太線（濃色）
-                svg += `    <line x1="${sx1.toFixed(1)}" y1="${sy1.toFixed(1)}" x2="${sx2.toFixed(1)}" y2="${sy2.toFixed(1)}" stroke="#0f172a" stroke-width="${strokeW.toFixed(1)}" stroke-linecap="square" />\n`;
-
-                if (beam.spans && Array.isArray(beam.spans) && beam.spans.length > 0) {
-                    beam.spans.forEach((span, sIdx) => {
-                        const sp1 = extractPoint(span.startNode, bP1) || extractPoint(span.p1, bP1) || bP1;
-                        const sp2 = extractPoint(span.endNode, bP2) || extractPoint(span.p2, bP2) || bP2;
-                        const spProps = span.props || {};
-                        const sym = (spProps.symbol || span.symbol || bp.symbol || `FG${sIdx + 1}`).trim();
-                        allItemsToDraw.push({
-                            p1: sp1,
-                            p2: sp2,
-                            symbol: sym,
-                            beam: beam,
-                            spanIndex: sIdx
-                        });
-                    });
-                } else {
-                    const sym = (bp.symbol || bp.beamName || `FG${bIdx + 1}`).trim();
-                    allItemsToDraw.push({
-                        p1: bP1,
-                        p2: bP2,
-                        symbol: sym,
-                        beam: beam,
-                        spanIndex: 0
-                    });
-                }
-            });
-
-            // 各アイテムのカギ線と符号の描画
-            allItemsToDraw.forEach(item => {
+            allBeamSegments.forEach(item => {
                 const sym = item.symbol;
                 if (!sym) return;
 
@@ -294,6 +316,11 @@
                 const x2 = toSx(item.p2.x), y2 = toSy(item.p2.y);
                 const dx = x2 - x1;
                 const dy = y2 - y1;
+                const strokeW = Math.max(2.5, Math.min(6, (item.width || 150) * scale));
+
+                // 梁躯体太線（濃色）
+                svg += `    <line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="#0f172a" stroke-width="${strokeW.toFixed(1)}" stroke-linecap="square" />\n`;
+
                 const isHorizontal = Math.abs(dx) >= Math.abs(dy);
 
                 // 外周判定
