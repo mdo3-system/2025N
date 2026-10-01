@@ -1,5 +1,5 @@
-// v3.14.0: Foundation Plan drawing output, Slab-to-Section CAD parameter synchronization, and Pillar Hardware integration
-window.APP_VERSION = "v3.14.0";
+// v3.14.1: Fix Foundation Plan SVG bounding box coordinate extraction and scale NaN guard
+window.APP_VERSION = "v3.14.1";
 
 (function() {
     function applyAppVersion() {
