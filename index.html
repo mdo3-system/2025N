@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>上善如水 - 壁量計算WEB (v3.13.39)</title>
+    <title>上善如水 - 壁量計算WEB (v3.14.0)</title>
     <script src="https://cdn.jsdelivr.net/npm/dxf-parser@1.1.2/dist/dxf-parser.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/encoding-japanese/2.0.0/encoding.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/clipper-lib@6.4.2/clipper.js"></script>
@@ -1702,9 +1702,9 @@
                             <div>
                                 <div style="display:flex; justify-content:space-between; margin-bottom:2px;">
                                     <span style="color:#94a3b8;">スラブ厚</span>
-                                    <span id="txtSlabT" style="font-weight:bold; color:#60a5fa;">180 mm</span>
+                                    <span id="txtSlabT" style="font-weight:bold; color:#60a5fa;">150 mm</span>
                                 </div>
-                                <input type="range" id="slabT" min="120" max="300" step="10" value="180" style="width:100%;" oninput="window.FoundationSectionController.updateParam('slabT', parseInt(this.value));">
+                                <input type="range" id="slabT" min="120" max="300" step="10" value="150" style="width:100%;" oninput="window.FoundationSectionController.updateParam('slabT', parseInt(this.value)); document.getElementById('txtSlabT').textContent = this.value + ' mm';">
                             </div>
                         </div>
                         <div>
@@ -1779,7 +1779,7 @@
     </div>
 
     <!-- JavaScript モジュール群 (本番バンドル・難読化版: 開発時は index.dev.html を参照) -->
-    <script src="assets/js/modules/wall_4split/dist/wall_4split.bundle.min.js?v=3.13.39"></script>
+    <script src="assets/js/modules/wall_4split/dist/wall_4split.bundle.min.js?v=3.14.0"></script>
 
     
     <!-- マジックリンク認証・ライセンス制御JS (フェーズ3) -->

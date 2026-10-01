@@ -428,7 +428,7 @@ window.FoundationRenderer = {
             <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid #8e44ad; margin-bottom:10px; padding-bottom:5px;">
                 <span style="font-size:12px; font-weight:bold; color:#2c3e50;">🏗️ 基礎梁 計算条件</span>
                 <div style="display:flex; gap:6px;">
-                    <button type="button" onclick="if(window.FoundationSectionController) window.FoundationSectionController.openModal()" style="padding:5px 12px; background:#2563eb; color:#fff; font-weight:bold; font-size:11px; border:none; border-radius:4px; cursor:pointer; box-shadow:0 2px 4px rgba(0,0,0,0.1); display:flex; align-items:center; gap:4px;">📐 断面詳細図・CAD出力</button>
+                    <button type="button" onclick="if(window.FoundationSectionController) window.FoundationSectionController.openModal('${(beam.spans && beam.spans[0]?.props?.symbol) || beam.props?.symbol || 'FG1'}')" style="padding:5px 12px; background:#2563eb; color:#fff; font-weight:bold; font-size:11px; border:none; border-radius:4px; cursor:pointer; box-shadow:0 2px 4px rgba(0,0,0,0.1); display:flex; align-items:center; gap:4px;">📐 断面詳細図・CAD出力</button>
                     <button type="button" onclick="if(window.FoundationPropertyHandler) window.FoundationPropertyHandler.saveBeamModalProps(${beam.id})" style="padding:5px 12px; background:#8e44ad; color:#fff; font-weight:bold; font-size:11px; border:none; border-radius:4px; cursor:pointer; box-shadow:0 2px 4px rgba(0,0,0,0.1);">💾 基礎梁設定を保存して再計算</button>
                 </div>
             </div>

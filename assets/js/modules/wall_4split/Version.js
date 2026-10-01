@@ -1,5 +1,5 @@
-// v3.13.39: Integration of Foundation Beam Cross Section Detail CAD Viewer & Symbol Inconsistency Validation
-window.APP_VERSION = "v3.13.39";
+// v3.14.0: Foundation Plan drawing output, Slab-to-Section CAD parameter synchronization, and Pillar Hardware integration
+window.APP_VERSION = "v3.14.0";
 
 (function() {
     function applyAppVersion() {

@@ -62,6 +62,7 @@ const SCRIPT_FILES = [
     'assets/js/modules/wall_4split/view/FoundationSvgGenerator.js',
     'assets/js/modules/wall_4split/view/FoundationRenderer.js',
     'assets/js/modules/wall_4split/view/FoundationSectionSvgRenderer.js',
+    'assets/js/modules/wall_4split/view/FoundationPlanSvgGenerator.js',
     'assets/js/modules/wall_4split/view/DocumentRenderer.js',
     'assets/js/modules/wall_4split/view/ElevationRenderer.js',
     'assets/js/modules/wall_4split/view/RoofRenderer.js',

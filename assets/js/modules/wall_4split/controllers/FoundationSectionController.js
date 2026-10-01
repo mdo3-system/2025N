@@ -30,9 +30,17 @@
 
         /**
          * 断面図CADモーダルを開く（AppStateから符号と仕様を同期）
+         * @param {string} [targetSymbol] - 初期フォーカスする梁符号名
          */
-        openModal: function() {
+        openModal: function(targetSymbol) {
             this.syncFromAppState();
+            if (targetSymbol) {
+                const targetStr = String(targetSymbol).trim();
+                const idx = this.beamList.findIndex(b => (b.title || b.id) === targetStr);
+                if (idx !== -1) {
+                    this.currentBeamIndex = idx;
+                }
+            }
             const modal = document.getElementById('modal-foundation-section-cad');
             if (modal) {
                 modal.style.display = 'flex';
@@ -55,30 +63,51 @@
         },
 
         /**
-         * AppState（伏図上の基礎梁）から符号と仕様を自動抽出・同期
+         * AppState（伏図上の基礎梁・スラブ）から符号と仕様を自動抽出・同期
          */
         syncFromAppState: function() {
             const s = (typeof window !== 'undefined') ? window.AppState : null;
             if (!s) return;
 
-            // 1. スラブ仕様からスラブ配筋を同期
+            // 1. スラブ仕様からスラブ厚・天端下がり・配筋を同期
+            let defaultSlabT = 150;
+            let defaultGlToSlab = 50;
+            let defaultSlabArrangement = 'double';
+
             if (s.foundationSlabs && s.foundationSlabs.length > 0) {
                 const sl = s.foundationSlabs[0];
                 const sp = sl.props || {};
+                if (sp.slabThickness || sp.thickness) {
+                    defaultSlabT = Number(sp.slabThickness || sp.thickness);
+                }
+                if (sp.slabTopHeight !== undefined) {
+                    defaultGlToSlab = Number(sp.slabTopHeight);
+                }
                 if (sp.rebarShort) {
-                    this.slabCommon.shortBar = `${sp.rebarShort.type || 'D13'}@${sp.rebarShort.pitch || 150}`;
+                    this.slabCommon.shortBar = typeof sp.rebarShort === 'string'
+                        ? sp.rebarShort
+                        : `${sp.rebarShort.type || 'D13'}@${sp.rebarShort.pitch || 150}`;
                 }
                 if (sp.rebarLong) {
-                    this.slabCommon.longBar = `${sp.rebarLong.type || 'D10'}@${sp.rebarLong.pitch || 300}`;
+                    this.slabCommon.longBar = typeof sp.rebarLong === 'string'
+                        ? sp.rebarLong
+                        : `${sp.rebarLong.type || 'D10'}@${sp.rebarLong.pitch || 300}`;
+                }
+                if (sp.arrangement) {
+                    defaultSlabArrangement = sp.arrangement;
+                } else if (sp.isDouble !== undefined) {
+                    defaultSlabArrangement = sp.isDouble ? 'double' : 'single';
                 }
             }
 
-            // 2. 伏図から符号ごとに梁仕様を集約
+            // 2. 伏図から符号ごとに梁仕様・隣接スラブ仕様を集約
             const symbolMap = {};
 
             (s.foundationBeams || []).forEach(beam => {
                 const bp = beam.props || {};
                 const isExterior = this._isBeamExterior(beam, s);
+                const beamSlabT = bp.slabThickness || bp.thickness || defaultSlabT;
+                const beamGlToSlab = bp.slabTopHeight !== undefined ? bp.slabTopHeight : defaultGlToSlab;
 
                 if (beam.spans && beam.spans.length > 0) {
                     beam.spans.forEach((span, sIdx) => {
@@ -94,6 +123,9 @@
                                 width: spProps.width !== undefined ? spProps.width : (bp.width || 150),
                                 height: spProps.height !== undefined ? spProps.height : (bp.height || 640),
                                 embedDepth: spProps.embedDepth !== undefined ? spProps.embedDepth : (bp.embedDepth ?? 250),
+                                slabT: spProps.slabThickness !== undefined ? spProps.slabThickness : beamSlabT,
+                                glToSlab: spProps.slabTopHeight !== undefined ? spProps.slabTopHeight : beamGlToSlab,
+                                slabArrangement: spProps.slabArrangement || bp.slabArrangement || defaultSlabArrangement,
                                 topRebar: spProps.topRebar || bp.topRebar || '1-D13',
                                 bottomRebar: spProps.bottomRebar || bp.bottomRebar || '1-D13',
                                 stirrup: spProps.stirrup || bp.stirrup || '1-D10@200'
@@ -111,6 +143,9 @@
                             width: bp.width || 150,
                             height: bp.height || 640,
                             embedDepth: bp.embedDepth ?? 250,
+                            slabT: beamSlabT,
+                            glToSlab: beamGlToSlab,
+                            slabArrangement: bp.slabArrangement || defaultSlabArrangement,
                             topRebar: bp.topRebar || '1-D13',
                             bottomRebar: bp.bottomRebar || '1-D13',
                             stirrup: bp.stirrup || '1-D10@200'
@@ -120,7 +155,7 @@
                 }
             });
 
-            // 3. 既存の beamList とマージ（伏図の最新値を反映しつつ、手動追加符号も維持）
+            // 3. 既存の beamList とマージ（伏図の最新スラブ・梁値を反映しつつ、手動追加符号も維持）
             const updatedList = [];
             const processedSymbols = new Set();
 
@@ -137,12 +172,12 @@
                         baseSpec: info.isExterior ? 'FG1' : 'FG2',
                         baseToeWidthType: 'matchStem',
                         stemArrangement: 'single',
-                        slabArrangement: 'double',
+                        slabArrangement: info.slabArrangement || defaultSlabArrangement,
                         stemW: info.width || 150,
-                        slabT: 180,
+                        slabT: info.slabT || defaultSlabT,
                         aboveGl: Math.max((info.height || 640) - (info.embedDepth || 250), 300),
                         embedH: info.embedDepth || 250,
-                        glToSlab: 50,
+                        glToSlab: info.glToSlab !== undefined ? info.glToSlab : defaultGlToSlab,
                         levelerT: 10,
                         topSpec: this._normalizeRebarSpec(info.topRebar),
                         botSpec: this._normalizeRebarSpec(info.bottomRebar),
@@ -156,6 +191,9 @@
                     existing.spansCount = info.spansCount;
                     existing.stemW = info.width || existing.stemW;
                     existing.embedH = info.embedDepth !== undefined ? info.embedDepth : existing.embedH;
+                    existing.slabT = info.slabT || existing.slabT || defaultSlabT;
+                    existing.glToSlab = info.glToSlab !== undefined ? info.glToSlab : existing.glToSlab;
+                    existing.slabArrangement = info.slabArrangement || existing.slabArrangement || defaultSlabArrangement;
                     existing.topSpec = this._normalizeRebarSpec(info.topRebar) || existing.topSpec;
                     existing.botSpec = this._normalizeRebarSpec(info.bottomRebar) || existing.botSpec;
                     existing.stirrupBar = this._normalizeStirrupSpec(info.stirrup) || existing.stirrupBar;
@@ -168,6 +206,8 @@
                 const sym = b.title || b.id;
                 if (!processedSymbols.has(sym)) {
                     b.spansCount = 0; // 未配置マーク
+                    b.slabT = b.slabT || defaultSlabT;
+                    b.glToSlab = b.glToSlab !== undefined ? b.glToSlab : defaultGlToSlab;
                     updatedList.push(b);
                 }
             });
@@ -176,8 +216,8 @@
                 // デフォルト初期値
                 updatedList.push({
                     id: 'FG1', title: 'FG1', baseSpec: 'FG1', baseToeWidthType: 'matchStem',
-                    stemArrangement: 'single', slabArrangement: 'double',
-                    stemW: 150, slabT: 180, aboveGl: 400, embedH: 500, glToSlab: 50, levelerT: 10,
+                    stemArrangement: 'single', slabArrangement: defaultSlabArrangement,
+                    stemW: 150, slabT: defaultSlabT, aboveGl: 400, embedH: 500, glToSlab: defaultGlToSlab, levelerT: 10,
                     topSpec: '1-D13', botSpec: '1-D13', stirrupBar: 'D10@200',
                     incTopStirrup: true, incBotStirrup: true, spansCount: 0
                 });
@@ -278,6 +318,25 @@
                 if (el) el.value = val;
             };
 
+            const ensureOptionAndSet = (id, val) => {
+                const el = document.getElementById(id);
+                if (!el || !val) return;
+                let found = false;
+                for (let i = 0; i < el.options.length; i++) {
+                    if (el.options[i].value === val) {
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found) {
+                    const opt = document.createElement('option');
+                    opt.value = val;
+                    opt.textContent = val;
+                    el.appendChild(opt);
+                }
+                el.value = val;
+            };
+
             const lblTitle = document.getElementById('lblCurrentSignTitle');
             if (lblTitle) {
                 lblTitle.value = b.title || b.id || 'FG1';
@@ -285,23 +344,32 @@
 
             setVal('beamBaseSpec', b.baseSpec || 'FG1');
             setVal('baseToeWidthType', b.baseToeWidthType || 'matchStem');
+            setVal('stemArrangement', b.stemArrangement || 'single');
             setVal('stemW', b.stemW || 150);
-            setVal('slabT', b.slabT || 180);
+            setVal('slabT', b.slabT || 150);
             setVal('aboveGl', b.aboveGl !== undefined ? b.aboveGl : 400);
             setVal('embedH', b.embedH !== undefined ? b.embedH : 500);
             setVal('glToSlab', b.glToSlab !== undefined ? b.glToSlab : 50);
             setVal('levelerT', b.levelerT !== undefined ? b.levelerT : 10);
-            setVal('stirrupBar', b.stirrupBar || 'D10@200');
+            ensureOptionAndSet('stirrupBar', b.stirrupBar || 'D10@200');
 
             const txtSlabT = document.getElementById('txtSlabT');
-            if (txtSlabT) txtSlabT.textContent = (b.slabT || 180) + ' mm';
+            if (txtSlabT) txtSlabT.textContent = (b.slabT || 150) + ' mm';
+            const txtAboveGl = document.getElementById('txtAboveGl');
+            if (txtAboveGl) txtAboveGl.textContent = (b.aboveGl !== undefined ? b.aboveGl : 400) + ' mm';
+            const txtEmbed = document.getElementById('txtEmbed');
+            if (txtEmbed) txtEmbed.textContent = (b.embedH !== undefined ? b.embedH : 500) + ' mm';
+            const txtGlToSlab = document.getElementById('txtGlToSlab');
+            if (txtGlToSlab) txtGlToSlab.textContent = '+' + (b.glToSlab !== undefined ? b.glToSlab : 50) + ' mm';
+            const txtLeveler = document.getElementById('txtLeveler');
+            if (txtLeveler) txtLeveler.textContent = (b.levelerT !== undefined ? b.levelerT : 10) + ' mm';
 
             this.updateTopSpecOptions(b.stemArrangement === 'double', b.topSpec);
             const is250 = (b.baseSpec === 'FG1') && (b.baseToeWidthType === 'fixed250');
             this.updateBotSpecOptions(is250, b.stemArrangement === 'double', b.botSpec);
 
-            setVal('slabShortBar', this.slabCommon.shortBar);
-            setVal('slabLongBar', this.slabCommon.longBar);
+            ensureOptionAndSet('slabShortBar', this.slabCommon.shortBar);
+            ensureOptionAndSet('slabLongBar', this.slabCommon.longBar);
 
             const chkAvg = document.getElementById('chkShowAvgGl');
             if (chkAvg) chkAvg.checked = this.avgGlConfig.show;

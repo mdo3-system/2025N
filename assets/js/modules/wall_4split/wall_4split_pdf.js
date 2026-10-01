@@ -1358,14 +1358,31 @@ async function generateDoc() {
         h += `<div class="doc-section" id="sec-fd-beam" style="margin-bottom:30px;">
             ${getHeader(`■ ${secNum++}. 基礎梁 構造検定 ＆ 応力（N・M・Q）図`)}`;
 
-        // 7-1. 基礎梁負担図（べた基礎接地圧分担域）を最初に1枚出力
+        // 7-1. 基礎伏図（基礎梁符号・スラブ符号・1F柱・柱脚金物・通り芯・寸法線）
+        const planGenerator = (typeof window !== 'undefined' && window.FoundationPlanSvgGenerator)
+            ? window.FoundationPlanSvgGenerator
+            : (typeof FoundationPlanSvgGenerator !== 'undefined' ? FoundationPlanSvgGenerator : null);
+        if (planGenerator && typeof planGenerator.generateFoundationPlanSvg === 'function') {
+            const planSvg = planGenerator.generateFoundationPlanSvg(window.AppState);
+            if (planSvg) {
+                h += `<div style="margin-bottom:25px; border:1px solid #ccc; padding:15px; border-radius:8px; page-break-inside:avoid; break-inside:avoid;">
+                    <div style="font-size:13px; font-weight:bold; margin-bottom:10px; border-bottom:2px solid #2980b9; padding-bottom:5px; color:#1a5276; display:flex; justify-content:space-between; align-items:center;">
+                        <span>7-1. 基礎伏図（基礎梁符号・スラブ符号・1F柱・柱脚金物）</span>
+                        <span style="font-size:11px; font-weight:normal; color:#7f8c8d;">通り芯・寸法線連動</span>
+                    </div>
+                    ${planSvg}
+                </div>`;
+            }
+        }
+
+        // 7-2. 基礎梁負担図（べた基礎接地圧分担域）
         if (window.FoundationRenderer && typeof window.FoundationRenderer.generateFoundationTributarySvg === 'function') {
             const firstBeamWithSpans = (window.AppState.foundationBeams || []).find(b => b.spans && b.spans.length > 0);
             const tributarySvgGlobal = window.FoundationRenderer.generateFoundationTributarySvg(firstBeamWithSpans, window.AppState);
             if (tributarySvgGlobal) {
                 h += `<div style="margin-bottom:25px; border:1px solid #ccc; padding:15px; border-radius:8px; page-break-inside:avoid; break-inside:avoid;">
                     <div style="font-size:13px; font-weight:bold; margin-bottom:10px; border-bottom:2px solid #27ae60; padding-bottom:5px; color:#1a5276;">
-                        7-1. 基礎梁 負担図（べた基礎 接地圧分担域）
+                        7-2. 基礎梁 負担図（べた基礎 接地圧分担域）
                     </div>
                     ${tributarySvgGlobal}
                 </div>`;
