@@ -1,5 +1,5 @@
-// v3.13.38: Display DXF elevation drawing in mitsuke preview & enable DXF background during floor area drawing
-window.APP_VERSION = "v3.13.38";
+// v3.13.39: Integration of Foundation Beam Cross Section Detail CAD Viewer & Symbol Inconsistency Validation
+window.APP_VERSION = "v3.13.39";
 
 (function() {
     function applyAppVersion() {

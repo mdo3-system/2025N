@@ -50,6 +50,10 @@ const filesToLoad = [
     '../logic/WasmBridge.js',
     '../logic/AuthLicenseManager.js',
     '../logic/RequiredWallCalculator.js',
+    '../logic/FoundationSectionEngine.js',
+    '../logic/FoundationSymbolValidator.js',
+    '../logic/FoundationSectionDxfExporter.js',
+    '../view/FoundationSectionSvgRenderer.js',
     '../controllers/PillarPropertyController.js',
     '../controllers/WallPropertyController.js',
     '../view/FoundationSvgGenerator.js',
@@ -92,7 +96,8 @@ const testFiles = [
     'RequiredWallCalculator.test.js',
     'WasmBridge.test.js',
     'AuthLicenseManager.test.js',
-    'MitsukeMode.test.js'
+    'MitsukeMode.test.js',
+    'FoundationSection.test.js'
 ];
 
 testFiles.forEach(f => {

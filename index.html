@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>上善如水 - 壁量計算WEB (v3.13.38)</title>
+    <title>上善如水 - 壁量計算WEB (v3.13.39)</title>
     <script src="https://cdn.jsdelivr.net/npm/dxf-parser@1.1.2/dist/dxf-parser.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/encoding-japanese/2.0.0/encoding.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/clipper-lib@6.4.2/clipper.js"></script>
@@ -1567,8 +1567,219 @@
         </div>
     </div>
 
+    <!-- [v3.13.39] 木造ベタ基礎 梁断面詳細図 (FOUNDATION CAD PRO) モーダル -->
+    <div id="modal-foundation-section-cad" class="modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:10005; align-items:center; justify-content:center; backdrop-filter:blur(4px);">
+        <div style="background:#0f172a; width:96vw; height:92vh; border-radius:10px; border:1px solid #334155; overflow:hidden; box-shadow:0 12px 40px rgba(0,0,0,0.6); display:flex; flex-direction:column; color:#f8fafc; font-family:monospace, sans-serif;">
+            
+            <!-- ヘッダー -->
+            <div style="background:#1e293b; padding:8px 16px; border-bottom:1px solid #334155; display:flex; justify-content:space-between; align-items:center; shrink-0;">
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <span style="background:#2563eb; color:#fff; padding:2px 8px; border-radius:4px; font-weight:bold; font-size:11px;">FOUNDATION CAD PRO</span>
+                    <h3 style="margin:0; font-size:14px; font-weight:bold; color:#f8fafc; display:flex; align-items:center; gap:8px;">
+                        木造ベタ基礎 梁断面詳細図
+                        <span style="font-size:10.5px; font-weight:normal; color:#34d399; background:#064e3b; padding:2px 6px; border-radius:4px; border:1px solid #059669;">天端同寸干渉解消版</span>
+                    </h3>
+                </div>
+
+                <!-- 符号タブコンテナ -->
+                <div id="beamSectionTabsContainer" style="display:flex; align-items:center; gap:4px; overflow-x:auto; max-width:550px; padding:3px 6px; background:#0b1120; border-radius:6px; border:1px solid #334155;"></div>
+
+                <!-- アクションボタン群 -->
+                <div style="display:flex; align-items:center; gap:6px;">
+                    <button type="button" onclick="window.FoundationSectionController.resetView()" style="padding:4px 10px; font-size:11px; background:#334155; color:#cbd5e1; border:none; border-radius:4px; cursor:pointer;">100%</button>
+                    <button type="button" onclick="window.FoundationSectionController.exportSVG()" style="padding:4px 10px; font-size:11px; background:#334155; color:#f8fafc; border:1px solid #475569; border-radius:4px; cursor:pointer;">🖼️ SVG</button>
+                    <button type="button" onclick="window.FoundationSectionController.exportDXF(false)" style="padding:4px 12px; font-size:11px; background:#0284c7; color:#fff; font-weight:bold; border:none; border-radius:4px; cursor:pointer;" title="選択中の符号のみDXF出力">📥 選択符号DXF</button>
+                    <button type="button" onclick="window.FoundationSectionController.exportDXF(true)" style="padding:4px 14px; font-size:11px; background:#059669; color:#fff; font-weight:bold; border:none; border-radius:4px; cursor:pointer; box-shadow:0 2px 4px rgba(0,0,0,0.3);" title="全符号を完全DXF出力">📐 全符号DXF</button>
+                    <button type="button" onclick="window.FoundationSectionController.closeModal()" style="background:#e11d48; border:none; color:#fff; cursor:pointer; font-size:12px; padding:4px 10px; border-radius:4px; font-weight:bold; margin-left:6px;">✖ 閉じる</button>
+                </div>
+            </div>
+
+            <!-- メインコンテンツ -->
+            <div style="flex:1; display:flex; overflow:hidden;">
+                
+                <!-- 左サイドバー -->
+                <aside style="width:340px; background:rgba(30,41,59,0.95); padding:12px; border-right:1px solid #334155; font-size:11px; overflow-y:auto; display:flex; flex-direction:column; gap:10px; shrink-0;">
+                    
+                    <!-- 符号名編集 -->
+                    <div style="background:rgba(23,37,84,0.8); padding:8px 10px; border-radius:6px; border:1px solid #2563eb; display:flex; justify-content:space-between; align-items:center;">
+                        <div>
+                            <span style="font-size:9.5px; color:#93c5fd; display:block;">編集中符号 (クリックして変更可)</span>
+                            <input type="text" id="lblCurrentSignTitle" value="FG1" onchange="window.FoundationSectionController.updateCurrentSignTitle(this.value)" style="background:#0f172a; color:#fff; border:1px solid #3b82f6; border-radius:4px; padding:2px 6px; font-size:13px; font-weight:bold; width:90px; margin-top:2px;">
+                        </div>
+                        <div style="display:flex; gap:4px;">
+                            <button type="button" onclick="window.FoundationSectionController.cloneCurrentBeam()" style="padding:3px 8px; background:#334155; color:#f8fafc; font-size:10px; border:none; border-radius:4px; cursor:pointer;">複製</button>
+                            <button type="button" onclick="window.FoundationSectionController.deleteCurrentBeam()" style="padding:3px 8px; background:#881337; color:#fecdd3; font-size:10px; border:none; border-radius:4px; cursor:pointer;">削除</button>
+                        </div>
+                    </div>
+
+                    <!-- 不整合警告バナー枠 -->
+                    <div id="fd-section-warning-banner" style="display:none;"></div>
+
+                    <!-- 1. 基礎梁仕様ベース -->
+                    <div style="background:rgba(51,65,85,0.4); padding:8px; border-radius:6px; border:1px solid #475569; display:flex; flex-direction:column; gap:6px;">
+                        <div style="font-weight:bold; color:#93c5fd; border-bottom:1px solid #475569; padding-bottom:3px;">1. 基礎梁仕様ベース</div>
+                        <div>
+                            <label style="color:#94a3b8; display:block; margin-bottom:2px;">準拠仕様</label>
+                            <select id="beamBaseSpec" onchange="window.FoundationSectionController.updateParam('baseSpec', this.value)" style="width:100%; background:#0f172a; color:#fde047; border:1px solid #475569; border-radius:4px; padding:3px; font-weight:bold;">
+                                <option value="FG1">FG1仕様 (外周/ポーチ・ハンチ形式)</option>
+                                <option value="FG2">FG2仕様 (内部・両側スラブ連続T型形式)</option>
+                            </select>
+                        </div>
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px;">
+                            <div>
+                                <label style="color:#94a3b8; display:block; margin-bottom:2px;">立上り配筋</label>
+                                <select id="stemArrangement" onchange="window.FoundationSectionController.updateParam('stemArrangement', this.value)" style="width:100%; background:#0f172a; color:#f8fafc; border:1px solid #475569; border-radius:4px; padding:3px;">
+                                    <option value="single">シングル配筋</option>
+                                    <option value="double">ダブル配筋 (フープ)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label style="color:#94a3b8; display:block; margin-bottom:2px;">底盤幅形式</label>
+                                <select id="baseToeWidthType" onchange="window.FoundationSectionController.updateParam('baseToeWidthType', this.value)" style="width:100%; background:#0f172a; color:#67e8f9; border:1px solid #475569; border-radius:4px; padding:3px;">
+                                    <option value="matchStem">立上り幅と同寸</option>
+                                    <option value="fixed250">250mm固定 (並列3本可)</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 2. 平均GL設定 -->
+                    <div style="background:rgba(69,26,3,0.3); padding:8px; border-radius:6px; border:1px solid #b45309; display:flex; flex-direction:column; gap:6px;">
+                        <div style="font-weight:bold; color:#fcd34d; border-bottom:1px solid #b45309; padding-bottom:3px; display:flex; justify-content:space-between; align-items:center;">
+                            <span>2. 平均GL設定</span>
+                            <label style="display:flex; align-items:center; gap:4px; cursor:pointer;">
+                                <input type="checkbox" id="chkShowAvgGl" onchange="window.FoundationSectionController.avgGlConfig.show = this.checked; window.FoundationSectionController.draw();" checked>
+                                <span style="font-size:10px; color:#fde68a;">表示ON</span>
+                            </label>
+                        </div>
+                        <div>
+                            <div style="display:flex; justify-content:space-between; margin-bottom:2px;">
+                                <span style="color:#94a3b8;">平均GL位置 (設計GL基準)</span>
+                                <span id="txtAvgGlDiff" style="font-weight:bold; color:#fbbf24;">-180 mm</span>
+                            </div>
+                            <input type="range" id="avgGlDiff" min="-600" max="600" step="10" value="-180" style="width:100%;" oninput="window.FoundationSectionController.avgGlConfig.diff = parseInt(this.value); document.getElementById('txtAvgGlDiff').textContent = (this.value >= 0 ? '+' : '') + this.value + ' mm'; window.FoundationSectionController.draw();">
+                        </div>
+                    </div>
+
+                    <!-- 3. 躯体寸法 -->
+                    <div style="background:rgba(51,65,85,0.4); padding:8px; border-radius:6px; border:1px solid #475569; display:flex; flex-direction:column; gap:6px;">
+                        <div style="font-weight:bold; color:#93c5fd; border-bottom:1px solid #475569; padding-bottom:3px;">3. 基準高さ・躯体寸法 (mm)</div>
+                        <div>
+                            <div style="display:flex; justify-content:space-between; margin-bottom:2px;">
+                                <span style="color:#94a3b8;">GL上天端高</span>
+                                <span id="txtAboveGl" style="font-weight:bold; color:#60a5fa;">400 mm</span>
+                            </div>
+                            <input type="range" id="aboveGl" min="0" max="1500" step="10" value="400" style="width:100%;" oninput="window.FoundationSectionController.updateParam('aboveGl', parseInt(this.value)); document.getElementById('txtAboveGl').textContent = this.value + ' mm';">
+                        </div>
+                        <div>
+                            <div style="display:flex; justify-content:space-between; margin-bottom:2px;">
+                                <span style="color:#94a3b8;">根入れ深さ ※H (設計GL下)</span>
+                                <span id="txtEmbed" style="font-weight:bold; color:#34d399;">500 mm</span>
+                            </div>
+                            <input type="range" id="embedH" min="50" max="1500" step="10" value="500" style="width:100%;" oninput="window.FoundationSectionController.updateParam('embedH', parseInt(this.value)); document.getElementById('txtEmbed').textContent = this.value + ' mm';">
+                        </div>
+                        <div>
+                            <div style="display:flex; justify-content:space-between; margin-bottom:2px;">
+                                <span style="color:#94a3b8;">スラブ天端高 (GL基準)</span>
+                                <span id="txtGlToSlab" style="font-weight:bold; color:#60a5fa;">+50 mm</span>
+                            </div>
+                            <input type="range" id="glToSlab" min="0" max="150" step="5" value="50" style="width:100%;" oninput="window.FoundationSectionController.updateParam('glToSlab', parseInt(this.value)); document.getElementById('txtGlToSlab').textContent = '+' + this.value + ' mm';">
+                        </div>
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; border-top:1px solid #475569; padding-top:4px;">
+                            <div>
+                                <label style="color:#94a3b8; display:block; margin-bottom:2px;">立上り幅</label>
+                                <select id="stemW" onchange="window.FoundationSectionController.updateParam('stemW', parseInt(this.value))" style="width:100%; background:#0f172a; color:#f8fafc; border:1px solid #475569; border-radius:4px; padding:2px;">
+                                    <option value="120">120 mm</option>
+                                    <option value="130">130 mm</option>
+                                    <option value="140">140 mm</option>
+                                    <option value="150" selected>150 mm</option>
+                                    <option value="160">160 mm</option>
+                                    <option value="170">170 mm</option>
+                                    <option value="180">180 mm</option>
+                                    <option value="200">200 mm</option>
+                                </select>
+                            </div>
+                            <div>
+                                <div style="display:flex; justify-content:space-between; margin-bottom:2px;">
+                                    <span style="color:#94a3b8;">スラブ厚</span>
+                                    <span id="txtSlabT" style="font-weight:bold; color:#60a5fa;">180 mm</span>
+                                </div>
+                                <input type="range" id="slabT" min="120" max="300" step="10" value="180" style="width:100%;" oninput="window.FoundationSectionController.updateParam('slabT', parseInt(this.value));">
+                            </div>
+                        </div>
+                        <div>
+                            <div style="display:flex; justify-content:space-between; margin-bottom:2px;">
+                                <span style="color:#94a3b8;">レベラー厚</span>
+                                <span id="txtLeveler" style="font-weight:bold; color:#38bdf8;">10 mm</span>
+                            </div>
+                            <input type="range" id="levelerT" min="0" max="30" step="5" value="10" style="width:100%;" oninput="window.FoundationSectionController.updateParam('levelerT', parseInt(this.value)); document.getElementById('txtLeveler').textContent = this.value + ' mm';">
+                        </div>
+                    </div>
+
+                    <!-- 4. 配筋仕様 -->
+                    <div style="background:rgba(51,65,85,0.4); padding:8px; border-radius:6px; border:1px solid #475569; display:flex; flex-direction:column; gap:6px;">
+                        <div style="font-weight:bold; color:#93c5fd; border-bottom:1px solid #475569; padding-bottom:3px;">4. 梁配筋仕様</div>
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px;">
+                            <div>
+                                <label style="color:#94a3b8; display:block; margin-bottom:2px;">上主筋</label>
+                                <select id="topSpec" onchange="window.FoundationSectionController.updateParam('topSpec', this.value)" style="width:100%; background:#0f172a; color:#f8fafc; border:1px solid #475569; border-radius:4px; padding:2px; font-weight:bold;"></select>
+                            </div>
+                            <div>
+                                <label style="color:#94a3b8; display:block; margin-bottom:2px;">下主筋</label>
+                                <select id="botSpec" onchange="window.FoundationSectionController.updateParam('botSpec', this.value)" style="width:100%; background:#0f172a; color:#f8fafc; border:1px solid #475569; border-radius:4px; padding:2px; font-weight:bold;"></select>
+                            </div>
+                        </div>
+                        <div>
+                            <label style="color:#94a3b8; display:block; margin-bottom:2px;">縦筋 (スターラップ/フープ)</label>
+                            <select id="stirrupBar" onchange="window.FoundationSectionController.updateParam('stirrupBar', this.value)" style="width:100%; background:#0f172a; color:#f8fafc; border:1px solid #475569; border-radius:4px; padding:2px;">
+                                <option value="D10@200">D10@200</option>
+                                <option value="D10@150">D10@150</option>
+                                <option value="D13@200">D13@200</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- 5. スラブ配筋 -->
+                    <div style="background:rgba(51,65,85,0.4); padding:8px; border-radius:6px; border:1px solid #475569; display:flex; flex-direction:column; gap:6px;">
+                        <div style="font-weight:bold; color:#fde047; border-bottom:1px solid #475569; padding-bottom:3px;">5. 耐圧盤スラブ配筋</div>
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px;">
+                            <div>
+                                <label style="color:#94a3b8; display:block; margin-bottom:2px;">短辺 (外側●)</label>
+                                <select id="slabShortBar" onchange="window.FoundationSectionController.slabCommon.shortBar = this.value; window.FoundationSectionController.draw();" style="width:100%; background:#0f172a; color:#f8fafc; border:1px solid #475569; border-radius:4px; padding:2px;">
+                                    <option value="D13@150">D13@150</option>
+                                    <option value="D13@200">D13@200</option>
+                                    <option value="D16@150">D16@150</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label style="color:#94a3b8; display:block; margin-bottom:2px;">長辺 (内側)</label>
+                                <select id="slabLongBar" onchange="window.FoundationSectionController.slabCommon.longBar = this.value; window.FoundationSectionController.draw();" style="width:100%; background:#0f172a; color:#f8fafc; border:1px solid #475569; border-radius:4px; padding:2px;">
+                                    <option value="D10@300">D10@300</option>
+                                    <option value="D13@300">D13@300</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="padding-top:4px;">
+                        <button type="button" onclick="window.FoundationSectionController.addNewBeam()" style="width:100%; padding:8px; background:linear-gradient(to right, #2563eb, #4f46e5); color:#fff; font-weight:bold; border:none; border-radius:6px; cursor:pointer; box-shadow:0 2px 4px rgba(0,0,0,0.3);">＋ 基礎梁符号を追加 (FG+*)</button>
+                    </div>
+
+                </aside>
+
+                <!-- 右側：CADプレビュー画面 -->
+                <main id="cadViewerMain" style="flex:1; background-color:#080c14; background-image:linear-gradient(to right, rgba(255,255,255,0.04) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.04) 1px, transparent 1px); background-size:20px 20px; display:flex; align-items:center; justify-content:center; position:relative; overflow:hidden; cursor:grab;">
+                    <svg id="cadSvgViewer" style="width:100%; height:100%;" viewBox="0 0 1600 1000" xmlns="http://www.w3.org/2000/svg">
+                        <g id="cadViewportGroup"></g>
+                    </svg>
+                </main>
+
+            </div>
+        </div>
+    </div>
+
     <!-- JavaScript モジュール群 (本番バンドル・難読化版: 開発時は index.dev.html を参照) -->
-    <script src="assets/js/modules/wall_4split/dist/wall_4split.bundle.min.js?v=3.13.38"></script>
+    <script src="assets/js/modules/wall_4split/dist/wall_4split.bundle.min.js?v=3.13.39"></script>
 
     
     <!-- マジックリンク認証・ライセンス制御JS (フェーズ3) -->

@@ -405,11 +405,35 @@ window.FoundationRenderer = {
 
         let html = `<div class="foundation-beam-report" style="color:#2c3e50; font-family:'Hiragino Kaku Gothic ProN','Meiryo',sans-serif; padding:5px; box-sizing:border-box;">`;
 
+        // 符号重複・仕様不一致警告のチェック
+        if (typeof window !== 'undefined' && window.FoundationSymbolValidator) {
+            const symWarnings = window.FoundationSymbolValidator.validateSymbolsConsistency(s);
+            if (symWarnings && symWarnings.length > 0) {
+                html += `<div style="background:#fff3cd; border:1px solid #ffeeba; border-left:4px solid #e74c3c; border-radius:4px; padding:8px 12px; margin-bottom:12px; font-size:11px; color:#856404;">
+                    <div style="font-weight:bold; color:#c0392b; margin-bottom:3px; display:flex; align-items:center; gap:6px;">
+                        ⚠️ 【符号・仕様不一致警告】同一符号で形状または主筋仕様が異なっています
+                    </div>`;
+                symWarnings.forEach(w => {
+                    w.conflicts.forEach(c => {
+                        html += `<div style="margin-left:8px; line-height:1.5;">・符号<b>『${w.symbol}』</b>: ${c.locationA} と ${c.locationB} の間で相違があります（${c.diffDetails.join('、 ')}）</div>`;
+                    });
+                });
+                html += `<div style="margin-top:4px; font-size:10px; color:#d9534f;">※主筋や断面が異なる場合は、符号が重複しないよう『FG1A』『FG1B』などに変更してください。</div>
+                </div>`;
+            }
+        }
+
         if (options.showInputs) {
             html += `
             <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid #8e44ad; margin-bottom:10px; padding-bottom:5px;">
                 <span style="font-size:12px; font-weight:bold; color:#2c3e50;">🏗️ 基礎梁 計算条件</span>
-                <button type="button" onclick="if(window.FoundationPropertyHandler) window.FoundationPropertyHandler.saveBeamModalProps(${beam.id})" style="padding:5px 12px; background:#8e44ad; color:#fff; font-weight:bold; font-size:11px; border:none; border-radius:4px; cursor:pointer; box-shadow:0 2px 4px rgba(0,0,0,0.1);">💾 基礎梁設定を保存して再計算</button>
+                <div style="display:flex; gap:6px;">
+                    <button type="button" onclick="if(window.FoundationSectionController) window.FoundationSectionController.openModal()" style="padding:5px 12px; background:#2563eb; color:#fff; font-weight:bold; font-size:11px; border:none; border-radius:4px; cursor:pointer; box-shadow:0 2px 4px rgba(0,0,0,0.1); display:flex; align-items:center; gap:4px;">📐 断面詳細図・CAD出力</button>
+                    <button type="button" onclick="if(window.FoundationPropertyHandler) window.FoundationPropertyHandler.saveBeamModalProps(${beam.id})" style="padding:5px 12px; background:#8e44ad; color:#fff; font-weight:bold; font-size:11px; border:none; border-radius:4px; cursor:pointer; box-shadow:0 2px 4px rgba(0,0,0,0.1);">💾 基礎梁設定を保存して再計算</button>
+                </div>
+            </div>
+            <div id="rebar-change-hint-${beam.id}" style="display:none; background:#ebf8ff; border:1px solid #bee3f8; border-radius:4px; padding:6px 10px; margin-bottom:10px; font-size:10.5px; color:#2b6cb0;">
+                💡 <b>主筋・断面仕様を変更しました。</b> 他のスパンと仕様が異なる場合は、符号が重複しないよう「FG1A」「FG1B」のように符号名を変更してください。
             </div>
             <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; background:#fdfafa; padding:8px; border-radius:6px; margin-bottom:12px; border:1px solid #f1e5f5; font-size:11px;">
                 <div>

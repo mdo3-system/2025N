@@ -94,6 +94,12 @@ window.FoundationPropertyHandler = {
                 if (window.AppController && typeof window.AppController.refreshAll === 'function') {
                     window.AppController.refreshAll();
                 }
+
+                // 主筋・断面変更時の注意喚起ヒント表示
+                if (['topRebar', 'bottomRebar', 'height', 'width', 'embedDepth', 'stirrup'].includes(key)) {
+                    const hintEl = document.getElementById(`rebar-change-hint-${id}`);
+                    if (hintEl) hintEl.style.display = 'block';
+                }
             }
         }
 
