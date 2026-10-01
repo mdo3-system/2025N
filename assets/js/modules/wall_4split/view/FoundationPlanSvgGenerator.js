@@ -1,8 +1,8 @@
 /**
  * view/FoundationPlanSvgGenerator.js - SVG Generator for Foundation Plan (基礎伏図)
- * v3.14.3: Single Responsibility Principle (SRP) - Visual CAD generator for Foundation Plan
+ * v3.14.4: Step 1 - Refine 45-degree sloped ticks geometry, cap, and uniform slash angle
  * Displays: 
- *  1. Foundation beam symbols with hook lines & 45-degree sloped ticks, rotated parallel for vertical beams, 
+ *  1. Foundation beam symbols with hook lines & uniform 45-degree sloped ticks (/), rotated parallel for vertical beams, 
  *     exterior beams positioned outside, merged consecutive spans with same symbol to prevent text clutter.
  *  2. Robust property fallback (startNode/endNode/polygon/name as well as p1/p2/vertices/props).
  *  3. Collision avoidance: automatically shifts slab symbols away from foundation beam lines.
@@ -359,8 +359,8 @@
                 const isNearMinY = Math.abs(midCadY - minY) < 300;
                 const isNearMaxX = Math.abs(midCadX - maxX) < 300;
 
-                const offsetDist = 16;
-                const tickSize = 3.5; // スラッシュの半長 (斜め45度)
+                const offsetDist = 15;
+                const tickSize = 3.2; // 45度スラッシュの半長 (建築製図標準のシャープなサイズ)
 
                 if (isHorizontal) {
                     // 水平梁 (外周下側なら下、他は上)
@@ -380,12 +380,12 @@
                     if (pX2 <= pX1) return;
 
                     const hookPath = `M ${pX1.toFixed(1)} ${beamY.toFixed(1)} L ${pX1.toFixed(1)} ${lineY.toFixed(1)} L ${pX2.toFixed(1)} ${lineY.toFixed(1)} L ${pX2.toFixed(1)} ${beamY.toFixed(1)}`;
-                    svg += `    <path d="${hookPath}" fill="none" stroke="#2563eb" stroke-width="0.9" />\n`;
+                    svg += `    <path d="${hookPath}" fill="none" stroke="#2563eb" stroke-width="0.85" stroke-linejoin="miter" />\n`;
 
-                    // カギ線の両角に綺麗な45度スラッシュ（／）を描画
-                    // 画面座標系(Y下向き)で右上がり45°: (x - t, y + t) -> (x + t, y - t)
-                    svg += `    <line x1="${(pX1 - tickSize).toFixed(1)}" y1="${(lineY + tickSize).toFixed(1)}" x2="${(pX1 + tickSize).toFixed(1)}" y2="${(lineY - tickSize).toFixed(1)}" stroke="#2563eb" stroke-width="1.2" />\n`;
-                    svg += `    <line x1="${(pX2 - tickSize).toFixed(1)}" y1="${(lineY + tickSize).toFixed(1)}" x2="${(pX2 + tickSize).toFixed(1)}" y2="${(lineY - tickSize).toFixed(1)}" stroke="#2563eb" stroke-width="1.2" />\n`;
+                    // 【ステップ1】カギ線両角の45度スラッシュ（／: 建築製図標準・右上がり45°）
+                    // 画面座標系(Y下向き)で右上がり45°: (x - tickSize, y + tickSize) -> (x + tickSize, y - tickSize)
+                    svg += `    <line x1="${(pX1 - tickSize).toFixed(1)}" y1="${(lineY + tickSize).toFixed(1)}" x2="${(pX1 + tickSize).toFixed(1)}" y2="${(lineY - tickSize).toFixed(1)}" stroke="#2563eb" stroke-width="1.2" stroke-linecap="round" />\n`;
+                    svg += `    <line x1="${(pX2 - tickSize).toFixed(1)}" y1="${(lineY + tickSize).toFixed(1)}" x2="${(pX2 + tickSize).toFixed(1)}" y2="${(lineY - tickSize).toFixed(1)}" stroke="#2563eb" stroke-width="1.2" stroke-linecap="round" />\n`;
 
                     // 梁符号テキスト (水平・カギ線の外側に並列配置)
                     const textY = isPlaceBottom ? (lineY + 11) : (lineY - 3);
@@ -408,14 +408,13 @@
 
                     // カギ線: 梁からの水平足 + 垂直線 + 梁への水平足
                     const hookPath = `M ${beamX.toFixed(1)} ${pY1.toFixed(1)} L ${lineX.toFixed(1)} ${pY1.toFixed(1)} L ${lineX.toFixed(1)} ${pY2.toFixed(1)} L ${beamX.toFixed(1)} ${pY2.toFixed(1)}`;
-                    svg += `    <path d="${hookPath}" fill="none" stroke="#2563eb" stroke-width="0.9" />\n`;
+                    svg += `    <path d="${hookPath}" fill="none" stroke="#2563eb" stroke-width="0.85" stroke-linejoin="miter" />\n`;
 
-                    // カギ線の両角に綺麗な45度スラッシュ（／）を描画
-                    svg += `    <line x1="${(lineX - tickSize).toFixed(1)}" y1="${(pY1 + tickSize).toFixed(1)}" x2="${(lineX + tickSize).toFixed(1)}" y2="${(pY1 - tickSize).toFixed(1)}" stroke="#2563eb" stroke-width="1.2" />\n`;
-                    svg += `    <line x1="${(lineX - tickSize).toFixed(1)}" y1="${(pY2 + tickSize).toFixed(1)}" x2="${(lineX + tickSize).toFixed(1)}" y2="${(pY2 - tickSize).toFixed(1)}" stroke="#2563eb" stroke-width="1.2" />\n`;
+                    // 【ステップ1】カギ線両角の45度スラッシュ（／: 建築製図標準・右上がり45°で統一）
+                    svg += `    <line x1="${(lineX - tickSize).toFixed(1)}" y1="${(pY1 + tickSize).toFixed(1)}" x2="${(lineX + tickSize).toFixed(1)}" y2="${(pY1 - tickSize).toFixed(1)}" stroke="#2563eb" stroke-width="1.2" stroke-linecap="round" />\n`;
+                    svg += `    <line x1="${(lineX - tickSize).toFixed(1)}" y1="${(pY2 + tickSize).toFixed(1)}" x2="${(lineX + tickSize).toFixed(1)}" y2="${(pY2 - tickSize).toFixed(1)}" stroke="#2563eb" stroke-width="1.2" stroke-linecap="round" />\n`;
 
                     // 梁符号テキスト (縦カギ線と平行になるよう90度回転・並列表記)
-                    // カギ線の縦線と絶対に重ならないよう、線の外側に十分なマージン(10px)を取る
                     const textX = isPlaceRight ? (lineX + 10) : (lineX - 10);
                     svg += `    <text x="${textX.toFixed(1)}" y="${midY.toFixed(1)}" font-size="9" font-weight="bold" fill="#1e40af" text-anchor="middle" dominant-baseline="central" transform="rotate(-90, ${textX.toFixed(1)}, ${midY.toFixed(1)})" style="paint-order:stroke; stroke:#ffffff; stroke-width:3px; stroke-linejoin:round;">${sym}</text>\n`;
                 }

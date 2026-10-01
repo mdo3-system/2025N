@@ -1,5 +1,5 @@
-// v3.14.3: Refine foundation plan beam hooks, parallel text alignment, and slash ticks
-window.APP_VERSION = "v3.14.3";
+// v3.14.4: Step 1 - Refine 45-degree sloped ticks geometry and uniform slash angle
+window.APP_VERSION = "v3.14.4";
 
 (function() {
     function applyAppVersion() {
