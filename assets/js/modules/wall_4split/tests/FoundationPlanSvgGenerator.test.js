@@ -6,7 +6,7 @@
     const { describe, it, expect } = window.TestRunner;
 
     describe("FoundationPlanSvgGenerator (v3.14.0 - Custom Drawing Style)", () => {
-        it("should generate foundation plan SVG with hook lines, dashed slab diagonals, and hold-down only symbols", () => {
+        it("should generate foundation plan SVG with hook lines, rotated vertical beam symbols, sloped ticks, and hold-down numbers (3,4,5)", () => {
             const mockState = {
                 gridXCoords: [0, 1820, 3640],
                 gridYCoords: [0, 1820, 3640],
@@ -17,13 +17,24 @@
                         id: 'B1',
                         p1: { x: 0, y: 0 },
                         p2: { x: 3640, y: 0 },
-                        props: { width: 150, height: 640, embedDepth: 250, symbol: 'FG1' }
+                        spans: [
+                            {
+                                startNode: { x: 0, y: 0 },
+                                endNode: { x: 1820, y: 0 },
+                                props: { symbol: 'FG1' }
+                            },
+                            {
+                                startNode: { x: 1820, y: 0 },
+                                endNode: { x: 3640, y: 0 },
+                                props: { symbol: 'FG1A' }
+                            }
+                        ]
                     },
                     {
                         id: 'B2',
                         p1: { x: 0, y: 0 },
                         p2: { x: 0, y: 1820 },
-                        props: { width: 150, height: 640, embedDepth: 250, symbol: 'FG2' }
+                        props: { symbol: 'FG2' }
                     }
                 ],
                 foundationSlabs: [
@@ -51,6 +62,15 @@
                         manualMark: 'V',
                         hardware: 'VP',
                         nValue: 0.65
+                    },
+                    {
+                        id: 'P3',
+                        floor: 1,
+                        x: 3640,
+                        y: 0,
+                        manualMark: '3',
+                        hardware: 'HD15',
+                        nValue: 1.45
                     }
                 ]
             };
@@ -65,20 +85,23 @@
             expect(svg.includes('X1')).toBe(true);
             expect(svg.includes('Y1')).toBe(true);
             expect(svg.includes('1820')).toBe(true);
-            expect(svg.includes('3640')).toBe(true);
 
-            // 基礎梁符号 & カギ線 (path)
+            // スパンごとの基礎梁符号（FG1 と FG1A の両方が抽出されていること）
             expect(svg.includes('FG1')).toBe(true);
+            expect(svg.includes('FG1A')).toBe(true);
             expect(svg.includes('FG2')).toBe(true);
-            expect(svg.includes('<path d="M ')).toBe(true); // カギ線
+
+            // 垂直梁の符号が90度回転表示されていること
+            expect(svg.includes('rotate(-90')).toBe(true);
 
             // スラブ符号 & 対角線
             expect(svg.includes('FS1')).toBe(true);
-            expect(svg.includes('stroke-dasharray="6,3,1.5,3"')).toBe(true); // 一点鎖線対角線
+            expect(svg.includes('stroke-dasharray="6,3,1.5,3"')).toBe(true);
 
-            // ホールダウン金物のみ表示、一般金物(VP)は非表示
-            expect(svg.includes('HD25')).toBe(true);
-            expect(svg.includes('VP')).toBe(false); // VPは非表示
+            // ホールダウン金物のみ表示（記号: 5, 3）、一般金物(VP)は非表示
+            expect(svg.includes('>5<')).toBe(true);
+            expect(svg.includes('>3<')).toBe(true);
+            expect(svg.includes('VP')).toBe(false);
         });
 
         it("should handle empty or null state gracefully without throwing errors", () => {
