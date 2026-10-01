@@ -5,8 +5,8 @@
 (function() {
     const { describe, it, expect } = window.TestRunner;
 
-    describe("FoundationPlanSvgGenerator (v3.14.0)", () => {
-        it("should generate valid foundation plan SVG containing beam symbols, slab symbols, pillars, hardware, and dimensions", () => {
+    describe("FoundationPlanSvgGenerator (v3.14.0 - Custom Drawing Style)", () => {
+        it("should generate foundation plan SVG with hook lines, dashed slab diagonals, and hold-down only symbols", () => {
             const mockState = {
                 gridXCoords: [0, 1820, 3640],
                 gridYCoords: [0, 1820, 3640],
@@ -21,8 +21,8 @@
                     },
                     {
                         id: 'B2',
-                        p1: { x: 0, y: 1820 },
-                        p2: { x: 3640, y: 1820 },
+                        p1: { x: 0, y: 0 },
+                        p2: { x: 0, y: 1820 },
                         props: { width: 150, height: 640, embedDepth: 250, symbol: 'FG2' }
                     }
                 ],
@@ -30,7 +30,7 @@
                     {
                         id: 'S1',
                         vertices: [{ x: 0, y: 0 }, { x: 1820, y: 0 }, { x: 1820, y: 1820 }, { x: 0, y: 1820 }],
-                        props: { name: 'FS1', slabThickness: 150, rebarShort: 'D13@200' }
+                        props: { name: 'FS1', slabThickness: 150 }
                     }
                 ],
                 pillars: [
@@ -67,18 +67,18 @@
             expect(svg.includes('1820')).toBe(true);
             expect(svg.includes('3640')).toBe(true);
 
-            // 基礎梁符号
+            // 基礎梁符号 & カギ線 (path)
             expect(svg.includes('FG1')).toBe(true);
             expect(svg.includes('FG2')).toBe(true);
+            expect(svg.includes('<path d="M ')).toBe(true); // カギ線
 
-            // スラブ符号
+            // スラブ符号 & 対角線
             expect(svg.includes('FS1')).toBe(true);
-            expect(svg.includes('t=150')).toBe(true);
+            expect(svg.includes('stroke-dasharray="6,3,1.5,3"')).toBe(true); // 一点鎖線対角線
 
-            // 柱脚金物
+            // ホールダウン金物のみ表示、一般金物(VP)は非表示
             expect(svg.includes('HD25')).toBe(true);
-            expect(svg.includes('N=2.14')).toBe(true);
-            expect(svg.includes('VP')).toBe(true);
+            expect(svg.includes('VP')).toBe(false); // VPは非表示
         });
 
         it("should handle empty or null state gracefully without throwing errors", () => {
