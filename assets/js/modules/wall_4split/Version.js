@@ -1,5 +1,5 @@
-// v3.14.2: Fix foundation beam position extraction via startNode/endNode fallback and avoid slab symbol collisions
-window.APP_VERSION = "v3.14.2";
+// v3.14.3: Refine foundation plan beam hooks, parallel text alignment, and slash ticks
+window.APP_VERSION = "v3.14.3";
 
 (function() {
     function applyAppVersion() {
