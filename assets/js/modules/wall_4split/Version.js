@@ -1,5 +1,5 @@
-// v3.14.6: Exterior beam orientation, shared hook anchors, slab symbol anti-collision, FG2 embed 100mm, slab rebar combos
-window.APP_VERSION = "v3.14.6";
+// v3.14.7: Slab rebar select slots include D10D13 and D13D16
+window.APP_VERSION = "v3.14.7";
 
 (function() {
     function applyAppVersion() {

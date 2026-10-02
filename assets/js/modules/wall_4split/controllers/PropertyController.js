@@ -478,7 +478,7 @@ window.PropertyController = {
             '2隣辺固定2隣辺ピン', '長辺2辺固定短辺2辺ピン', '短辺2辺固定長辺2辺ピン',
             '1辺固定3辺ピン（長辺固定）', '1辺固定3辺ピン（短辺固定）', '4辺ピン', '片持ち'
         ];
-        const rebars = ['D10', 'D10/D13', 'D13', 'D16', 'D13/D16'];
+        const rebars = ['D10', 'D13', 'D16', 'D10D13', 'D13D16', 'D10/D13', 'D13/D16'];
         const thickness = p.slabThickness || p.thickness || 150;
 
         return `
