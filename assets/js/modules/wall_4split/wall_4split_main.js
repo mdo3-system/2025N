@@ -261,6 +261,7 @@ window.applyBeamPreset = function(preset) {
     const sym = document.getElementById('fd-beam-symbol');
     const w = document.getElementById('fd-beam-width');
     const h = document.getElementById('fd-beam-height');
+    const ed = document.getElementById('fd-embed-depth');
     const tr = document.getElementById('fd-top-rebar');
     const br = document.getElementById('fd-bot-rebar');
     const st = document.getElementById('fd-stirrup');
@@ -268,6 +269,7 @@ window.applyBeamPreset = function(preset) {
         if(sym) sym.value = 'FG1';
         if(w) w.value = 150;
         if(h) h.value = 640;
+        if(ed) ed.value = 250;
         if(tr) tr.value = '1-D13';
         if(br) br.value = '1-D13';
         if(st) st.value = '1-D10@200';
@@ -275,6 +277,7 @@ window.applyBeamPreset = function(preset) {
         if(sym) sym.value = 'FG2';
         if(w) w.value = 150;
         if(h) h.value = 490;
+        if(ed) ed.value = 100; // FG2初期設定: 根入れ100mm
         if(tr) tr.value = '1-D13';
         if(br) br.value = '1-D13';
         if(st) st.value = '1-D10@200';
@@ -282,9 +285,38 @@ window.applyBeamPreset = function(preset) {
         if(sym) sym.value = 'FG3';
         if(w) w.value = 150;
         if(h) h.value = 300;
+        if(ed) ed.value = 250; // FG3初期設定: 根入れ250mm
         if(tr) tr.value = '1-D13';
         if(br) br.value = '1-D13';
         if(st) st.value = '1-D10@200';
+    }
+};
+
+window.setSlabRebarCombo = function(combo) {
+    const stype = document.getElementById('fd-slab-short-type');
+    const ltype = document.getElementById('fd-slab-long-type');
+    const spitch = document.getElementById('fd-slab-short-pitch');
+    const lpitch = document.getElementById('fd-slab-long-pitch');
+    if (combo === 'D10D13') {
+        if (stype) stype.value = 'D13';
+        if (ltype) ltype.value = 'D10';
+        if (spitch && !spitch.value) spitch.value = 150;
+        if (lpitch && !lpitch.value) lpitch.value = 200;
+    } else if (combo === 'D13D16') {
+        if (stype) stype.value = 'D16';
+        if (ltype) ltype.value = 'D13';
+        if (spitch && !spitch.value) spitch.value = 150;
+        if (lpitch && !lpitch.value) lpitch.value = 200;
+    }
+    const b1 = document.getElementById('btn-rebar-d10d13');
+    const b2 = document.getElementById('btn-rebar-d13d16');
+    if (b1) {
+        b1.style.background = (combo === 'D10D13') ? '#8e44ad' : '#fff';
+        b1.style.color = (combo === 'D10D13') ? '#fff' : '#8e44ad';
+    }
+    if (b2) {
+        b2.style.background = (combo === 'D13D16') ? '#8e44ad' : '#fff';
+        b2.style.color = (combo === 'D13D16') ? '#fff' : '#8e44ad';
     }
 };
 

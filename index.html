@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>上善如水 - 壁量計算WEB (v3.14.5)</title>
+    <title>上善如水 - 壁量計算WEB (v3.14.6)</title>
     <script src="https://cdn.jsdelivr.net/npm/dxf-parser@1.1.2/dist/dxf-parser.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/encoding-japanese/2.0.0/encoding.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/clipper-lib@6.4.2/clipper.js"></script>
@@ -1103,6 +1103,13 @@
                     </select>
                     <span style="font-size:10px; margin:0 2px;">@</span>
                     <input type="number" id="fd-slab-long-pitch" value="300" style="width:45px;">
+                </div>
+                <div class="calc-row">
+                    <label>配筋組合せ</label>
+                    <div style="display: flex; gap: 4px; flex: 1;">
+                        <button type="button" id="btn-rebar-d10d13" onclick="if(window.setSlabRebarCombo) setSlabRebarCombo('D10D13')" style="flex:1; padding:4px 2px; font-size:10px; font-weight:bold; border-radius:4px; border:1px solid #8e44ad; background:#fff; color:#8e44ad; cursor:pointer;" title="短辺D13/長辺D10">D10+D13</button>
+                        <button type="button" id="btn-rebar-d13d16" onclick="if(window.setSlabRebarCombo) setSlabRebarCombo('D13D16')" style="flex:1; padding:4px 2px; font-size:10px; font-weight:bold; border-radius:4px; border:1px solid #8e44ad; background:#fff; color:#8e44ad; cursor:pointer;" title="短辺D16/長辺D13">D13+D16</button>
+                    </div>
                 </div>
                 
                 <hr style="border:0; border-top:1px dashed #d2b4de; margin:10px 0;">

@@ -509,7 +509,8 @@ window.FoundationEngine = {
 
                 const b_val = beam.props?.width || 150;
                 const h_val = beam.props?.height || 640;
-                const embed_val = beam.props?.embedDepth ?? 250;
+                const defaultBeamEmbed = (beam.props?.symbol === 'FG2' || beam.name === 'FG2' || (beam.props?.symbol || '').includes('FG2')) ? 100 : 250;
+                const embed_val = beam.props?.embedDepth ?? defaultBeamEmbed;
                 const w_self_span = (b_val * (Math.max(0, h_val - embed_val) + 10.0) / 1e6) * 24.0;
 
                 const load = (window.SlabBeamSynchronizer && typeof window.SlabBeamSynchronizer.calculateSpanSlabLoad === 'function')
@@ -553,7 +554,8 @@ window.FoundationEngine = {
                 // 2. スパン別次元の確定 (個別指定が無ければ全体デフォルト)
                 const b_val = sp.width !== undefined ? parseFloat(sp.width) : (beam.props?.width || 150);
                 const h_val = sp.height !== undefined ? parseFloat(sp.height) : (beam.props?.height || 640);
-                const embed_val = sp.embedDepth !== undefined ? parseFloat(sp.embedDepth) : (beam.props?.embedDepth ?? 250);
+                const defaultSpanEmbed = ((sp.symbol || beam.props?.symbol || '').includes('FG2')) ? 100 : 250;
+                const embed_val = sp.embedDepth !== undefined ? parseFloat(sp.embedDepth) : (beam.props?.embedDepth ?? defaultSpanEmbed);
                 
                 // 鉄筋および基礎符号もスパン別上書きに対応 (スコープをループ直下に配置)
                 const symbolStr = sp.symbol || beam.props?.symbol || beam.props?.beamName || `FG${i+1}`;

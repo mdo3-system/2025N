@@ -1,5 +1,5 @@
-// v3.14.5: Fix span node coordinate extraction and display all vertical beam hooks correctly
-window.APP_VERSION = "v3.14.5";
+// v3.14.6: Exterior beam orientation, shared hook anchors, slab symbol anti-collision, FG2 embed 100mm, slab rebar combos
+window.APP_VERSION = "v3.14.6";
 
 (function() {
     function applyAppVersion() {
