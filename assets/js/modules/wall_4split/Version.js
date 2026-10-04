@@ -1,5 +1,5 @@
-// v3.14.8: Foundation cross section drawing tool manual & eie.jp updates
-window.APP_VERSION = "v3.14.8";
+// v3.14.9: Designer responsibility agreement modal & safe deploy protocol
+window.APP_VERSION = "v3.14.9";
 
 (function() {
     function applyAppVersion() {
