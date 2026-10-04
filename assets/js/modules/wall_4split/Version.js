@@ -1,5 +1,5 @@
-// v3.14.9: Designer responsibility agreement modal & safe deploy protocol
-window.APP_VERSION = "v3.14.9";
+// v3.15.0: Column diameter calculation check tables (2-1, 2-2, 2-3) under tributary area tables
+window.APP_VERSION = "v3.15.0";
 
 (function() {
     function applyAppVersion() {

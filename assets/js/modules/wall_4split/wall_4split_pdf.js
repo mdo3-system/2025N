@@ -1244,7 +1244,11 @@ async function generateDoc() {
                 totalArea += p.usedArea || 0;
                 h += `<tr><td>${window.getPillarName(p) || '-'}</td><td>${autoA}</td><td>${manA}</td><td style="font-weight:bold;">${usedA}</td></tr>`;
             });
-            h += `<tr><td colspan="3" style="text-align:right;font-weight:bold;">採用面積 合計：</td><td style="font-weight:bold;color:#d35400;">${totalArea.toFixed(2)} ㎡</td></tr></table><br>`;
+            h += `<tr><td colspan="3" style="text-align:right;font-weight:bold;">採用面積 合計：</td><td style="font-weight:bold;color:#d35400;">${totalArea.toFixed(2)} ㎡</td></tr></table>`;
+            if (window.ColumnDiameterEngine) {
+                h += window.ColumnDiameterEngine.generateHtmlSummary(f, window.AppState, true);
+            }
+            h += `<br>`;
         });
         h += `</div><div class="page-break"></div>`;
 

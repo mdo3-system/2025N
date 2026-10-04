@@ -123,6 +123,7 @@ window.PreviewModalView = {
                     ${iPA1 ? `<div class="img-preview-box"><div style="font-weight:bold;color:#0056b3;margin-bottom:5px;">1F 柱負担面積図</div><img src="${iPA1.img}" style="width:100%; border:1px solid #ddd; padding:5px; border-radius:4px; box-shadow:0 2px 8px rgba(0,0,0,0.08);"></div>` : ''}
                     ${iPA2 ? `<div class="img-preview-box"><div style="font-weight:bold;color:#0056b3;margin-bottom:5px;">2F 柱負担面積図</div><img src="${iPA2.img}" style="width:100%; border:1px solid #ddd; padding:5px; border-radius:4px; box-shadow:0 2px 8px rgba(0,0,0,0.08);"></div>` : ''}
                 </div>
+                <div id="pillar-table-container" style="margin-top:20px;"></div>
             </div>
         `;
 
@@ -168,6 +169,15 @@ window.PreviewModalView = {
         const div4TableContainer = document.getElementById('div4-table-container');
         if (div4TableContainer && window.ReportEngine && window.ReportEngine.generateDiv4TableHtml) {
             div4TableContainer.innerHTML = window.ReportEngine.generateDiv4TableHtml(window.AppState);
+        }
+
+        const pillarTableContainer = document.getElementById('pillar-table-container');
+        if (pillarTableContainer && window.ColumnDiameterEngine) {
+            let pHtml = '';
+            ['1F', '2F'].forEach(f => {
+                pHtml += window.ColumnDiameterEngine.generateHtmlSummary(f, window.AppState, false);
+            });
+            pillarTableContainer.innerHTML = pHtml;
         }
 
         // イベントバインディング
