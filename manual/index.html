@@ -364,7 +364,31 @@
         <a href="jyouzen_data_sample.json" class="sample-btn" download>💾 サンプル (JSON) をダウンロード</a></li>
     </ul>
 
-    <h2>第4章：設計者向けQ&A（DXF・その他トラブルシューティング）</h2>
+    <h2>第4章：基礎計算 ＆ 基礎断面詳細図作図ツール（FOUNDATION CAD PRO）</h2>
+    
+    <h3>4-1. 基礎断面詳細図ツールの起動と概要</h3>
+    <p>「基礎」タブにて基礎梁やスラブを配置・計算した後、基礎梁プロパティや計算結果ダイアログの「📐 断面詳細図・CAD出力」ボタンを押すと、<strong>木造ベタ基礎 梁断面詳細図作図ツール（FOUNDATION CAD PRO）</strong>が起動します。</p>
+    
+    <div class="info-box accent">
+        <h4 style="margin-top:0; color:#d35400;">📐 FOUNDATION CAD PRO の主な機能と特長</h4>
+        <ul>
+            <li><strong>符号別タブ切り替え:</strong> 伏図上で配置された基礎梁符号（FG1, FG2, FG3...）をワンクリックで切り替え表示。符号タイトルの変更や複製・削除も自由に行えます。</li>
+            <li><strong>ミリ単位のリアルタイム断面描画:</strong> 梁成（GL上高さ・根入れ深さ）、立上り幅、主筋本数（上筋・下筋・段数・径）、スラブ厚、スラブ天端レベル、あばら筋（スターラップ径・ピッチ）を即座に連動描画。</li>
+            <li><strong>平均GLライン表示とレベル差調整:</strong> 敷地高低差や平均GLラインの表示・非表示、レベル差（+/-mm）のスライダー調整に対応。</li>
+            <li><strong>CADエクスポート（DXF / SVG）:</strong> 選択中の符号単体のDXF出力に加え、すべての梁符号を並べて一括出力する「📐 全符号DXF」、ベクター画像用の「🖼️ SVG」出力に対応。JWWやAutoCADへ即座に取り込み可能です。</li>
+        </ul>
+    </div>
+
+    <h3>4-2. 断面詳細図の編集・出力手順</h3>
+    <ol style="line-height:2.0; font-size:15px;">
+        <li>「基礎」タブで基礎梁を選択し、プロパティパネルまたは計算結果から「📐 断面詳細図・CAD出力」をクリック。</li>
+        <li>上部の符号タブから調整したい梁（例: FG1）を選択。</li>
+        <li>左側コントロールパネルで、立上り幅（stemW）、梁成（aboveGl / embedH）、主筋本数・段数、スターラップピッチ、スラブ配筋を調整。</li>
+        <li>画面中央のプレビューで寸法線や鉄筋の干渉がないか確認。マウスドラッグでパン移動、ホイールで拡大縮小（ズーム）が可能。</li>
+        <li>「📐 全符号DXF」または「📥 選択符号DXF」ボタンをクリックしてDXFファイルをダウンロードし、CADでご利用いただけます。</li>
+    </ol>
+
+    <h2>第5章：設計者向けQ&A（DXF・その他トラブルシューティング）</h2>
     
     <div class="faq-q">Q1. DXFを読み込んだのに、柱や通り芯が表示されません。</div>
     <div class="faq-a">A. レイヤ名 <code>GLID</code> に加え <code>GRID</code> も認識しますが、それ以外で表示されない場合、以下の原因が考えられます。<br>
@@ -377,7 +401,7 @@
     地震力によって必要壁量が決まっている（支配している）状態のときは、風圧力用の見付面積の数値を変更しても、最終的な判定や必要壁量に変化は起きません。エラーではありませんのでご安心ください。<br>
     <span class="highlight">※大臣認定耐力壁を使用した場合、認定書をこの計算書に添付して申請してください。</span></div>
 
-    <h2>第5章：【解説動画】法改正と壁量計算の基本</h2>
+    <h2>第6章：【解説動画】法改正と壁量計算の基本</h2>
     <p>以下の動画は、マニュアル内からいつでもご視聴いただけます。<br>
     初回ログイン時の制限は、下記動画のうち1つでも視聴すれば解除されます。</p>
     
@@ -407,7 +431,7 @@
             <a href="../pricing.html" style="margin:0 10px; color:#004a99;">機能・料金詳細</a> |
             <a href="../tokusho.html" style="margin:0 10px; color:#004a99;">特定商取引法に基づく表記</a>
         </div>
-        Program License & Copyright &copy; 2026 MDO3 Structural Systems. All Rights Reserved. (v3.13)<br>
+        Program License & Copyright &copy; 2026 MDO3 Structural Systems. All Rights Reserved. (v3.14)<br>
         販売・運営: 株式会社住ま居る (上善如水 壁量計算Web)
     </div>
 </div>
