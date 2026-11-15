@@ -268,18 +268,35 @@ window.GridEngine = {
             return `Y${i + 1}`;
         };
 
-        let nx = masterXs.map((x, i) => {
-            const name = resolveGridXName(x, i);
+        const makeUniqueNames = (names) => {
+            const seen = new Set();
+            return names.map(base => {
+                const raw = (base || '').trim() || 'G';
+                if (!seen.has(raw)) {
+                    seen.add(raw);
+                    return raw;
+                }
+                let idx = 2;
+                let candidate = `${raw}(${idx})`;
+                while (seen.has(candidate)) {
+                    idx++;
+                    candidate = `${raw}(${idx})`;
+                }
+                seen.add(candidate);
+                return candidate;
+            });
+        };
+
+        let nx = makeUniqueNames(masterXs.map((x, i) => resolveGridXName(x, i)));
+        nx.forEach((name, i) => {
             if (!state.userEditedGridX) state.userEditedGridX = {};
-            state.userEditedGridX[Math.round(x)] = name;
-            return name;
+            state.userEditedGridX[Math.round(masterXs[i])] = name;
         });
 
-        let ny = masterYs.map((y, i) => {
-            const name = resolveGridYName(y, i);
+        let ny = makeUniqueNames(masterYs.map((y, i) => resolveGridYName(y, i)));
+        ny.forEach((name, i) => {
             if (!state.userEditedGridY) state.userEditedGridY = {};
-            state.userEditedGridY[Math.round(y)] = name;
-            return name;
+            state.userEditedGridY[Math.round(masterYs[i])] = name;
         });
 
         state.gridXCoords = masterXs; state.gridXNames = nx;

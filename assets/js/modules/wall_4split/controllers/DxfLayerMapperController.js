@@ -200,52 +200,55 @@ window.DxfLayerMapperController = {
                 layers: Array.from(lSet).sort()
             });
 
-            // 現在のステップに対象ファイルを即座に割り当て
-            this.stepData[stepNum].fileIdx = newIdx;
-
-            // 他に未指定（fileIdx < 0）のステップがあればファイル名で自動割り当てを試行
+            // 他ステップ向けファイル名判定＆未指定ステップへの自動割り当て
             const isRoofName = /(?:1RF|2RF|RF|屋根|下屋|大屋根|\b1R\b|\b2R\b)/i.test(file.name);
-            if (this.stepData[2].fileIdx < 0 && !isRoofName && /(?:2F|2階|2_COL|2_BACK)/i.test(file.name)) {
-                this.stepData[2].fileIdx = newIdx;
-            }
-            if (this.stepData[3].fileIdx < 0 && /(?:1RF|1R|下屋|1階.*屋根|1F.*屋根)/i.test(file.name)) {
-                this.stepData[3].fileIdx = newIdx;
-            }
-            if (this.stepData[4].fileIdx < 0 && (/(?:2RF|2R|大屋根|2階.*屋根|2F.*屋根)/i.test(file.name) || (!/(?:1階|1F|1RF|1R|下屋)/i.test(file.name) && /(?:RF|屋根)/i.test(file.name)))) {
-                this.stepData[4].fileIdx = newIdx;
-            }
+            const is2FMatch = !isRoofName && /(?:2F|2階|2_COL|2_BACK)/i.test(file.name);
+            const is1RFMatch = /(?:1RF|1R|下屋|1階.*屋根|1F.*屋根)/i.test(file.name);
+            const is2RFMatch = /(?:2RF|2R|大屋根|2階.*屋根|2F.*屋根)/i.test(file.name) || (!/(?:1階|1F|1RF|1R|下屋)/i.test(file.name) && /(?:RF|屋根)/i.test(file.name));
 
-            // レイヤー自動マッチング（優先度順・他階レイヤー誤爆防止）
-            const activeFileObj = this.loadedFiles[newIdx];
-            const fileLayers = activeFileObj.layers;
-            const findLayerByPriority = (patterns, excludePat = null) => {
-                const candidates = excludePat ? fileLayers.filter(l => !excludePat.test(l)) : fileLayers;
-                for (const pat of patterns) {
-                    const hit = candidates.find(l => pat.test(l));
-                    if (hit) return hit;
+            if (this.stepData[2].fileIdx < 0 && is2FMatch) this.stepData[2].fileIdx = newIdx;
+            if (this.stepData[3].fileIdx < 0 && is1RFMatch) this.stepData[3].fileIdx = newIdx;
+            if (this.stepData[4].fileIdx < 0 && is2RFMatch) this.stepData[4].fileIdx = newIdx;
+
+            // 現在ステップに既に有効なファイルがあり、追加ファイルが別ステップ向けの場合は現在ステップを上書きしない
+            const matchedOtherStep = (is2FMatch && stepNum !== 2) || (is1RFMatch && stepNum !== 3) || (is2RFMatch && stepNum !== 4);
+            const shouldAssignCurrent = (this.stepData[stepNum].fileIdx < 0) || !matchedOtherStep;
+
+            if (shouldAssignCurrent) {
+                this.stepData[stepNum].fileIdx = newIdx;
+
+                // レイヤー自動マッチング（優先度順・他階レイヤー誤爆防止）
+                const activeFileObj = this.loadedFiles[newIdx];
+                const fileLayers = activeFileObj.layers;
+                const findLayerByPriority = (patterns, excludePat = null) => {
+                    const candidates = excludePat ? fileLayers.filter(l => !excludePat.test(l)) : fileLayers;
+                    for (const pat of patterns) {
+                        const hit = candidates.find(l => pat.test(l));
+                        if (hit) return hit;
+                    }
+                    return '';
+                };
+                const GRID_PAT = /(GRID|GLID|通り芯|通芯|軸線)/i;
+
+                if (stepNum === 1) {
+                    this.stepData[1].gridLayer = findLayerByPriority([GRID_PAT]);
+                    this.stepData[1].colLayer = findLayerByPriority([/(1F_COL|1F.*COL|1F.*柱|1.*柱)/i, /(COL|COLUMN|柱|HASHIRA)/i], /(?:2F|2階)/i);
+                    this.stepData[1].dimLayer = findLayerByPriority([/(1F.*DIM)/i, /(DIM|寸法|SUNPO|DIMENSION)/i], /(?:2F|2階)/i);
+                    this.stepData[1].backLayer = findLayerByPriority([/(1F_BACK|1_BACK|1F.*背景)/i, /(BACK|背景|下図)/i], /(?:2F|2階)/i) || '__ALL_LAYERS__';
+                } else if (stepNum === 2) {
+                    this.stepData[2].gridLayer = findLayerByPriority([GRID_PAT]);
+                    this.stepData[2].colLayer = findLayerByPriority([/(2F_COL|2F.*COL|2F.*柱|2.*柱)/i, /(COL|COLUMN|柱|HASHIRA)/i], /(?:1F|1階)/i);
+                    this.stepData[2].dimLayer = findLayerByPriority([/(2F.*DIM)/i, /(DIM|寸法|SUNPO|DIMENSION)/i], /(?:1F|1階)/i);
+                    this.stepData[2].backLayer = findLayerByPriority([/(2F_BACK|2_BACK|2F.*背景)/i, /(BACK|背景|下図)/i], /(?:1F|1階)/i) || '__ALL_LAYERS__';
+                } else if (stepNum === 3) {
+                    this.stepData[3].gridLayer = findLayerByPriority([GRID_PAT]);
+                    this.stepData[3].dimLayer = findLayerByPriority([/(1RF.*DIM|1R.*DIM)/i, /(DIM|寸法|SUNPO)/i]);
+                    this.stepData[3].roofLayer = findLayerByPriority([/(1F_R|1R|1RF|下屋|1階.*屋根)/i, /(屋根|ROOF)/i]) || '__ALL_LAYERS__';
+                } else if (stepNum === 4) {
+                    this.stepData[4].gridLayer = findLayerByPriority([GRID_PAT]);
+                    this.stepData[4].dimLayer = findLayerByPriority([/(2RF.*DIM|2R.*DIM|RF.*DIM)/i, /(DIM|寸法|SUNPO)/i]);
+                    this.stepData[4].roofLayer = findLayerByPriority([/(2F_R|2R|2RF|RF|大屋根|2階.*屋根)/i, /(屋根|ROOF)/i]) || '__ALL_LAYERS__';
                 }
-                return '';
-            };
-            const GRID_PAT = /(GRID|GLID|通り芯|通芯|軸線)/i;
-
-            if (stepNum === 1) {
-                this.stepData[1].gridLayer = findLayerByPriority([GRID_PAT]);
-                this.stepData[1].colLayer = findLayerByPriority([/(1F_COL|1F.*COL|1F.*柱|1.*柱)/i, /(COL|COLUMN|柱|HASHIRA)/i], /(?:2F|2階)/i);
-                this.stepData[1].dimLayer = findLayerByPriority([/(1F.*DIM)/i, /(DIM|寸法|SUNPO|DIMENSION)/i], /(?:2F|2階)/i);
-                this.stepData[1].backLayer = findLayerByPriority([/(1F_BACK|1_BACK|1F.*背景)/i, /(BACK|背景|下図)/i], /(?:2F|2階)/i) || '__ALL_LAYERS__';
-            } else if (stepNum === 2) {
-                this.stepData[2].gridLayer = findLayerByPriority([GRID_PAT]);
-                this.stepData[2].colLayer = findLayerByPriority([/(2F_COL|2F.*COL|2F.*柱|2.*柱)/i, /(COL|COLUMN|柱|HASHIRA)/i], /(?:1F|1階)/i);
-                this.stepData[2].dimLayer = findLayerByPriority([/(2F.*DIM)/i, /(DIM|寸法|SUNPO|DIMENSION)/i], /(?:1F|1階)/i);
-                this.stepData[2].backLayer = findLayerByPriority([/(2F_BACK|2_BACK|2F.*背景)/i, /(BACK|背景|下図)/i], /(?:1F|1階)/i) || '__ALL_LAYERS__';
-            } else if (stepNum === 3) {
-                this.stepData[3].gridLayer = findLayerByPriority([GRID_PAT]);
-                this.stepData[3].dimLayer = findLayerByPriority([/(1RF.*DIM|1R.*DIM)/i, /(DIM|寸法|SUNPO)/i]);
-                this.stepData[3].roofLayer = findLayerByPriority([/(1F_R|1R|1RF|下屋|1階.*屋根)/i, /(屋根|ROOF)/i]) || '__ALL_LAYERS__';
-            } else if (stepNum === 4) {
-                this.stepData[4].gridLayer = findLayerByPriority([GRID_PAT]);
-                this.stepData[4].dimLayer = findLayerByPriority([/(2RF.*DIM|2R.*DIM|RF.*DIM)/i, /(DIM|寸法|SUNPO)/i]);
-                this.stepData[4].roofLayer = findLayerByPriority([/(2F_R|2R|2RF|RF|大屋根|2階.*屋根)/i, /(屋根|ROOF)/i]) || '__ALL_LAYERS__';
             }
 
             const countEl = document.getElementById('dxf-mapper-layer-count');

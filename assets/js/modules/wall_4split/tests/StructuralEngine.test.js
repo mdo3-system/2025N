@@ -86,5 +86,27 @@
             expect(p2F.isTooshi).toBe(true);
         });
 
+        it("should deduplicate grid axis labels when multiple grid lines resolve to the same name (v3.15.5)", () => {
+            const state = {
+                isGridFixed: true,
+                gridXCoords: [0, 910, 1820],
+                gridYCoords: [0, 1820],
+                gridXNames: ['X1', 'X1', 'X2'],
+                gridYNames: ['Y1', 'Y1'],
+                userEditedGridX: { '0': 'X1', '910': 'X1', '1820': 'X2' },
+                userEditedGridY: { '0': 'Y1', '1820': 'Y1' },
+                pillars: [
+                    { id: 'p1', floor: '1F', x: 0, y: 0, isDeleted: false },
+                    { id: 'p2', floor: '1F', x: 910, y: 0, isDeleted: false }
+                ],
+                walls: []
+            };
+            window.GridEngine.analyzeGrids(state);
+            expect(state.gridXNames.join(',')).toBe('X1,X1(2),X2');
+            expect(state.gridYNames.join(',')).toBe('Y1,Y1(2)');
+            expect(state.pillars[0].gx).toBe('X1');
+            expect(state.pillars[1].gx).toBe('X1(2)');
+        });
+
     });
 })();
