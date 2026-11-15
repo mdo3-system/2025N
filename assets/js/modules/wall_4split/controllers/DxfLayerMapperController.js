@@ -540,15 +540,15 @@ window.DxfLayerMapperController = {
         if (curNum === 1) {
             curData.colLayer = document.getElementById('w-select-col')?.value || '';
             curData.backLayer = document.getElementById('w-select-back')?.value || '';
-            curData.originPt = this.selectedVisualOriginPt || { x: 0, y: 0 };
+            curData.originPt = this.selectedVisualOriginPt || curData.originPt || { x: 0, y: 0 };
             this.established1FOrigin = curData.originPt;
         } else if (curNum === 2) {
             curData.colLayer = document.getElementById('w-select-col')?.value || '';
             curData.backLayer = document.getElementById('w-select-back')?.value || '';
-            curData.originPt = this.selectedVisualOriginPt || { x: 0, y: 0 };
+            curData.originPt = this.selectedVisualOriginPt || curData.originPt || { x: 0, y: 0 };
         } else if (curNum === 3 || curNum === 4) {
             curData.roofLayer = document.getElementById('w-select-roof')?.value || '';
-            curData.originPt = this.selectedVisualOriginPt || { x: 0, y: 0 };
+            curData.originPt = this.selectedVisualOriginPt || curData.originPt || { x: 0, y: 0 };
         }
 
         if (this.mitsukeMode === 'dxf_manual' && curNum === 2) {
@@ -617,7 +617,36 @@ window.DxfLayerMapperController = {
         }
         s.layerVisibility = {};
 
-        const orig1F = this.established1FOrigin || { x: 0, y: 0 };
+        // 未訪問ステップのレイヤー自動選択を補完（「この設定のまま完了する」押下時の空振り防止）
+        const GRID_PAT = /(GRID|GLID|通り芯|通芯|軸線|°)/i;
+        [1, 2, 3, 4].forEach(sn => {
+            const sd = this.stepData[sn];
+            if (!sd || sd.fileIdx < 0 || sd.fileIdx >= this.loadedFiles.length) return;
+            const fls = this.loadedFiles[sd.fileIdx].layers || [];
+            const pick = (patterns, excludePat = null) => {
+                const cands = excludePat ? fls.filter(l => !excludePat.test(l)) : fls;
+                for (const p of patterns) {
+                    const hit = cands.find(l => p.test(l));
+                    if (hit) return hit;
+                }
+                return '';
+            };
+            if (!sd.gridLayer) sd.gridLayer = pick([GRID_PAT]);
+            if (!sd.dimLayer) sd.dimLayer = pick([/(DIM|寸法|SUNPO|DIMENSION)/i]);
+            if (sn === 1) {
+                if (!sd.colLayer) sd.colLayer = pick([/(1F_COL|1F.*COL|1F.*柱|1.*柱)/i, /(COL|COLUMN|柱|HASHIRA)/i], /(?:2F|2階)/i);
+                if (!sd.backLayer) sd.backLayer = pick([/(1F_BACK|1_BACK|1F.*背景)/i, /(BACK|背景|下図)/i], /(?:2F|2階)/i) || '__ALL_LAYERS__';
+            } else if (sn === 2) {
+                if (!sd.colLayer) sd.colLayer = pick([/(2F_COL|2F.*COL|2F.*柱|2.*柱)/i, /(COL|COLUMN|柱|HASHIRA)/i], /(?:1F|1階)/i);
+                if (!sd.backLayer) sd.backLayer = pick([/(2F_BACK|2_BACK|2F.*背景)/i, /(BACK|背景|下図)/i], /(?:1F|1階)/i) || '__ALL_LAYERS__';
+            } else if (sn === 3) {
+                if (!sd.roofLayer) sd.roofLayer = pick([/(1F_R|1R|1RF|下屋)/i, /(屋根|ROOF)/i]) || '__ALL_LAYERS__';
+            } else if (sn === 4) {
+                if (!sd.roofLayer) sd.roofLayer = pick([/(2F_R|2R|2RF|RF|大屋根)/i, /(屋根|ROOF)/i]) || '__ALL_LAYERS__';
+            }
+        });
+
+        const orig1F = this.established1FOrigin || this.stepData[1].originPt || { x: 0, y: 0 };
 
         // 統合 layerMapping の構築
         const fullMapping = {
@@ -1027,6 +1056,7 @@ window.DxfLayerMapperController = {
                 }
             });
         });
+        intersections.sort((a, b) => (a.x - b.x) || (a.y - b.y));
         console.log(`  ✅ 交点算出: ${intersections.length}件`);
         this.currentStepGridIntersections = intersections;
 
@@ -1040,6 +1070,9 @@ window.DxfLayerMapperController = {
 
         const chosenPt = this.selectedVisualOriginPt || defaultCenterPt;
         curData.originPt = chosenPt;
+        if (curNum === 1 && !this.established1FOrigin) {
+            this.established1FOrigin = chosenPt;
+        }
 
         // 平行移動オフセット計算: Step 2以降ではクリックした交点 chosenPt が 1階基準原点 1FOrigin へ重ね合わさるようにシフト
         const orig1F = this.established1FOrigin || (this.stepData[1].originPt || { x: 0, y: 0 });

@@ -1,10 +1,11 @@
+// v3.15.6: Fix DXF wizard originPt synchronization on nextStep/finishWizard, sort grid intersections, and auto-fill unvisited step layers on complete
 // v3.15.5: Prevent overwriting current step on DXF add when matched to another step, and deduplicate grid axis labels (e.g. X8(2))
 // v3.15.4: Split direct ratio warnings (pillar 0 vs wall 0), assign grid text only to closest grid line within 350mm, auto-match added DXF files to unassigned steps
 // v3.15.3: Deduplicate snapped pillars at identical coordinates in GridEngine (manual/attribute priority) and fix 1F/2F roof DXF file auto-matching
 // v3.15.2: Fix 2F DXF wizard layer/file mapping & column deduplication, show div4 ratio/judgement on all rows, handle 0-denominator direct support ratio as out-of-scope warning
 // v3.15.1: Fix report modal close handling, fallback manual floor area for required wall calc, deduplicate DXF imported columns
 // v3.15.0: Column diameter calculation check tables (2-1, 2-2, 2-3) under tributary area tables
-window.APP_VERSION = "v3.15.5";
+window.APP_VERSION = "v3.15.6";
 
 (function () {
     function applyAppVersion() {
