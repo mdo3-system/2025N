@@ -189,8 +189,15 @@ window.AppExport = {
             if (val < th2) return `<span style="background:#f1c40f;color:#333;padding:2px 5px;border-radius:3px;">注意</span>`;
             return `<span style="background:#3498db;color:#fff;padding:2px 5px;border-radius:3px;">良好</span>`;
         };
-        const warnNote = (r.pRatio === null || r.wRatioTotal === null)
-            ? `<div style="font-size:12px;color:#b75900;background:#fff8e6;border:1px solid #f5c26b;padding:8px 10px;border-radius:4px;margin-top:10px;">⚠️ 2階の柱または耐力壁が0（未入力）のため直下率の検定外です。現在の柱位置で問題ないかよく確認してください。</div>`
+        const warnMsgs = [];
+        if (r.pRatio === null) {
+            warnMsgs.push('⚠️ 2階の柱が0本のため柱直下率は検定外です。現在の柱位置で問題ないかよく確認してください。');
+        }
+        if (r.wRatioTotal === null) {
+            warnMsgs.push('⚠️ 2階の耐力壁が未入力（0.00m）のため壁直下率は検定外です。');
+        }
+        const warnNote = warnMsgs.length > 0
+            ? `<div style="font-size:12px;color:#b75900;background:#fff8e6;border:1px solid #f5c26b;padding:8px 10px;border-radius:4px;margin-top:10px;">${warnMsgs.join('<br>')}</div>`
             : '';
 
         let html = `

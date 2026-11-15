@@ -203,6 +203,18 @@ window.DxfLayerMapperController = {
             // 現在のステップに対象ファイルを即座に割り当て
             this.stepData[stepNum].fileIdx = newIdx;
 
+            // 他に未指定（fileIdx < 0）のステップがあればファイル名で自動割り当てを試行
+            const isRoofName = /(?:1RF|2RF|RF|屋根|下屋|大屋根|\b1R\b|\b2R\b)/i.test(file.name);
+            if (this.stepData[2].fileIdx < 0 && !isRoofName && /(?:2F|2階|2_COL|2_BACK)/i.test(file.name)) {
+                this.stepData[2].fileIdx = newIdx;
+            }
+            if (this.stepData[3].fileIdx < 0 && /(?:1RF|1R|下屋|1階.*屋根|1F.*屋根)/i.test(file.name)) {
+                this.stepData[3].fileIdx = newIdx;
+            }
+            if (this.stepData[4].fileIdx < 0 && (/(?:2RF|2R|大屋根|2階.*屋根|2F.*屋根)/i.test(file.name) || (!/(?:1階|1F|1RF|1R|下屋)/i.test(file.name) && /(?:RF|屋根)/i.test(file.name)))) {
+                this.stepData[4].fileIdx = newIdx;
+            }
+
             // レイヤー自動マッチング（優先度順・他階レイヤー誤爆防止）
             const activeFileObj = this.loadedFiles[newIdx];
             const fileLayers = activeFileObj.layers;

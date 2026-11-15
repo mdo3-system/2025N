@@ -211,9 +211,15 @@ window.ReportEngine = {
                 if (val < th2) return '<span style="color:#f1c40f;font-weight:bold;">!</span>';
                 return '<span style="color:#2ecc71;font-weight:bold;">OK</span>';
             };
-            const hasOutOfScope = (r.pRatio === null || r.wRatioTotal === null);
-            const warnNote = hasOutOfScope
-                ? `<div style="font-size:10px;color:#b75900;background:#fff8e6;border:1px solid #f5c26b;padding:4px 6px;border-radius:3px;margin-top:4px;">⚠️ 2階に柱または壁が存在しないため検定外です。現在の柱位置で問題ないかよく確認してください。</div>`
+            const warnMsgs = [];
+            if (r.pRatio === null) {
+                warnMsgs.push('⚠️ 2階の柱が0本のため柱直下率は検定外です。現在の柱位置で問題ないかよく確認してください。');
+            }
+            if (r.wRatioTotal === null) {
+                warnMsgs.push('⚠️ 2階の耐力壁が未入力（0.00m）のため壁直下率は検定外です。');
+            }
+            const warnNote = warnMsgs.length > 0
+                ? `<div style="font-size:10px;color:#b75900;background:#fff8e6;border:1px solid #f5c26b;padding:4px 6px;border-radius:3px;margin-top:4px;">${warnMsgs.join('<br>')}</div>`
                 : '';
             ratioBlock = `<div style="background:#e67e22;color:#fff;padding:3px 5px;font-weight:bold;font-size:12px;border-radius:3px;margin-top:10px">📐 直下率</div>
                           <table class="report-table">

@@ -206,25 +206,33 @@ window.GridEngine = {
                     cleaned = matchRepeat[1];
                 }
 
-                // 1. X軸（縦の通り芯：masterXs）へのマッチング
+                // 1. X軸（縦の通り芯：masterXs）へのマッチング（350mm以内の最寄り1本のみ）
                 if (/^[X|x]/i.test(cleaned) || !/^[Y|y]/i.test(cleaned)) {
+                    let bestMx = null, minDx = 350;
                     masterXs.forEach(mx => {
-                        if (Math.abs(mx - ct.x) < 350) {
-                            if (/^[X|x]/i.test(cleaned) || !detectedGridX[Math.round(mx)]) {
-                                detectedGridX[Math.round(mx)] = cleaned;
-                            }
-                        }
+                        const d = Math.abs(mx - ct.x);
+                        if (d < minDx) { minDx = d; bestMx = mx; }
                     });
+                    if (bestMx !== null) {
+                        const keyX = Math.round(bestMx);
+                        if (/^[X|x]/i.test(cleaned) || !detectedGridX[keyX]) {
+                            detectedGridX[keyX] = cleaned;
+                        }
+                    }
                 }
-                // 2. Y軸（横の通り芯：masterYs）へのマッチング
+                // 2. Y軸（横の通り芯：masterYs）へのマッチング（350mm以内の最寄り1本のみ）
                 if (/^[Y|y]/i.test(cleaned) || !/^[X|x]/i.test(cleaned)) {
+                    let bestMy = null, minDy = 350;
                     masterYs.forEach(my => {
-                        if (Math.abs(my - ct.y) < 350) {
-                            if (/^[Y|y]/i.test(cleaned) || !detectedGridY[Math.round(my)]) {
-                                detectedGridY[Math.round(my)] = cleaned;
-                            }
-                        }
+                        const d = Math.abs(my - ct.y);
+                        if (d < minDy) { minDy = d; bestMy = my; }
                     });
+                    if (bestMy !== null) {
+                        const keyY = Math.round(bestMy);
+                        if (/^[Y|y]/i.test(cleaned) || !detectedGridY[keyY]) {
+                            detectedGridY[keyY] = cleaned;
+                        }
+                    }
                 }
             });
         }
