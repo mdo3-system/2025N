@@ -182,27 +182,32 @@ window.AppExport = {
         if (!window.StructuralEngine || !window.StructuralEngine.calculateDirectSupportRatio) return;
         let r = window.StructuralEngine.calculateDirectSupportRatio(window.AppState);
 
+        const fmtRatio = (val) => (val === null || val === undefined || isNaN(val)) ? '—' : `${val.toFixed(1)} %`;
         let getJ = (val, th1, th2) => {
+            if (val === null || val === undefined || isNaN(val)) return `<span style="background:#e67e22;color:#fff;padding:2px 5px;border-radius:3px;">検定外</span>`;
             if (val < th1) return `<span style="background:#e74c3c;color:#fff;padding:2px 5px;border-radius:3px;">危険</span>`;
             if (val < th2) return `<span style="background:#f1c40f;color:#333;padding:2px 5px;border-radius:3px;">注意</span>`;
             return `<span style="background:#3498db;color:#fff;padding:2px 5px;border-radius:3px;">良好</span>`;
         };
+        const warnNote = (r.pRatio === null || r.wRatioTotal === null)
+            ? `<div style="font-size:12px;color:#b75900;background:#fff8e6;border:1px solid #f5c26b;padding:8px 10px;border-radius:4px;margin-top:10px;">⚠️ 2階の柱または耐力壁が0（未入力）のため直下率の検定外です。現在の柱位置で問題ないかよく確認してください。</div>`
+            : '';
 
         let html = `
         <table class="report-table" style="width:100%; font-size:14px;">
             <tr><th colspan="5">柱 直下率</th></tr>
             <tr><td>2階 柱数</td><td>${r.pCount2F} 本</td><td>直下柱数</td><td>${r.pMatch} 本</td><td>${getJ(r.pRatio, 50, 60)}</td></tr>
-            <tr><td colspan="4" style="text-align:right; font-weight:bold;">柱 直下率：</td><td style="font-weight:bold; color:#0056b3; font-size:16px;">${r.pRatio.toFixed(1)} %</td></tr>
+            <tr><td colspan="4" style="text-align:right; font-weight:bold;">柱 直下率：</td><td style="font-weight:bold; color:#0056b3; font-size:16px;">${fmtRatio(r.pRatio)}</td></tr>
         </table>
         <table class="report-table" style="width:100%; font-size:14px; margin-top:15px;">
             <tr><th colspan="5">壁 直下率</th></tr>
             <tr><td>X方向 2階実長</td><td>${r.wLen2FX.toFixed(2)} m</td><td>直下壁長</td><td>${r.wMatchX.toFixed(2)} m</td><td>${getJ(r.wRatioX, 40, 60)}</td></tr>
-            <tr><td colspan="4" style="text-align:right; font-weight:bold;">X方向 直下率：</td><td style="font-weight:bold; color:#0056b3; font-size:16px;">${r.wRatioX.toFixed(1)} %</td></tr>
+            <tr><td colspan="4" style="text-align:right; font-weight:bold;">X方向 直下率：</td><td style="font-weight:bold; color:#0056b3; font-size:16px;">${fmtRatio(r.wRatioX)}</td></tr>
             <tr><td colspan="5"></td></tr>
             <tr><td>Y方向 2階実長</td><td>${r.wLen2FY.toFixed(2)} m</td><td>直下壁長</td><td>${r.wMatchY.toFixed(2)} m</td><td>${getJ(r.wRatioY, 40, 60)}</td></tr>
-            <tr><td colspan="4" style="text-align:right; font-weight:bold;">Y方向 直下率：</td><td style="font-weight:bold; color:#0056b3; font-size:16px;">${r.wRatioY.toFixed(1)} %</td></tr>
-            <tr style="background:#f9f9f9;"><td colspan="4" style="text-align:right; font-weight:bold;">壁 総合直下率：</td><td style="font-weight:bold; color:#d35400; font-size:16px;">${r.wRatioTotal.toFixed(1)} %</td></tr>
-        </table>`;
+            <tr><td colspan="4" style="text-align:right; font-weight:bold;">Y方向 直下率：</td><td style="font-weight:bold; color:#0056b3; font-size:16px;">${fmtRatio(r.wRatioY)}</td></tr>
+            <tr style="background:#f9f9f9;"><td colspan="4" style="text-align:right; font-weight:bold;">壁 総合直下率：</td><td style="font-weight:bold; color:#d35400; font-size:16px;">${fmtRatio(r.wRatioTotal)}</td></tr>
+        </table>${warnNote}`;
         
         let rc = document.getElementById('ratio-container');
         if (rc) { rc.innerHTML = html; document.getElementById('modal-ratio').style.display = 'flex'; }

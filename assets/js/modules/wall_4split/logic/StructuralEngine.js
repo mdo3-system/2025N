@@ -324,7 +324,7 @@ window.StructuralEngine = {
         p2F.forEach(p2 => {
             if (p1F.some(p1 => Math.abs(p1.x - p2.x) < 10 && Math.abs(p1.y - p2.y) < 10)) pMatch++;
         });
-        let pRatio = pCount2F > 0 ? (pMatch / pCount2F) * 100 : 0;
+        let pRatio = pCount2F > 0 ? (pMatch / pCount2F) * 100 : null;
 
         const w2F = s.walls.filter(w => w.floor === '2F');
         const w1F = s.walls.filter(w => w.floor === '1F');
@@ -383,9 +383,9 @@ window.StructuralEngine = {
             }
         });
 
-        let wRatioX = wLen2FX > 0 ? (wMatchX / wLen2FX) * 100 : 0;
-        let wRatioY = wLen2FY > 0 ? (wMatchY / wLen2FY) * 100 : 0;
-        let wRatioTotal = (wLen2FX + wLen2FY) > 0 ? ((wMatchX + wMatchY) / (wLen2FX + wLen2FY)) * 100 : 0;
+        let wRatioX = wLen2FX > 0 ? (wMatchX / wLen2FX) * 100 : null;
+        let wRatioY = wLen2FY > 0 ? (wMatchY / wLen2FY) * 100 : null;
+        let wRatioTotal = (wLen2FX + wLen2FY) > 0 ? ((wMatchX + wMatchY) / (wLen2FX + wLen2FY)) * 100 : null;
 
         return {
             pRatio, pCount2F, pMatch,

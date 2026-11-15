@@ -90,7 +90,7 @@ window.DxfLayerMapperController = {
             return;
         }
 
-        // ファイル名の自動マッチング
+        // ファイル名の自動マッチング（該当ファイルがない場合は無理に他階を割り当てず -1 を許容）
         const isRoofFile = (name) => /(?:1RF|2RF|RF|屋根|下屋|大屋根|\b1R\b|\b2R\b)/i.test(name);
         
         const findIdx = (pat, excludeRoof = false) => {
@@ -100,15 +100,18 @@ window.DxfLayerMapperController = {
             });
         };
 
-        const idx1F = Math.max(0, findIdx(/(?:1F|1階|1_COL|1_BACK)/i, true));
-        const idx2F = Math.max(0, findIdx(/(?:2F|2階|2_COL|2_BACK)/i, true));
-        const idx1RF = Math.max(0, findIdx(/(?:1RF|1R|下屋)/i));
-        const idx2RF = Math.max(0, findIdx(/(?:2RF|2R|RF|屋根|大屋根)/i));
+        const idx1F = findIdx(/(?:1F|1階|1_COL|1_BACK)/i, true);
+        const idx2F = findIdx(/(?:2F|2階|2_COL|2_BACK)/i, true);
+        const idx1RF = findIdx(/(?:1RF|1R|下屋)/i);
+        const idx2RF = findIdx(/(?:2RF|2R|RF|屋根|大屋根)/i);
+
+        const isSingleFile = (this.loadedFiles.length === 1);
+        const singleLayers = isSingleFile ? (this.loadedFiles[0].layers || []) : [];
 
         this.stepData[1].fileIdx = (idx1F >= 0) ? idx1F : 0;
-        this.stepData[2].fileIdx = (idx2F >= 0) ? idx2F : (this.loadedFiles.length > 1 ? 1 : 0);
-        this.stepData[3].fileIdx = (idx1RF >= 0) ? idx1RF : 0;
-        this.stepData[4].fileIdx = (idx2RF >= 0) ? idx2RF : 0;
+        this.stepData[2].fileIdx = (idx2F >= 0) ? idx2F : (isSingleFile && singleLayers.some(l => /(?:2F|2階)/i.test(l)) ? 0 : -1);
+        this.stepData[3].fileIdx = (idx1RF >= 0) ? idx1RF : (isSingleFile && singleLayers.some(l => /(?:1F_R|1R|1RF|下屋)/i.test(l)) ? 0 : -1);
+        this.stepData[4].fileIdx = (idx2RF >= 0) ? idx2RF : (isSingleFile && singleLayers.some(l => /(?:2F_R|2R|2RF|RF|大屋根|屋根|ROOF)/i.test(l)) ? 0 : -1);
 
         const countEl = document.getElementById('dxf-mapper-layer-count');
         if (countEl) countEl.innerText = `ロード済みファイル: ${this.loadedFiles.length} 件`;
@@ -193,30 +196,37 @@ window.DxfLayerMapperController = {
             // 現在のステップに対象ファイルを即座に割り当て
             this.stepData[stepNum].fileIdx = newIdx;
 
-            // レイヤー自動マッチング [v3.13.23] 「通芯」も含む拡張パターン
+            // レイヤー自動マッチング（優先度順・他階レイヤー誤爆防止）
             const activeFileObj = this.loadedFiles[newIdx];
             const fileLayers = activeFileObj.layers;
-            const findLayer = (pat) => fileLayers.find(l => pat.test(l)) || '';
+            const findLayerByPriority = (patterns, excludePat = null) => {
+                const candidates = excludePat ? fileLayers.filter(l => !excludePat.test(l)) : fileLayers;
+                for (const pat of patterns) {
+                    const hit = candidates.find(l => pat.test(l));
+                    if (hit) return hit;
+                }
+                return '';
+            };
             const GRID_PAT = /(GRID|GLID|通り芯|通芯|軸線)/i;
 
             if (stepNum === 1) {
-                this.stepData[1].gridLayer = findLayer(GRID_PAT);
-                this.stepData[1].colLayer = findLayer(/(1F_COL|1F.*COL|1F.*柱|1.*柱|COL|COLUMN|柱)/i);
-                this.stepData[1].dimLayer = findLayer(/(1F.*DIM|DIM|寸法|SUNPO|DIMENSION)/i);
-                this.stepData[1].backLayer = findLayer(/(1F_BACK|1_BACK|1F.*背景|BACK|背景|下図)/i) || '__ALL_LAYERS__';
+                this.stepData[1].gridLayer = findLayerByPriority([GRID_PAT]);
+                this.stepData[1].colLayer = findLayerByPriority([/(1F_COL|1F.*COL|1F.*柱|1.*柱)/i, /(COL|COLUMN|柱|HASHIRA)/i], /(?:2F|2階)/i);
+                this.stepData[1].dimLayer = findLayerByPriority([/(1F.*DIM)/i, /(DIM|寸法|SUNPO|DIMENSION)/i], /(?:2F|2階)/i);
+                this.stepData[1].backLayer = findLayerByPriority([/(1F_BACK|1_BACK|1F.*背景)/i, /(BACK|背景|下図)/i], /(?:2F|2階)/i) || '__ALL_LAYERS__';
             } else if (stepNum === 2) {
-                this.stepData[2].gridLayer = findLayer(GRID_PAT);
-                this.stepData[2].colLayer = findLayer(/(2F_COL|2F.*COL|2F.*柱|2.*柱)/i) || findLayer(/(柱|COL|HASHIRA)/i);
-                this.stepData[2].dimLayer = findLayer(/(2F.*DIM|DIM|寸法|SUNPO|DIMENSION)/i);
-                this.stepData[2].backLayer = findLayer(/(2F_BACK|2_BACK|2F.*背景)/i) || findLayer(/(BACK|背景|下図)/i) || '__ALL_LAYERS__';
+                this.stepData[2].gridLayer = findLayerByPriority([GRID_PAT]);
+                this.stepData[2].colLayer = findLayerByPriority([/(2F_COL|2F.*COL|2F.*柱|2.*柱)/i, /(COL|COLUMN|柱|HASHIRA)/i], /(?:1F|1階)/i);
+                this.stepData[2].dimLayer = findLayerByPriority([/(2F.*DIM)/i, /(DIM|寸法|SUNPO|DIMENSION)/i], /(?:1F|1階)/i);
+                this.stepData[2].backLayer = findLayerByPriority([/(2F_BACK|2_BACK|2F.*背景)/i, /(BACK|背景|下図)/i], /(?:1F|1階)/i) || '__ALL_LAYERS__';
             } else if (stepNum === 3) {
-                this.stepData[3].gridLayer = findLayer(GRID_PAT);
-                this.stepData[3].dimLayer = findLayer(/(1RF.*DIM|1R.*DIM|DIM|寸法|SUNPO)/i);
-                this.stepData[3].roofLayer = findLayer(/(1F_R|1R|1RF|下屋|1階.*屋根)/i) || findLayer(/(屋根|ROOF)/i) || '__ALL_LAYERS__';
+                this.stepData[3].gridLayer = findLayerByPriority([GRID_PAT]);
+                this.stepData[3].dimLayer = findLayerByPriority([/(1RF.*DIM|1R.*DIM)/i, /(DIM|寸法|SUNPO)/i]);
+                this.stepData[3].roofLayer = findLayerByPriority([/(1F_R|1R|1RF|下屋|1階.*屋根)/i, /(屋根|ROOF)/i]) || '__ALL_LAYERS__';
             } else if (stepNum === 4) {
-                this.stepData[4].gridLayer = findLayer(GRID_PAT);
-                this.stepData[4].dimLayer = findLayer(/(2RF.*DIM|2R.*DIM|RF.*DIM|DIM|寸法|SUNPO)/i);
-                this.stepData[4].roofLayer = findLayer(/(2F_R|2R|2RF|RF|大屋根|2階.*屋根)/i) || findLayer(/(屋根|ROOF)/i) || '__ALL_LAYERS__';
+                this.stepData[4].gridLayer = findLayerByPriority([GRID_PAT]);
+                this.stepData[4].dimLayer = findLayerByPriority([/(2RF.*DIM|2R.*DIM|RF.*DIM)/i, /(DIM|寸法|SUNPO)/i]);
+                this.stepData[4].roofLayer = findLayerByPriority([/(2F_R|2R|2RF|RF|大屋根|2階.*屋根)/i, /(屋根|ROOF)/i]) || '__ALL_LAYERS__';
             }
 
             const countEl = document.getElementById('dxf-mapper-layer-count');
@@ -303,7 +313,9 @@ window.DxfLayerMapperController = {
         if (!container) return;
 
         const curData = this.stepData[stepNum];
-        const activeFile = this.loadedFiles[curData.fileIdx] || this.loadedFiles[0];
+        const activeFile = (curData.fileIdx >= 0 && curData.fileIdx < this.loadedFiles.length)
+            ? this.loadedFiles[curData.fileIdx]
+            : null;
         const fileLayers = activeFile ? activeFile.layers : [];
 
         let html = `
@@ -382,6 +394,13 @@ window.DxfLayerMapperController = {
         const fileSel = document.getElementById('w-file-select');
         if (fileSel) {
             fileSel.innerHTML = '';
+            if (stepNum > 1) {
+                const noneOpt = document.createElement('option');
+                noneOpt.value = '-1';
+                noneOpt.text = '-- 未指定 (このステップをスキップ) --';
+                if (curData.fileIdx < 0) noneOpt.selected = true;
+                fileSel.appendChild(noneOpt);
+            }
             this.loadedFiles.forEach((f, idx) => {
                 const opt = document.createElement('option');
                 opt.value = idx; opt.text = f.name;
@@ -389,13 +408,23 @@ window.DxfLayerMapperController = {
                 fileSel.appendChild(opt);
             });
             fileSel.onchange = (e) => {
-                curData.fileIdx = parseInt(e.target.value || 0, 10);
+                const nextIdx = parseInt(e.target.value, 10);
+                curData.fileIdx = isNaN(nextIdx) ? -1 : nextIdx;
+                curData.gridLayer = '';
+                curData.dimLayer = '';
+                if (stepNum === 1 || stepNum === 2) {
+                    curData.colLayer = '';
+                    curData.backLayer = '';
+                } else {
+                    curData.roofLayer = '';
+                }
+                curData.originPt = null;
                 this.renderStep(stepNum);
             };
         }
 
-        // レイヤードロップダウン設定
-        const populateSelect = (elId, pat, currentVal, isBack = false) => {
+        // レイヤードロップダウン設定（patterns: 優先度順の配列または単一RegExp）
+        const populateSelect = (elId, patOrList, currentVal, isBack = false, excludePat = null) => {
             const el = document.getElementById(elId);
             if (!el) return;
             el.innerHTML = '';
@@ -411,7 +440,15 @@ window.DxfLayerMapperController = {
                 el.appendChild(allOpt);
             }
 
-            const autoMatched = fileLayers.find(l => pat.test(l)) || "";
+            let autoMatched = "";
+            if (fileLayers.length > 0) {
+                const patterns = Array.isArray(patOrList) ? patOrList : [patOrList];
+                const candidates = excludePat ? fileLayers.filter(l => !excludePat.test(l)) : fileLayers;
+                for (const p of patterns) {
+                    const hit = candidates.find(l => p.test(l));
+                    if (hit) { autoMatched = hit; break; }
+                }
+            }
             fileLayers.forEach(l => {
                 const opt = document.createElement('option');
                 opt.value = l; opt.text = l;
@@ -448,15 +485,15 @@ window.DxfLayerMapperController = {
         populateSelect('w-select-dim', /(DIM|寸法|SUNPO|DIMENSION)/i, curData.dimLayer);
 
         if (stepNum === 1) {
-            populateSelect('w-select-col', /(1F_COL|1F.*COL|1F.*柱|COL|COLUMN|柱)/i, curData.colLayer);
-            populateSelect('w-select-back', /(1F_BACK|1_BACK|1F.*背景|BACK|背景|下図)/i, curData.backLayer, true);
+            populateSelect('w-select-col', [/(1F_COL|1F.*COL|1F.*柱|1.*柱)/i, /(COL|COLUMN|柱|HASHIRA)/i], curData.colLayer, false, /(?:2F|2階)/i);
+            populateSelect('w-select-back', [/(1F_BACK|1_BACK|1F.*背景)/i, /(BACK|背景|下図)/i], curData.backLayer, true, /(?:2F|2階)/i);
         } else if (stepNum === 2) {
-            populateSelect('w-select-col', /(2F_COL|2F.*COL|2F.*柱|COL|COLUMN|柱)/i, curData.colLayer);
-            populateSelect('w-select-back', /(2F_BACK|2_BACK|2F.*背景|BACK|背景|下図)/i, curData.backLayer, true);
+            populateSelect('w-select-col', [/(2F_COL|2F.*COL|2F.*柱|2.*柱)/i, /(COL|COLUMN|柱|HASHIRA)/i], curData.colLayer, false, /(?:1F|1階)/i);
+            populateSelect('w-select-back', [/(2F_BACK|2_BACK|2F.*背景)/i, /(BACK|背景|下図)/i], curData.backLayer, true, /(?:1F|1階)/i);
         } else if (stepNum === 3) {
-            populateSelect('w-select-roof', /(1F_R|1R|1RF|屋根|下屋)/i, curData.roofLayer, true);
+            populateSelect('w-select-roof', [/(1F_R|1R|1RF|下屋)/i, /(屋根|ROOF)/i], curData.roofLayer, true);
         } else if (stepNum === 4) {
-            populateSelect('w-select-roof', /(2F_R|2R|2RF|RF|大屋根|屋根)/i, curData.roofLayer, true);
+            populateSelect('w-select-roof', [/(2F_R|2R|2RF|RF|大屋根)/i, /(屋根|ROOF)/i], curData.roofLayer, true);
         }
 
         this.renderPreviewCanvas();
@@ -471,7 +508,10 @@ window.DxfLayerMapperController = {
 
         // 現在フォームの選択値を収集
         const fileSel = document.getElementById('w-file-select');
-        if (fileSel) curData.fileIdx = parseInt(fileSel.value || 0, 10);
+        if (fileSel) {
+            const parsedIdx = parseInt(fileSel.value, 10);
+            curData.fileIdx = isNaN(parsedIdx) ? -1 : parsedIdx;
+        }
         curData.gridLayer = document.getElementById('w-select-grid')?.value || '';
         curData.dimLayer  = document.getElementById('w-select-dim')?.value || '';
 
@@ -591,6 +631,7 @@ window.DxfLayerMapperController = {
         stepsToProcess.forEach(({ stepNum, key, layer }) => {
             if (stepNum > 1 && !layer) return;
             const curData = this.stepData[stepNum];
+            if (!curData || curData.fileIdx < 0) return;
             const fileObj = this.loadedFiles[curData.fileIdx];
             if (!fileObj || !fileObj.rawTxt) return;
 
@@ -602,6 +643,7 @@ window.DxfLayerMapperController = {
             const dx = orig1F.x - targetOrig.x;
             const dy = orig1F.y - targetOrig.y;
 
+            const isColStep = (key === 'col1F' || key === 'col2F');
             const targetFloorStr = (stepNum === 1) ? '1F' : ((stepNum === 2) ? '2F' : ((stepNum === 3) ? '1R' : '2R'));
             const singleMapping = {
                 gridLayer:    key === 'grid'   ? layer : '',
@@ -613,19 +655,20 @@ window.DxfLayerMapperController = {
                 roof1FLayer:  key === 'roof1F' ? (layer || '__ALL_LAYERS__') : '',
                 roof2FLayer:  key === 'roof2F' ? (layer || '__ALL_LAYERS__') : '',
                 targetFloor:  targetFloorStr,
-                skipGridText: (stepNum !== (this.gridTextStep || 1))
+                skipGridText: (stepNum !== (this.gridTextStep || 1)),
+                noFallbackCol: !isColStep
             };
 
             try {
                 window.Parsers.parseDxf(
                     fileObj.rawTxt,
                     s,
-                    false,  // isSub
-                    false,  // skipEntities
+                    false,       // isSub
+                    !isColStep,  // skipEntities: col1F/col2F 以外では柱を抽出しない
                     singleMapping,
-                    true,   // appendMode
-                    dx,     // offsetX
-                    dy      // offsetY
+                    true,        // appendMode
+                    dx,          // offsetX
+                    dy           // offsetY
                 );
 
                 // パースで追加された全要素に対し、ステップの目的カテゴリを直接注入
@@ -882,8 +925,20 @@ window.DxfLayerMapperController = {
 
         const curNum = this.currentStep;
         const curData = this.stepData[curNum];
-        const fileObj = this.loadedFiles[curData.fileIdx] || this.loadedFiles[0];
-        if (!fileObj || !fileObj.rawTxt) return;
+        const fileObj = (curData && curData.fileIdx >= 0 && curData.fileIdx < this.loadedFiles.length)
+            ? this.loadedFiles[curData.fileIdx]
+            : null;
+        if (!fileObj || !fileObj.rawTxt) {
+            ctx.fillStyle = '#2f3640';
+            ctx.fillRect(0, 0, cvs.width, cvs.height);
+            ctx.fillStyle = '#a4b0be';
+            ctx.font = 'bold 14px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('📁 ファイル未指定（このステップはスキップされます）', cvs.width / 2, cvs.height / 2);
+            const infoEl = document.getElementById('wizard-preview-overlay-info');
+            if (infoEl) infoEl.innerText = '⏭️ ファイル未指定：このまま次へ進むとこのステップはスキップされます';
+            return;
+        }
 
         // 万能スキャナーで生テキストから全線分を解読抽出
         const rawLines = this.parseDxfRawLinesDirect(fileObj.rawTxt);

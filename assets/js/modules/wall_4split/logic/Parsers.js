@@ -64,8 +64,8 @@ window.Parsers = {
                         if (layerMapping.targetFloor === '1F') isCol2F = false;
                         if (layerMapping.targetFloor === '2F') isCol1F = false;
 
-                        // 明示的マッピングで col1FLayer / col2FLayer のいずれかが指定されている場合はフォールバックによる両階重複を回避
-                        if (!isCol1F && !isCol2F && !col1L && !col2L && (normL.includes('COL') || normL.includes('柱'))) {
+                        // 明示的マッピングで col1FLayer / col2FLayer のいずれかが指定されている場合、または noFallbackCol / skipEntities 指定時はフォールバックによる両階重複を回避
+                        if (!isCol1F && !isCol2F && !col1L && !col2L && !layerMapping.noFallbackCol && !skipEntities && (normL.includes('COL') || normL.includes('柱'))) {
                             if (layerMapping.targetFloor === '2F') isCol2F = true;
                             else isCol1F = true;
                         }
@@ -90,7 +90,7 @@ window.Parsers = {
                         isBack2F = !isGrid && !isCol && !isRoof && normL.includes('2F');
                     }
                     
-                    if (isCol && !isSub) {
+                    if (isCol && !isSub && !skipEntities) {
                         // 柱レイヤーの幾何要素のみから柱候補を抽出（通り芯は作らない）
                         let cx = null, cy = null;
                         if (ent.type === 'POINT') { cx = ent.position.x; cy = ent.position.y; }

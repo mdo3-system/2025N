@@ -169,13 +169,20 @@ window.ReportEngine = {
                         <tr><td>Y</td><td>${rY.toFixed(2)}</td><td>${kyt.toFixed(2)}</td><td class="${kyt >= rY ? 'bg-ok' : 'bg-ng'}">${kyt >= rY ? 'OK' : 'NG'}</td></tr>
                      </table>`;
 
+            const xRatioStr = (Math.min(d4.rxt, d4.rxb) / (Math.max(d4.rxt, d4.rxb) || 1)).toFixed(2);
+            const yRatioStr = (Math.min(d4.ryl, d4.ryr) / (Math.max(d4.ryl, d4.ryr) || 1)).toFixed(2);
+            const xJudgeCls = d4.isXOk ? 'bg-ok' : 'bg-ng';
+            const xJudgeStr = d4.isXOk ? 'OK' : 'NG';
+            const yJudgeCls = d4.isYOk ? 'bg-ok' : 'bg-ng';
+            const yJudgeStr = d4.isYOk ? 'OK' : 'NG';
+
             h += `<div style="background:#0056b3;color:#fff;padding:3px 5px;font-weight:bold;font-size:12px;border-radius:3px">4分割 壁釣り合い</div>
                   <table class="report-table" style="border-collapse:collapse;">
                     <tr><th>向</th><th>側端</th><th>必要(m)</th><th>存在(m)</th><th>充足</th><th>率比</th><th>判定</th></tr>
-                    <tr><td rowspan="2" style="vertical-align:middle; font-weight:bold;">X</td><td>上</td><td>${(ext * cq).toFixed(2)}</td><td>${d4.vxt.toFixed(2)}</td><td>${d4.rxt.toFixed(2)}</td><td rowspan="2" style="vertical-align:middle; font-weight:bold;">${(Math.min(d4.rxt, d4.rxb) / (Math.max(d4.rxt, d4.rxb) || 1)).toFixed(2)}</td><td rowspan="2" style="vertical-align:middle; font-weight:bold;" class="${d4.isXOk ? 'bg-ok' : 'bg-ng'}">${d4.isXOk ? 'OK' : 'NG'}</td></tr>
-                    <tr><td>下</td><td>${(exb * cq).toFixed(2)}</td><td>${d4.vxb.toFixed(2)}</td><td>${d4.rxb.toFixed(2)}</td></tr>
-                    <tr><td rowspan="2" style="vertical-align:middle; font-weight:bold;">Y</td><td>左</td><td>${(eyl * cq).toFixed(2)}</td><td>${d4.vyl.toFixed(2)}</td><td>${d4.ryl.toFixed(2)}</td><td rowspan="2" style="vertical-align:middle; font-weight:bold;">${(Math.min(d4.ryl, d4.ryr) / (Math.max(d4.ryl, d4.ryr) || 1)).toFixed(2)}</td><td rowspan="2" style="vertical-align:middle; font-weight:bold;" class="${d4.isYOk ? 'bg-ok' : 'bg-ng'}">${d4.isYOk ? 'OK' : 'NG'}</td></tr>
-                    <tr><td>右</td><td>${(eyr * cq).toFixed(2)}</td><td>${d4.vyr.toFixed(2)}</td><td>${d4.ryr.toFixed(2)}</td></tr>
+                    <tr><td rowspan="2" style="vertical-align:middle; font-weight:bold;">X</td><td>上</td><td>${(ext * cq).toFixed(2)}</td><td>${d4.vxt.toFixed(2)}</td><td>${d4.rxt.toFixed(2)}</td><td style="font-weight:bold;">${xRatioStr}</td><td style="font-weight:bold;" class="${xJudgeCls}">${xJudgeStr}</td></tr>
+                    <tr><td>下</td><td>${(exb * cq).toFixed(2)}</td><td>${d4.vxb.toFixed(2)}</td><td>${d4.rxb.toFixed(2)}</td><td style="font-weight:bold;">${xRatioStr}</td><td style="font-weight:bold;" class="${xJudgeCls}">${xJudgeStr}</td></tr>
+                    <tr><td rowspan="2" style="vertical-align:middle; font-weight:bold;">Y</td><td>左</td><td>${(eyl * cq).toFixed(2)}</td><td>${d4.vyl.toFixed(2)}</td><td>${d4.ryl.toFixed(2)}</td><td style="font-weight:bold;">${yRatioStr}</td><td style="font-weight:bold;" class="${yJudgeCls}">${yJudgeStr}</td></tr>
+                    <tr><td>右</td><td>${(eyr * cq).toFixed(2)}</td><td>${d4.vyr.toFixed(2)}</td><td>${d4.ryr.toFixed(2)}</td><td style="font-weight:bold;">${yRatioStr}</td><td style="font-weight:bold;" class="${yJudgeCls}">${yJudgeStr}</td></tr>
                   </table>`;
             
             if (f === '2F') h2 = h; else h1 = h;
@@ -197,17 +204,23 @@ window.ReportEngine = {
         let ratioBlock = '';
         if (window.StructuralEngine && window.StructuralEngine.calculateDirectSupportRatio) {
             const r = window.StructuralEngine.calculateDirectSupportRatio(s);
+            const fmtRatio = (val) => (val === null || val === undefined || isNaN(val)) ? '—' : `${val.toFixed(1)}%`;
             const getJText = (val, th1, th2) => {
+                if (val === null || val === undefined || isNaN(val)) return '<span style="color:#e67e22;font-weight:bold;">検定外</span>';
                 if (val < th1) return '<span style="color:#e74c3c;font-weight:bold;">NG</span>';
                 if (val < th2) return '<span style="color:#f1c40f;font-weight:bold;">!</span>';
                 return '<span style="color:#2ecc71;font-weight:bold;">OK</span>';
             };
+            const hasOutOfScope = (r.pRatio === null || r.wRatioTotal === null);
+            const warnNote = hasOutOfScope
+                ? `<div style="font-size:10px;color:#b75900;background:#fff8e6;border:1px solid #f5c26b;padding:4px 6px;border-radius:3px;margin-top:4px;">⚠️ 2階に柱または壁が存在しないため検定外です。現在の柱位置で問題ないかよく確認してください。</div>`
+                : '';
             ratioBlock = `<div style="background:#e67e22;color:#fff;padding:3px 5px;font-weight:bold;font-size:12px;border-radius:3px;margin-top:10px">📐 直下率</div>
                           <table class="report-table">
                             <tr><th>項目</th><th>割合</th><th>判定</th></tr>
-                            <tr><td>柱 直下率</td><td>${r.pRatio.toFixed(1)}%</td><td>${getJText(r.pRatio, 50, 60)}</td></tr>
-                            <tr><td>壁 総合直下率</td><td>${r.wRatioTotal.toFixed(1)}%</td><td>${getJText(r.wRatioTotal, 40, 60)}</td></tr>
-                          </table>`;
+                            <tr><td>柱 直下率</td><td>${fmtRatio(r.pRatio)}</td><td>${getJText(r.pRatio, 50, 60)}</td></tr>
+                            <tr><td>壁 総合直下率</td><td>${fmtRatio(r.wRatioTotal)}</td><td>${getJText(r.wRatioTotal, 40, 60)}</td></tr>
+                          </table>${warnNote}`;
         }
 
         const lc = document.getElementById('left-report-container');
@@ -241,6 +254,13 @@ window.ReportEngine = {
             const ext = getVal(`e-x-t${suffix}`), exb = getVal(`e-x-b${suffix}`), eyl = getVal(`e-y-l${suffix}`), eyr = getVal(`e-y-r${suffix}`);
             const d4 = s.reqWall[f].div4 || { vxt: 0, vxb: 0, vyl: 0, vyr: 0, rxt: 0, rxb: 0, ryl: 0, ryr: 0, isXOk: true, isYOk: true };
 
+            const xRatioStr = (Math.min(d4.rxt, d4.rxb) / (Math.max(d4.rxt, d4.rxb) || 1)).toFixed(2);
+            const yRatioStr = (Math.min(d4.ryl, d4.ryr) / (Math.max(d4.ryl, d4.ryr) || 1)).toFixed(2);
+            const xJudgeColor = d4.isXOk ? '#27ae60' : '#c0392b';
+            const xJudgeStr = d4.isXOk ? 'OK' : 'NG';
+            const yJudgeColor = d4.isYOk ? '#27ae60' : '#c0392b';
+            const yJudgeStr = d4.isYOk ? 'OK' : 'NG';
+
             html += `
             <div style="flex:1; min-width:350px;">
                 <div style="background:#0056b3;color:#fff;padding:5px 8px;font-weight:bold;font-size:14px;border-radius:4px 4px 0 0;">${f} 4分割 壁釣り合い</div>
@@ -260,14 +280,16 @@ window.ReportEngine = {
                         <td style="border:1px solid #ddd;">${ext.toFixed(2)}</td>
                         <td style="border:1px solid #ddd; background:#fffaf0;">${(ext * cq).toFixed(2)}</td>
                         <td style="border:1px solid #ddd;">${d4.vxt.toFixed(2)}</td>
-                        <td rowspan="2" style="border:1px solid #ddd; font-weight:bold;">${(Math.min(d4.rxt, d4.rxb) / (Math.max(d4.rxt, d4.rxb) || 1)).toFixed(2)}</td>
-                        <td rowspan="2" style="border:1px solid #ddd; font-weight:bold; color:${d4.isXOk ? '#27ae60' : '#c0392b'};">${d4.isXOk ? 'OK' : 'NG'}</td>
+                        <td style="border:1px solid #ddd; font-weight:bold;">${xRatioStr}</td>
+                        <td style="border:1px solid #ddd; font-weight:bold; color:${xJudgeColor};">${xJudgeStr}</td>
                     </tr>
                     <tr>
                         <td style="border:1px solid #ddd;">下</td>
                         <td style="border:1px solid #ddd;">${exb.toFixed(2)}</td>
                         <td style="border:1px solid #ddd; background:#fffaf0;">${(exb * cq).toFixed(2)}</td>
                         <td style="border:1px solid #ddd;">${d4.vxb.toFixed(2)}</td>
+                        <td style="border:1px solid #ddd; font-weight:bold;">${xRatioStr}</td>
+                        <td style="border:1px solid #ddd; font-weight:bold; color:${xJudgeColor};">${xJudgeStr}</td>
                     </tr>
                     <tr>
                         <td rowspan="2" style="border:1px solid #ddd; font-weight:bold;">Y</td>
@@ -275,14 +297,16 @@ window.ReportEngine = {
                         <td style="border:1px solid #ddd;">${eyl.toFixed(2)}</td>
                         <td style="border:1px solid #ddd; background:#fffaf0;">${(eyl * cq).toFixed(2)}</td>
                         <td style="border:1px solid #ddd;">${d4.vyl.toFixed(2)}</td>
-                        <td rowspan="2" style="border:1px solid #ddd; font-weight:bold;">${(Math.min(d4.ryl, d4.ryr) / (Math.max(d4.ryl, d4.ryr) || 1)).toFixed(2)}</td>
-                        <td rowspan="2" style="border:1px solid #ddd; font-weight:bold; color:${d4.isYOk ? '#27ae60' : '#c0392b'};">${d4.isYOk ? 'OK' : 'NG'}</td>
+                        <td style="border:1px solid #ddd; font-weight:bold;">${yRatioStr}</td>
+                        <td style="border:1px solid #ddd; font-weight:bold; color:${yJudgeColor};">${yJudgeStr}</td>
                     </tr>
                     <tr>
                         <td style="border:1px solid #ddd;">右</td>
                         <td style="border:1px solid #ddd;">${eyr.toFixed(2)}</td>
                         <td style="border:1px solid #ddd; background:#fffaf0;">${(eyr * cq).toFixed(2)}</td>
                         <td style="border:1px solid #ddd;">${d4.vyr.toFixed(2)}</td>
+                        <td style="border:1px solid #ddd; font-weight:bold;">${yRatioStr}</td>
+                        <td style="border:1px solid #ddd; font-weight:bold; color:${yJudgeColor};">${yJudgeStr}</td>
                     </tr>
                 </table>
             </div>`;

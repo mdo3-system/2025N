@@ -1,6 +1,7 @@
+// v3.15.2: Fix 2F DXF wizard layer/file mapping & column deduplication, show div4 ratio/judgement on all rows, handle 0-denominator direct support ratio as out-of-scope warning
 // v3.15.1: Fix report modal close handling, fallback manual floor area for required wall calc, deduplicate DXF imported columns
 // v3.15.0: Column diameter calculation check tables (2-1, 2-2, 2-3) under tributary area tables
-window.APP_VERSION = "v3.15.1";
+window.APP_VERSION = "v3.15.2";
 
 (function() {
     function applyAppVersion() {
