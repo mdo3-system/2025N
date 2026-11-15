@@ -106,8 +106,27 @@ window.InputController = {
             if (window.DocumentEngine) window.DocumentEngine.generateFullReport(); 
         });
 
-        document.querySelectorAll('.btn-close-modal').forEach(btn => {
-            btn.addEventListener('click', function () { this.closest('.modal-overlay').style.display = 'none'; });
+        // モーダル共通クローズ処理（静的・動的要素を問わず Event Delegation で確実に動作）
+        document.addEventListener('click', function (e) {
+            const btn = e.target.closest('.btn-close-modal');
+            if (btn) {
+                const overlay = btn.closest('.modal-overlay');
+                if (overlay) overlay.style.display = 'none';
+                const mDoc = document.getElementById('modal-doc');
+                if (mDoc && (btn.closest('#modal-doc') || btn.closest('#doc-nav-container'))) {
+                    mDoc.style.display = 'none';
+                }
+            }
+        });
+
+        // Escapeキー押下時に開いているモーダル（特に一括計算書モーダル）を閉じる
+        window.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') {
+                const mDoc = document.getElementById('modal-doc');
+                if (mDoc && mDoc.style.display !== 'none') {
+                    mDoc.style.display = 'none';
+                }
+            }
         });
     },
 

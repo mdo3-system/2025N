@@ -88,8 +88,16 @@ window.StructuralEngine = {
             const awx = (c.projectedAreas && c.projectedAreas[f] ? c.projectedAreas[f].x : 0) + (f === '1F' ? (c.projectedAreas && c.projectedAreas['2F'] ? c.projectedAreas['2F'].x : 0) : 0);
             const awy = (c.projectedAreas && c.projectedAreas[f] ? c.projectedAreas[f].y : 0) + (f === '1F' ? (c.projectedAreas && c.projectedAreas['2F'] ? c.projectedAreas['2F'].y : 0) : 0);
 
-            // 基準法/性能表示モードに応じた算定面積
-            const rawArea = (r && r[f] && r[f].seismic != null) ? r[f].seismic : (s.reqWall && s.reqWall[f] ? s.reqWall[f].a_eff || 0 : 0);
+            // 基準法/性能表示モードに応じた算定面積（手入力フォールバック対応）
+            let rawArea = (r && r[f] && r[f].seismic != null && r[f].seismic > 0)
+                ? r[f].seismic
+                : (s.reqWall && s.reqWall[f] && s.reqWall[f].a_eff > 0)
+                    ? s.reqWall[f].a_eff
+                    : 0;
+            if (rawArea === 0 && typeof document !== 'undefined') {
+                const el = document.getElementById(f === '1F' ? 'a-f1' : 'a-f2');
+                if (el && el.value !== '') rawArea = parseFloat(el.value) || 0;
+            }
             const eq = Math.round(rawArea * cq * 100) / 100;
             const wx = Math.round(awx * cw * 100) / 100;
             const wy = Math.round(awy * cw * 100) / 100;

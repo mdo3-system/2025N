@@ -57,4 +57,14 @@ describe('AreaEngine (v3.3.0)', () => {
         // In seinou mode, P1's loadArea should sum floor (4m²) + porch (4m²) = 8.00m²
         expect(p1.loadArea).toBe(8.00);
     });
+
+    it('should fallback to config.floorAreas when no areaLines exist for required wall areas (v3.15.1)', () => {
+        const mockState = {
+            config: { calcMode: 'standard', atticHeight: 1.4, floorAreas: { '1F': 65.5, '2F': 50.0 } },
+            areaLines: []
+        };
+        const reqAreas = window.AreaEngine.calculateRequiredWallAreas(mockState);
+        expect(reqAreas['1F'].seismic).toBe(65.5);
+        expect(reqAreas['2F'].seismic).toBe(50.0);
+    });
 });

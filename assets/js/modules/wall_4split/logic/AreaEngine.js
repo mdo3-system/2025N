@@ -83,14 +83,41 @@ window.AreaEngine = {
      */
     calculateRequiredWallAreas: function(state) {
         const s = state || window.AppState;
-        const c = s.config;
+        const c = s.config || {};
         const atticRatio = (c.atticHeight || 1.4) / 2.1;
         const isSeinou = (c.calcMode === 'seinou');
 
         const getAreaVal = (f, type) => this.getAreaByType(f, type, s);
 
-        const af1 = getAreaVal('1F', 'floor'), aa1 = getAreaVal('1F', 'attic'), ab1 = getAreaVal('1F', 'balcony'), ap1 = getAreaVal('1F', 'porch');
-        const af2 = getAreaVal('2F', 'floor'), aa2 = getAreaVal('2F', 'attic'), ab2 = getAreaVal('2F', 'balcony'), av2 = getAreaVal('2F', 'void');
+        // ポリゴン未作図時のフォールバック（手入力スロット #a-f1, #a-f2 または config.floorAreas）
+        const getFallbackFloorArea = (f) => {
+            const inputId = f === '1F' ? 'a-f1' : 'a-f2';
+            if (typeof document !== 'undefined') {
+                const el = document.getElementById(inputId);
+                if (el && el.value !== '' && !isNaN(parseFloat(el.value))) {
+                    const val = parseFloat(el.value);
+                    if (val > 0) return val;
+                }
+            }
+            if (c.floorAreas && c.floorAreas[f] > 0) {
+                return c.floorAreas[f];
+            }
+            return 0;
+        };
+
+        let af1 = getAreaVal('1F', 'floor');
+        if (af1 == null || af1 === 0) af1 = getFallbackFloorArea('1F');
+
+        const aa1 = getAreaVal('1F', 'attic') || 0;
+        const ab1 = getAreaVal('1F', 'balcony') || 0;
+        const ap1 = getAreaVal('1F', 'porch') || 0;
+
+        let af2 = getAreaVal('2F', 'floor');
+        if (af2 == null || af2 === 0) af2 = getFallbackFloorArea('2F');
+
+        const aa2 = getAreaVal('2F', 'attic') || 0;
+        const ab2 = getAreaVal('2F', 'balcony') || 0;
+        const av2 = getAreaVal('2F', 'void') || 0;
 
         let a1_seismic = af1 + (aa1 * atticRatio) + (aa2 * atticRatio);
         if (isSeinou) a1_seismic += ap1 + (ab1 * 0.4);

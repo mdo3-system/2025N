@@ -201,18 +201,22 @@ window.DxfLayerMapperController = {
 
             if (stepNum === 1) {
                 this.stepData[1].gridLayer = findLayer(GRID_PAT);
-                this.stepData[1].colLayer = findLayer(/(柱|COL|HASHIRA)/i);
-                this.stepData[1].dimLayer = findLayer(/(DIM|寸法|SUNPO|DIMENSION)/i);
-                this.stepData[1].backLayer = '__ALL_LAYERS__';
+                this.stepData[1].colLayer = findLayer(/(1F_COL|1F.*COL|1F.*柱|1.*柱|COL|COLUMN|柱)/i);
+                this.stepData[1].dimLayer = findLayer(/(1F.*DIM|DIM|寸法|SUNPO|DIMENSION)/i);
+                this.stepData[1].backLayer = findLayer(/(1F_BACK|1_BACK|1F.*背景|BACK|背景|下図)/i) || '__ALL_LAYERS__';
             } else if (stepNum === 2) {
                 this.stepData[2].gridLayer = findLayer(GRID_PAT);
-                this.stepData[2].colLayer = findLayer(/(柱|COL|HASHIRA)/i);
-                this.stepData[2].dimLayer = findLayer(/(DIM|寸法|SUNPO|DIMENSION)/i);
-                this.stepData[2].backLayer = '__ALL_LAYERS__';
-            } else if (stepNum === 3 || stepNum === 4) {
-                this.stepData[stepNum].gridLayer = findLayer(GRID_PAT);
-                this.stepData[stepNum].dimLayer = findLayer(/(DIM|寸法|SUNPO|DIMENSION)/i);
-                this.stepData[stepNum].roofLayer = findLayer(/(屋根|ROOF|下屋|大屋根)/i) || '__ALL_LAYERS__';
+                this.stepData[2].colLayer = findLayer(/(2F_COL|2F.*COL|2F.*柱|2.*柱)/i) || findLayer(/(柱|COL|HASHIRA)/i);
+                this.stepData[2].dimLayer = findLayer(/(2F.*DIM|DIM|寸法|SUNPO|DIMENSION)/i);
+                this.stepData[2].backLayer = findLayer(/(2F_BACK|2_BACK|2F.*背景)/i) || findLayer(/(BACK|背景|下図)/i) || '__ALL_LAYERS__';
+            } else if (stepNum === 3) {
+                this.stepData[3].gridLayer = findLayer(GRID_PAT);
+                this.stepData[3].dimLayer = findLayer(/(1RF.*DIM|1R.*DIM|DIM|寸法|SUNPO)/i);
+                this.stepData[3].roofLayer = findLayer(/(1F_R|1R|1RF|下屋|1階.*屋根)/i) || findLayer(/(屋根|ROOF)/i) || '__ALL_LAYERS__';
+            } else if (stepNum === 4) {
+                this.stepData[4].gridLayer = findLayer(GRID_PAT);
+                this.stepData[4].dimLayer = findLayer(/(2RF.*DIM|2R.*DIM|RF.*DIM|DIM|寸法|SUNPO)/i);
+                this.stepData[4].roofLayer = findLayer(/(2F_R|2R|2RF|RF|大屋根|2階.*屋根)/i) || findLayer(/(屋根|ROOF)/i) || '__ALL_LAYERS__';
             }
 
             const countEl = document.getElementById('dxf-mapper-layer-count');
@@ -651,10 +655,10 @@ window.DxfLayerMapperController = {
             }
         });
 
-        // 柱の重複除去（10mm以内）
+        // 柱の重複除去（同一階・50mm以内は同一柱としてマージ）
         if (s.pillars) {
             s.pillars = s.pillars.filter((p, idx, self) =>
-                idx === self.findIndex(t => t.floor === p.floor && Math.hypot(t.x - p.x, t.y - p.y) < 10)
+                idx === self.findIndex(t => t.floor === p.floor && Math.hypot(t.x - p.x, t.y - p.y) <= 50)
             );
         }
 

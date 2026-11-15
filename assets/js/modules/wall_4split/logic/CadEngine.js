@@ -478,8 +478,11 @@ window.CadEngine = {
             if (minDx <= SNAP_TOL) cx = roundCoord(nearestX);
             if (minDy <= SNAP_TOL) cy = roundCoord(nearestY);
 
-            // 通り芯交点または有効位置にある柱を確定
-            uniquePillars.push({ id: `P${pIdCounter++}`, x: cx, y: cy, floor: g.floor, layer: g.layer });
+            // 通り芯交点または有効位置にある柱を確定（同一階・同一交点への重複登録を確実に防止）
+            const isDuplicate = uniquePillars.some(p => p.floor === g.floor && Math.abs(p.x - cx) <= 50 && Math.abs(p.y - cy) <= 50);
+            if (!isDuplicate) {
+                uniquePillars.push({ id: `P${pIdCounter++}`, x: cx, y: cy, floor: g.floor, layer: g.layer });
+            }
         });
 
         return { newBgLines, newBgTexts, newBubbles, pillars: uniquePillars, areaLines, detectedOrigin: currentOrigin, shiftApplied: { x: shiftX, y: shiftY } };

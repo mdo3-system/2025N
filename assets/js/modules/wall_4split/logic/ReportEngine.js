@@ -170,11 +170,11 @@ window.ReportEngine = {
                      </table>`;
 
             h += `<div style="background:#0056b3;color:#fff;padding:3px 5px;font-weight:bold;font-size:12px;border-radius:3px">4分割 壁釣り合い</div>
-                  <table class="report-table">
+                  <table class="report-table" style="border-collapse:collapse;">
                     <tr><th>向</th><th>側端</th><th>必要(m)</th><th>存在(m)</th><th>充足</th><th>率比</th><th>判定</th></tr>
-                    <tr><td rowspan="2">X</td><td>上</td><td>${(ext * cq).toFixed(2)}</td><td>${d4.vxt.toFixed(2)}</td><td>${d4.rxt.toFixed(2)}</td><td rowspan="2">${(Math.min(d4.rxt, d4.rxb) / (Math.max(d4.rxt, d4.rxb) || 1)).toFixed(2)}</td><td rowspan="2" class="${d4.isXOk ? 'bg-ok' : 'bg-ng'}">${d4.isXOk ? 'OK' : 'NG'}</td></tr>
+                    <tr><td rowspan="2" style="vertical-align:middle; font-weight:bold;">X</td><td>上</td><td>${(ext * cq).toFixed(2)}</td><td>${d4.vxt.toFixed(2)}</td><td>${d4.rxt.toFixed(2)}</td><td rowspan="2" style="vertical-align:middle; font-weight:bold;">${(Math.min(d4.rxt, d4.rxb) / (Math.max(d4.rxt, d4.rxb) || 1)).toFixed(2)}</td><td rowspan="2" style="vertical-align:middle; font-weight:bold;" class="${d4.isXOk ? 'bg-ok' : 'bg-ng'}">${d4.isXOk ? 'OK' : 'NG'}</td></tr>
                     <tr><td>下</td><td>${(exb * cq).toFixed(2)}</td><td>${d4.vxb.toFixed(2)}</td><td>${d4.rxb.toFixed(2)}</td></tr>
-                    <tr><td rowspan="2">Y</td><td>左</td><td>${(eyl * cq).toFixed(2)}</td><td>${d4.vyl.toFixed(2)}</td><td>${d4.ryl.toFixed(2)}</td><td rowspan="2">${(Math.min(d4.ryl, d4.ryr) / (Math.max(d4.ryl, d4.ryr) || 1)).toFixed(2)}</td><td rowspan="2" class="${d4.isYOk ? 'bg-ok' : 'bg-ng'}">${d4.isYOk ? 'OK' : 'NG'}</td></tr>
+                    <tr><td rowspan="2" style="vertical-align:middle; font-weight:bold;">Y</td><td>左</td><td>${(eyl * cq).toFixed(2)}</td><td>${d4.vyl.toFixed(2)}</td><td>${d4.ryl.toFixed(2)}</td><td rowspan="2" style="vertical-align:middle; font-weight:bold;">${(Math.min(d4.ryl, d4.ryr) / (Math.max(d4.ryl, d4.ryr) || 1)).toFixed(2)}</td><td rowspan="2" style="vertical-align:middle; font-weight:bold;" class="${d4.isYOk ? 'bg-ok' : 'bg-ng'}">${d4.isYOk ? 'OK' : 'NG'}</td></tr>
                     <tr><td>右</td><td>${(eyr * cq).toFixed(2)}</td><td>${d4.vyr.toFixed(2)}</td><td>${d4.ryr.toFixed(2)}</td></tr>
                   </table>`;
             

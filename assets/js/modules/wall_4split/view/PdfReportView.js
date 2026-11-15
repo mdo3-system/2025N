@@ -34,7 +34,7 @@ window.PdfReportView = {
                 <option value="fd_only">🏗️ 基礎計算書を出力 (6〜7項目)</option>
             </select>
             <button class="print-btn" onclick="window.PdfReportView.printDocSection()" style="padding:5px 12px; background:#27ae60; color:#fff; border:none; border-radius:4px; font-weight:bold; cursor:pointer; font-size:12px;">🖨️ 印刷/PDF</button>
-            <button class="btn-close-modal" onclick="document.getElementById('modal-doc').style.display='none'" style="padding:5px 12px; background:#e74c3c; color:#fff; border:none; border-radius:4px; font-weight:bold; cursor:pointer; font-size:12px;">✖ 閉じる</button>
+            <button class="btn-close-modal" onclick="window.closeDocReportModal()" style="padding:5px 12px; background:#e74c3c; color:#fff; border:none; border-radius:4px; font-weight:bold; cursor:pointer; font-size:12px;">✖ 閉じる</button>
         </div>`;
     },
 

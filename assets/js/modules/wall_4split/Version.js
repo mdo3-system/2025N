@@ -1,5 +1,6 @@
+// v3.15.1: Fix report modal close handling, fallback manual floor area for required wall calc, deduplicate DXF imported columns
 // v3.15.0: Column diameter calculation check tables (2-1, 2-2, 2-3) under tributary area tables
-window.APP_VERSION = "v3.15.0";
+window.APP_VERSION = "v3.15.1";
 
 (function() {
     function applyAppVersion() {

@@ -706,15 +706,20 @@ async function generateDoc() {
                 <option value="fd_only">🏗️ 基礎計算書を出力 (6〜7項目)</option>
             </select>
             <button class="print-btn" onclick="window.printDocSection()" style="padding:5px 12px; background:#27ae60; color:#fff; border:none; border-radius:4px; font-weight:bold; cursor:pointer; font-size:12px;">🖨️ 印刷/PDF</button>
-            <button class="btn-close-modal" onclick="document.getElementById('modal-doc').style.display='none'" style="padding:5px 12px; background:#e74c3c; color:#fff; border:none; border-radius:4px; font-weight:bold; cursor:pointer; font-size:12px;">✖ 閉じる</button>
+            <button class="btn-close-modal" onclick="window.closeDocReportModal()" style="padding:5px 12px; background:#e74c3c; color:#fff; border:none; border-radius:4px; font-weight:bold; cursor:pointer; font-size:12px;">✖ 閉じる</button>
         </div>`;
+
+        // 計算書モーダル安全クローズ関数のグローバル定義
+        window.closeDocReportModal = function () {
+            const mDoc = document.getElementById('modal-doc');
+            if (mDoc) mDoc.style.display = 'none';
+        };
 
         const navEl = document.getElementById('doc-nav-container');
         if (navEl) navEl.innerHTML = navHtml;
         document.querySelectorAll('#doc-nav-container .btn-close-modal, #modal-doc .btn-close-modal').forEach(btn => {
             btn.addEventListener('click', function () { 
-                const mDoc = document.getElementById('modal-doc');
-                if (mDoc) mDoc.style.display = 'none'; 
+                window.closeDocReportModal();
             });
         });
 
@@ -1183,11 +1188,11 @@ async function generateDoc() {
             let rt_xt = txt / (req_xt || 1), rt_xb = txb / (req_xb || 1), rt_yl = tyl / (req_yl || 1), rt_yr = tyr / (req_yr || 1);
             let r_x = Math.min(rt_xt, rt_xb) / (Math.max(rt_xt, rt_xb) || 1), r_y = Math.min(rt_yl, rt_yr) / (Math.max(rt_yl, rt_yr) || 1);
 
-            h += `<table class="report-table" style="width:70%; margin:auto;">
+            h += `<table class="report-table" style="width:70%; margin:auto; border-collapse:collapse;">
                 <tr><th colspan="7">4分割 壁釣り合い検定</th></tr><tr><th>向</th><th>側端</th><th>必要(m)</th><th>存在(m)</th><th>充足</th><th>率比</th><th>判定</th></tr>
-                <tr><td rowspan="2">X</td><td>上</td><td>${req_xt.toFixed(2)}</td><td>${txt.toFixed(2)}</td><td>${rt_xt.toFixed(2)}</td><td rowspan="2">${r_x.toFixed(2)}</td><td rowspan="2" class="${(r_x >= 0.5 || (rt_xt >= 1.0 && rt_xb >= 1.0)) ? 'bg-ok' : 'bg-ng'}">${(r_x >= 0.5 || (rt_xt >= 1.0 && rt_xb >= 1.0)) ? 'OK' : 'NG'}</td></tr>
+                <tr><td rowspan="2" style="vertical-align:middle; font-weight:bold;">X</td><td>上</td><td>${req_xt.toFixed(2)}</td><td>${txt.toFixed(2)}</td><td>${rt_xt.toFixed(2)}</td><td rowspan="2" style="vertical-align:middle; font-weight:bold;">${r_x.toFixed(2)}</td><td rowspan="2" style="vertical-align:middle; font-weight:bold;" class="${(r_x >= 0.5 || (rt_xt >= 1.0 && rt_xb >= 1.0)) ? 'bg-ok' : 'bg-ng'}">${(r_x >= 0.5 || (rt_xt >= 1.0 && rt_xb >= 1.0)) ? 'OK' : 'NG'}</td></tr>
                 <tr><td>下</td><td>${req_xb.toFixed(2)}</td><td>${txb.toFixed(2)}</td><td>${rt_xb.toFixed(2)}</td></tr>
-                <tr><td rowspan="2">Y</td><td>左</td><td>${req_yl.toFixed(2)}</td><td>${tyl.toFixed(2)}</td><td>${rt_yl.toFixed(2)}</td><td rowspan="2">${r_y.toFixed(2)}</td><td rowspan="2" class="${(r_y >= 0.5 || (rt_yl >= 1.0 && rt_yr >= 1.0)) ? 'bg-ok' : 'bg-ng'}">${(r_y >= 0.5 || (rt_yl >= 1.0 && rt_yr >= 1.0)) ? 'OK' : 'NG'}</td></tr>
+                <tr><td rowspan="2" style="vertical-align:middle; font-weight:bold;">Y</td><td>左</td><td>${req_yl.toFixed(2)}</td><td>${tyl.toFixed(2)}</td><td>${rt_yl.toFixed(2)}</td><td rowspan="2" style="vertical-align:middle; font-weight:bold;">${r_y.toFixed(2)}</td><td rowspan="2" style="vertical-align:middle; font-weight:bold;" class="${(r_y >= 0.5 || (rt_yl >= 1.0 && rt_yr >= 1.0)) ? 'bg-ok' : 'bg-ng'}">${(r_y >= 0.5 || (rt_yl >= 1.0 && rt_yr >= 1.0)) ? 'OK' : 'NG'}</td></tr>
                 <tr><td>右</td><td>${req_yr.toFixed(2)}</td><td>${tyr.toFixed(2)}</td><td>${rt_yr.toFixed(2)}</td></tr>
             </table></div><br>`;
         });
@@ -1445,7 +1450,20 @@ async function generateDoc() {
 
         const dc = document.getElementById('doc-container');
         const modal = document.getElementById('modal-doc');
-        if (dc && modal) { dc.innerHTML = h; modal.style.display = 'flex'; } else { throw new Error('doc-container または modal-doc が見つかりません'); }
+        if (dc && modal) {
+            dc.innerHTML = h;
+            modal.style.display = 'flex';
+            if (!modal._hasBackdropClickAttached) {
+                modal._hasBackdropClickAttached = true;
+                modal.addEventListener('click', function (e) {
+                    if (e.target === modal) {
+                        window.closeDocReportModal();
+                    }
+                });
+            }
+        } else {
+            throw new Error('doc-container または modal-doc が見つかりません');
+        }
 
     } catch (e) {
         console.error("一括出力エラー:", e);
