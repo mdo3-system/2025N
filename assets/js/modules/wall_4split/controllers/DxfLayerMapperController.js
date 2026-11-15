@@ -28,7 +28,7 @@ window.DxfLayerMapperController = {
     /**
      * プログレスバー表示・非表示
      */
-    showProgress: function(percent, message) {
+    showProgress: function (percent, message) {
         const modal = document.getElementById('modal-dxf-loading');
         const bar = document.getElementById('dxf-loading-bar');
         const msg = document.getElementById('dxf-loading-msg');
@@ -39,7 +39,7 @@ window.DxfLayerMapperController = {
         if (pct) pct.innerText = `${percent}%`;
     },
 
-    closeProgress: function() {
+    closeProgress: function () {
         const modal = document.getElementById('modal-dxf-loading');
         if (modal) modal.style.display = 'none';
     },
@@ -47,7 +47,7 @@ window.DxfLayerMapperController = {
     /**
      * DXFステップバイステップウィザードモーダルを展開
      */
-    openMapper: function(inputData, callback) {
+    openMapper: function (inputData, callback) {
         this.closeProgress();
         this.onConfirmCallback = callback;
         this.loadedFiles = [];
@@ -92,7 +92,7 @@ window.DxfLayerMapperController = {
 
         // ファイル名の自動マッチング（該当ファイルがない場合は無理に他階を割り当てず -1 を許容）
         const isRoofFile = (name) => /(?:1RF|2RF|RF|屋根|下屋|大屋根|\b1R\b|\b2R\b)/i.test(name);
-        
+
         const findIdx = (pat, excludeRoof = false) => {
             return this.loadedFiles.findIndex(f => {
                 if (excludeRoof && isRoofFile(f.name)) return false;
@@ -133,7 +133,7 @@ window.DxfLayerMapperController = {
     /**
      * イベントハンドラーバインド
      */
-    bindWizardEvents: function() {
+    bindWizardEvents: function () {
         const btnNext = document.getElementById('btn-wizard-next');
         const btnPrev = document.getElementById('btn-wizard-prev');
         const btnSkip = document.getElementById('btn-wizard-skip');
@@ -153,12 +153,12 @@ window.DxfLayerMapperController = {
         this.initPreviewCanvasEvents();
     },
 
-    closeModal: function() {
+    closeModal: function () {
         const modal = document.getElementById('modal-dxf-mapper');
         if (modal) modal.style.display = 'none';
     },
 
-    setMitsukeMode: function(mode) {
+    setMitsukeMode: function (mode) {
         this.mitsukeMode = mode;
         const autoRadio = document.getElementById('w-mitsuke-mode-auto');
         const manualRadio = document.getElementById('w-mitsuke-mode-manual');
@@ -170,7 +170,7 @@ window.DxfLayerMapperController = {
     /**
      * 各ステップでのDXFファイル追加ハンドラー
      */
-    handleAddDxfFile: function(e, stepNum) {
+    handleAddDxfFile: function (e, stepNum) {
         const file = e.target.files && e.target.files[0];
         if (!file) return;
 
@@ -262,7 +262,7 @@ window.DxfLayerMapperController = {
     /**
      * 指定ステップのUIコントロールおよびプレビュー描画 (全ステップ通り芯スロット完備)
      */
-    renderStep: function(stepNum) {
+    renderStep: function (stepNum) {
         this.currentStep = stepNum;
         this.previewZoomScale = 1.0;
         this.previewPanOffset = { x: 0, y: 0 };
@@ -303,12 +303,12 @@ window.DxfLayerMapperController = {
         // タイトルテキスト
         const titleEl = document.getElementById('wizard-step-title');
         const titles = {
-            1: isDxfManual 
-               ? '🏠 【Step 1 / 2】1階図面の原点指定 (通り芯レイヤーを選択し、交点をクリックして基準原点を設定)'
-               : '🏠 【Step 1 / 4】1階図面の原点指定 (通り芯レイヤーを選択し、交点をクリックして基準原点を設定)',
-            2: isDxfManual 
-               ? '🏢 【Step 2 / 2】2階図面の原点指定 (確定後、屋根をスキップして見附面積手入力へ進みます)'
-               : '🏢 【Step 2 / 4】2階図面の原点指定 (2階の通り芯レイヤーを選択し、1階原点🎯へ合わせる交点をクリック)',
+            1: isDxfManual
+                ? '🏠 【Step 1 / 2】1階図面の原点指定 (通り芯レイヤーを選択し、交点をクリックして基準原点を設定)'
+                : '🏠 【Step 1 / 4】1階図面の原点指定 (通り芯レイヤーを選択し、交点をクリックして基準原点を設定)',
+            2: isDxfManual
+                ? '🏢 【Step 2 / 2】2階図面の原点指定 (確定後、屋根をスキップして見附面積手入力へ進みます)'
+                : '🏢 【Step 2 / 4】2階図面の原点指定 (2階の通り芯レイヤーを選択し、1階原点🎯へ合わせる交点をクリック)',
             3: '🏠 【Step 3 / 4】1階屋根図面の原点指定 (屋根の通り芯レイヤーを選択し、1階原点🎯へ合わせる交点をクリック)',
             4: '🏠 【Step 4 / 4】2階屋根図面の原点指定 (屋根の通り芯レイヤーを選択し、1階原点🎯へ合わせる交点をクリック)'
         };
@@ -485,8 +485,8 @@ window.DxfLayerMapperController = {
             // 【即時ステート同期】選択中（または自動マッチングされた）の要素を直ちに curData へ保存
             if (el.value) {
                 if (elId === 'w-select-grid') curData.gridLayer = el.value;
-                if (elId === 'w-select-dim')  curData.dimLayer  = el.value;
-                if (elId === 'w-select-col')  curData.colLayer  = el.value;
+                if (elId === 'w-select-dim') curData.dimLayer = el.value;
+                if (elId === 'w-select-col') curData.colLayer = el.value;
                 if (elId === 'w-select-back') curData.backLayer = el.value;
                 if (elId === 'w-select-roof') curData.roofLayer = el.value;
             }
@@ -494,8 +494,8 @@ window.DxfLayerMapperController = {
             // 変更イベントでプレビューをリアルタイム更新
             el.onchange = () => {
                 if (elId === 'w-select-grid') curData.gridLayer = el.value;
-                if (elId === 'w-select-dim')  curData.dimLayer  = el.value;
-                if (elId === 'w-select-col')  curData.colLayer  = el.value;
+                if (elId === 'w-select-dim') curData.dimLayer = el.value;
+                if (elId === 'w-select-col') curData.colLayer = el.value;
                 if (elId === 'w-select-back') curData.backLayer = el.value;
                 if (elId === 'w-select-roof') curData.roofLayer = el.value;
                 this.renderPreviewCanvas();
@@ -524,7 +524,7 @@ window.DxfLayerMapperController = {
     /**
      * 次のステップへ進む
      */
-    nextStep: function() {
+    nextStep: function () {
         const curNum = this.currentStep;
         const curData = this.stepData[curNum];
 
@@ -535,7 +535,7 @@ window.DxfLayerMapperController = {
             curData.fileIdx = isNaN(parsedIdx) ? -1 : parsedIdx;
         }
         curData.gridLayer = document.getElementById('w-select-grid')?.value || '';
-        curData.dimLayer  = document.getElementById('w-select-dim')?.value || '';
+        curData.dimLayer = document.getElementById('w-select-dim')?.value || '';
 
         if (curNum === 1) {
             curData.colLayer = document.getElementById('w-select-col')?.value || '';
@@ -563,7 +563,7 @@ window.DxfLayerMapperController = {
     /**
      * 前のステップへ戻る
      */
-    prevStep: function() {
+    prevStep: function () {
         if (this.currentStep > 1) {
             this.renderStep(this.currentStep - 1);
         }
@@ -572,7 +572,7 @@ window.DxfLayerMapperController = {
     /**
      * 合算された通り芯線分の重複排除（デデュープ）処理
      */
-    deduplicateGridLines: function(bgLines) {
+    deduplicateGridLines: function (bgLines) {
         if (!Array.isArray(bgLines)) return [];
         // [v3.13.23] 「通芯」も含む拡張パターン
         const gridLines = bgLines.filter(l => l.layerCategory === 'GRID' || /(GRID|GLID|通り芯|通芯|軸線|°)/i.test(l.layer));
@@ -601,7 +601,7 @@ window.DxfLayerMapperController = {
         return [...uniqueGrids, ...otherLines];
     },
 
-    finishWizard: function() {
+    finishWizard: function () {
         this.closeModal();
         this.showProgress(30, "⚙️ ステップ別DXFデータを解析中...");
 
@@ -613,7 +613,7 @@ window.DxfLayerMapperController = {
         s.pillars = (s.pillars || []).filter(p => p.isManual);
         if (s.docDrawings) {
             s.docDrawings.floor = { entities: [], loaded: false };
-            s.docDrawings.div4  = { entities: [], loaded: false };
+            s.docDrawings.div4 = { entities: [], loaded: false };
         }
         s.layerVisibility = {};
 
@@ -650,17 +650,17 @@ window.DxfLayerMapperController = {
 
         // 統合 layerMapping の構築
         const fullMapping = {
-            gridLayer:   this.stepData[1].gridLayer || '',
-            col1FLayer:  this.stepData[1].colLayer || '',
-            col2FLayer:  this.stepData[2].colLayer || '',
+            gridLayer: this.stepData[1].gridLayer || '',
+            col1FLayer: this.stepData[1].colLayer || '',
+            col2FLayer: this.stepData[2].colLayer || '',
             back1FLayer: this.stepData[1].backLayer || '__ALL_LAYERS__',
             back2FLayer: this.stepData[2].backLayer || '__ALL_LAYERS__',
             roof1FLayer: this.stepData[3].roofLayer || '__ALL_LAYERS__',
             roof2FLayer: this.stepData[4].roofLayer || '__ALL_LAYERS__',
             slots: {
-                grid:   { fileIdx: this.stepData[1].fileIdx },
-                col1F:  { fileIdx: this.stepData[1].fileIdx },
-                col2F:  { fileIdx: this.stepData[2].fileIdx },
+                grid: { fileIdx: this.stepData[1].fileIdx },
+                col1F: { fileIdx: this.stepData[1].fileIdx },
+                col2F: { fileIdx: this.stepData[2].fileIdx },
                 back1F: { fileIdx: this.stepData[1].fileIdx },
                 back2F: { fileIdx: this.stepData[2].fileIdx },
                 roof1F: { fileIdx: this.stepData[3].fileIdx },
@@ -670,10 +670,10 @@ window.DxfLayerMapperController = {
 
         // 順次パース処理定義
         const stepsToProcess = [
-            { stepNum: 1, key: 'grid',   layer: fullMapping.gridLayer   },
-            { stepNum: 1, key: 'col1F',  layer: fullMapping.col1FLayer  },
+            { stepNum: 1, key: 'grid', layer: fullMapping.gridLayer },
+            { stepNum: 1, key: 'col1F', layer: fullMapping.col1FLayer },
             { stepNum: 1, key: 'back1F', layer: fullMapping.back1FLayer },
-            { stepNum: 2, key: 'col2F',  layer: fullMapping.col2FLayer  },
+            { stepNum: 2, key: 'col2F', layer: fullMapping.col2FLayer },
             { stepNum: 2, key: 'back2F', layer: fullMapping.back2FLayer },
             { stepNum: 3, key: 'roof1F', layer: fullMapping.roof1FLayer },
             { stepNum: 4, key: 'roof2F', layer: fullMapping.roof2FLayer },
@@ -697,15 +697,15 @@ window.DxfLayerMapperController = {
             const isColStep = (key === 'col1F' || key === 'col2F');
             const targetFloorStr = (stepNum === 1) ? '1F' : ((stepNum === 2) ? '2F' : ((stepNum === 3) ? '1R' : '2R'));
             const singleMapping = {
-                gridLayer:    key === 'grid'   ? layer : '',
-                col1FLayer:   key === 'col1F'  ? layer : '',
-                col2FLayer:   key === 'col2F'  ? layer : '',
-                dimLayer:     curData.dimLayer || '',
-                back1FLayer:  key === 'back1F' ? (layer || '__ALL_LAYERS__') : '',
-                back2FLayer:  key === 'back2F' ? (layer || '__ALL_LAYERS__') : '',
-                roof1FLayer:  key === 'roof1F' ? (layer || '__ALL_LAYERS__') : '',
-                roof2FLayer:  key === 'roof2F' ? (layer || '__ALL_LAYERS__') : '',
-                targetFloor:  targetFloorStr,
+                gridLayer: key === 'grid' ? layer : '',
+                col1FLayer: key === 'col1F' ? layer : '',
+                col2FLayer: key === 'col2F' ? layer : '',
+                dimLayer: curData.dimLayer || '',
+                back1FLayer: key === 'back1F' ? (layer || '__ALL_LAYERS__') : '',
+                back2FLayer: key === 'back2F' ? (layer || '__ALL_LAYERS__') : '',
+                roof1FLayer: key === 'roof1F' ? (layer || '__ALL_LAYERS__') : '',
+                roof2FLayer: key === 'roof2F' ? (layer || '__ALL_LAYERS__') : '',
+                targetFloor: targetFloorStr,
                 skipGridText: (stepNum !== (this.gridTextStep || 1)),
                 noFallbackCol: !isColStep
             };
@@ -743,8 +743,8 @@ window.DxfLayerMapperController = {
                     }
                 }
 
-                console.log(`✅ [Step:${stepNum} Key:${key}] parsed ${(s.bgLinesOriginal||[]).length - startLineCount} lines with category ${targetCat}`);
-            } catch(e) {
+                console.log(`✅ [Step:${stepNum} Key:${key}] parsed ${(s.bgLinesOriginal || []).length - startLineCount} lines with category ${targetCat}`);
+            } catch (e) {
                 console.error(`❌ [Wizard] Step ${stepNum} parse error:`, e);
             }
         });
@@ -756,7 +756,7 @@ window.DxfLayerMapperController = {
             );
         }
 
-        
+
         s.bgLinesOriginal = this.deduplicateGridLines(s.bgLinesOriginal);
         s.layerVisibility = {
             'GRID': true,
@@ -826,7 +826,7 @@ window.DxfLayerMapperController = {
      * 万能DXF生テキストパーサー (Universal DXF Entity & Block Scanner)
      * [v3.13.27] 極大円弧ガード・BLOCKS内ポリライン展開修正・UTF-8対応
      */
-    parseDxfRawLinesDirect: function(rawTxt) {
+    parseDxfRawLinesDirect: function (rawTxt) {
         const lines = [];
         if (!rawTxt || typeof rawTxt !== 'string') return lines;
 
@@ -968,7 +968,7 @@ window.DxfLayerMapperController = {
     /**
      * プレビューキャンバス描画（選択された通り芯レイヤーの交点磁石吸着＆リアルタイムアライメント描画）
      */
-    renderPreviewCanvas: function() {
+    renderPreviewCanvas: function () {
         const cvs = document.getElementById('dxf-origin-preview-canvas');
         if (!cvs) return;
         const ctx = cvs.getContext('2d');
@@ -1024,7 +1024,7 @@ window.DxfLayerMapperController = {
             } else {
                 // スマート長尺フォールバック (メートル/ミリ/ペーパー空間の全スケール対応)
                 const linesWithLen = rawLines.map(l => ({ ...l, len: Math.hypot(l.x2 - l.x1, l.y2 - l.y1) }))
-                                             .sort((a, b) => b.len - a.len);
+                    .sort((a, b) => b.len - a.len);
                 const maxLen = linesWithLen.length > 0 ? linesWithLen[0].len : 0;
                 const minGridLen = Math.max(10, maxLen * 0.10); // 上位長さの10%以上かつ10単位以上
                 targetGridLines = linesWithLen.filter(l => l.len >= minGridLen);
@@ -1034,7 +1034,7 @@ window.DxfLayerMapperController = {
 
         console.log(`📐 [DXF Wizard Step${curNum}] gridLayer="${gridL}" → 対象線分: ${targetGridLines.length}件`);
         if (targetGridLines.length > 0) {
-            const sampleLayers = [...new Set(targetGridLines.slice(0,5).map(l => l.layer))];
+            const sampleLayers = [...new Set(targetGridLines.slice(0, 5).map(l => l.layer))];
             console.log('  レイヤー名サンプル:', sampleLayers);
         }
 
@@ -1060,13 +1060,28 @@ window.DxfLayerMapperController = {
         console.log(`  ✅ 交点算出: ${intersections.length}件`);
         this.currentStepGridIntersections = intersections;
 
-        // デフォルト選択原点（最初の通り芯交点、または図面中央）
+        // 1階基準原点（Step 2以降で同座標系DXFの自動一致判定に使用）
+        const orig1F = this.established1FOrigin || (this.stepData[1] && this.stepData[1].originPt) || null;
+
+        // デフォルト選択原点：Step 2以降は1F基準原点と50mm以内で一致する交点があればそれを優先（同座標系ズレ防止）
         let minRawX = Infinity, minRawY = Infinity, maxRawX = -Infinity, maxRawY = -Infinity;
         rawLines.forEach(l => {
             if (l.x1 != null && !isNaN(l.x1)) { minRawX = Math.min(minRawX, l.x1); maxRawX = Math.max(maxRawX, l.x1); }
             if (l.y1 != null && !isNaN(l.y1)) { minRawY = Math.min(minRawY, l.y1); maxRawY = Math.max(maxRawY, l.y1); }
         });
-        const defaultCenterPt = (intersections.length > 0) ? intersections[0] : ((minRawX !== Infinity) ? { x: (minRawX + maxRawX) / 2, y: (minRawY + maxRawY) / 2 } : { x: 0, y: 0 });
+        let matched1FOriginPt = null;
+        if (curNum >= 2 && orig1F && intersections.length > 0) {
+            let bestDist = 50;
+            intersections.forEach(pt => {
+                const d = Math.hypot(pt.x - orig1F.x, pt.y - orig1F.y);
+                if (d <= bestDist) {
+                    bestDist = d;
+                    matched1FOriginPt = pt;
+                }
+            });
+        }
+        const defaultCenterPt = matched1FOriginPt
+            || ((intersections.length > 0) ? intersections[0] : ((minRawX !== Infinity) ? { x: (minRawX + maxRawX) / 2, y: (minRawY + maxRawY) / 2 } : { x: 0, y: 0 }));
 
         const chosenPt = this.selectedVisualOriginPt || defaultCenterPt;
         curData.originPt = chosenPt;
@@ -1075,7 +1090,6 @@ window.DxfLayerMapperController = {
         }
 
         // 平行移動オフセット計算: Step 2以降ではクリックした交点 chosenPt が 1階基準原点 1FOrigin へ重ね合わさるようにシフト
-        const orig1F = this.established1FOrigin || (this.stepData[1].originPt || { x: 0, y: 0 });
         const alignOffset = (curNum >= 2 && orig1F) ? {
             dx: orig1F.x - chosenPt.x,
             dy: orig1F.y - chosenPt.y
@@ -1177,7 +1191,7 @@ window.DxfLayerMapperController = {
     /**
      * キャンバスイベント初期化（マウス位置追従スマートズーム＆マルチボタンドラッグ＆交点磁石スナップ）
      */
-    initPreviewCanvasEvents: function() {
+    initPreviewCanvasEvents: function () {
         const cvs = document.getElementById('dxf-origin-preview-canvas');
         if (!cvs) return;
 
@@ -1302,7 +1316,7 @@ window.DxfLayerMapperController = {
             }
 
             // 通り芯交点が見つかればそれに精密磁石スナップ！なければ四捨五入整数座標を採用
-            const targetPt = closestGridIntersection 
+            const targetPt = closestGridIntersection
                 ? { x: Math.round(closestGridIntersection.x), y: Math.round(closestGridIntersection.y) }
                 : { x: Math.round(clickedWorldX), y: Math.round(clickedWorldY) };
 
@@ -1314,7 +1328,7 @@ window.DxfLayerMapperController = {
             this.renderPreviewCanvas();
         };
     },
-    toggleDxfLayerPanel: function() {
+    toggleDxfLayerPanel: function () {
         if (typeof window.renderLayerPanel === 'function') {
             window.renderLayerPanel();
         }
@@ -1331,7 +1345,7 @@ window.DxfLayerMapperController = {
     }
 };
 
-window.toggleLayerPanelDirect = function() {
+window.toggleLayerPanelDirect = function () {
     return window.DxfLayerMapperController.toggleDxfLayerPanel();
 };
 
