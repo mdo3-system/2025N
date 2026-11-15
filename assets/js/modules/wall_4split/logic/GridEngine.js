@@ -300,6 +300,59 @@ window.GridEngine = {
                 p.isInvalidPos = false;
             }
         });
+
+        // 5. スナップ後の同一座標・同一階の重複柱をマージ統合（属性・手動優先）
+        this.deduplicateSnappedPillars(state);
+    },
+
+    /**
+     * 同一階・同一スナップ座標に重複している有効柱を1本に統合する
+     * 優先順位: isManual > 明示属性（断面寸法・通し柱・金物・N値） > 先行エントリ
+     */
+    deduplicateSnappedPillars: function(state) {
+        const s = state || window.AppState;
+        if (!s || !Array.isArray(s.pillars) || s.pillars.length === 0) return;
+
+        const scorePillar = (p) => {
+            let score = 0;
+            if (p.isManual) score += 1000;
+            if (p.d != null && p.d !== 105) score += 100;
+            else if (p.d != null) score += 10;
+            if (p.isTooshi || (p.colType && p.colType !== '管柱')) score += 50;
+            else if (p.colType) score += 5;
+            if (p.jointTop || p.jointBot || (p.nValue != null && p.nValue > 0)) score += 20;
+            return score;
+        };
+
+        const groups = new Map();
+        s.pillars.forEach(p => {
+            if (p.isDeleted || p.isInvalidPos) return;
+            const key = `${p.floor || '1F'}_${Math.round(p.x)}_${Math.round(p.y)}`;
+            if (!groups.has(key)) groups.set(key, []);
+            groups.get(key).push(p);
+        });
+
+        const dropSet = new Set();
+        groups.forEach(list => {
+            if (list.length <= 1) return;
+            // スコア降順（同スコアなら元の出現順を維持）
+            const sorted = [...list].sort((a, b) => scorePillar(b) - scorePillar(a));
+            const winner = sorted[0];
+            for (let i = 1; i < sorted.length; i++) {
+                const loser = sorted[i];
+                // winner側で未設定の属性があればloserから補完
+                if (winner.d == null && loser.d != null) winner.d = loser.d;
+                if (!winner.colType && loser.colType) winner.colType = loser.colType;
+                if (!winner.isTooshi && loser.isTooshi) winner.isTooshi = true;
+                if (!winner.jointTop && loser.jointTop) winner.jointTop = loser.jointTop;
+                if (!winner.jointBot && loser.jointBot) winner.jointBot = loser.jointBot;
+                dropSet.add(loser);
+            }
+        });
+
+        if (dropSet.size > 0) {
+            s.pillars = s.pillars.filter(p => !dropSet.has(p));
+        }
     },
 
     /**

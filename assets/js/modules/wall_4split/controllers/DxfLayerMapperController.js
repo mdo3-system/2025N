@@ -102,8 +102,15 @@ window.DxfLayerMapperController = {
 
         const idx1F = findIdx(/(?:1F|1階|1_COL|1_BACK)/i, true);
         const idx2F = findIdx(/(?:2F|2階|2_COL|2_BACK)/i, true);
-        const idx1RF = findIdx(/(?:1RF|1R|下屋)/i);
-        const idx2RF = findIdx(/(?:2RF|2R|RF|屋根|大屋根)/i);
+        const idx1RF = findIdx(/(?:1RF|1R|下屋|1階.*屋根|1F.*屋根)/i);
+        let idx2RF = findIdx(/(?:2RF|2R|大屋根|2階.*屋根|2F.*屋根)/i);
+        if (idx2RF < 0) {
+            idx2RF = this.loadedFiles.findIndex((f, i) => {
+                if (i === idx1RF) return false;
+                if (/(?:1階|1F|1RF|1R|下屋)/i.test(f.name)) return false;
+                return /(?:RF|屋根)/i.test(f.name);
+            });
+        }
 
         const isSingleFile = (this.loadedFiles.length === 1);
         const singleLayers = isSingleFile ? (this.loadedFiles[0].layers || []) : [];

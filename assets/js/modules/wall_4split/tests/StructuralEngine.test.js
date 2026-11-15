@@ -67,5 +67,24 @@
             }
         });
 
+        it("should deduplicate snapped pillars at identical floor/coordinates keeping manual/explicit attributes (v3.15.3)", () => {
+            const state = {
+                pillars: [
+                    { id: 'p1', floor: '1F', x: 0, y: 0, isDeleted: false, isInvalidPos: false },
+                    { id: 'p2', floor: '1F', x: 0, y: 0, isManual: true, d: 120, isDeleted: false, isInvalidPos: false },
+                    { id: 'p3', floor: '2F', x: 0, y: 0, isDeleted: false, isInvalidPos: false },
+                    { id: 'p4', floor: '2F', x: 0, y: 0, isTooshi: true, isDeleted: false, isInvalidPos: false }
+                ]
+            };
+            window.GridEngine.deduplicateSnappedPillars(state);
+            expect(state.pillars.length).toBe(2);
+            const p1F = state.pillars.find(p => p.floor === '1F');
+            const p2F = state.pillars.find(p => p.floor === '2F');
+            expect(p1F.id).toBe('p2');
+            expect(p1F.d).toBe(120);
+            expect(p2F.id).toBe('p4');
+            expect(p2F.isTooshi).toBe(true);
+        });
+
     });
 })();

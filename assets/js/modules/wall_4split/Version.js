@@ -1,9 +1,10 @@
+// v3.15.3: Deduplicate snapped pillars at identical coordinates in GridEngine (manual/attribute priority) and fix 1F/2F roof DXF file auto-matching
 // v3.15.2: Fix 2F DXF wizard layer/file mapping & column deduplication, show div4 ratio/judgement on all rows, handle 0-denominator direct support ratio as out-of-scope warning
 // v3.15.1: Fix report modal close handling, fallback manual floor area for required wall calc, deduplicate DXF imported columns
 // v3.15.0: Column diameter calculation check tables (2-1, 2-2, 2-3) under tributary area tables
-window.APP_VERSION = "v3.15.2";
+window.APP_VERSION = "v3.15.3";
 
-(function() {
+(function () {
     function applyAppVersion() {
         if (typeof document === 'undefined') return;
         const ver = window.APP_VERSION || "v3.15.0";
