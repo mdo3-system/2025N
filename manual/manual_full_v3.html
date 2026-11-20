@@ -308,17 +308,15 @@
         <ul>
             <li><a href="#sec-pricing">💳 無料プランと有料サブスクリプション機能の比較一覧（無料で出来ること・課金後にできること）</a></li>
             <li><a href="#sec1">1. CADでの作図 ＆ DXF読み込みルール（最重要）</a></li>
-            <li><a href="#sec2">2. 建物荷重仕様の設定 ＆ 表計算ツールからの必要壁量転記</a></li>
+            <li><a href="#sec2">2. 建物荷重仕様の設定 ＆ 表計算ツール連動による必要壁量の自動算定・転記</a></li>
             <li><a href="#sec3">3. 柱寸法 ＆ 軸組工法階高の設定（有効細長比算出用）</a></li>
             <li><a href="#sec4">4. 確認申請審査に関する実務上の注意点</a></li>
-            <li><a href="#sec5">5. マウス操作 ＆ 画面ナビゲーション（全体表示）</a></li>
-            <li><a href="#sec6">6. 画面レイアウト構成 ＆ 各部機能図解</a></li>
-            <li><a href="#sec7">7. 左パネルの各ボタン機能解説 (一括出力[有料]等)</a></li>
-            <li><a href="#sec8">8. 右パネルの各ツール解説 (操作モード・柱プロパティ)</a></li>
-            <li><a href="#sec9">9. 耐力壁・柱の作図フロー ＆ リアルタイムOK/NG目視確認</a></li>
-            <li><a href="#sec10">10. 屋根伏図の作図 ＆ 母屋下げ/母屋上げの見附面積・風力計算</a></li>
-            <li><a href="#sec11">11. 基礎計算（グレー本2025準拠 スラブ・基礎梁・人通口補強筋）完全ガイド</a></li>
-            <li><a href="#sec12">12. 構造計算理論（グレー本2025準拠 斜め壁＆金物計算）</a></li>
+            <li><a href="#sec5">5. 左パネルの各ボタン機能解説 (一括出力[有料]等)</a></li>
+            <li><a href="#sec6">6. 右パネルの各ツール解説 (操作モード・柱プロパティ)</a></li>
+            <li><a href="#sec7">7. 耐力壁・柱の作図フロー ＆ リアルタイムOK/NG目視確認</a></li>
+            <li><a href="#sec8">8. 見付面積の算定（CAD取込・手入力 vs 水平投影面積作図の2パターン）＆ 屋根伏図作図ツール</a></li>
+            <li><a href="#sec9">9. 基礎計算（グレー本2025準拠 スラブ・基礎梁・人通口補強筋）完全ガイド</a></li>
+            <li><a href="#sec10">10. 構造計算理論（グレー本2025準拠 斜め壁＆金物計算）</a></li>
         </ul>
     </div>
 
@@ -730,17 +728,137 @@
         </ul>
     </div>
 
-    <!-- 8. 屋根伏図の作図 ＆ 母屋下げ/母屋上げ -->
+    <!-- 8. 見付面積の算定 ＆ 屋根伏図作図ツール -->
     <div class="section" id="sec8">
-        <h2>8. 屋根伏図の作図 ＆ 母屋下げ/母屋上げの見附面積・風力計算</h2>
+        <h2>8. 見付面積の算定（CAD取込・手入力 vs 水平投影面積作図の2パターン）＆ 屋根伏図作図ツール</h2>
         
-        <p>「1階屋根」「2階屋根」タブを選択し、屋根ポリゴン（水上・水下・勾配）および外壁線を作図することで、立体形状から風圧力見附投影面積が完全自動計算されます（※カットライン FL + 1.35m）。</p>
+        <p>風圧力に対する必要壁量を算定するためには、各階（1階・2階）および各方向（X方向・Y方向）の「見付面積（見附面積）」が必要です。<br>
+        本システムでは、設計者の実務フローや図面データ状況に応じて選べる<strong>【2つの見付面積算定パターン】</strong>を完全サポートしています。</p>
+
+        <!-- 2パターンの比較解説 -->
+        <div style="background:#f8fafc; border:2px solid #3b82f6; border-radius:8px; padding:18px; margin:20px 0;">
+            <h3 style="margin-top:0; color:#1d4ed8; border:none; padding:0; font-size:16px;">🎯 見付面積を算定する2つのパターンと使い分け</h3>
+            
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:16px; margin-top:12px;">
+                <!-- パターンA -->
+                <div style="background:#fff; border:1px solid #bfdbfe; border-radius:6px; padding:14px;">
+                    <div style="font-weight:bold; color:#1e40af; font-size:14px; margin-bottom:8px; display:flex; align-items:center; gap:6px;">
+                        <span>📝 【パターンA】CAD取り込み・数値手入力</span>
+                    </div>
+                    <div style="font-size:12px; color:#475569; margin-bottom:10px;">
+                        <strong>（屋根作図省略モード: dxf_manual）</strong>
+                    </div>
+                    <ul style="font-size:13px; line-height:1.7; padding-left:18px; margin:0 0 10px 0; color:#334155;">
+                        <li><strong>こんな時に最適:</strong>
+                            <ul style="padding-left:14px; margin:2px 0;">
+                                <li>ARCHITREND ZERO や Jw_cad 側で既に立面図・見付面積求積表を作成済みの場合</li>
+                                <li>複雑な異形屋根やパラペット等があり、CAD側の正確な求積数値をそのまま使いたい場合</li>
+                                <li>屋根伏図の作図作業を省略して最短で壁量判定を行いたい場合</li>
+                            </ul>
+                        </li>
+                        <li><strong>操作手順:</strong>
+                            <ol style="padding-left:16px; margin:4px 0;">
+                                <li>DXF読込ウィザード（Step 1〜2）で見付算定方式を<strong>「📝 見附図はDXF/手入力で登録 (屋根省略)」</strong>に設定（または左パネルの「見附算定」ラジオボタンで<strong>「DXF/手入力」</strong>を選択）。</li>
+                                <li>画面左パネルの<strong>「見付面積」入力スロット（1階X/Y、2階X/Y）へ数値を直接手入力</strong>します。</li>
+                            </ol>
+                        </li>
+                        <li><strong>メリット:</strong> 屋根伏図の作図をスキップでき、立面図DXFを下絵として参照しながら数値を即座に反映可能。</li>
+                    </ul>
+                </div>
+
+                <!-- パターンB -->
+                <div style="background:#fff; border:1px solid #86efac; border-radius:6px; padding:14px;">
+                    <div style="font-weight:bold; color:#166534; font-size:14px; margin-bottom:8px; display:flex; align-items:center; gap:6px;">
+                        <span>🏠 【パターンB】水平投影面積の作図・立体自動算定</span>
+                    </div>
+                    <div style="font-size:12px; color:#475569; margin-bottom:10px;">
+                        <strong>（屋根作図モード: auto_roof【標準デフォルト】）</strong>
+                    </div>
+                    <ul style="font-size:13px; line-height:1.7; padding-left:18px; margin:0 0 10px 0; color:#334155;">
+                        <li><strong>こんな時に最適:</strong>
+                            <ul style="padding-left:14px; margin:2px 0;">
+                                <li>立面図を手動で求積せず、平面屋根伏図から完全自動で正確な見付面積を算出したい場合</li>
+                                <li>計算書（PDF）に三角形・台形・長方形の求積図・計算式を審査提出用に美しく一括出力したい場合</li>
+                                <li>3Dプレビューで母屋下げ・下屋などの立体形状をリアルに確認したい場合</li>
+                            </ul>
+                        </li>
+                        <li><strong>操作手順:</strong>
+                            <ol style="padding-left:16px; margin:4px 0;">
+                                <li>見付算定方式で<strong>「🏠 屋根作図(自動)」</strong>を選択。</li>
+                                <li>「1階屋根」「2階屋根」タブに切り替え、右パネルの屋根作図ツールで屋根伏図（水平投影ポリゴン）および外壁線を作図。</li>
+                                <li>屋根勾配・軒の出・桁高オフセットを設定すると、建築基準法（FL+1.35mカットライン）に準拠した立体見付面積が完全自動算定されます。</li>
+                            </ol>
+                        </li>
+                        <li><strong>メリット:</strong> 手計算・求積ミスを完全に防止でき、左パネルの「🖼️ 見付面積」ボタンでいつでも立面図・求積表を確認可能。</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <h3>8-1. 屋根伏図作図ツール（水平投影面積・外壁線の描画操作）</h3>
+        <p>上部階切り替えタブで<strong>「1階屋根」</strong>または<strong>「2階屋根」</strong>を選択すると、画面右側のパネルが自動的に<strong>「🏠 屋根伏図・見付面積 プロパティ」</strong>に切り替わります。以下のツールを上から順に活用して作図を進めます。</p>
+
+        <div style="background:#fff; border:1px solid #e2e8f0; border-radius:8px; padding:16px; margin:15px 0;">
+            <table class="manual-table" style="width:100%; font-size:13px; border-collapse:collapse;">
+                <thead>
+                    <tr style="background:#f1f5f9;">
+                        <th style="padding:8px; border:1px solid #cbd5e1; width:22%;">ツール名・サブモード</th>
+                        <th style="padding:8px; border:1px solid #cbd5e1; width:28%;">操作方法</th>
+                        <th style="padding:8px; border:1px solid #cbd5e1;">役割 ＆ 実務上のポイント</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>👆 選択・編集<br>(roof_select)</strong></td>
+                        <td>作図済みの屋根面（ポリゴン）や外壁線をクリック</td>
+                        <td>プロパティポップアップが開き、屋根面の名称、勾配（寸）、桁高オフセット（高度mm）の確認・変更ができます。</td>
+                    </tr>
+                    <tr>
+                        <td><strong>📏 屋根グリッド追加<br>(roof-add-grid)</strong></td>
+                        <td>既存の通り芯をクリックし、オフセット距離（例: 455mm、750mmなど）を指定</td>
+                        <td>軒の出ラインや母屋下げ位置に合わせて補助グリッド線を追加します。屋根面の角部を正確にスナップさせるために使用します。</td>
+                    </tr>
+                    <tr>
+                        <td><strong>📐 屋根面を引く<br>(draw-roof)</strong></td>
+                        <td>グリッド交点をクリックして水平投影外形をなぞり、<strong>始点に戻ってクリックして閉じる</strong>。<br>その後、<strong>勾配方向の基準線（水上・水下）を2点クリック</strong>して指定</td>
+                        <td><strong>水平投影された屋根面ポリゴンを定義します。</strong><br>
+                        切妻屋根なら左右2面、寄棟なら4面、片流れなら1面を作図します。作図直後にプロパティダイアログが開くので、「屋根勾配（例: 4.0寸）」を入力します。</td>
+                    </tr>
+                    <tr>
+                        <td><strong>✏️ 外壁線を引く<br>(draw-ext-wall)</strong></td>
+                        <td>柱または通り芯の交点を順にクリックし、始点に戻って閉じる</td>
+                        <td>建物の外壁位置を水平投影多角形として定義します。見付面積の算定において、軒先から外壁までの「見上げ部分」や階ごとの外郭線を高精度に判定するために使用します。</td>
+                    </tr>
+                    <tr>
+                        <td><strong>❌ 屋根グリッド削除<br>(roof-del-grid)</strong></td>
+                        <td>不要になった屋根グリッド線をクリック</td>
+                        <td>追加した屋根用オフセット線を削除します（基本の通り芯は保護されます）。</td>
+                    </tr>
+                    <tr>
+                        <td><strong>❌ 屋根要素の削除<br>(delete-roof)</strong></td>
+                        <td>作図済みの屋根面や外壁線をクリック</td>
+                        <td>誤って作図した屋根ポリゴンや外壁線をワンクリックで削除します。</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
 
         <div class="alert alert-note">
-            <strong>🏠 母屋下げ・母屋上げ・下屋（複雑な屋根形状）の作図ポイント:</strong><br>
-            母屋下げや母屋上げなどの段差がある屋根や、1階下屋がある複雑な建物の場合、<strong>基準線となる位置に「屋根グリッド」を作図し、分割された屋根ポリゴンごとに「桁高オフセット（高度mm）」や「勾配（寸）」を設定</strong>します。<br>
-            これにより、<strong>見附投影面積（カットラインからの垂直スキャン）および 3Dプレビュー画面の両方で、母屋下げ・母屋上げの高低差や段差が正しく計算・描画・反映されます。</strong>
+            <strong>🏠 母屋下げ・母屋上げ・下屋（複雑な屋根形状）の立体算定テクニック:</strong><br>
+            ・<strong>母屋下げ/母屋上げ:</strong> 基準線となる位置に屋根グリッドを追加し、下がっている部分の屋根ポリゴンのプロパティで<strong>「桁高オフセット（mm）」（例: -300 や -450）</strong>を入力します。<br>
+            ・<strong>1階下屋（げや）:</strong> 「1階屋根」タブで作図します。2階の外郭から飛び出た下屋形状を水平投影で作図することで、1階見付面積への算入および2階外壁との取り合いが立体的に自動判定されます。<br>
+            ・<strong>キャンセル操作:</strong> 描画途中でのキャンセルは<strong>右クリック</strong>または<strong>Escキー</strong>で行えます。
         </div>
+
+        <h3>8-2. 「🖼️ 見付面積」確認モーダル ＆ 計算書への自動展開</h3>
+        <p>屋根伏図の作図完了後、画面左側パネルの<strong>「🖼️ 見付面積」</strong>ボタンをクリックすると、自動算定された風圧力見付面積の詳細ダイアログが表示されます。</p>
+        
+        <ul style="line-height:1.8; font-size:13px; color:#334155;">
+            <li><strong>東面（X方向）・南面（Y方向）の立面図プレビュー:</strong> 基準法カットライン（1FL+1.35m、2FL+1.35m）および各算定ブロック（三角形・台形・長方形）が色分けされてグラフィカルに表示されます。</li>
+            <li><strong>見付求積表:</strong> 審査官が暗算・電卓で容易に検算できるよう、各ブロックの記号（B1, B2, A1...）、算定式（底辺 × 高さ ÷ 2 等）、求積面積（㎡）、累計面積（㎡）が表形式で完全整理されます。</li>
+            <li><strong>必要壁量（風圧力）への自動連動:</strong> 算出された見付面積に風圧力係数（$0.50\text{ m/㎡}$ または特定行政庁指定値）を乗じた必要壁量がリアルタイムに確定し、地震力必要壁量との自動比較判定が行われます。</li>
+            <li><strong>計算書一括出力（PDF）への自動収録:</strong> 有料プランの「📑 計算書を一括出力 (PDF)」を実行すると、表紙・壁量検定表・4分割表・N値計算表に加えて、<strong>第2章「風圧力見付面積求積図・計算書」として求積図と算定表がそのままA4縦版で美しく収録</strong>されます。</li>
+        </ul>
     </div>
 
     <!-- 9. 基礎計算 -->

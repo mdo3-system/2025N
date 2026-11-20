@@ -196,9 +196,13 @@
         <span style="font-size:14px; color:#555;">※上記リンク先より<strong>「壁量等の基準（令和7年施行）に対応した表計算ツール（多機能版）」</strong>をダウンロードしてご利用ください。</span></li>
     </ul>
 
-    <div class="info-box danger" style="background:#fff3cd; border-color:#ffeeba;">
-        <strong style="color:#856404; font-size:16px;">⚠️ 見付面積の手入力（超重要）</strong><br>
-        平面図（DXF）からは建物の「高さ」が読み取れません。風圧力を計算するための<strong>「見付面積（X方向・Y方向）」は、設計者ご自身で立面図等から算出し、必ず左側パネルに【手入力】</strong>してください。ここの入力を忘れると、風圧力に対する必要壁量が正しく計算されず、重大な計算ミスにつながります。
+    <div class="info-box accent" style="background-color: #f0f7ff; border-color: #3498db;">
+        <strong style="color:#2980b9; font-size:16px;">💡 見付面積の登録方法は【2パターン】から選択可能</strong><br>
+        風圧力を計算するための「見付面積（X方向・Y方向）」の算定方法は、設計者の実務スタイルに合わせて2つの方式から選択できます。<br><br>
+        <strong>① 【パターンA】CAD取り込み・数値手入力（屋根省略モード: dxf_manual）</strong><br>
+        ARCHITREND ZERO や Jw_cad 側で既に立面図・求積表を作成している場合は、左パネルの見附算定で「DXF/手入力」を選択し、<strong>「見付面積」入力欄に数値を手入力</strong>します。屋根伏図の作図作業をスキップして素早く計算を進められます。<br><br>
+        <strong>② 【パターンB】水平投影面積の作図・立体自動算定（屋根作図モード: auto_roof【標準デフォルト】）</strong><br>
+        「1階屋根」「2階屋根」タブで作図ツールを使用し、<strong>屋根伏図（水平投影ポリゴン）および外壁線を作図</strong>することで、建築基準法（FL+1.35mカットライン）に準拠した風圧力見付面積が完全立体自動算定されます。計算書にも求積図・算定式が自動生成されます。
     </div>
 
     <h2>第2章：各入力ツールの詳細と使い方</h2>
@@ -292,6 +296,23 @@
         <p>実務で非常に手間のかかる「斜め壁」の水平成分の算出も、本ツールなら直感的な操作で完結します。柱間をクリックするだけで、システムが角度を自動計算し、cosθ・sinθのべき乗を用いた有効壁倍率を瞬時にX・Y方向へ按分します。</p>
         <div class="inline-video">
             <iframe src="https://www.youtube.com/embed/u813BLbbu0s" frameborder="0" allowfullscreen></iframe>
+        </div>
+    </div>
+
+    <h4 style="font-size: 20px; border-bottom: 2px solid #2980b9; padding-bottom: 5px; margin-top:40px;">🔧 屋根伏図・見付面積 作図ツール（水平投影面積作図・立体自動算定）</h4>
+    <p>上部階切り替えタブで<strong>「1階屋根」</strong>または<strong>「2階屋根」</strong>を選択すると、画面右側のパネルが「🏠 屋根伏図・見付面積 プロパティ」に切り替わり、屋根伏図（水平投影）から風圧力見付面積を立体自動算定できます。</p>
+
+    <div style="background:#fff; border:1px solid #cbd5e1; border-radius:6px; padding:15px; margin-bottom:20px;">
+        <strong style="color:#2c3e50; font-size:15px;">【屋根作図ツールの基本操作手順】</strong>
+        <ol style="margin-top:8px; padding-left:20px; line-height:1.8;">
+            <li><strong>軒の出グリッドを追加:</strong> <code>📏 屋根グリッド追加</code> を選び、外壁の通り芯をクリックしてオフセット距離（例: 455mm、750mmなど）を指定し、軒先スナップ線を作成します。</li>
+            <li><strong>屋根面（水平投影）を作図:</strong> <code>📐 屋根面を引く</code> を選び、グリッド交点を順にクリックして屋根の外形を囲み、<strong>始点に戻ってクリックして閉じる</strong>。その後、<strong>勾配方向の基準線（水上と水下）を2点クリック</strong>して指定します。</li>
+            <li><strong>屋根勾配・桁高オフセットを設定:</strong> 作図後に表示されるプロパティ画面で「屋根勾配（例: 4.0寸）」を入力します。母屋下げや段差がある場合は「桁高オフセット（高度mm）」で高低差を設定します。</li>
+            <li><strong>外壁線を作図:</strong> <code>✏️ 外壁線を引く</code> を選び、建物の外壁ラインを多角形（水平投影）で囲みます。</li>
+            <li><strong>見付面積と求積表を確認:</strong> 画面左パネルの <strong>「🖼️ 見付面積」</strong> ボタンをクリックすると、X方向（東面）・Y方向（南面）の立面図、分割求積表（三角形・台形・長方形の算定根拠）が自動プレビュー表示されます。</li>
+        </ol>
+        <div style="font-size:12px; color:#555; margin-top:8px;">
+            ※作図を省略し、CAD側の立面求積数値をそのまま使いたい場合は、左パネルの見附算定で<strong>「DXF/手入力」</strong>を選択して数値を直接入力してください。
         </div>
     </div>
 
