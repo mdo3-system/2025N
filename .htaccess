@@ -1,0 +1,25 @@
+# ----------------------------------------------------------------------
+# 2025.eie.jp キャッシュ制御 & XServer Nginxリバースプロキシ設定
+# ----------------------------------------------------------------------
+
+# 1. XServer Nginx静的キャッシュの最適化
+# HTMLファイルは常に最新のコンテンツ（最新の?v=クエリ付きJS）を配信するためNginxキャッシュを無効化
+<IfModule mod_setenvif.c>
+    SetEnvIf Request_URI "\.(html|htm)$" Ngx_Cache_NoCacheMode=on
+    SetEnvIf Request_URI "\.(html|htm)$" Ngx_Cache_StaticMode=off
+</IfModule>
+
+# 2. ブラウザ向けCache-Controlヘッダー設定
+<IfModule mod_headers.c>
+    # HTMLファイルはブラウザキャッシュさせず、常にサーバーへ最新版を確認させる
+    <FilesMatch "\.(html|htm)$">
+        Header set Cache-Control "no-cache, no-store, must-revalidate"
+        Header set Pragma "no-cache"
+        Header set Expires "0"
+    </FilesMatch>
+
+    # JS/CSSファイルはURLのクエリパラメータ（?v=x.x.x）の更新で即時キャッシュ破棄
+    <FilesMatch "\.(js|css)$">
+        Header set Cache-Control "public, max-age=86400, must-revalidate"
+    </FilesMatch>
+</IfModule>

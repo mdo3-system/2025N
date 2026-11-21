@@ -142,6 +142,29 @@ async function bundleAndMinify() {
 
     console.log(`✅ [Bundle] Successfully generated: ${outPath}`);
     console.log(`🎉 [Bundle] Minified size: ${(minSize / 1024).toFixed(1)} KB (Saved ${ratio}%)`);
+
+    // index.html のバージョンタグおよびキャッシュバスタークエリ(?v=...)を自動同期
+    try {
+        const verFilePath = path.resolve(ROOT_DIR, 'assets/js/modules/wall_4split/Version.js');
+        const verContent = fs.readFileSync(verFilePath, 'utf8');
+        const verMatch = verContent.match(/window\.APP_VERSION\s*=\s*["']([^"']+)["']/);
+        if (verMatch) {
+            const appVer = verMatch[1];
+            const cleanVer = appVer.replace(/^v/, '');
+            const indexPath = path.resolve(ROOT_DIR, 'index.html');
+            if (fs.existsSync(indexPath)) {
+                let html = fs.readFileSync(indexPath, 'utf8');
+                html = html.replace(/<title>上善如水 - 壁量計算WEB \([^)]+\)<\/title>/, `<title>上善如水 - 壁量計算WEB (${appVer})</title>`);
+                html = html.replace(/(<span id="app-version-title"[^>]*>)[^<]*(<\/span>)/, `$1${appVer}$2`);
+                html = html.replace(/(dist\/wall_4split\.bundle\.min\.js\?v=)[^"']*/g, `$1${cleanVer}`);
+                html = html.replace(/(ColumnDiameterEngine\.js\?v=)[^"']*/g, `$1${cleanVer}`);
+                fs.writeFileSync(indexPath, html, 'utf8');
+                console.log(`🔄 [Bundle] Synchronized index.html version to ${appVer} (?v=${cleanVer})`);
+            }
+        }
+    } catch (e) {
+        console.warn('⚠️ [Bundle] Could not auto-sync index.html version:', e.message);
+    }
 }
 
 bundleAndMinify().catch(err => {
