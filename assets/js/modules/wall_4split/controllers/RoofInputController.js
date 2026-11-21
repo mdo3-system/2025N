@@ -281,38 +281,66 @@ window.RoofInputController = {
     },
 
     handlePropertyFallback: function(state, existingFace = null) {
+        if (window.ModalController && typeof window.ModalController.showRoofFaceModal === 'function') {
+            window.ModalController.showRoofFaceModal({
+                state,
+                existingFace,
+                onConfirm: (res) => {
+                    if (existingFace) {
+                        existingFace.label = res.label;
+                        existingFace.slope = res.slope;
+                        existingFace.roofThickness = res.thickness;
+                        existingFace.baseHeightDelta = res.delta;
+                        existingFace.floor = res.floor;
+                    } else {
+                        const face = {
+                            id: Date.now(),
+                            label: res.label,
+                            vertices: [...state.roofDrawPoints],
+                            slopeLine: [...state.roofTempSlopeLine],
+                            slope: res.slope,
+                            roofThickness: res.thickness,
+                            baseHeightDelta: res.delta,
+                            floor: res.floor
+                        };
+                        if (!state.roofFaces) state.roofFaces = [];
+                        state.roofFaces.push(face);
+                    }
+                    state.roofDrawPoints = [];
+                    state.roofTempSlopeLine = [];
+                    state.roofDrawingStep = 'polygon';
+                    window.AppController.refreshAll();
+                },
+                onCancel: () => {
+                    this.cancelDrawing(state);
+                    window.AppController.refreshAll();
+                }
+            });
+            return;
+        }
+
         const defaultLabel = existingFace ? existingFace.label : `R${(state.roofFaces || []).length + 1}`;
-        const defaultSlope = existingFace ? String(existingFace.slope) : "4.5";
-        const defaultThickness = existingFace ? String(existingFace.roofThickness) : "150";
-        const defaultDelta = existingFace ? String(existingFace.baseHeightDelta) : "0";
-
-        const label = prompt("屋根面の名称を入力してください", defaultLabel) || defaultLabel;
-        const slopeStr = prompt("屋根勾配を「寸」で入力してください (例: 4.5)", defaultSlope);
-        const thicknessStr = prompt("屋根厚みを「mm」で入力してください", defaultThickness);
-        const deltaStr = prompt("基準高からの増減を「mm」で入力してください (基本: 0)", defaultDelta);
-
-        const slope = parseFloat(slopeStr) || parseFloat(defaultSlope);
-        const thickness = parseFloat(thicknessStr) || parseFloat(defaultThickness);
-        const delta = parseFloat(deltaStr) || parseFloat(defaultDelta);
-
+        const defaultSlope = existingFace ? 4.5 : 4.5;
+        const defaultThickness = 150;
+        const defaultDelta = 0;
         const currentFl = state.currentFloor || '1F';
         const is1FGroup = (f) => ['1F', '1R', '1RF', '1F_R'].includes(String(f).toUpperCase().trim());
         const defaultFloorChoice = is1FGroup(currentFl) ? '1F' : '2F';
 
         if (existingFace) {
-            existingFace.label = label;
-            existingFace.slope = slope;
-            existingFace.roofThickness = thickness;
-            existingFace.baseHeightDelta = delta;
+            existingFace.label = defaultLabel;
+            existingFace.slope = defaultSlope;
+            existingFace.roofThickness = defaultThickness;
+            existingFace.baseHeightDelta = defaultDelta;
         } else {
             const face = {
                 id: Date.now(),
-                label: label,
+                label: defaultLabel,
                 vertices: [...state.roofDrawPoints],
                 slopeLine: [...state.roofTempSlopeLine],
-                slope: slope,
-                roofThickness: thickness,
-                baseHeightDelta: delta,
+                slope: defaultSlope,
+                roofThickness: defaultThickness,
+                baseHeightDelta: defaultDelta,
                 floor: defaultFloorChoice
             };
             if (!state.roofFaces) state.roofFaces = [];

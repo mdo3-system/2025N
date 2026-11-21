@@ -1,3 +1,4 @@
+// v3.15.9: Replace window.prompt with in-page HTML modal dialogs across all tools (add-grid, roof-add-grid, span-edit, edit-text, roof-face) for restricted browser environments
 // v3.15.8: Fix manual grid addition (set isGridFixed on X, normalize IME full-width inputs, preserve existing coordinates in GridEngine without DXF, persist userEditedGrid in history stack)
 // v3.15.7: Prefer matching 1F origin intersection in Step 2+ preview to prevent false offset shift on different-footprint floors
 // v3.15.6: Fix DXF wizard originPt synchronization on nextStep/finishWizard, sort grid intersections, and auto-fill unvisited step layers on complete
@@ -7,7 +8,7 @@
 // v3.15.2: Fix 2F DXF wizard layer/file mapping & column deduplication, show div4 ratio/judgement on all rows, handle 0-denominator direct support ratio as out-of-scope warning
 // v3.15.1: Fix report modal close handling, fallback manual floor area for required wall calc, deduplicate DXF imported columns
 // v3.15.0: Column diameter calculation check tables (2-1, 2-2, 2-3) under tributary area tables
-window.APP_VERSION = "v3.15.8";
+window.APP_VERSION = "v3.15.9";
 
 (function () {
     function applyAppVersion() {

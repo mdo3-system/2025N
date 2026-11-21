@@ -79,13 +79,25 @@ function initCanvasInput(canvas) {
                 });
                 if (hitDim) {
                     const axisName = hitDim.axis === 'X' ? 'X方向 (間口)' : 'Y方向 (奥行)';
-                    const valStr = prompt(`【${axisName}】 通り芯間スパン距離を入力してください (mm):\n（※指定スパン以降のグリッドおよび配置要素が自動追従再配置されます）`, `${hitDim.span}`);
-                    if (valStr !== null) {
-                        const newSpan = parseFloat(valStr);
-                        if (!isNaN(newSpan) && newSpan > 0 && window.GridEngine) {
-                            window.GridEngine.updateGridSpan(hitDim.axis, hitDim.spanIndex, newSpan, state);
-                            return;
+                    const handleSpanChange = (valStr) => {
+                        if (valStr !== null && valStr !== undefined) {
+                            const newSpan = parseFloat(valStr);
+                            if (!isNaN(newSpan) && newSpan > 0 && window.GridEngine) {
+                                window.GridEngine.updateGridSpan(hitDim.axis, hitDim.spanIndex, newSpan, state);
+                                window.AppController.refreshAll();
+                            }
                         }
+                    };
+
+                    if (window.ModalController && typeof window.ModalController.showSimpleInputModal === 'function') {
+                        window.ModalController.showSimpleInputModal({
+                            title: `【${axisName}】 通り芯間スパン距離の変更`,
+                            message: `通り芯間スパン距離を入力してください (mm):\n（※指定スパン以降のグリッドおよび配置要素が自動追従再配置されます）`,
+                            defaultValue: `${hitDim.span}`,
+                            inputType: 'number',
+                            confirmText: 'スパン変更を適用',
+                            onConfirm: handleSpanChange
+                        });
                     }
                     return;
                 }
@@ -434,98 +446,27 @@ function handleRoofGridInput(mode, state, clickX, clickY) {
     const roofGrids = window.GridEngine.getRoofGrids(state);
 
     if (mode === 'add-grid') {
-        const normalizeAxis = (val) => {
-            if (!val) return '';
-            const s = val.replace(/[Ａ-Ｚａ-ｚ]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0)).toUpperCase().trim();
-            if (s === '1' || s.startsWith('X') || s.includes('間口') || s.includes('エックス') || s.includes('横')) return 'X';
-            if (s === '2' || s.startsWith('Y') || s.includes('奥行') || s.includes('ワイ') || s.includes('縦')) return 'Y';
-            return s;
-        };
-        const normalizeNumber = (val) => {
-            if (val === null || val === undefined) return NaN;
-            const s = String(val)
-                .replace(/[０-９]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0))
-                .replace(/[ー－―]/g, '-')
-                .replace(/，/g, ',')
-                .replace(/．/g, '.')
-                .trim();
-            return parseFloat(s);
+        const applyAddRoofGrid = (axis, base, offset, type, name) => {
+            const newCoord = base + offset;
+            if (axis === 'X') {
+                if (!state.roofGridManualX) state.roofGridManualX = [];
+                state.roofGridManualX.push({ coord: newCoord, name: name.trim(), type: type, val: offset });
+            } else {
+                if (!state.roofGridManualY) state.roofGridManualY = [];
+                state.roofGridManualY.push({ coord: newCoord, name: name.trim(), type: type, val: offset });
+            }
+            window.AppController.refreshAll();
         };
 
-        const axis = prompt("追加する屋根通り芯の方向を入力してください (X または Y)", "X");
-        if (!axis) return;
-        const upAxis = normalizeAxis(axis);
-        if (upAxis !== 'X' && upAxis !== 'Y') return;
-
-        if (upAxis === 'X') {
-            let bestGX = 0;
-            let minDX = Infinity;
-            if (roofGrids.x.length > 0) {
-                roofGrids.x.forEach(gx => {
-                    let d = Math.abs(clickX - (gx * state.scale + state.offsetX));
-                    if (d < minDX) { minDX = d; bestGX = gx; }
-                });
-            }
-            if (minDX > 100 || minDX === Infinity) {
-                bestGX = snapToModule((clickX - state.offsetX) / state.scale);
-            }
-
-            const offsetStr = prompt(`屋根基準位置 (座標: ${bestGX}) からのオフセット距離を入力してください (mm)\n右方向はプラス、左方向はマイナス`, "910");
-            if (offsetStr === null) return;
-            const offset = normalizeNumber(offsetStr);
-            if (isNaN(offset)) return;
-
-            const typeStr = prompt("追加する屋根用グリッドのタイプを入力してください\n1: 軒の出\n2: ケラバの出\n3: その他", "1");
-            let type = 'other';
-            const cleanTypeStr = (typeStr || '').replace(/[０-９]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0)).trim();
-            if (cleanTypeStr === '1' || cleanTypeStr.includes('軒')) type = 'eaves';
-            else if (cleanTypeStr === '2' || cleanTypeStr.includes('ケラバ')) type = 'keraba';
-
-            const newGX = bestGX + offset;
-            const countX = (state.roofGridManualX || []).length + 1;
-            const defaultNameX = type === 'eaves' ? `${countX} 軒の出` : (type === 'keraba' ? `${countX} ケラバの出` : `${countX} その他`);
-            const name = prompt("追加する屋根X通りの名称を入力してください", defaultNameX);
-            if (!name) return;
-
-            if (!state.roofGridManualX) state.roofGridManualX = [];
-            state.roofGridManualX.push({ coord: newGX, name: name.trim(), type: type, val: offset });
-        } else {
-            let bestGY = 0;
-            let minDY = Infinity;
-            if (roofGrids.y.length > 0) {
-                // [v3.10.9] DPI独立: cssH = 物理px / dpr = CSS論理px
-                const _dprRG = window.devicePixelRatio || 1;
-                const _cssHRG = state.canvas.height / _dprRG;
-                roofGrids.y.forEach(gy => {
-                    let d = Math.abs(clickY - (_cssHRG - (gy * state.scale + state.offsetY)));
-                    if (d < minDY) { minDY = d; bestGY = gy; }
-                });
-            }
-            if (minDY > 100 || minDY === Infinity) {
-                const _dprRG2 = window.devicePixelRatio || 1;
-                const _cssHRG2 = state.canvas.height / _dprRG2;
-                bestGY = snapToModule((_cssHRG2 - clickY - state.offsetY) / state.scale);
-            }
-
-            const offsetStr = prompt(`屋根基準位置 (座標: ${bestGY}) からのオフセット距離を入力してください (mm)\n上方向はプラス、下方向はマイナス`, "910");
-            if (offsetStr === null) return;
-            const offset = normalizeNumber(offsetStr);
-            if (isNaN(offset)) return;
-
-            const typeStr = prompt("追加する屋根用グリッドのタイプを入力してください\n1: 軒の出\n2: ケラバの出\n3: その他", "1");
-            let type = 'other';
-            const cleanTypeStr = (typeStr || '').replace(/[０-９]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0)).trim();
-            if (cleanTypeStr === '1' || cleanTypeStr.includes('軒')) type = 'eaves';
-            else if (cleanTypeStr === '2' || cleanTypeStr.includes('ケラバ')) type = 'keraba';
-
-            const newGY = bestGY + offset;
-            const countY = (state.roofGridManualY || []).length + 1;
-            const defaultNameY = type === 'eaves' ? `${countY} 軒の出` : (type === 'keraba' ? `${countY} ケラバの出` : `${countY} その他`);
-            const name = prompt("追加する屋根Y通りの名称を入力してください", defaultNameY);
-            if (!name) return;
-
-            if (!state.roofGridManualY) state.roofGridManualY = [];
-            state.roofGridManualY.push({ coord: newGY, name: name.trim(), type: type, val: offset });
+        if (window.ModalController && typeof window.ModalController.showRoofGridAddModal === 'function') {
+            window.ModalController.showRoofGridAddModal({
+                state,
+                clickX,
+                clickY,
+                onConfirm: (axis, base, offset, type, name) => {
+                    applyAddRoofGrid(axis, base, offset, type, name);
+                }
+            });
         }
     } else if (mode === 'del-grid') {
         let bestIX = -1, bestIY = -1, minD = 20;
@@ -562,113 +503,49 @@ function handleGridInput(mode, state, clickX, clickY) {
         return;
     }
     if (mode === 'add-grid') {
-        const snapToModule = (val) => {
-            const module = 455;
-            const nearest = Math.round(val / module) * module;
-            if (Math.abs(val - nearest) < 5) return nearest;
-            return Math.round(val);
+        const applyAddGrid = (axis, base, offset, name) => {
+            const newCoord = base + offset;
+            if (axis === 'X') {
+                if (!state.manualGridX) state.manualGridX = [];
+                state.manualGridX.push({ coord: newCoord, name: name.trim() });
+                if (!state.userEditedGridX) state.userEditedGridX = {};
+                state.userEditedGridX[newCoord] = name.trim();
+
+                if (state.deletedGridX) {
+                    state.deletedGridX = state.deletedGridX.filter(dx => Math.abs(dx - newCoord) > 5);
+                }
+                state.isGridFixed = true;
+            } else if (axis === 'Y') {
+                if (!state.manualGridY) state.manualGridY = [];
+                state.manualGridY.push({ coord: newCoord, name: name.trim() });
+                if (!state.userEditedGridY) state.userEditedGridY = {};
+                state.userEditedGridY[newCoord] = name.trim();
+
+                // 削除リストに入っていたら解除
+                if (state.deletedGridY) {
+                    state.deletedGridY = state.deletedGridY.filter(dy => Math.abs(dy - newCoord) > 5);
+                }
+                state.isGridFixed = true;
+            }
+            if (window.GridEngine) {
+                window.GridEngine.analyzeGrids(state);
+                if (typeof window.GridEngine.syncAllElementNames === 'function') {
+                    window.GridEngine.syncAllElementNames(state);
+                }
+            }
+            window.AppController.refreshAll();
         };
-        const normalizeAxis = (val) => {
-            if (!val) return '';
-            const s = val.replace(/[Ａ-Ｚａ-ｚ]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0)).toUpperCase().trim();
-            if (s === '1' || s.startsWith('X') || s.includes('間口') || s.includes('エックス') || s.includes('横')) return 'X';
-            if (s === '2' || s.startsWith('Y') || s.includes('奥行') || s.includes('ワイ') || s.includes('縦')) return 'Y';
-            return s;
-        };
-        const normalizeNumber = (val) => {
-            if (val === null || val === undefined) return NaN;
-            const s = String(val)
-                .replace(/[０-９]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0))
-                .replace(/[ー－―]/g, '-')
-                .replace(/，/g, ',')
-                .replace(/．/g, '.')
-                .trim();
-            return parseFloat(s);
-        };
 
-        const axis = prompt("追加する通り芯の方向を入力してください (X または Y)", "X");
-        if (!axis) return;
-        const upAxis = normalizeAxis(axis);
-        if (upAxis !== 'X' && upAxis !== 'Y') return;
-
-        if (upAxis === 'X') {
-            let bestGX = 0;
-            let minDX = Infinity;
-            if (state.gridXCoords && state.gridXCoords.length > 0) {
-                state.gridXCoords.forEach(gx => {
-                    const cx = window.toCanvasPixel ? window.toCanvasPixel(gx, 0).cx : (gx * state.scale + state.offsetX);
-                    let d = Math.abs(clickX - cx);
-                    if (d < minDX) { minDX = d; bestGX = gx; }
-                });
-            }
-
-            // もし既存通り芯が遠すぎる（または無い）場合は、クリック地点を基準にする
-            if (minDX > 100 || minDX === Infinity) {
-                bestGX = snapToModule(window.toWorldCoord ? window.toWorldCoord(clickX, clickY).x : (clickX - state.offsetX) / state.scale);
-            }
-
-            const offsetStr = prompt(`基準位置 (座標: ${bestGX}) からのオフセット距離を入力してください (mm)\n右方向はプラス、左方向はマイナス`, "910");
-            if (offsetStr === null) return;
-            const offset = normalizeNumber(offsetStr);
-            if (isNaN(offset)) return;
-
-            const newGX = bestGX + offset;
-            const name = prompt("追加するX通りの名称を入力してください", `X_${(state.manualGridX || []).length + 1}`);
-            if (!name) return;
-
-            if (!state.manualGridX) state.manualGridX = [];
-            state.manualGridX.push({ coord: newGX, name: name.trim() });
-            if (!state.userEditedGridX) state.userEditedGridX = {};
-            state.userEditedGridX[newGX] = name.trim();
-
-            if (state.deletedGridX) {
-                state.deletedGridX = state.deletedGridX.filter(dx => Math.abs(dx - newGX) > 5);
-            }
-            state.isGridFixed = true;
-        } else if (upAxis === 'Y') {
-            let bestGY = 0;
-            let minDY = Infinity;
-            const _dprGY = window.devicePixelRatio || 1;
-            const _cssHGY = state.canvas.height / _dprGY;
-            if (state.gridYCoords && state.gridYCoords.length > 0) {
-                state.gridYCoords.forEach(gy => {
-                    const cy = window.toCanvasPixel ? window.toCanvasPixel(0, gy).cy : (_cssHGY - (gy * state.scale + state.offsetY));
-                    let d = Math.abs(clickY - cy);
-                    if (d < minDY) { minDY = d; bestGY = gy; }
-                });
-            }
-
-            if (minDY > 100 || minDY === Infinity) {
-                bestGY = snapToModule(window.toWorldCoord ? window.toWorldCoord(clickX, clickY).y : (_cssHGY - clickY - state.offsetY) / state.scale);
-            }
-
-            const offsetStr = prompt(`基準位置 (座標: ${bestGY}) からのオフセット距離を入力してください (mm)\n上方向はプラス、下方向はマイナス`, "910");
-            if (offsetStr === null) return;
-            const offset = normalizeNumber(offsetStr);
-            if (isNaN(offset)) return;
-
-            const newGY = bestGY + offset;
-            const name = prompt("追加するY通りの名称を入力してください", `Y_${(state.manualGridY || []).length + 1}`);
-            if (!name) return;
-
-            if (!state.manualGridY) state.manualGridY = [];
-            state.manualGridY.push({ coord: newGY, name: name.trim() });
-            if (!state.userEditedGridY) state.userEditedGridY = {};
-            state.userEditedGridY[newGY] = name.trim();
-
-            // 削除リストに入っていたら解除
-            if (state.deletedGridY) {
-                state.deletedGridY = state.deletedGridY.filter(dy => Math.abs(dy - newGY) > 5);
-            }
-            state.isGridFixed = true;
+        if (window.ModalController && typeof window.ModalController.showGridAddModal === 'function') {
+            window.ModalController.showGridAddModal({
+                state,
+                clickX,
+                clickY,
+                onConfirm: (axis, base, offset, name) => {
+                    applyAddGrid(axis, base, offset, name);
+                }
+            });
         }
-        if (window.GridEngine) {
-            window.GridEngine.analyzeGrids(state);
-            if (typeof window.GridEngine.syncAllElementNames === 'function') {
-                window.GridEngine.syncAllElementNames(state);
-            }
-        }
-        window.AppController.refreshAll();
     } else if (mode === 'del-grid') {
         // クリック位置に近いグリッドを検索
         const _dprDG = window.devicePixelRatio || 1;
@@ -784,29 +661,62 @@ function handleEditText(e, state) {
     
     if (winnerType === 'X' && bestGX !== null) {
         const oldName = state.gridXNames[bestIX] || '';
-        const newName = prompt(`X通り (${Math.round(bestGX)} mm) の通り芯名を編集してください:`, oldName);
-        if (newName !== null && newName.trim() !== '') {
-            if (window.GridEngine && typeof window.GridEngine.updateGridName === 'function') {
-                window.GridEngine.updateGridName('X', bestIX, newName.trim(), state);
-            } else {
-                state.gridXNames[bestIX] = newName.trim();
+        const onConfirmX = (newName) => {
+            if (newName !== null && newName !== undefined && newName.trim() !== '') {
+                if (window.GridEngine && typeof window.GridEngine.updateGridName === 'function') {
+                    window.GridEngine.updateGridName('X', bestIX, newName.trim(), state);
+                } else {
+                    state.gridXNames[bestIX] = newName.trim();
+                }
+                window.AppController.refreshAll();
             }
+        };
+        if (window.ModalController && typeof window.ModalController.showSimpleInputModal === 'function') {
+            window.ModalController.showSimpleInputModal({
+                title: '通り芯名の編集',
+                message: `X通り (${Math.round(bestGX)} mm) の通り芯名を編集してください:`,
+                defaultValue: oldName,
+                confirmText: '変更を保存',
+                onConfirm: onConfirmX
+            });
         }
     } else if (winnerType === 'Y' && bestGY !== null) {
         const oldName = state.gridYNames[bestIY] || '';
-        const newName = prompt(`Y通り (${Math.round(bestGY)} mm) の通り芯名を編集してください:`, oldName);
-        if (newName !== null && newName.trim() !== '') {
-            if (window.GridEngine && typeof window.GridEngine.updateGridName === 'function') {
-                window.GridEngine.updateGridName('Y', bestIY, newName.trim(), state);
-            } else {
-                state.gridYNames[bestIY] = newName.trim();
+        const onConfirmY = (newName) => {
+            if (newName !== null && newName !== undefined && newName.trim() !== '') {
+                if (window.GridEngine && typeof window.GridEngine.updateGridName === 'function') {
+                    window.GridEngine.updateGridName('Y', bestIY, newName.trim(), state);
+                } else {
+                    state.gridYNames[bestIY] = newName.trim();
+                }
+                window.AppController.refreshAll();
             }
+        };
+        if (window.ModalController && typeof window.ModalController.showSimpleInputModal === 'function') {
+            window.ModalController.showSimpleInputModal({
+                title: '通り芯名の編集',
+                message: `Y通り (${Math.round(bestGY)} mm) の通り芯名を編集してください:`,
+                defaultValue: oldName,
+                confirmText: '変更を保存',
+                onConfirm: onConfirmY
+            });
         }
     } else if (winnerType === 'Diag' && bestDiag) {
         const oldName = bestDiag.name || '';
-        const newName = prompt(`斜め通り芯 (${oldName}) の名称を編集してください:`, oldName);
-        if (newName !== null && newName.trim() !== '') {
-            bestDiag.name = newName.trim();
+        const onConfirmDiag = (newName) => {
+            if (newName !== null && newName !== undefined && newName.trim() !== '') {
+                bestDiag.name = newName.trim();
+                window.AppController.refreshAll();
+            }
+        };
+        if (window.ModalController && typeof window.ModalController.showSimpleInputModal === 'function') {
+            window.ModalController.showSimpleInputModal({
+                title: '斜め通り芯名の編集',
+                message: `斜め通り芯 (${oldName}) の名称を編集してください:`,
+                defaultValue: oldName,
+                confirmText: '変更を保存',
+                onConfirm: onConfirmDiag
+            });
         }
     }
     window.AppController.refreshAll();
