@@ -434,9 +434,27 @@ function handleRoofGridInput(mode, state, clickX, clickY) {
     const roofGrids = window.GridEngine.getRoofGrids(state);
 
     if (mode === 'add-grid') {
+        const normalizeAxis = (val) => {
+            if (!val) return '';
+            const s = val.replace(/[Ａ-Ｚａ-ｚ]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0)).toUpperCase().trim();
+            if (s === '1' || s.startsWith('X') || s.includes('間口') || s.includes('エックス') || s.includes('横')) return 'X';
+            if (s === '2' || s.startsWith('Y') || s.includes('奥行') || s.includes('ワイ') || s.includes('縦')) return 'Y';
+            return s;
+        };
+        const normalizeNumber = (val) => {
+            if (val === null || val === undefined) return NaN;
+            const s = String(val)
+                .replace(/[０-９]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0))
+                .replace(/[ー－―]/g, '-')
+                .replace(/，/g, ',')
+                .replace(/．/g, '.')
+                .trim();
+            return parseFloat(s);
+        };
+
         const axis = prompt("追加する屋根通り芯の方向を入力してください (X または Y)", "X");
         if (!axis) return;
-        const upAxis = axis.toUpperCase().trim();
+        const upAxis = normalizeAxis(axis);
         if (upAxis !== 'X' && upAxis !== 'Y') return;
 
         if (upAxis === 'X') {
@@ -454,13 +472,14 @@ function handleRoofGridInput(mode, state, clickX, clickY) {
 
             const offsetStr = prompt(`屋根基準位置 (座標: ${bestGX}) からのオフセット距離を入力してください (mm)\n右方向はプラス、左方向はマイナス`, "910");
             if (offsetStr === null) return;
-            const offset = parseFloat(offsetStr);
+            const offset = normalizeNumber(offsetStr);
             if (isNaN(offset)) return;
 
             const typeStr = prompt("追加する屋根用グリッドのタイプを入力してください\n1: 軒の出\n2: ケラバの出\n3: その他", "1");
             let type = 'other';
-            if (typeStr === '1') type = 'eaves';
-            else if (typeStr === '2') type = 'keraba';
+            const cleanTypeStr = (typeStr || '').replace(/[０-９]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0)).trim();
+            if (cleanTypeStr === '1' || cleanTypeStr.includes('軒')) type = 'eaves';
+            else if (cleanTypeStr === '2' || cleanTypeStr.includes('ケラバ')) type = 'keraba';
 
             const newGX = bestGX + offset;
             const countX = (state.roofGridManualX || []).length + 1;
@@ -490,13 +509,14 @@ function handleRoofGridInput(mode, state, clickX, clickY) {
 
             const offsetStr = prompt(`屋根基準位置 (座標: ${bestGY}) からのオフセット距離を入力してください (mm)\n上方向はプラス、下方向はマイナス`, "910");
             if (offsetStr === null) return;
-            const offset = parseFloat(offsetStr);
+            const offset = normalizeNumber(offsetStr);
             if (isNaN(offset)) return;
 
             const typeStr = prompt("追加する屋根用グリッドのタイプを入力してください\n1: 軒の出\n2: ケラバの出\n3: その他", "1");
             let type = 'other';
-            if (typeStr === '1') type = 'eaves';
-            else if (typeStr === '2') type = 'keraba';
+            const cleanTypeStr = (typeStr || '').replace(/[０-９]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0)).trim();
+            if (cleanTypeStr === '1' || cleanTypeStr.includes('軒')) type = 'eaves';
+            else if (cleanTypeStr === '2' || cleanTypeStr.includes('ケラバ')) type = 'keraba';
 
             const newGY = bestGY + offset;
             const countY = (state.roofGridManualY || []).length + 1;
@@ -548,10 +568,27 @@ function handleGridInput(mode, state, clickX, clickY) {
             if (Math.abs(val - nearest) < 5) return nearest;
             return Math.round(val);
         };
+        const normalizeAxis = (val) => {
+            if (!val) return '';
+            const s = val.replace(/[Ａ-Ｚａ-ｚ]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0)).toUpperCase().trim();
+            if (s === '1' || s.startsWith('X') || s.includes('間口') || s.includes('エックス') || s.includes('横')) return 'X';
+            if (s === '2' || s.startsWith('Y') || s.includes('奥行') || s.includes('ワイ') || s.includes('縦')) return 'Y';
+            return s;
+        };
+        const normalizeNumber = (val) => {
+            if (val === null || val === undefined) return NaN;
+            const s = String(val)
+                .replace(/[０-９]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0))
+                .replace(/[ー－―]/g, '-')
+                .replace(/，/g, ',')
+                .replace(/．/g, '.')
+                .trim();
+            return parseFloat(s);
+        };
 
         const axis = prompt("追加する通り芯の方向を入力してください (X または Y)", "X");
         if (!axis) return;
-        const upAxis = axis.toUpperCase().trim();
+        const upAxis = normalizeAxis(axis);
         if (upAxis !== 'X' && upAxis !== 'Y') return;
 
         if (upAxis === 'X') {
@@ -559,19 +596,20 @@ function handleGridInput(mode, state, clickX, clickY) {
             let minDX = Infinity;
             if (state.gridXCoords && state.gridXCoords.length > 0) {
                 state.gridXCoords.forEach(gx => {
-                    let d = Math.abs(clickX - (gx * state.scale + state.offsetX));
+                    const cx = window.toCanvasPixel ? window.toCanvasPixel(gx, 0).cx : (gx * state.scale + state.offsetX);
+                    let d = Math.abs(clickX - cx);
                     if (d < minDX) { minDX = d; bestGX = gx; }
                 });
             }
 
             // もし既存通り芯が遠すぎる（または無い）場合は、クリック地点を基準にする
             if (minDX > 100 || minDX === Infinity) {
-                bestGX = snapToModule((clickX - state.offsetX) / state.scale);
+                bestGX = snapToModule(window.toWorldCoord ? window.toWorldCoord(clickX, clickY).x : (clickX - state.offsetX) / state.scale);
             }
 
             const offsetStr = prompt(`基準位置 (座標: ${bestGX}) からのオフセット距離を入力してください (mm)\n右方向はプラス、左方向はマイナス`, "910");
             if (offsetStr === null) return;
-            const offset = parseFloat(offsetStr);
+            const offset = normalizeNumber(offsetStr);
             if (isNaN(offset)) return;
 
             const newGX = bestGX + offset;
@@ -586,6 +624,7 @@ function handleGridInput(mode, state, clickX, clickY) {
             if (state.deletedGridX) {
                 state.deletedGridX = state.deletedGridX.filter(dx => Math.abs(dx - newGX) > 5);
             }
+            state.isGridFixed = true;
         } else if (upAxis === 'Y') {
             let bestGY = 0;
             let minDY = Infinity;
@@ -593,18 +632,19 @@ function handleGridInput(mode, state, clickX, clickY) {
             const _cssHGY = state.canvas.height / _dprGY;
             if (state.gridYCoords && state.gridYCoords.length > 0) {
                 state.gridYCoords.forEach(gy => {
-                    let d = Math.abs(clickY - (_cssHGY - (gy * state.scale + state.offsetY)));
+                    const cy = window.toCanvasPixel ? window.toCanvasPixel(0, gy).cy : (_cssHGY - (gy * state.scale + state.offsetY));
+                    let d = Math.abs(clickY - cy);
                     if (d < minDY) { minDY = d; bestGY = gy; }
                 });
             }
 
             if (minDY > 100 || minDY === Infinity) {
-                bestGY = snapToModule((_cssHGY - clickY - state.offsetY) / state.scale);
+                bestGY = snapToModule(window.toWorldCoord ? window.toWorldCoord(clickX, clickY).y : (_cssHGY - clickY - state.offsetY) / state.scale);
             }
 
             const offsetStr = prompt(`基準位置 (座標: ${bestGY}) からのオフセット距離を入力してください (mm)\n上方向はプラス、下方向はマイナス`, "910");
             if (offsetStr === null) return;
-            const offset = parseFloat(offsetStr);
+            const offset = normalizeNumber(offsetStr);
             if (isNaN(offset)) return;
 
             const newGY = bestGY + offset;
@@ -631,18 +671,20 @@ function handleGridInput(mode, state, clickX, clickY) {
         window.AppController.refreshAll();
     } else if (mode === 'del-grid') {
         // クリック位置に近いグリッドを検索
-        const toC = (x, y) => ({ cx: x * state.scale + state.offsetX, cy: state.canvas.height - (y * state.scale + state.offsetY) });
+        const _dprDG = window.devicePixelRatio || 1;
+        const _cssHDG = state.canvas.height / _dprDG;
+        const toC = (x, y) => window.toCanvasPixel ? window.toCanvasPixel(x, y) : { cx: x * state.scale + state.offsetX, cy: _cssHDG - (y * state.scale + state.offsetY) };
         let bestIX = -1, bestIY = -1, minD = 20;
         let targetVal = null, targetAxis = null;
         let targetDiag = null;
 
         // X/Y検索
-        state.gridXCoords.forEach((gx, i) => { 
-            let d = Math.abs(clickX - (gx * state.scale + state.offsetX)); 
+        (state.gridXCoords || []).forEach((gx, i) => { 
+            let d = Math.abs(clickX - toC(gx, 0).cx); 
             if(d < minD){ minD=d; bestIX=i; targetVal=gx; targetAxis='X'; } 
         });
-        state.gridYCoords.forEach((gy, i) => { 
-            let d = Math.abs(clickY - (state.canvas.height - (gy * state.scale + state.offsetY))); 
+        (state.gridYCoords || []).forEach((gy, i) => { 
+            let d = Math.abs(clickY - toC(0, gy).cy); 
             if(d < minD){ minD=d; bestIY=i; targetVal=gy; targetAxis='Y'; } 
         });
 
@@ -682,6 +724,7 @@ function handleGridInput(mode, state, clickX, clickY) {
                     state.deletedGridY.push(targetVal);
                     state.manualGridY = (state.manualGridY || []).filter(m => Math.abs(m.coord - targetVal) > 5);
                 }
+                state.isGridFixed = true;
 
             // 2. 柱の論理削除
             const pillarIdsToRemove = new Set();

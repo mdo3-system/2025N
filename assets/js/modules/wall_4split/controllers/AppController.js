@@ -155,6 +155,8 @@ window.AppController = {
             gridYCoords: [...(state.gridYCoords || [])],
             gridXNames: [...(state.gridXNames || [])],
             gridYNames: [...(state.gridYNames || [])],
+            userEditedGridX: JSON.parse(JSON.stringify(state.userEditedGridX || {})),
+            userEditedGridY: JSON.parse(JSON.stringify(state.userEditedGridY || {})),
             isGridFixed: !!state.isGridFixed,
             foundationBeams: JSON.parse(JSON.stringify(state.foundationBeams || [])),
             foundationSlabs: JSON.parse(JSON.stringify(state.foundationSlabs || [])),
@@ -206,6 +208,8 @@ window.AppController = {
         state.gridYCoords = [...(data.gridYCoords || [])];
         state.gridXNames = [...(data.gridXNames || [])];
         state.gridYNames = [...(data.gridYNames || [])];
+        state.userEditedGridX = JSON.parse(JSON.stringify(data.userEditedGridX || {}));
+        state.userEditedGridY = JSON.parse(JSON.stringify(data.userEditedGridY || {}));
         state.isGridFixed = !!data.isGridFixed;
         state.manualGridX = JSON.parse(JSON.stringify(data.manualGridX || []));
         state.manualGridY = JSON.parse(JSON.stringify(data.manualGridY || []));
