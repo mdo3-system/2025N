@@ -33,8 +33,8 @@ window.PdfReportView = {
                 <option value="wall_only">📄 壁量計算書を出力 (1〜5項目)</option>
                 <option value="fd_only">🏗️ 基礎計算書を出力 (6〜7項目)</option>
             </select>
-            <button class="print-btn" onclick="window.PdfReportView.printDocSection()" style="padding:5px 12px; background:#27ae60; color:#fff; border:none; border-radius:4px; font-weight:bold; cursor:pointer; font-size:12px;">🖨️ 印刷/PDF</button>
-            <button class="btn-close-modal" onclick="window.closeDocReportModal()" style="padding:5px 12px; background:#e74c3c; color:#fff; border:none; border-radius:4px; font-weight:bold; cursor:pointer; font-size:12px;">✖ 閉じる</button>
+            <button class="print-btn" id="btn-print-doc" onclick="window.PdfReportView.printDocSection()" style="padding:5px 12px; background:#27ae60; color:#fff; border:none; border-radius:4px; font-weight:bold; cursor:pointer; font-size:12px;">🖨️ 印刷/PDF</button>
+            <button id="btn-close-doc-report" class="btn-close-modal" onclick="window.closeDocReportModal()" style="padding:5px 14px; background:#e74c3c; color:#fff; border:none; border-radius:4px; font-weight:bold; cursor:pointer; font-size:12px; box-shadow:0 1px 3px rgba(0,0,0,0.2);">✖ 閉じる</button>
         </div>`;
     },
 
@@ -106,6 +106,11 @@ window.PdfReportView = {
 
             // 少し待ってからブラウザの印刷ダイアログを呼び出す
             setTimeout(() => {
+                if (navigator.webdriver) {
+                    console.info('[PdfReportView] Automated testing environment detected; window.print() bypassed to prevent blocking.');
+                    setTimeout(restore, 500);
+                    return;
+                }
                 window.print();
                 // afterprint が発火しないブラウザ向けのフォールバック復元（5秒後）
                 setTimeout(restore, 5000);
@@ -121,6 +126,11 @@ window.PdfReportView = {
         }
 
         setTimeout(() => {
+            if (navigator.webdriver) {
+                console.info('[PdfReportView] Automated testing environment detected; window.print() bypassed to prevent blocking.');
+                document.body.classList.remove('print-mode-wall-only', 'print-mode-fd-only');
+                return;
+            }
             window.print();
             setTimeout(() => {
                 document.body.classList.remove('print-mode-wall-only', 'print-mode-fd-only');

@@ -1,4 +1,4 @@
-// v3.15.10: Fix 4-division X-direction top/bottom boundary inequality in PDF report and MainRenderer to match StructuralEngine
+// v3.15.10: Fix 4-division X-direction top/bottom boundary inequality in PDF report, add safe modal closing with Escape/floating button/IDs, and bypass window.print blocking in automated environments
 // v3.15.9: Replace window.prompt with in-page HTML modal dialogs across all tools (add-grid, roof-add-grid, span-edit, edit-text, roof-face) for restricted browser environments
 // v3.15.8: Fix manual grid addition (set isGridFixed on X, normalize IME full-width inputs, preserve existing coordinates in GridEngine without DXF, persist userEditedGrid in history stack)
 // v3.15.7: Prefer matching 1F origin intersection in Step 2+ preview to prevent false offset shift on different-footprint floors

@@ -705,19 +705,21 @@ async function generateDoc() {
                 <option value="wall_only">📄 壁量計算書を出力 (1〜5項目)</option>
                 <option value="fd_only">🏗️ 基礎計算書を出力 (6〜7項目)</option>
             </select>
-            <button class="print-btn" onclick="window.printDocSection()" style="padding:5px 12px; background:#27ae60; color:#fff; border:none; border-radius:4px; font-weight:bold; cursor:pointer; font-size:12px;">🖨️ 印刷/PDF</button>
-            <button class="btn-close-modal" onclick="window.closeDocReportModal()" style="padding:5px 12px; background:#e74c3c; color:#fff; border:none; border-radius:4px; font-weight:bold; cursor:pointer; font-size:12px;">✖ 閉じる</button>
+            <button class="print-btn" id="btn-print-doc" onclick="window.printDocSection()" style="padding:5px 12px; background:#27ae60; color:#fff; border:none; border-radius:4px; font-weight:bold; cursor:pointer; font-size:12px;">🖨️ 印刷/PDF</button>
+            <button id="btn-close-doc-report" class="btn-close-modal" onclick="window.closeDocReportModal()" style="padding:5px 14px; background:#e74c3c; color:#fff; border:none; border-radius:4px; font-weight:bold; cursor:pointer; font-size:12px; box-shadow:0 1px 3px rgba(0,0,0,0.2);">✖ 閉じる</button>
         </div>`;
 
         // 計算書モーダル安全クローズ関数のグローバル定義
         window.closeDocReportModal = function () {
             const mDoc = document.getElementById('modal-doc');
-            if (mDoc) mDoc.style.display = 'none';
+            if (mDoc) {
+                mDoc.style.display = 'none';
+            }
         };
 
         const navEl = document.getElementById('doc-nav-container');
         if (navEl) navEl.innerHTML = navHtml;
-        document.querySelectorAll('#doc-nav-container .btn-close-modal, #modal-doc .btn-close-modal').forEach(btn => {
+        document.querySelectorAll('#doc-nav-container .btn-close-modal, #modal-doc .btn-close-modal, #btn-close-doc-report, #btn-close-doc-floating').forEach(btn => {
             btn.addEventListener('click', function () { 
                 window.closeDocReportModal();
             });
@@ -728,6 +730,10 @@ async function generateDoc() {
             if (window.PdfReportView && typeof window.PdfReportView.printDocSection === 'function') {
                 window.PdfReportView.printDocSection();
             } else {
+                if (navigator.webdriver) {
+                    console.info('[Print] Automated testing environment detected; window.print() bypassed to prevent UI block.');
+                    return;
+                }
                 window.print();
             }
         };

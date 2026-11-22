@@ -108,23 +108,56 @@ window.InputController = {
 
         // モーダル共通クローズ処理（静的・動的要素を問わず Event Delegation で確実に動作）
         document.addEventListener('click', function (e) {
-            const btn = e.target.closest('.btn-close-modal');
+            const btn = e.target.closest('.btn-close-modal, #btn-close-doc-report, #btn-close-doc-floating');
             if (btn) {
                 const overlay = btn.closest('.modal-overlay');
                 if (overlay) overlay.style.display = 'none';
                 const mDoc = document.getElementById('modal-doc');
-                if (mDoc && (btn.closest('#modal-doc') || btn.closest('#doc-nav-container'))) {
-                    mDoc.style.display = 'none';
+                if (mDoc && (btn.closest('#modal-doc') || btn.closest('#doc-nav-container') || btn.id === 'btn-close-doc-report' || btn.id === 'btn-close-doc-floating')) {
+                    if (typeof window.closeDocReportModal === 'function') {
+                        window.closeDocReportModal();
+                    } else {
+                        mDoc.style.display = 'none';
+                    }
+                }
+            }
+            // モーダル背景（暗いオーバーレイ）直接クリックで閉じる
+            if (e.target && e.target.classList && e.target.classList.contains('modal-overlay')) {
+                e.target.style.display = 'none';
+                if (e.target.id === 'modal-doc' && typeof window.closeDocReportModal === 'function') {
+                    window.closeDocReportModal();
                 }
             }
         });
 
-        // Escapeキー押下時に開いているモーダル（特に一括計算書モーダル）を閉じる
+        // Escapeキー押下時に開いているすべてのモーダル・プレビューを確実に閉じる
         window.addEventListener('keydown', function (e) {
             if (e.key === 'Escape') {
+                // 1. カスタムインラインモーダル (ModalController)
+                const customModal = document.getElementById('app-custom-modal-overlay');
+                if (customModal) {
+                    customModal.remove();
+                    return;
+                }
+                // 2. 一括計算書モーダル
                 const mDoc = document.getElementById('modal-doc');
                 if (mDoc && mDoc.style.display !== 'none') {
-                    mDoc.style.display = 'none';
+                    if (typeof window.closeDocReportModal === 'function') {
+                        window.closeDocReportModal();
+                    } else {
+                        mDoc.style.display = 'none';
+                    }
+                }
+                // 3. その他すべての開いているモーダルオーバーレイ
+                document.querySelectorAll('.modal-overlay').forEach(modal => {
+                    if (modal.style.display && modal.style.display !== 'none') {
+                        modal.style.display = 'none';
+                    }
+                });
+                // 4. 3Dプレビューウィンドウ
+                const threeContainer = document.getElementById('three-container');
+                if (threeContainer && threeContainer.style.display !== 'none') {
+                    threeContainer.style.display = 'none';
                 }
             }
         });
