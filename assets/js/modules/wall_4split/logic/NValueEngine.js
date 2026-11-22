@@ -80,7 +80,7 @@ window.NValueEngine = {
 
             s.walls.filter(w => w.floor === targetFloor && (w.p1.id === targetPillarId || w.p2.id === targetPillarId))
                 .forEach(w => {
-                    const tv = window.getWallTotalVal(w);
+                    const tv = (typeof window.getWallTotalVal === 'function') ? window.getWallTotalVal(w) : (window.WallEngine ? window.WallEngine.getTotalMultiplier(w, s) : 0);
                     if (tv === 0) return;
                     const op = (w.p1.id === targetPillarId) ? w.p2 : w.p1;
                     const dx = Math.abs(op.x - refP.x), dy = Math.abs(op.y - refP.y);
@@ -175,6 +175,11 @@ window.NValueEngine = {
                         p.cStrX = fmt(aR, b, k_p, L, upX);
                         p.cStrY = fmt(aT, b, k_p, L, upY);
 
+                        const nx = (aR * b * k_p) + (upper.Ax * b2 * k2) - L;
+                        const ny = (aT * b * k_p) + (upper.Ay * b2 * k2) - L;
+                        p.nCalcX = Math.max(0, nx);
+                        p.nCalcY = Math.max(0, ny);
+
                         if (typeof window !== 'undefined' && window.WasmBridge && window.WasmBridge.calculatePillarN) {
                             const res = window.WasmBridge.calculatePillarN({
                                 aX: aR, aY: aT, b: b, k: k_p, L: L,
@@ -183,11 +188,16 @@ window.NValueEngine = {
                             });
                             p.nValue = res.nValue;
                         } else {
-                            p.nValue = Math.max(0, (aR * b * k_p) + (upper.Ax * b2 * k2) - L, (aT * b * k_p) + (upper.Ay * b2 * k2) - L);
+                            p.nValue = Math.max(0, nx, ny);
                         }
                     } else {
                         p.cStrX = fmt(aR, b, k_p, L);
                         p.cStrY = fmt(aT, b, k_p, L);
+
+                        const nx = aR * b * k_p - L;
+                        const ny = aT * b * k_p - L;
+                        p.nCalcX = Math.max(0, nx);
+                        p.nCalcY = Math.max(0, ny);
 
                         if (typeof window !== 'undefined' && window.WasmBridge && window.WasmBridge.calculatePillarN) {
                             const res = window.WasmBridge.calculatePillarN({
@@ -196,7 +206,7 @@ window.NValueEngine = {
                             });
                             p.nValue = res.nValue;
                         } else {
-                            p.nValue = Math.max(0, aR * b * k_p - L, aT * b * k_p - L);
+                            p.nValue = Math.max(0, nx, ny);
                         }
                     }
                 } else {
@@ -206,6 +216,11 @@ window.NValueEngine = {
                     p.cStrX = `(Σα: ${p.Ax.toFixed(2)} × B: ${b.toFixed(1)} × K: ${k_p.toFixed(2)})<br> － (押さえL: ${L.toFixed(2)})`;
                     p.cStrY = `(Σα: ${p.Ay.toFixed(2)} × B: ${b.toFixed(1)} × K: ${k_p.toFixed(2)})<br> － (押さえL: ${L.toFixed(2)})`;
 
+                    const nx = p.Ax * b * k_p - L;
+                    const ny = p.Ay * b * k_p - L;
+                    p.nCalcX = Math.max(0, nx);
+                    p.nCalcY = Math.max(0, ny);
+
                     if (typeof window !== 'undefined' && window.WasmBridge && window.WasmBridge.calculatePillarN) {
                         const res = window.WasmBridge.calculatePillarN({
                             aX: p.Ax, aY: p.Ay, b: b, k: k_p, L: L,
@@ -213,7 +228,7 @@ window.NValueEngine = {
                         });
                         p.nValue = res.nValue;
                     } else {
-                        p.nValue = Math.max(0, p.Ax * b * k_p - L, p.Ay * b * k_p - L);
+                        p.nValue = Math.max(0, nx, ny);
                     }
                 }
                 

@@ -31,6 +31,7 @@ global.document = {
 
 // logic ファイル群の読み込み
 const filesToLoad = [
+    '../wall_4split_bridge.js',
     '../logic/ServiceContainer.js',
     '../logic/GridEngine.js',
     '../logic/Parsers.js',

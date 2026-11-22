@@ -1175,10 +1175,36 @@ async function generateDoc() {
                 let isDiag = (degX > 0.1 && degX < 89.9) ? ' [✔斜]' : '';
                 let kx = Math.floor(L * effX * 100) / 100, ky = Math.floor(L * effY * 100) / 100;
 
-                if (effX > 0 && b && cy >= b.yLineT - 0.5) { xt.push(`<tr><td>${w.p1.gy} ${w.p1.gx}-${w.p2.gx}${isDiag}</td><td>${L.toFixed(3)}</td><td>${kx.toFixed(2)}</td></tr>`); txt += kx; }
-                if (effX > 0 && b && cy <= b.yLineB + 0.5) { xb.push(`<tr><td>${w.p1.gy} ${w.p1.gx}-${w.p2.gx}${isDiag}</td><td>${L.toFixed(3)}</td><td>${kx.toFixed(2)}</td></tr>`); txb += kx; }
-                if (effY > 0 && b && cx <= b.xLineL + 0.5) { ylf.push(`<tr><td>${w.p1.gx} ${w.p1.gy}-${w.p2.gy}${isDiag}</td><td>${L.toFixed(3)}</td><td>${ky.toFixed(2)}</td></tr>`); tyl += ky; }
-                if (effY > 0 && b && cx >= b.xLineR - 0.5) { yrg.push(`<tr><td>${w.p1.gx} ${w.p1.gy}-${w.p2.gy}${isDiag}</td><td>${L.toFixed(3)}</td><td>${ky.toFixed(2)}</td></tr>`); tyr += ky; }
+                const ratios = (window.WallEngine && b) ? window.WallEngine.getWall4DivisionRatios(w, b) : null;
+                const rTop = ratios ? ratios.rTop : (b && cy >= b.yLineT - 0.5 ? 1 : 0);
+                const rBot = ratios ? ratios.rBot : (b && cy <= b.yLineB + 0.5 ? 1 : 0);
+                const rLeft = ratios ? ratios.rLeft : (b && cx <= b.xLineL + 0.5 ? 1 : 0);
+                const rRight = ratios ? ratios.rRight : (b && cx >= b.xLineR - 0.5 ? 1 : 0);
+
+                if (effX > 0 && rTop > 0) {
+                    let kx_t = Math.floor(kx * rTop * 100) / 100;
+                    let label = `${w.p1.gy} ${w.p1.gx}-${w.p2.gx}${isDiag}${rTop < 0.999 ? ` (${(rTop * 100).toFixed(0)}%)` : ''}`;
+                    xt.push(`<tr><td>${label}</td><td>${(L * rTop).toFixed(3)}</td><td>${kx_t.toFixed(2)}</td></tr>`);
+                    txt += kx_t;
+                }
+                if (effX > 0 && rBot > 0) {
+                    let kx_b = Math.floor(kx * rBot * 100) / 100;
+                    let label = `${w.p1.gy} ${w.p1.gx}-${w.p2.gx}${isDiag}${rBot < 0.999 ? ` (${(rBot * 100).toFixed(0)}%)` : ''}`;
+                    xb.push(`<tr><td>${label}</td><td>${(L * rBot).toFixed(3)}</td><td>${kx_b.toFixed(2)}</td></tr>`);
+                    txb += kx_b;
+                }
+                if (effY > 0 && rLeft > 0) {
+                    let ky_l = Math.floor(ky * rLeft * 100) / 100;
+                    let label = `${w.p1.gx} ${w.p1.gy}-${w.p2.gy}${isDiag}${rLeft < 0.999 ? ` (${(rLeft * 100).toFixed(0)}%)` : ''}`;
+                    ylf.push(`<tr><td>${label}</td><td>${(L * rLeft).toFixed(3)}</td><td>${ky_l.toFixed(2)}</td></tr>`);
+                    tyl += ky_l;
+                }
+                if (effY > 0 && rRight > 0) {
+                    let ky_r = Math.floor(ky * rRight * 100) / 100;
+                    let label = `${w.p1.gx} ${w.p1.gy}-${w.p2.gy}${isDiag}${rRight < 0.999 ? ` (${(rRight * 100).toFixed(0)}%)` : ''}`;
+                    yrg.push(`<tr><td>${label}</td><td>${(L * rRight).toFixed(3)}</td><td>${ky_r.toFixed(2)}</td></tr>`);
+                    tyr += ky_r;
+                }
             });
 
             h += `<div style="page-break-inside: avoid; break-inside: avoid;">`;

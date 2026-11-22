@@ -108,5 +108,73 @@
             expect(state.pillars[1].gx).toBe('X1(2)');
         });
 
+        it("should calculate correct diagonal wall effective lengths using cos^2 / sin^2 (v3.15.11)", () => {
+            const diagWall = {
+                p1: { x: 0, y: 0 },
+                p2: { x: 1444, y: 1820 },
+                floor: '1F',
+                totalVal: 2.5
+            };
+            const res = window.WallEngine.calcWallEffectiveLengths(diagWall);
+            expect(Math.abs(res.len - 2.324) < 0.01).toBe(true);
+            expect(Math.abs(res.kx - 2.24) < 0.02).toBe(true);
+            expect(Math.abs(res.ky - 3.56) < 0.02).toBe(true);
+        });
+
+        it("should accurately distribute diagonal wall to 4-division boundary zones by overlap ratio (v3.15.11)", () => {
+            const bounds = {
+                yLineT: 6000,
+                yLineB: 2000,
+                xLineL: 2000,
+                xLineR: 6000
+            };
+            // Diagonal wall from (1000, 1000) to (2444, 2820)
+            // dx = 1444, dy = 1820.
+            // X spans [1000, 2444]. Left boundary xLineL = 2000 -> overlap [1000, 2000] = 1000 -> rLeft = 1000/1444 ≈ 0.6925
+            // Y spans [1000, 2820]. Bottom boundary yLineB = 2000 -> overlap [1000, 2000] = 1000 -> rBot = 1000/1820 ≈ 0.5494
+            const diagWall = {
+                p1: { x: 1000, y: 1000 },
+                p2: { x: 2444, y: 2820 },
+                floor: '1F',
+                totalVal: 2.5
+            };
+            const ratios = window.WallEngine.getWall4DivisionRatios(diagWall, bounds);
+            expect(Math.abs(ratios.rLeft - (1000 / 1444)) < 0.01).toBe(true);
+            expect(Math.abs(ratios.rBot - (1000 / 1820)) < 0.01).toBe(true);
+            expect(ratios.rTop).toBe(0);
+            expect(ratios.rRight).toBe(0);
+        });
+
+        it("should populate p.nCalcX and p.nCalcY in NValueEngine (v3.15.11)", () => {
+            const state = {
+                config: {
+                    weights: { roof: 500, solar: 0, ceilingIns: 100 },
+                    floorHeight1F: 2.7,
+                    floorHeight2F: 2.7,
+                    nValueMode: 'standard'
+                },
+                pillars: [
+                    { id: 'p1', x: 0, y: 0, floor: '2F', isCornerAuto: true, isC: true },
+                    { id: 'p2', x: 1820, y: 0, floor: '2F' },
+                    { id: 'p3', x: 0, y: 1820, floor: '2F' }
+                ],
+                walls: [
+                    { p1: { id: 'p1', x: 0, y: 0 }, p2: { id: 'p2', x: 1820, y: 0 }, floor: '2F', totalVal: 2.5 },
+                    { p1: { id: 'p1', x: 0, y: 0 }, p2: { id: 'p3', x: 0, y: 1820 }, floor: '2F', totalVal: 1.5 }
+                ],
+                gridXCoords: [0, 1820],
+                gridYCoords: [0, 1820],
+                gridXNames: ['X1', 'X2'],
+                gridYNames: ['Y1', 'Y2']
+            };
+            window.NValueEngine.calculateNValues(state);
+            const p = state.pillars[0];
+            expect(Math.abs(p.nCalcX - 1.60) < 0.01).toBe(true);
+            expect(Math.abs(p.nCalcY - 0.80) < 0.01).toBe(true);
+            expect(Math.abs(p.nValue - 1.60) < 0.01).toBe(true);
+            expect(Math.abs(p.nCalcY - 0.80) < 0.01).toBe(true);
+            expect(Math.abs(p.nValue - 1.60) < 0.01).toBe(true);
+        });
+
     });
 })();

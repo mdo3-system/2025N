@@ -126,15 +126,12 @@ window.ReportEngine = {
             let kxt = 0, kyt = 0, sx = 0, sy = 0;
 
             walls.filter(w => w.floor === f).forEach(w => {
-                const dx = Math.abs(w.p2.x - w.p1.x) / 1000;
-                const dy = Math.abs(w.p2.y - w.p1.y) / 1000;
-                const tv = window.WallEngine ? window.WallEngine.getTotalMultiplier(w) : 0;
+                const res = window.WallEngine ? window.WallEngine.calcWallEffectiveLengths(w, s) : null;
+                const kx = res ? res.kx : 0;
+                const ky = res ? res.ky : 0;
 
                 const cx = (w.p1.x + w.p2.x) / 2;
                 const cy = (w.p1.y + w.p2.y) / 2;
-
-                const kx = dx * tv;
-                const ky = dy * tv;
 
                 kxt += kx; sy += kx * cy; kyt += ky; sx += ky * cx;
             });

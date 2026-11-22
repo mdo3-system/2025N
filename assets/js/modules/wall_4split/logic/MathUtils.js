@@ -585,7 +585,7 @@ window.getWallTotalVal = function(w) {
     const p1 = window.getWallSpec(w.outPanelId).val || w.outPanelVal || 0;
     const p2 = window.getWallSpec(w.inPanelId).val || w.inPanelVal || 0;
     const b = window.getBraceSpec(w.braceId).val || w.braceVal || 0;
-    return p1 + p2 + b;
+    return (p1 + p2 + b) || (w.totalVal || 0);
 };
 
 window.getWallSpec = function(id) {

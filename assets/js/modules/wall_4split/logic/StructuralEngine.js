@@ -415,18 +415,25 @@ window.StructuralEngine = {
             let vxt = 0, vxb = 0, vyl = 0, vyr = 0;
 
             walls.forEach(w => {
-                const res = window.WallEngine ? window.WallEngine.calcWallEffectiveLengths(w) : { kx: 0, ky: 0 };
+                const res = window.WallEngine ? window.WallEngine.calcWallEffectiveLengths(w, s) : { kx: 0, ky: 0 };
                 const kx = res.kx;
                 const ky = res.ky;
 
-                const cx = (w.p1.x + w.p2.x) / 2;
-                const cy = (w.p1.y + w.p2.y) / 2;
-
                 if (b) {
-                    if (cy >= b.yLineT - 0.5) vxt += kx;
-                    if (cy <= b.yLineB + 0.5) vxb += kx;
-                    if (cx <= b.xLineL + 0.5) vyl += ky;
-                    if (cx >= b.xLineR - 0.5) vyr += ky;
+                    const ratios = window.WallEngine ? window.WallEngine.getWall4DivisionRatios(w, b) : null;
+                    if (ratios) {
+                        vxt += kx * ratios.rTop;
+                        vxb += kx * ratios.rBot;
+                        vyl += ky * ratios.rLeft;
+                        vyr += ky * ratios.rRight;
+                    } else {
+                        const cx = (w.p1.x + w.p2.x) / 2;
+                        const cy = (w.p1.y + w.p2.y) / 2;
+                        if (cy >= b.yLineT - 0.5) vxt += kx;
+                        if (cy <= b.yLineB + 0.5) vxb += kx;
+                        if (cx <= b.xLineL + 0.5) vyl += ky;
+                        if (cx >= b.xLineR - 0.5) vyr += ky;
+                    }
                 }
             });
 

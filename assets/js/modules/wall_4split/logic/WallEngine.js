@@ -76,7 +76,7 @@ window.WallEngine = {
 
         // Fallback for legacy data (numerical values stored directly on the object)
         if (total === 0) {
-            total = (wall.outPanelVal || 0) + (wall.inPanelVal || 0) + (wall.braceVal || 0);
+            total = (wall.outPanelVal || 0) + (wall.inPanelVal || 0) + (wall.braceVal || 0) || (wall.totalVal || 0);
         }
 
         // 柱高さに基づく 3.2m 超低減の適用
@@ -105,6 +105,61 @@ window.WallEngine = {
         const ky = lenM * tv * sin2; // Y方向許容せん断耐力・有効壁長 (m)
 
         return { kx, ky, len: lenM, tv, cos2, sin2, heightInfo };
+    },
+
+    /**
+     * 壁が4分割法の各側端領域 (上/下/左/右) に重なる長さの比率 [0, 1] を算出
+     * （直交壁は従来の中点判定と完全互換、斜め壁は側端境界線との幾何交差による厳密按分）
+     * @param {Object} w - 壁オブジェクト (p1, p2)
+     * @param {Object} b - 4分割法境界 (yLineT, yLineB, xLineL, xLineR)
+     * @returns {Object} { rTop, rBot, rLeft, rRight }
+     */
+    getWall4DivisionRatios: function(w, b) {
+        if (!w || !w.p1 || !w.p2 || !b) return { rTop: 0, rBot: 0, rLeft: 0, rRight: 0 };
+
+        const yMin = Math.min(w.p1.y, w.p2.y);
+        const yMax = Math.max(w.p1.y, w.p2.y);
+        const dy = yMax - yMin;
+
+        const xMin = Math.min(w.p1.x, w.p2.x);
+        const xMax = Math.max(w.p1.x, w.p2.x);
+        const dx = xMax - xMin;
+
+        // Y方向（上端 / 下端）の比率
+        let rTop = 0;
+        let rBot = 0;
+        if (dy < 5) {
+            // 水平直交壁
+            const cy = (w.p1.y + w.p2.y) / 2;
+            if (cy >= b.yLineT - 0.5) rTop = 1.0;
+            if (cy <= b.yLineB + 0.5) rBot = 1.0;
+        } else {
+            // 鉛直直交壁または斜め壁
+            const overlapTop = Math.max(0, yMax - Math.max(yMin, b.yLineT - 0.5));
+            rTop = Math.min(1.0, Math.max(0, overlapTop / dy));
+
+            const overlapBot = Math.max(0, Math.min(yMax, b.yLineB + 0.5) - yMin);
+            rBot = Math.min(1.0, Math.max(0, overlapBot / dy));
+        }
+
+        // X方向（左端 / 右端）の比率
+        let rLeft = 0;
+        let rRight = 0;
+        if (dx < 5) {
+            // 鉛直直交壁
+            const cx = (w.p1.x + w.p2.x) / 2;
+            if (cx <= b.xLineL + 0.5) rLeft = 1.0;
+            if (cx >= b.xLineR - 0.5) rRight = 1.0;
+        } else {
+            // 水平直交壁または斜め壁
+            const overlapLeft = Math.max(0, Math.min(xMax, b.xLineL + 0.5) - xMin);
+            rLeft = Math.min(1.0, Math.max(0, overlapLeft / dx));
+
+            const overlapRight = Math.max(0, xMax - Math.max(xMin, b.xLineR - 0.5));
+            rRight = Math.min(1.0, Math.max(0, overlapRight / dx));
+        }
+
+        return { rTop, rBot, rLeft, rRight };
     },
 
     /**
