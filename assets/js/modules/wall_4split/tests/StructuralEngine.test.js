@@ -156,11 +156,14 @@
                 pillars: [
                     { id: 'p1', x: 0, y: 0, floor: '2F', isCornerAuto: true, isC: true },
                     { id: 'p2', x: 1820, y: 0, floor: '2F' },
-                    { id: 'p3', x: 0, y: 1820, floor: '2F' }
+                    { id: 'p3', x: 0, y: 1820, floor: '2F' },
+                    { id: 'p1_1f', x: 0, y: 0, floor: '1F', isCornerAuto: true, isC: true },
+                    { id: 'p2_1f', x: 1820, y: 0, floor: '1F' }
                 ],
                 walls: [
                     { p1: { id: 'p1', x: 0, y: 0 }, p2: { id: 'p2', x: 1820, y: 0 }, floor: '2F', totalVal: 2.5 },
-                    { p1: { id: 'p1', x: 0, y: 0 }, p2: { id: 'p3', x: 0, y: 1820 }, floor: '2F', totalVal: 1.5 }
+                    { p1: { id: 'p1', x: 0, y: 0 }, p2: { id: 'p3', x: 0, y: 1820 }, floor: '2F', totalVal: 1.5 },
+                    { p1: { id: 'p1_1f', x: 0, y: 0 }, p2: { id: 'p2_1f', x: 1820, y: 0 }, floor: '1F', totalVal: 2.5 }
                 ],
                 gridXCoords: [0, 1820],
                 gridYCoords: [0, 1820],
@@ -172,8 +175,11 @@
             expect(Math.abs(p.nCalcX - 1.60) < 0.01).toBe(true);
             expect(Math.abs(p.nCalcY - 0.80) < 0.01).toBe(true);
             expect(Math.abs(p.nValue - 1.60) < 0.01).toBe(true);
-            expect(Math.abs(p.nCalcY - 0.80) < 0.01).toBe(true);
-            expect(Math.abs(p.nValue - 1.60) < 0.01).toBe(true);
+
+            const p1F = state.pillars.find(item => item.id === 'p1_1f');
+            expect(p1F.Ax).toBe(2.5);
+            expect(p1F.Ay).toBe(0);
+            expect(p1F.nCalcX > 0).toBe(true);
         });
 
     });

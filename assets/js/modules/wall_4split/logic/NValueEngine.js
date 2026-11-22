@@ -154,6 +154,9 @@ window.NValueEngine = {
                     const upper = map2FByName[window.getPillarName(p, s)] || null;
                     const underUpper = has2FAbove(p);
                     const { aR, aT, parts } = collectAlpha(p.id, '1F', p);
+                    p.Ax = aR;
+                    p.Ay = aT;
+                    p._parts = parts;
                     
                     // 告示1460号に基づく押さえ効果L値 (建物重量減歩の詳細計算は行わない)
                     let L = underUpper ? (isC ? 1.0 : 1.6) : (isC ? 0.4 : 0.6);
