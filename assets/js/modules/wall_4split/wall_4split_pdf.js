@@ -1169,8 +1169,8 @@ async function generateDoc() {
                 let isDiag = (degX > 0.1 && degX < 89.9) ? ' [✔斜]' : '';
                 let kx = Math.floor(L * effX * 100) / 100, ky = Math.floor(L * effY * 100) / 100;
 
-                if (effX > 0 && b && cy <= b.yLineT + 0.5) { xt.push(`<tr><td>${w.p1.gy} ${w.p1.gx}-${w.p2.gx}${isDiag}</td><td>${L.toFixed(3)}</td><td>${kx.toFixed(2)}</td></tr>`); txt += kx; }
-                if (effX > 0 && b && cy >= b.yLineB - 0.5) { xb.push(`<tr><td>${w.p1.gy} ${w.p1.gx}-${w.p2.gx}${isDiag}</td><td>${L.toFixed(3)}</td><td>${kx.toFixed(2)}</td></tr>`); txb += kx; }
+                if (effX > 0 && b && cy >= b.yLineT - 0.5) { xt.push(`<tr><td>${w.p1.gy} ${w.p1.gx}-${w.p2.gx}${isDiag}</td><td>${L.toFixed(3)}</td><td>${kx.toFixed(2)}</td></tr>`); txt += kx; }
+                if (effX > 0 && b && cy <= b.yLineB + 0.5) { xb.push(`<tr><td>${w.p1.gy} ${w.p1.gx}-${w.p2.gx}${isDiag}</td><td>${L.toFixed(3)}</td><td>${kx.toFixed(2)}</td></tr>`); txb += kx; }
                 if (effY > 0 && b && cx <= b.xLineL + 0.5) { ylf.push(`<tr><td>${w.p1.gx} ${w.p1.gy}-${w.p2.gy}${isDiag}</td><td>${L.toFixed(3)}</td><td>${ky.toFixed(2)}</td></tr>`); tyl += ky; }
                 if (effY > 0 && b && cx >= b.xLineR - 0.5) { yrg.push(`<tr><td>${w.p1.gx} ${w.p1.gy}-${w.p2.gy}${isDiag}</td><td>${L.toFixed(3)}</td><td>${ky.toFixed(2)}</td></tr>`); tyr += ky; }
             });

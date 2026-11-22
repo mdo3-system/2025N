@@ -148,8 +148,8 @@ window.MainRenderer = {
         };
         drawRect({ minX: b.minX, maxX: b.xLineL, minY: b.minY, maxY: b.maxY }, 'rgba(52,152,219,0.25)');
         drawRect({ minX: b.xLineR, maxX: b.maxX, minY: b.minY, maxY: b.maxY }, 'rgba(52,152,219,0.25)');
-        drawRect({ minX: b.minX, maxX: b.maxX, minY: b.minY, maxY: b.yLineT }, 'rgba(231,76,60,0.25)');
-        drawRect({ minX: b.minX, maxX: b.maxX, minY: b.yLineB, maxY: b.maxY }, 'rgba(231,76,60,0.25)');
+        drawRect({ minX: b.minX, maxX: b.maxX, minY: b.yLineT, maxY: b.maxY }, 'rgba(231,76,60,0.25)'); // 上側側端部 (Top)
+        drawRect({ minX: b.minX, maxX: b.maxX, minY: b.minY, maxY: b.yLineB }, 'rgba(231,76,60,0.25)'); // 下側側端部 (Bottom)
     },
 
     isLayerVisible: function(layer, state, element) {
